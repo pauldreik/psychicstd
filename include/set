@@ -1,0 +1,195 @@
+#pragma once
+#include <algorithm>
+#include <functional>
+#include <initializer_list>
+#include <utility>
+#include <vector>
+
+namespace std {
+
+// set backed by sorted vector
+template <typename Key, typename Compare = less<Key>,
+          typename Alloc = allocator<Key>>
+class set {
+public:
+  using key_type = Key;
+  using value_type = Key;
+  using size_type = size_t;
+  using difference_type = ptrdiff_t;
+  using key_compare = Compare;
+  using value_compare = Compare;
+  using reference = const Key&;
+  using const_reference = const Key&;
+  using iterator = typename vector<Key>::const_iterator;
+  using const_iterator = typename vector<Key>::const_iterator;
+  using reverse_iterator = typename vector<Key>::const_reverse_iterator;
+  using const_reverse_iterator = typename vector<Key>::const_reverse_iterator;
+
+  set() = default;
+  explicit set(const Compare& c) : comp_(c) {}
+  template <typename It> set(It first, It last) {
+    for (; first != last; ++first)
+      insert(*first);
+  }
+  set(initializer_list<Key> il) {
+    for (auto& v : il)
+      insert(v);
+  }
+  set(const set&) = default;
+  set(set&&) = default;
+  set& operator=(const set&) = default;
+  set& operator=(set&&) = default;
+  set& operator=(initializer_list<Key> il) {
+    data_.clear();
+    for (auto& v : il)
+      insert(v);
+    return *this;
+  }
+
+  iterator begin() const noexcept { return data_.begin(); }
+  iterator end() const noexcept { return data_.end(); }
+  const_iterator cbegin() const noexcept { return data_.cbegin(); }
+  const_iterator cend() const noexcept { return data_.cend(); }
+  reverse_iterator rbegin() const noexcept { return data_.rbegin(); }
+  reverse_iterator rend() const noexcept { return data_.rend(); }
+
+  bool empty() const noexcept { return data_.empty(); }
+  size_type size() const noexcept { return data_.size(); }
+  size_type max_size() const noexcept { return data_.max_size(); }
+
+  pair<iterator, bool> insert(const Key& k) {
+    auto it = lower_bound_(k);
+    if (it != data_.end() && !comp_(k, *it))
+      return {it, false};
+    it = data_.insert(data_.begin() + (it - data_.begin()), k);
+    return {it, true};
+  }
+  pair<iterator, bool> insert(Key&& k) {
+    auto it = lower_bound_(k);
+    if (it != data_.end() && !comp_(k, *it))
+      return {it, false};
+    it = data_.insert(data_.begin() + (it - data_.begin()),
+                      static_cast<Key&&>(k));
+    return {it, true};
+  }
+  template <typename It> void insert(It first, It last) {
+    for (; first != last; ++first)
+      insert(*first);
+  }
+  void insert(initializer_list<Key> il) {
+    for (auto& v : il)
+      insert(v);
+  }
+
+  template <typename... Args> pair<iterator, bool> emplace(Args&&... args) {
+    return insert(Key(static_cast<Args&&>(args)...));
+  }
+
+  iterator erase(const_iterator pos) {
+    return data_.erase(data_.begin() + (pos - data_.begin()));
+  }
+  iterator erase(const_iterator first, const_iterator last) {
+    return data_.erase(data_.begin() + (first - data_.begin()),
+                       data_.begin() + (last - data_.begin()));
+  }
+  size_type erase(const Key& k) {
+    auto it = lower_bound_(k);
+    if (it == data_.end() || comp_(k, *it))
+      return 0;
+    data_.erase(data_.begin() + (it - data_.begin()));
+    return 1;
+  }
+  void clear() noexcept { data_.clear(); }
+  void swap(set& other) noexcept { data_.swap(other.data_); }
+
+  iterator find(const Key& k) const {
+    auto it = lower_bound_(k);
+    if (it != data_.end() && !comp_(k, *it))
+      return it;
+    return data_.end();
+  }
+  size_type count(const Key& k) const { return find(k) != data_.end() ? 1 : 0; }
+  bool contains(const Key& k) const { return find(k) != data_.end(); }
+
+  iterator lower_bound(const Key& k) const { return lower_bound_(k); }
+  iterator upper_bound(const Key& k) const {
+    auto it = lower_bound_(k);
+    if (it != data_.end() && !comp_(k, *it))
+      ++it;
+    return it;
+  }
+  pair<iterator, iterator> equal_range(const Key& k) const {
+    return {lower_bound(k), upper_bound(k)};
+  }
+
+  bool operator==(const set& o) const { return data_ == o.data_; }
+  bool operator!=(const set& o) const { return !(*this == o); }
+  bool operator<(const set& o) const { return data_ < o.data_; }
+
+private:
+  vector<Key> data_;
+  Compare comp_ = {};
+
+  const_iterator lower_bound_(const Key& k) const {
+    return std::lower_bound(data_.begin(), data_.end(), k, comp_);
+  }
+};
+
+// multiset
+template <typename Key, typename Compare = less<Key>,
+          typename Alloc = allocator<Key>>
+class multiset {
+public:
+  using key_type = Key;
+  using value_type = Key;
+  using size_type = size_t;
+  using iterator = typename vector<Key>::const_iterator;
+  using const_iterator = typename vector<Key>::const_iterator;
+
+  multiset() = default;
+  template <typename It> multiset(It first, It last) {
+    for (; first != last; ++first)
+      insert(*first);
+  }
+
+  iterator begin() const noexcept { return data_.begin(); }
+  iterator end() const noexcept { return data_.end(); }
+  bool empty() const noexcept { return data_.empty(); }
+  size_type size() const noexcept { return data_.size(); }
+  void clear() noexcept { data_.clear(); }
+
+  iterator insert(const Key& k) {
+    auto it = std::lower_bound(data_.begin(), data_.end(), k, comp_);
+    return data_.insert(data_.begin() + (it - data_.begin()), k);
+  }
+  template <typename... Args> iterator emplace(Args&&... args) {
+    return insert(Key(static_cast<Args&&>(args)...));
+  }
+  iterator erase(const_iterator pos) {
+    return data_.erase(data_.begin() + (pos - data_.begin()));
+  }
+  size_type erase(const Key& k) {
+    auto lo = std::lower_bound(data_.begin(), data_.end(), k, comp_);
+    auto hi = std::upper_bound(data_.begin(), data_.end(), k, comp_);
+    auto n = hi - lo;
+    data_.erase(lo, hi);
+    return n;
+  }
+  size_type count(const Key& k) const {
+    auto lo = std::lower_bound(data_.begin(), data_.end(), k, comp_);
+    auto hi = std::upper_bound(data_.begin(), data_.end(), k, comp_);
+    return hi - lo;
+  }
+  iterator find(const Key& k) const {
+    auto it = std::lower_bound(data_.begin(), data_.end(), k, comp_);
+    if (it != data_.end() && !comp_(k, *it))
+      return it;
+    return data_.end();
+  }
+
+private:
+  vector<Key> data_;
+  Compare comp_ = {};
+};
+
+} // namespace std

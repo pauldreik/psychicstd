@@ -1,0 +1,39 @@
+#pragma once
+#include <cstddef>
+#include <functional>
+#include <memory>
+
+namespace std {
+
+template <typename Key, typename T, typename Hash = hash<Key>,
+          typename KeyEqual = equal_to<Key>,
+          typename Allocator = allocator<pair<const Key, T>>>
+class unordered_map {
+public:
+  using key_type = Key;
+  using mapped_type = T;
+  using value_type = pair<const Key, T>;
+  using allocator_type = Allocator;
+  using size_type = size_t;
+
+  unordered_map() = default;
+  explicit unordered_map(const Allocator& a) {}
+  size_type size() const noexcept { return 0; }
+  bool empty() const noexcept { return true; }
+};
+
+template <typename Key, typename T, typename Hash = hash<Key>,
+          typename KeyEqual = equal_to<Key>,
+          typename Allocator = allocator<pair<const Key, T>>>
+class unordered_multimap {
+public:
+  using key_type = Key;
+  using mapped_type = T;
+  using value_type = pair<const Key, T>;
+  using allocator_type = Allocator;
+  using size_type = size_t;
+
+  unordered_multimap() = default;
+};
+
+} // namespace std

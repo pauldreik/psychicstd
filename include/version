@@ -1,0 +1,3 @@
+#pragma once
+// Minimal feature-test macro header for psychicstd
+// Real values omitted — tests using __cpp_* macros may behave differently

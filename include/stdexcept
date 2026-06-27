@@ -1,0 +1,69 @@
+#pragma once
+#include <exception>
+#include <string>
+
+namespace std {
+
+class logic_error : public exception {
+public:
+  explicit logic_error(const string& msg) : msg_(msg) {}
+  explicit logic_error(const char* msg) : msg_(msg) {}
+  const char* what() const noexcept override { return msg_.c_str(); }
+
+private:
+  string msg_;
+};
+
+class domain_error : public logic_error {
+public:
+  explicit domain_error(const string& msg) : logic_error(msg) {}
+  explicit domain_error(const char* msg) : logic_error(msg) {}
+};
+
+class invalid_argument : public logic_error {
+public:
+  explicit invalid_argument(const string& msg) : logic_error(msg) {}
+  explicit invalid_argument(const char* msg) : logic_error(msg) {}
+};
+
+class length_error : public logic_error {
+public:
+  explicit length_error(const string& msg) : logic_error(msg) {}
+  explicit length_error(const char* msg) : logic_error(msg) {}
+};
+
+class out_of_range : public logic_error {
+public:
+  explicit out_of_range(const string& msg) : logic_error(msg) {}
+  explicit out_of_range(const char* msg) : logic_error(msg) {}
+};
+
+class runtime_error : public exception {
+public:
+  explicit runtime_error(const string& msg) : msg_(msg) {}
+  explicit runtime_error(const char* msg) : msg_(msg) {}
+  const char* what() const noexcept override { return msg_.c_str(); }
+
+private:
+  string msg_;
+};
+
+class range_error : public runtime_error {
+public:
+  explicit range_error(const string& msg) : runtime_error(msg) {}
+  explicit range_error(const char* msg) : runtime_error(msg) {}
+};
+
+class overflow_error : public runtime_error {
+public:
+  explicit overflow_error(const string& msg) : runtime_error(msg) {}
+  explicit overflow_error(const char* msg) : runtime_error(msg) {}
+};
+
+class underflow_error : public runtime_error {
+public:
+  explicit underflow_error(const string& msg) : runtime_error(msg) {}
+  explicit underflow_error(const char* msg) : runtime_error(msg) {}
+};
+
+} // namespace std

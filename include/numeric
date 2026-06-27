@@ -1,0 +1,109 @@
+#pragma once
+#include <iterator>
+#include <type_traits>
+
+namespace std {
+
+// iota
+template <typename It, typename T> void iota(It first, It last, T value) {
+  for (; first != last; ++first, ++value)
+    *first = value;
+}
+
+// accumulate
+template <typename It, typename T> T accumulate(It first, It last, T init) {
+  for (; first != last; ++first)
+    init = static_cast<T&&>(init) + *first;
+  return init;
+}
+template <typename It, typename T, typename BinOp>
+T accumulate(It first, It last, T init, BinOp op) {
+  for (; first != last; ++first)
+    init = op(static_cast<T&&>(init), *first);
+  return init;
+}
+
+// reduce (C++17)
+template <typename It>
+typename iterator_traits<It>::value_type reduce(It first, It last) {
+  using T = typename iterator_traits<It>::value_type;
+  return accumulate(first, last, T{});
+}
+template <typename It, typename T> T reduce(It first, It last, T init) {
+  return accumulate(first, last, init);
+}
+template <typename It, typename T, typename BinOp>
+T reduce(It first, It last, T init, BinOp op) {
+  return accumulate(first, last, init, op);
+}
+
+// inner_product
+template <typename It1, typename It2, typename T>
+T inner_product(It1 first1, It1 last1, It2 first2, T init) {
+  for (; first1 != last1; ++first1, ++first2)
+    init = init + (*first1) * (*first2);
+  return init;
+}
+template <typename It1, typename It2, typename T, typename BinOp1,
+          typename BinOp2>
+T inner_product(It1 first1, It1 last1, It2 first2, T init, BinOp1 op1,
+                BinOp2 op2) {
+  for (; first1 != last1; ++first1, ++first2)
+    init = op1(init, op2(*first1, *first2));
+  return init;
+}
+
+// partial_sum
+template <typename In, typename Out>
+Out partial_sum(In first, In last, Out d_first) {
+  if (first == last)
+    return d_first;
+  typename iterator_traits<In>::value_type sum = *first;
+  *d_first = sum;
+  while (++first != last) {
+    sum = sum + *first;
+    *++d_first = sum;
+  }
+  return ++d_first;
+}
+
+// adjacent_difference
+template <typename In, typename Out>
+Out adjacent_difference(In first, In last, Out d_first) {
+  if (first == last)
+    return d_first;
+  typename iterator_traits<In>::value_type prev = *first;
+  *d_first = prev;
+  while (++first != last) {
+    auto val = *first;
+    *++d_first = val - prev;
+    prev = static_cast<decltype(val)&&>(val);
+  }
+  return ++d_first;
+}
+
+// gcd / lcm
+template <typename M, typename N> constexpr auto gcd(M m, N n) noexcept {
+  using T = decltype(m + n);
+  T a = m < T{} ? -T(m) : T(m);
+  T b = n < T{} ? -T(n) : T(n);
+  while (b) {
+    T t = b;
+    b = a % b;
+    a = t;
+  }
+  return a;
+}
+template <typename M, typename N> constexpr auto lcm(M m, N n) noexcept {
+  return (m / gcd(m, n)) * n;
+}
+
+// midpoint (C++20)
+template <typename T> constexpr T midpoint(T a, T b) noexcept {
+  if constexpr (is_floating_point_v<T>)
+    return a / 2 + b / 2;
+  else
+    return a + (b - a) / 2;
+}
+
+} // namespace std

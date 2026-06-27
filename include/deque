@@ -1,0 +1,19 @@
+#pragma once
+#include <cstddef>
+#include <memory>
+
+namespace std {
+
+template <typename T, typename Allocator = allocator<T>> class deque {
+public:
+  using value_type = T;
+  using allocator_type = Allocator;
+  using size_type = size_t;
+  using difference_type = ptrdiff_t;
+  using reference = T&;
+  using const_reference = const T&;
+  using pointer = T*;
+  using const_pointer = const T*;
+};
+
+} // namespace std

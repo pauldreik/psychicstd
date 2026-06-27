@@ -1,0 +1,62 @@
+#pragma once
+#include <cstdint>
+#include <type_traits>
+
+namespace std {
+
+namespace detail {
+constexpr intmax_t gcd(intmax_t a, intmax_t b) noexcept {
+  return b == 0 ? a : gcd(b, a % b);
+}
+} // namespace detail
+
+template <intmax_t Num, intmax_t Den = 1> struct ratio {
+  static_assert(Den != 0, "ratio: zero denominator");
+  static constexpr intmax_t num =
+      (Num / detail::gcd(Num < 0 ? -Num : Num, Den < 0 ? -Den : Den)) *
+      ((Den < 0) ? -1 : 1);
+  static constexpr intmax_t den =
+      (Den / detail::gcd(Num < 0 ? -Num : Num, Den < 0 ? -Den : Den)) *
+      ((Den < 0) ? -1 : 1);
+  using type = ratio<num, den>;
+};
+
+template <typename R1, typename R2>
+using ratio_add =
+    ratio<R1::num * R2::den + R2::num * R1::den, R1::den * R2::den>;
+
+template <typename R1, typename R2>
+using ratio_subtract =
+    ratio<R1::num * R2::den - R2::num * R1::den, R1::den * R2::den>;
+
+template <typename R1, typename R2>
+using ratio_multiply = ratio<R1::num * R2::num, R1::den * R2::den>;
+
+template <typename R1, typename R2>
+using ratio_divide = ratio<R1::num * R2::den, R1::den * R2::num>;
+
+template <typename R1, typename R2>
+struct ratio_equal : bool_constant<R1::num == R2::num && R1::den == R2::den> {};
+template <typename R1, typename R2>
+struct ratio_not_equal : bool_constant<!ratio_equal<R1, R2>::value> {};
+template <typename R1, typename R2>
+    struct ratio_less : bool_constant < R1::num* R2::den<R2::num * R1::den> {};
+
+using atto = ratio<1, 1000000000000000000LL>;
+using femto = ratio<1, 1000000000000000LL>;
+using pico = ratio<1, 1000000000000LL>;
+using nano = ratio<1, 1000000000LL>;
+using micro = ratio<1, 1000000LL>;
+using milli = ratio<1, 1000LL>;
+using centi = ratio<1, 100LL>;
+using deci = ratio<1, 10LL>;
+using deca = ratio<10LL, 1>;
+using hecto = ratio<100LL, 1>;
+using kilo = ratio<1000LL, 1>;
+using mega = ratio<1000000LL, 1>;
+using giga = ratio<1000000000LL, 1>;
+using tera = ratio<1000000000000LL, 1>;
+using peta = ratio<1000000000000000LL, 1>;
+using exa = ratio<1000000000000000000LL, 1>;
+
+} // namespace std

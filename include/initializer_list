@@ -1,0 +1,37 @@
+#pragma once
+#include <cstddef>
+
+// Layout must exactly match GCC/Clang's internal representation.
+// The compiler generates initializer_list objects; we just provide the class.
+namespace std {
+
+template <typename T> class initializer_list {
+public:
+  using value_type = T;
+  using reference = const T&;
+  using const_reference = const T&;
+  using size_type = size_t;
+  using iterator = const T*;
+  using const_iterator = const T*;
+
+  constexpr initializer_list() noexcept : begin_(nullptr), size_(0) {}
+
+  constexpr size_t size() const noexcept { return size_; }
+  constexpr const T* begin() const noexcept { return begin_; }
+  constexpr const T* end() const noexcept { return begin_ + size_; }
+
+private:
+  // GCC layout: pointer first, then size. Do not reorder.
+  const T* begin_;
+  size_t size_;
+};
+
+template <typename T>
+constexpr const T* begin(initializer_list<T> il) noexcept {
+  return il.begin();
+}
+template <typename T> constexpr const T* end(initializer_list<T> il) noexcept {
+  return il.end();
+}
+
+} // namespace std

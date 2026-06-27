@@ -1,0 +1,45 @@
+#pragma once
+#include <stdlib.h>
+
+namespace std {
+using ::_Exit;
+using ::abort;
+using ::abs;
+using ::at_quick_exit;
+using ::atexit;
+using ::atof;
+using ::atoi;
+using ::atol;
+using ::atoll;
+using ::bsearch;
+using ::calloc;
+using ::div;
+using ::div_t;
+using ::exit;
+using ::free;
+using ::getenv;
+using ::ldiv;
+using ::ldiv_t;
+using ::lldiv;
+using ::lldiv_t;
+using ::malloc;
+using ::mblen;
+using ::mbstowcs;
+using ::mbtowc;
+using ::qsort;
+using ::quick_exit;
+using ::rand;
+using ::realloc;
+using ::size_t;
+using ::srand;
+using ::strtod;
+using ::strtof;
+using ::strtol;
+using ::strtold;
+using ::strtoll;
+using ::strtoul;
+using ::strtoull;
+using ::system;
+using ::wcstombs;
+using ::wctomb;
+} // namespace std

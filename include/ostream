@@ -1,0 +1,338 @@
+#pragma once
+#include <cstdio>
+#include <exception>
+#include <ios>
+#include <streambuf>
+#include <string>
+
+namespace std {
+
+template <typename Char, typename Traits>
+class basic_ostream : public basic_ios<Char, Traits> {
+public:
+  using char_type = Char;
+  using traits_type = Traits;
+  using int_type = typename Traits::int_type;
+
+  explicit basic_ostream(basic_streambuf<Char, Traits>* sb) { this->init(sb); }
+
+  ~basic_ostream() = default;
+  basic_ostream(const basic_ostream&) = delete;
+  basic_ostream& operator=(const basic_ostream&) = delete;
+
+  class sentry {
+  public:
+    explicit sentry(basic_ostream& os) : os_(os), ok_(os.good()) {}
+    ~sentry() {}
+    explicit operator bool() const noexcept { return ok_; }
+
+  private:
+    basic_ostream& os_;
+    bool ok_;
+  };
+
+  basic_ostream& write(const Char* s, streamsize n) {
+    if (this->rdbuf())
+      this->rdbuf()->sputn(s, n);
+    return *this;
+  }
+  basic_ostream& put(Char c) {
+    write(&c, 1);
+    return *this;
+  }
+  basic_ostream& flush() { return *this; }
+
+  // Manipulators
+  basic_ostream& operator<<(basic_ostream& (*pf)(basic_ostream&)) {
+    return pf(*this);
+  }
+  basic_ostream& operator<<(ios_base& (*pf)(ios_base&)) {
+    pf(*this);
+    return *this;
+  }
+
+  // Arithmetic types
+  basic_ostream& operator<<(bool v) {
+    if (this->flags_ & ios_base::boolalpha)
+      return write_padded(v ? "true" : "false");
+    char buf[2] = {(char)('0' + v), '\0'};
+    return write_padded(buf);
+  }
+  basic_ostream& operator<<(short v) { return write_int(v); }
+  basic_ostream& operator<<(int v) { return write_int(v); }
+  basic_ostream& operator<<(long v) { return write_int(v); }
+  basic_ostream& operator<<(long long v) { return write_int(v); }
+  basic_ostream& operator<<(unsigned short v) { return write_uint(v); }
+  basic_ostream& operator<<(unsigned int v) { return write_uint(v); }
+  basic_ostream& operator<<(unsigned long v) { return write_uint(v); }
+  basic_ostream& operator<<(unsigned long long v) { return write_uint(v); }
+  basic_ostream& operator<<(float v) { return write_float((double)v); }
+  basic_ostream& operator<<(double v) { return write_float(v); }
+  basic_ostream& operator<<(long double v) { return write_long_double(v); }
+  basic_ostream& operator<<(const void* v) {
+    char buf[32];
+    __builtin_snprintf(buf, sizeof(buf), "%p", v);
+    return write_padded(buf);
+  }
+  basic_ostream& operator<<(nullptr_t) { return write_padded("nullptr"); }
+
+  basic_ostream& operator<<(char c) {
+    pad_and_write(&c, 1);
+    return *this;
+  }
+  basic_ostream& operator<<(const char* s) {
+    if (s) {
+      pad_and_write(s, (streamsize)__builtin_strlen(s));
+    }
+    return *this;
+  }
+  basic_ostream& operator<<(const basic_string<Char, Traits>& s) {
+    pad_and_write(s.data(), (streamsize)s.size());
+    return *this;
+  }
+  basic_ostream& operator<<(basic_string_view<Char> sv) {
+    pad_and_write(sv.data(), (streamsize)sv.size());
+    return *this;
+  }
+
+protected:
+  basic_ostream() { this->init(nullptr); }
+
+private:
+  void emit(const char* s, streamsize n) {
+    if (this->rdbuf())
+      this->rdbuf()->sputn(s, n);
+  }
+
+  void pad_and_write(const char* s, streamsize n) {
+    streamsize w = this->width_;
+    this->width_ = 0; // width is consumed after use
+    if (w <= n) {
+      emit(s, n);
+      return;
+    }
+    streamsize pad = w - n;
+    char fc = this->fill_;
+    if (this->flags_ & ios_base::left) {
+      emit(s, n);
+      for (streamsize i = 0; i < pad; ++i)
+        emit(&fc, 1);
+    } else {
+      for (streamsize i = 0; i < pad; ++i)
+        emit(&fc, 1);
+      emit(s, n);
+    }
+  }
+
+  basic_ostream& write_padded(const char* s) {
+    pad_and_write(s, (streamsize)__builtin_strlen(s));
+    return *this;
+  }
+
+  template <typename V> basic_ostream& write_int(V v) {
+    char buf[32];
+    int n;
+    if (this->flags_ & ios_base::hex) {
+      if (this->flags_ & ios_base::showbase)
+        n = __builtin_snprintf(
+            buf, sizeof(buf),
+            (this->flags_ & ios_base::uppercase) ? "0X%llX" : "0x%llx",
+            (unsigned long long)(typename make_unsigned<V>::type)v);
+      else
+        n = __builtin_snprintf(
+            buf, sizeof(buf),
+            (this->flags_ & ios_base::uppercase) ? "%llX" : "%llx",
+            (unsigned long long)(typename make_unsigned<V>::type)v);
+    } else if (this->flags_ & ios_base::oct) {
+      if (this->flags_ & ios_base::showbase)
+        n = __builtin_snprintf(
+            buf, sizeof(buf), "0%llo",
+            (unsigned long long)(typename make_unsigned<V>::type)v);
+      else
+        n = __builtin_snprintf(
+            buf, sizeof(buf), "%llo",
+            (unsigned long long)(typename make_unsigned<V>::type)v);
+    } else {
+      n = __builtin_snprintf(buf, sizeof(buf), "%lld", (long long)v);
+    }
+    if (n > 0)
+      pad_and_write(buf, n);
+    return *this;
+  }
+
+  template <typename V> basic_ostream& write_uint(V v) {
+    char buf[32];
+    int n;
+    if (this->flags_ & ios_base::hex) {
+      if (this->flags_ & ios_base::showbase)
+        n = __builtin_snprintf(buf, sizeof(buf),
+                               (this->flags_ & ios_base::uppercase) ? "0X%llX"
+                                                                    : "0x%llx",
+                               (unsigned long long)v);
+      else
+        n = __builtin_snprintf(buf, sizeof(buf),
+                               (this->flags_ & ios_base::uppercase) ? "%llX"
+                                                                    : "%llx",
+                               (unsigned long long)v);
+    } else if (this->flags_ & ios_base::oct) {
+      if (this->flags_ & ios_base::showbase)
+        n = __builtin_snprintf(buf, sizeof(buf), "0%llo",
+                               (unsigned long long)v);
+      else
+        n = __builtin_snprintf(buf, sizeof(buf), "%llo", (unsigned long long)v);
+    } else {
+      n = __builtin_snprintf(buf, sizeof(buf), "%llu", (unsigned long long)v);
+    }
+    if (n > 0)
+      pad_and_write(buf, n);
+    return *this;
+  }
+
+  basic_ostream& write_float(double v) {
+    char fmt[16];
+    char buf[64];
+    const char* spec = "g";
+    if (this->flags_ & ios_base::fixed)
+      spec = "f";
+    else if (this->flags_ & ios_base::scientific)
+      spec = "e";
+    __builtin_snprintf(fmt, sizeof(fmt), "%%.%lld%s", (long long)this->prec_,
+                       spec);
+    int n = __builtin_snprintf(buf, sizeof(buf), fmt, v);
+    if (n > 0)
+      pad_and_write(buf, n);
+    return *this;
+  }
+
+  basic_ostream& write_long_double(long double v) {
+    char fmt[16];
+    char buf[64];
+    const char* spec = "Lg";
+    if (this->flags_ & ios_base::fixed)
+      spec = "Lf";
+    else if (this->flags_ & ios_base::scientific)
+      spec = "Le";
+    __builtin_snprintf(fmt, sizeof(fmt), "%%.%lldL%s", (long long)this->prec_,
+                       spec);
+    // Fix the format string - L is part of spec already
+    __builtin_snprintf(fmt, sizeof(fmt), "%%.%lld%s", (long long)this->prec_,
+                       spec);
+    int n = __builtin_snprintf(buf, sizeof(buf), fmt, v);
+    if (n > 0)
+      pad_and_write(buf, n);
+    return *this;
+  }
+};
+
+// Manipulators
+template <typename C, typename T>
+basic_ostream<C, T>& endl(basic_ostream<C, T>& os) {
+  os.put('\n');
+  os.flush();
+  return os;
+}
+template <typename C, typename T>
+basic_ostream<C, T>& flush(basic_ostream<C, T>& os) {
+  os.flush();
+  return os;
+}
+template <typename C, typename T>
+basic_ostream<C, T>& ends(basic_ostream<C, T>& os) {
+  os.put(C());
+  return os;
+}
+
+// Flag manipulators (defined as free functions returning ios_base&)
+inline ios_base& boolalpha(ios_base& s) {
+  s.setf(ios_base::boolalpha);
+  return s;
+}
+inline ios_base& noboolalpha(ios_base& s) {
+  s.unsetf(ios_base::boolalpha);
+  return s;
+}
+inline ios_base& showbase(ios_base& s) {
+  s.setf(ios_base::showbase);
+  return s;
+}
+inline ios_base& noshowbase(ios_base& s) {
+  s.unsetf(ios_base::showbase);
+  return s;
+}
+inline ios_base& showpos(ios_base& s) {
+  s.setf(ios_base::showpos);
+  return s;
+}
+inline ios_base& noshowpos(ios_base& s) {
+  s.unsetf(ios_base::showpos);
+  return s;
+}
+inline ios_base& showpoint(ios_base& s) {
+  s.setf(ios_base::showpoint);
+  return s;
+}
+inline ios_base& noshowpoint(ios_base& s) {
+  s.unsetf(ios_base::showpoint);
+  return s;
+}
+inline ios_base& uppercase(ios_base& s) {
+  s.setf(ios_base::uppercase);
+  return s;
+}
+inline ios_base& nouppercase(ios_base& s) {
+  s.unsetf(ios_base::uppercase);
+  return s;
+}
+inline ios_base& skipws(ios_base& s) {
+  s.setf(ios_base::skipws);
+  return s;
+}
+inline ios_base& noskipws(ios_base& s) {
+  s.unsetf(ios_base::skipws);
+  return s;
+}
+inline ios_base& left(ios_base& s) {
+  s.setf(ios_base::left, ios_base::adjustfield);
+  return s;
+}
+inline ios_base& right(ios_base& s) {
+  s.setf(ios_base::right, ios_base::adjustfield);
+  return s;
+}
+inline ios_base& internal(ios_base& s) {
+  s.setf(0, ios_base::adjustfield);
+  return s;
+}
+inline ios_base& dec(ios_base& s) {
+  s.setf(ios_base::dec, ios_base::basefield);
+  return s;
+}
+inline ios_base& hex(ios_base& s) {
+  s.setf(ios_base::hex, ios_base::basefield);
+  return s;
+}
+inline ios_base& oct(ios_base& s) {
+  s.setf(ios_base::oct, ios_base::basefield);
+  return s;
+}
+inline ios_base& fixed(ios_base& s) {
+  s.setf(ios_base::fixed, ios_base::floatfield);
+  return s;
+}
+inline ios_base& scientific(ios_base& s) {
+  s.setf(ios_base::scientific, ios_base::floatfield);
+  return s;
+}
+inline ios_base& defaultfloat(ios_base& s) {
+  s.unsetf(ios_base::floatfield);
+  return s;
+}
+inline ios_base& hexfloat(ios_base& s) {
+  s.setf(ios_base::fixed | ios_base::scientific, ios_base::floatfield);
+  return s;
+}
+
+using ostream = basic_ostream<char>;
+using wostream = basic_ostream<wchar_t>;
+
+} // namespace std

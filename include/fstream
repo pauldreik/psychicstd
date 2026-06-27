@@ -1,0 +1,260 @@
+#pragma once
+#include <cstdio>
+#include <ios>
+#include <ostream>
+#include <streambuf>
+#include <string>
+
+namespace std {
+
+// basic_filebuf backed by FILE*
+// (default args are in <iosfwd>)
+template <typename Char, typename Traits>
+class basic_filebuf : public basic_streambuf<Char, Traits> {
+public:
+  basic_filebuf() = default;
+  ~basic_filebuf() { close(); }
+  basic_filebuf(const basic_filebuf&) = delete;
+  basic_filebuf& operator=(const basic_filebuf&) = delete;
+
+  bool is_open() const noexcept { return fp_ != nullptr; }
+
+  basic_filebuf* open(const char* path, ios_base::openmode mode) {
+    const char* m;
+    if ((mode & ios_base::out) && (mode & ios_base::in))
+      m = "r+";
+    else if (mode & ios_base::app)
+      m = "a";
+    else if (mode & ios_base::out)
+      m = "w";
+    else
+      m = "r";
+    fp_ = ::fopen(path, m);
+    return fp_ ? this : nullptr;
+  }
+  basic_filebuf* open(const basic_string<Char, Traits>& path,
+                      ios_base::openmode mode) {
+    return open(path.c_str(), mode);
+  }
+  basic_filebuf* close() {
+    if (fp_) {
+      ::fclose(fp_);
+      fp_ = nullptr;
+    }
+    return this;
+  }
+
+  // for ifstream: read a char
+  int sgetc() {
+    if (!fp_)
+      return -1;
+    return ::fgetc(fp_);
+  }
+
+  FILE* fp_ = nullptr;
+
+protected:
+  streamsize xsputn(const Char* s, streamsize n) override {
+    if (!fp_)
+      return 0;
+    return (streamsize)::fwrite(s, sizeof(Char), (size_t)n, fp_);
+  }
+};
+
+// basic_ofstream (default args are in <iosfwd>)
+template <typename Char, typename Traits>
+class basic_ofstream : public basic_ostream<Char, Traits> {
+public:
+  using string_type = basic_string<Char, Traits>;
+
+  basic_ofstream() : basic_ostream<Char, Traits>(&buf_) {}
+
+  explicit basic_ofstream(const char* path,
+                          ios_base::openmode mode = ios_base::out)
+      : basic_ostream<Char, Traits>(&buf_) {
+    open(path, mode);
+  }
+  explicit basic_ofstream(const string_type& path,
+                          ios_base::openmode mode = ios_base::out)
+      : basic_ostream<Char, Traits>(&buf_) {
+    open(path.c_str(), mode);
+  }
+
+  void open(const char* path, ios_base::openmode mode = ios_base::out) {
+    if (!buf_.open(path, mode | ios_base::out))
+      this->setstate(ios_base::failbit);
+    else
+      this->clear();
+  }
+  void open(const string_type& path, ios_base::openmode mode = ios_base::out) {
+    open(path.c_str(), mode);
+  }
+  void close() { buf_.close(); }
+  bool is_open() const { return buf_.is_open(); }
+
+  basic_filebuf<Char, Traits>* rdbuf() const {
+    return const_cast<basic_filebuf<Char, Traits>*>(&buf_);
+  }
+
+private:
+  basic_filebuf<Char, Traits> buf_;
+};
+
+// Minimal basic_istream for ifstream/getline
+// (default args are in <iosfwd>)
+template <typename Char, typename Traits>
+class basic_istream : public basic_ios<Char, Traits> {
+public:
+  using char_type = Char;
+  using traits_type = Traits;
+  using int_type = typename Traits::int_type;
+
+  explicit basic_istream(basic_filebuf<Char, Traits>* sb) : filebuf_(sb) {
+    this->init(nullptr);
+    if (sb)
+      this->clear();
+    else
+      this->setstate(ios_base::failbit);
+  }
+  basic_istream(const basic_istream&) = delete;
+  basic_istream& operator=(const basic_istream&) = delete;
+
+  int_type get() {
+    if (!filebuf_) {
+      this->setstate(ios_base::failbit);
+      return Traits::eof();
+    }
+    int c = filebuf_->sgetc();
+    if (c == EOF) {
+      this->setstate(ios_base::eofbit | ios_base::failbit);
+      return Traits::eof();
+    }
+    return (int_type)c;
+  }
+
+  basic_istream& operator>>(Char& c) {
+    int_type v = get();
+    if (!Traits::eq_int_type(v, Traits::eof()))
+      c = Traits::to_char_type(v);
+    return *this;
+  }
+
+protected:
+  basic_istream() : filebuf_(nullptr) { this->init(nullptr); }
+  basic_filebuf<Char, Traits>* filebuf_ = nullptr;
+};
+
+// basic_ifstream (default args are in <iosfwd>)
+template <typename Char, typename Traits>
+class basic_ifstream : public basic_istream<Char, Traits> {
+public:
+  using string_type = basic_string<Char, Traits>;
+
+  basic_ifstream() : basic_istream<Char, Traits>(&buf_) {}
+  explicit basic_ifstream(const char* path,
+                          ios_base::openmode mode = ios_base::in)
+      : basic_istream<Char, Traits>(&buf_) {
+    open(path, mode);
+  }
+  explicit basic_ifstream(const string_type& path,
+                          ios_base::openmode mode = ios_base::in)
+      : basic_istream<Char, Traits>(&buf_) {
+    open(path.c_str(), mode);
+  }
+
+  void open(const char* path, ios_base::openmode mode = ios_base::in) {
+    if (!buf_.open(path, mode | ios_base::in)) {
+      this->setstate(ios_base::failbit);
+      this->filebuf_ = nullptr;
+    } else {
+      this->clear();
+      this->filebuf_ = &buf_;
+    }
+  }
+  void open(const string_type& path, ios_base::openmode mode = ios_base::in) {
+    open(path.c_str(), mode);
+  }
+  void close() {
+    buf_.close();
+    this->filebuf_ = nullptr;
+  }
+  bool is_open() const { return buf_.is_open(); }
+
+  basic_filebuf<Char, Traits>* rdbuf() const {
+    return const_cast<basic_filebuf<Char, Traits>*>(&buf_);
+  }
+
+private:
+  basic_filebuf<Char, Traits> buf_;
+};
+
+// basic_fstream (default args are in <iosfwd>)
+template <typename Char, typename Traits>
+class basic_fstream : public basic_ostream<Char, Traits> {
+public:
+  using string_type = basic_string<Char, Traits>;
+
+  basic_fstream() : basic_ostream<Char, Traits>(&buf_) {}
+  explicit basic_fstream(const char* path,
+                         ios_base::openmode mode = ios_base::in | ios_base::out)
+      : basic_ostream<Char, Traits>(&buf_) {
+    open(path, mode);
+  }
+  explicit basic_fstream(const string_type& path,
+                         ios_base::openmode mode = ios_base::in | ios_base::out)
+      : basic_ostream<Char, Traits>(&buf_) {
+    open(path.c_str(), mode);
+  }
+
+  void open(const char* path,
+            ios_base::openmode mode = ios_base::in | ios_base::out) {
+    if (!buf_.open(path, mode))
+      this->setstate(ios_base::failbit);
+    else
+      this->clear();
+  }
+  void close() { buf_.close(); }
+  bool is_open() const { return buf_.is_open(); }
+
+  basic_filebuf<Char, Traits>* rdbuf() const {
+    return const_cast<basic_filebuf<Char, Traits>*>(&buf_);
+  }
+
+private:
+  basic_filebuf<Char, Traits> buf_;
+};
+
+// getline
+template <typename Char, typename Traits, typename Alloc>
+basic_istream<Char, Traits>& getline(basic_istream<Char, Traits>& is,
+                                     basic_string<Char, Traits, Alloc>& str,
+                                     Char delim = '\n') {
+  str.clear();
+  bool got_any = false;
+  typename Traits::int_type c;
+  while (!Traits::eq_int_type(c = is.get(), Traits::eof())) {
+    got_any = true;
+    if (Traits::eq_int_type(c, Traits::to_int_type(delim)))
+      break;
+    str.push_back(Traits::to_char_type(c));
+  }
+  if (!got_any)
+    is.setstate(ios_base::eofbit | ios_base::failbit);
+  return is;
+}
+
+// unitbuf / nounitbuf (no-op — we flush immediately)
+inline ios_base& unitbuf(ios_base& s) { return s; }
+inline ios_base& nounitbuf(ios_base& s) { return s; }
+
+using filebuf = basic_filebuf<char>;
+using ifstream = basic_ifstream<char>;
+using ofstream = basic_ofstream<char>;
+using fstream = basic_fstream<char>;
+
+using wfilebuf = basic_filebuf<wchar_t>;
+using wifstream = basic_ifstream<wchar_t>;
+using wofstream = basic_ofstream<wchar_t>;
+using wfstream = basic_fstream<wchar_t>;
+
+} // namespace std

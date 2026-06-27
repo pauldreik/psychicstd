@@ -1,0 +1,142 @@
+#pragma once
+#include <cstddef>
+#include <initializer_list>
+#include <type_traits>
+
+namespace std {
+
+template <typename T>
+[[nodiscard]] constexpr remove_reference_t<T>&& move(T&& t) noexcept {
+  return static_cast<remove_reference_t<T>&&>(t);
+}
+
+template <typename T> constexpr T&& forward(remove_reference_t<T>& t) noexcept {
+  return static_cast<T&&>(t);
+}
+template <typename T>
+constexpr T&& forward(remove_reference_t<T>&& t) noexcept {
+  return static_cast<T&&>(t);
+}
+
+template <typename T>
+  requires(is_move_constructible_v<T> && is_move_assignable_v<T>)
+constexpr void swap(T& a, T& b) noexcept(is_nothrow_move_constructible_v<T> &&
+                                         is_nothrow_move_assignable_v<T>) {
+  T tmp = move(a);
+  a = move(b);
+  b = move(tmp);
+}
+template <typename T, size_t N>
+constexpr void swap(T (&a)[N], T (&b)[N]) noexcept(noexcept(swap(*a, *b))) {
+  for (size_t i = 0; i < N; ++i)
+    swap(a[i], b[i]);
+}
+
+template <typename T, typename U = T>
+constexpr T exchange(T& obj, U&& new_val) {
+  T old = move(obj);
+  obj = forward<U>(new_val);
+  return old;
+}
+
+// is_swappable — needs swap in scope, so defined here not in <type_traits>
+namespace detail {
+template <typename T, typename = decltype(swap(declval<T&>(), declval<T&>()))>
+true_type is_swappable_test(int);
+template <typename T> false_type is_swappable_test(...);
+} // namespace detail
+template <typename T>
+struct is_swappable : decltype(detail::is_swappable_test<T>(0)) {};
+template <typename T>
+inline constexpr bool is_swappable_v = is_swappable<T>::value;
+
+namespace detail {
+template <typename T>
+auto is_nothrow_swappable_test(int)
+    -> bool_constant<noexcept(swap(declval<T&>(), declval<T&>()))>;
+template <typename T> false_type is_nothrow_swappable_test(...);
+} // namespace detail
+template <typename T>
+struct is_nothrow_swappable
+    : decltype(detail::is_nothrow_swappable_test<T>(0)) {};
+template <typename T>
+inline constexpr bool is_nothrow_swappable_v = is_nothrow_swappable<T>::value;
+
+template <typename T1, typename T2> struct pair {
+  T1 first;
+  T2 second;
+  constexpr pair() = default;
+  constexpr pair(const T1& a, const T2& b) : first(a), second(b) {}
+  template <typename U1, typename U2>
+    requires(is_constructible_v<T1, U1> && is_constructible_v<T2, U2>)
+  constexpr pair(U1&& a, U2&& b)
+      : first(forward<U1>(a)), second(forward<U2>(b)) {}
+  template <typename U1, typename U2>
+  constexpr pair(const pair<U1, U2>& p) : first(p.first), second(p.second) {}
+  template <typename U1, typename U2>
+  constexpr pair(pair<U1, U2>&& p)
+      : first(forward<U1>(p.first)), second(forward<U2>(p.second)) {}
+  constexpr pair(const pair&) = default;
+  constexpr pair(pair&&) = default;
+  pair& operator=(const pair&) = default;
+  pair& operator=(pair&&) = default;
+  constexpr void swap(pair& o) noexcept {
+    using std::swap;
+    swap(first, o.first);
+    swap(second, o.second);
+  }
+};
+
+template <typename T1, typename T2>
+constexpr pair<decay_t<T1>, decay_t<T2>> make_pair(T1&& a, T2&& b) {
+  return {forward<T1>(a), forward<T2>(b)};
+}
+
+template <typename T1, typename T2, typename U1, typename U2>
+constexpr bool operator==(const pair<T1, T2>& a, const pair<U1, U2>& b) {
+  return a.first == b.first && a.second == b.second;
+}
+template <typename T1, typename T2, typename U1, typename U2>
+constexpr bool operator!=(const pair<T1, T2>& a, const pair<U1, U2>& b) {
+  return !(a == b);
+}
+template <typename T1, typename T2, typename U1, typename U2>
+constexpr bool operator<(const pair<T1, T2>& a, const pair<U1, U2>& b) {
+  return a.first < b.first || (!(b.first < a.first) && a.second < b.second);
+}
+template <typename T1, typename T2, typename U1, typename U2>
+constexpr bool operator<=(const pair<T1, T2>& a, const pair<U1, U2>& b) {
+  return !(b < a);
+}
+template <typename T1, typename T2, typename U1, typename U2>
+constexpr bool operator>(const pair<T1, T2>& a, const pair<U1, U2>& b) {
+  return b < a;
+}
+template <typename T1, typename T2, typename U1, typename U2>
+constexpr bool operator>=(const pair<T1, T2>& a, const pair<U1, U2>& b) {
+  return !(a < b);
+}
+
+// integer_sequence
+template <typename T, T... Is> struct integer_sequence {
+  using value_type = T;
+  static constexpr size_t size() noexcept { return sizeof...(Is); }
+};
+
+template <size_t... Is> using index_sequence = integer_sequence<size_t, Is...>;
+
+#if defined(__clang__)
+template <typename T, T N>
+using make_integer_sequence = __make_integer_seq<integer_sequence, T, N>;
+#else
+template <typename T, T N>
+using make_integer_sequence = integer_sequence<T, __integer_pack(N)...>;
+#endif
+
+template <size_t N>
+using make_index_sequence = make_integer_sequence<size_t, N>;
+
+template <typename... Ts>
+using index_sequence_for = make_index_sequence<sizeof...(Ts)>;
+
+} // namespace std
