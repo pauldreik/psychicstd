@@ -1,0 +1,119 @@
+#pragma once
+#include <math.h>
+#include <stdlib.h>
+
+// C99 defines isnan/isinf/isfinite/isnormal/signbit as macros.
+// Undefine them so qualified names like std::isnan and Catch::isnan work.
+#ifdef isnan
+#undef isnan
+#endif
+#ifdef isinf
+#undef isinf
+#endif
+#ifdef isfinite
+#undef isfinite
+#endif
+#ifdef isnormal
+#undef isnormal
+#endif
+#ifdef signbit
+#undef signbit
+#endif
+#ifdef fpclassify
+#undef fpclassify
+#endif
+
+namespace std {
+using ::abs;
+using ::acos;
+using ::acosh;
+using ::asin;
+using ::asinh;
+using ::atan;
+using ::atan2;
+using ::atanh;
+using ::cbrt;
+using ::ceil;
+using ::cos;
+using ::cosh;
+using ::erf;
+using ::erfc;
+using ::exp;
+using ::exp2;
+using ::fabs;
+using ::fdim;
+using ::floor;
+using ::fma;
+using ::fmax;
+using ::fmin;
+using ::fmod;
+using ::log;
+using ::log10;
+using ::log2;
+using ::pow;
+using ::remainder;
+using ::round;
+using ::sin;
+using ::sinh;
+using ::sqrt;
+using ::tan;
+using ::tanh;
+using ::trunc;
+// isnan/isinf/isfinite/isnormal/signbit are macros in C — wrap them
+inline bool isnan(float x) { return __builtin_isnanf(x); }
+inline bool isnan(double x) { return __builtin_isnan(x); }
+inline bool isnan(long double x) { return __builtin_isnanl(x); }
+inline bool isinf(float x) { return __builtin_isinff(x); }
+inline bool isinf(double x) { return __builtin_isinf(x); }
+inline bool isinf(long double x) { return __builtin_isinfl(x); }
+inline bool isfinite(float x) { return __builtin_isfinite(x); }
+inline bool isfinite(double x) { return __builtin_isfinite(x); }
+inline bool isfinite(long double x) { return __builtin_isfinite(x); }
+inline bool isnormal(float x) { return __builtin_isnormal(x); }
+inline bool isnormal(double x) { return __builtin_isnormal(x); }
+inline bool isnormal(long double x) { return __builtin_isnormal(x); }
+inline bool signbit(float x) { return __builtin_signbitf(x); }
+inline bool signbit(double x) { return __builtin_signbit(x); }
+inline bool signbit(long double x) { return __builtin_signbitl(x); }
+using ::copysign;
+using ::frexp;
+using ::hypot;
+using ::ldexp;
+using ::llrint;
+using ::llround;
+using ::lrint;
+using ::lround;
+using ::modf;
+using ::nan;
+using ::nanf;
+using ::nanl;
+using ::nearbyint;
+using ::rint;
+using ::scalbln;
+using ::scalbn;
+
+// float overloads
+using ::ceilf;
+using ::cosf;
+using ::expf;
+using ::fabsf;
+using ::floorf;
+using ::fmodf;
+using ::hypotf;
+using ::logf;
+using ::powf;
+using ::roundf;
+using ::sinf;
+using ::sqrtf;
+using ::tanf;
+
+inline float abs(float x) { return ::fabsf(x); }
+inline double abs(double x) { return ::fabs(x); }
+inline long double abs(long double x) { return ::fabsl(x); }
+using ::nextafter;
+using ::nextafterf;
+using ::nextafterl;
+using ::nexttoward;
+using ::nexttowardf;
+using ::nexttowardl;
+} // namespace std

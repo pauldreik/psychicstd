@@ -1,0 +1,265 @@
+#pragma once
+#include <algorithm>
+#include <cstddef>
+#include <iterator>
+#include <stdexcept>
+
+namespace std {
+
+template <typename T, size_t N> struct array {
+  using value_type = T;
+  using size_type = size_t;
+  using difference_type = ptrdiff_t;
+  using reference = T&;
+  using const_reference = const T&;
+  using pointer = T*;
+  using const_pointer = const T*;
+  using iterator = T*;
+  using const_iterator = const T*;
+  using reverse_iterator = std::reverse_iterator<iterator>;
+  using const_reverse_iterator = std::reverse_iterator<const_iterator>;
+
+  T data_[N];
+
+  // Element access
+  constexpr reference operator[](size_type i) noexcept { return data_[i]; }
+  constexpr const_reference operator[](size_type i) const noexcept {
+    return data_[i];
+  }
+  constexpr reference at(size_type i) {
+    if (i >= N)
+      throw out_of_range("array::at");
+    return data_[i];
+  }
+  constexpr const_reference at(size_type i) const {
+    if (i >= N)
+      throw out_of_range("array::at");
+    return data_[i];
+  }
+  constexpr reference front() noexcept { return data_[0]; }
+  constexpr const_reference front() const noexcept { return data_[0]; }
+  constexpr reference back() noexcept { return data_[N - 1]; }
+  constexpr const_reference back() const noexcept { return data_[N - 1]; }
+  constexpr T* data() noexcept { return data_; }
+  constexpr const T* data() const noexcept { return data_; }
+
+  // Iterators
+  constexpr iterator begin() noexcept { return data_; }
+  constexpr iterator end() noexcept { return data_ + N; }
+  constexpr const_iterator begin() const noexcept { return data_; }
+  constexpr const_iterator end() const noexcept { return data_ + N; }
+  constexpr const_iterator cbegin() const noexcept { return data_; }
+  constexpr const_iterator cend() const noexcept { return data_ + N; }
+  constexpr reverse_iterator rbegin() noexcept {
+    return reverse_iterator(end());
+  }
+  constexpr reverse_iterator rend() noexcept {
+    return reverse_iterator(begin());
+  }
+  constexpr const_reverse_iterator rbegin() const noexcept {
+    return const_reverse_iterator(end());
+  }
+  constexpr const_reverse_iterator rend() const noexcept {
+    return const_reverse_iterator(begin());
+  }
+  constexpr const_reverse_iterator crbegin() const noexcept {
+    return const_reverse_iterator(cend());
+  }
+  constexpr const_reverse_iterator crend() const noexcept {
+    return const_reverse_iterator(cbegin());
+  }
+
+  // Capacity
+  constexpr bool empty() const noexcept { return N == 0; }
+  constexpr size_type size() const noexcept { return N; }
+  constexpr size_type max_size() const noexcept { return N; }
+
+  constexpr void fill(const T& v) {
+    for (auto& x : *this)
+      x = v;
+  }
+  constexpr void swap(array& o) noexcept {
+    for (size_type i = 0; i < N; ++i)
+      std::swap(data_[i], o.data_[i]);
+  }
+};
+
+// Zero-size specialization.
+// Uses an empty inner struct as the sole aggregate member so that:
+//   array<NoDefault, 0> a;      // OK — _Storage is default-constructible
+//   array<NoDefault, 0> a = {}; // OK
+//   array<NoDefault, 0> a = {{}}; // OK — initializes _storage with {}
+// data()/begin()/end() return a stable non-null pointer into _storage.
+template <typename T> struct array<T, 0> {
+  using value_type = T;
+  using size_type = size_t;
+  using difference_type = ptrdiff_t;
+  using reference = T&;
+  using const_reference = const T&;
+  using pointer = T*;
+  using const_pointer = const T*;
+  using iterator = T*;
+  using const_iterator = const T*;
+  using reverse_iterator = std::reverse_iterator<iterator>;
+  using const_reverse_iterator = std::reverse_iterator<const_iterator>;
+
+  struct _Storage {
+  } _storage; // empty, always default-constructible; allows `= {{}}` init
+
+  constexpr reference operator[](size_type) noexcept {
+    __builtin_unreachable();
+  }
+  constexpr const_reference operator[](size_type) const noexcept {
+    __builtin_unreachable();
+  }
+  constexpr reference at(size_type) { throw out_of_range("array::at"); }
+  constexpr const_reference at(size_type) const {
+    throw out_of_range("array::at");
+  }
+  constexpr reference front() noexcept { __builtin_unreachable(); }
+  constexpr const_reference front() const noexcept { __builtin_unreachable(); }
+  constexpr reference back() noexcept { __builtin_unreachable(); }
+  constexpr const_reference back() const noexcept { __builtin_unreachable(); }
+  constexpr T* data() noexcept { return nullptr; }
+  constexpr const T* data() const noexcept { return nullptr; }
+
+  constexpr iterator begin() noexcept { return nullptr; }
+  constexpr iterator end() noexcept { return nullptr; }
+  constexpr const_iterator begin() const noexcept { return nullptr; }
+  constexpr const_iterator end() const noexcept { return nullptr; }
+  constexpr const_iterator cbegin() const noexcept { return nullptr; }
+  constexpr const_iterator cend() const noexcept { return nullptr; }
+  constexpr reverse_iterator rbegin() noexcept {
+    return reverse_iterator(nullptr);
+  }
+  constexpr reverse_iterator rend() noexcept {
+    return reverse_iterator(nullptr);
+  }
+  constexpr const_reverse_iterator rbegin() const noexcept {
+    return const_reverse_iterator(nullptr);
+  }
+  constexpr const_reverse_iterator rend() const noexcept {
+    return const_reverse_iterator(nullptr);
+  }
+  constexpr const_reverse_iterator crbegin() const noexcept {
+    return const_reverse_iterator(nullptr);
+  }
+  constexpr const_reverse_iterator crend() const noexcept {
+    return const_reverse_iterator(nullptr);
+  }
+
+  constexpr bool empty() const noexcept { return true; }
+  constexpr size_type size() const noexcept { return 0; }
+  constexpr size_type max_size() const noexcept { return 0; }
+
+  constexpr void fill(const T&) noexcept {}
+  constexpr void swap(array&) noexcept {}
+};
+
+// Comparison operators
+template <typename T, size_t N>
+constexpr bool operator==(const array<T, N>& a, const array<T, N>& b) {
+  for (size_t i = 0; i < N; ++i)
+    if (!(a[i] == b[i]))
+      return false;
+  return true;
+}
+template <typename T, size_t N>
+constexpr bool operator!=(const array<T, N>& a, const array<T, N>& b) {
+  return !(a == b);
+}
+template <typename T, size_t N>
+constexpr bool operator<(const array<T, N>& a, const array<T, N>& b) {
+  for (size_t i = 0; i < N; ++i) {
+    if (a[i] < b[i])
+      return true;
+    if (b[i] < a[i])
+      return false;
+  }
+  return false;
+}
+template <typename T, size_t N>
+constexpr bool operator<=(const array<T, N>& a, const array<T, N>& b) {
+  return !(b < a);
+}
+template <typename T, size_t N>
+constexpr bool operator>(const array<T, N>& a, const array<T, N>& b) {
+  return b < a;
+}
+template <typename T, size_t N>
+constexpr bool operator>=(const array<T, N>& a, const array<T, N>& b) {
+  return !(a < b);
+}
+
+// get<I>
+template <size_t I, typename T, size_t N>
+constexpr T& get(array<T, N>& a) noexcept {
+  return a.data_[I];
+}
+template <size_t I, typename T, size_t N>
+constexpr const T& get(const array<T, N>& a) noexcept {
+  return a.data_[I];
+}
+template <size_t I, typename T, size_t N>
+constexpr T&& get(array<T, N>&& a) noexcept {
+  return static_cast<T&&>(a.data_[I]);
+}
+template <size_t I, typename T, size_t N>
+constexpr const T&& get(const array<T, N>&& a) noexcept {
+  return static_cast<const T&&>(a.data_[I]);
+}
+
+// tuple_size / tuple_element — forward declared in <tuple>; specialize here
+template <typename T> struct tuple_size;
+template <size_t I, typename T> struct tuple_element;
+
+template <typename T, size_t N>
+struct tuple_size<array<T, N>> : integral_constant<size_t, N> {};
+template <typename T, size_t N>
+struct tuple_size<const array<T, N>> : integral_constant<size_t, N> {};
+
+template <size_t I, typename T, size_t N> struct tuple_element<I, array<T, N>> {
+  using type = T;
+};
+template <size_t I, typename T, size_t N>
+struct tuple_element<I, const array<T, N>> {
+  using type = const T;
+};
+template <size_t I, typename T, size_t N>
+struct tuple_element<I, volatile array<T, N>> {
+  using type = volatile T;
+};
+template <size_t I, typename T, size_t N>
+struct tuple_element<I, const volatile array<T, N>> {
+  using type = const volatile T;
+};
+
+// CTAD deduction guide: array{1, 2, 3} -> array<int, 3>
+template <typename T, typename... U>
+array(T, U...) -> array<T, 1 + sizeof...(U)>;
+
+// to_array — converts a C array to std::array
+namespace detail {
+template <typename T, size_t N, size_t... I>
+constexpr array<remove_cv_t<T>, N> to_array_impl(T (&a)[N],
+                                                 index_sequence<I...>) {
+  return {{a[I]...}};
+}
+template <typename T, size_t N, size_t... I>
+constexpr array<remove_cv_t<T>, N> to_array_move_impl(T (&&a)[N],
+                                                      index_sequence<I...>) {
+  return {{static_cast<T&&>(a[I])...}};
+}
+} // namespace detail
+
+template <typename T, size_t N>
+constexpr array<remove_cv_t<T>, N> to_array(T (&a)[N]) {
+  return detail::to_array_impl(a, make_index_sequence<N>{});
+}
+template <typename T, size_t N>
+constexpr array<remove_cv_t<T>, N> to_array(T (&&a)[N]) {
+  return detail::to_array_move_impl(static_cast<T(&&)[N]>(a),
+                                    make_index_sequence<N>{});
+}
+
+} // namespace std

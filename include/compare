@@ -1,0 +1,247 @@
+#pragma once
+#include <type_traits>
+
+namespace std {
+
+// Comparison category types (C++20)
+class partial_ordering {
+  int v_;
+  constexpr explicit partial_ordering(int v) noexcept : v_(v) {}
+
+public:
+  static const partial_ordering less;
+  static const partial_ordering equivalent;
+  static const partial_ordering greater;
+  static const partial_ordering unordered;
+
+  friend constexpr bool operator==(partial_ordering v,
+                                   partial_ordering w) noexcept {
+    return v.v_ == w.v_;
+  }
+  friend constexpr bool operator==(partial_ordering v, int) noexcept {
+    return v.v_ == 0;
+  }
+  friend constexpr bool operator<(partial_ordering v, int) noexcept {
+    return v.v_ < 0 && v.v_ != -127;
+  }
+  friend constexpr bool operator>(partial_ordering v, int) noexcept {
+    return v.v_ > 0;
+  }
+  friend constexpr bool operator<=(partial_ordering v, int) noexcept {
+    return v.v_ <= 0 && v.v_ != -127;
+  }
+  friend constexpr bool operator>=(partial_ordering v, int) noexcept {
+    return v.v_ >= 0;
+  }
+  friend constexpr bool operator<(int, partial_ordering v) noexcept {
+    return v.v_ > 0;
+  }
+  friend constexpr bool operator>(int, partial_ordering v) noexcept {
+    return v.v_ < 0 && v.v_ != -127;
+  }
+  friend constexpr bool operator<=(int, partial_ordering v) noexcept {
+    return v.v_ >= 0;
+  }
+  friend constexpr bool operator>=(int, partial_ordering v) noexcept {
+    return v.v_ <= 0 && v.v_ != -127;
+  }
+};
+
+inline constexpr partial_ordering partial_ordering::less(-1);
+inline constexpr partial_ordering partial_ordering::equivalent(0);
+inline constexpr partial_ordering partial_ordering::greater(1);
+inline constexpr partial_ordering partial_ordering::unordered(-127);
+
+class weak_ordering {
+  int v_;
+  constexpr explicit weak_ordering(int v) noexcept : v_(v) {}
+
+public:
+  static const weak_ordering less;
+  static const weak_ordering equivalent;
+  static const weak_ordering greater;
+
+  constexpr operator partial_ordering() const noexcept {
+    return v_ < 0 ? partial_ordering::less
+                  : (v_ > 0 ? partial_ordering::greater
+                            : partial_ordering::equivalent);
+  }
+
+  friend constexpr bool operator==(weak_ordering v, weak_ordering w) noexcept {
+    return v.v_ == w.v_;
+  }
+  friend constexpr bool operator==(weak_ordering v, int) noexcept {
+    return v.v_ == 0;
+  }
+  friend constexpr bool operator<(weak_ordering v, int) noexcept {
+    return v.v_ < 0;
+  }
+  friend constexpr bool operator>(weak_ordering v, int) noexcept {
+    return v.v_ > 0;
+  }
+  friend constexpr bool operator<=(weak_ordering v, int) noexcept {
+    return v.v_ <= 0;
+  }
+  friend constexpr bool operator>=(weak_ordering v, int) noexcept {
+    return v.v_ >= 0;
+  }
+  friend constexpr bool operator<(int, weak_ordering v) noexcept {
+    return v.v_ > 0;
+  }
+  friend constexpr bool operator>(int, weak_ordering v) noexcept {
+    return v.v_ < 0;
+  }
+  friend constexpr bool operator<=(int, weak_ordering v) noexcept {
+    return v.v_ >= 0;
+  }
+  friend constexpr bool operator>=(int, weak_ordering v) noexcept {
+    return v.v_ <= 0;
+  }
+};
+
+inline constexpr weak_ordering weak_ordering::less(-1);
+inline constexpr weak_ordering weak_ordering::equivalent(0);
+inline constexpr weak_ordering weak_ordering::greater(1);
+
+class strong_ordering {
+  int v_;
+  constexpr explicit strong_ordering(int v) noexcept : v_(v) {}
+
+public:
+  static const strong_ordering less;
+  static const strong_ordering equal;
+  static const strong_ordering equivalent;
+  static const strong_ordering greater;
+
+  constexpr operator partial_ordering() const noexcept {
+    return v_ < 0 ? partial_ordering::less
+                  : (v_ > 0 ? partial_ordering::greater
+                            : partial_ordering::equivalent);
+  }
+  constexpr operator weak_ordering() const noexcept {
+    return v_ < 0
+               ? weak_ordering::less
+               : (v_ > 0 ? weak_ordering::greater : weak_ordering::equivalent);
+  }
+
+  friend constexpr bool operator==(strong_ordering v,
+                                   strong_ordering w) noexcept {
+    return v.v_ == w.v_;
+  }
+  friend constexpr bool operator==(strong_ordering v, int) noexcept {
+    return v.v_ == 0;
+  }
+  friend constexpr bool operator<(strong_ordering v, int) noexcept {
+    return v.v_ < 0;
+  }
+  friend constexpr bool operator>(strong_ordering v, int) noexcept {
+    return v.v_ > 0;
+  }
+  friend constexpr bool operator<=(strong_ordering v, int) noexcept {
+    return v.v_ <= 0;
+  }
+  friend constexpr bool operator>=(strong_ordering v, int) noexcept {
+    return v.v_ >= 0;
+  }
+  friend constexpr bool operator<(int, strong_ordering v) noexcept {
+    return v.v_ > 0;
+  }
+  friend constexpr bool operator>(int, strong_ordering v) noexcept {
+    return v.v_ < 0;
+  }
+  friend constexpr bool operator<=(int, strong_ordering v) noexcept {
+    return v.v_ >= 0;
+  }
+  friend constexpr bool operator>=(int, strong_ordering v) noexcept {
+    return v.v_ <= 0;
+  }
+};
+
+inline constexpr strong_ordering strong_ordering::less(-1);
+inline constexpr strong_ordering strong_ordering::equal(0);
+inline constexpr strong_ordering strong_ordering::equivalent(0);
+inline constexpr strong_ordering strong_ordering::greater(1);
+
+// is_eq / is_neq / is_lt / is_gt / is_lteq / is_gteq
+constexpr bool is_eq(partial_ordering v) noexcept { return v == 0; }
+constexpr bool is_neq(partial_ordering v) noexcept { return !(v == 0); }
+constexpr bool is_lt(partial_ordering v) noexcept { return v < 0; }
+constexpr bool is_gt(partial_ordering v) noexcept { return v > 0; }
+constexpr bool is_lteq(partial_ordering v) noexcept { return v <= 0; }
+constexpr bool is_gteq(partial_ordering v) noexcept { return v >= 0; }
+
+// three_way_comparable concept
+template <typename T, typename U = T>
+concept three_way_comparable =
+    requires(const remove_reference_t<T>& a, const remove_reference_t<U>& b) {
+      a <=> b;
+      b <=> a;
+    };
+
+template <typename T, typename U>
+concept three_way_comparable_with =
+    three_way_comparable<T> && three_way_comparable<U> &&
+    requires(const remove_reference_t<T>& t, const remove_reference_t<U>& u) {
+      t <=> u;
+      u <=> t;
+    };
+
+// compare_three_way functor
+struct compare_three_way {
+  template <typename T, typename U>
+  constexpr auto operator()(T&& t, U&& u) const
+      -> decltype(static_cast<T&&>(t) <=> static_cast<U&&>(u)) {
+    return static_cast<T&&>(t) <=> static_cast<U&&>(u);
+  }
+};
+
+// common_comparison_category
+template <typename... Ts> struct common_comparison_category {
+  using type = void;
+};
+template <typename T> struct common_comparison_category<T> {
+  using type = T;
+};
+template <typename A, typename B> struct common_comparison_category<A, B> {
+  using type = conditional_t<
+      is_same_v<A, partial_ordering> || is_same_v<B, partial_ordering>,
+      partial_ordering,
+      conditional_t<is_same_v<A, weak_ordering> || is_same_v<B, weak_ordering>,
+                    weak_ordering, strong_ordering>>;
+};
+template <typename A, typename B, typename... Rest>
+struct common_comparison_category<A, B, Rest...>
+    : common_comparison_category<
+          typename common_comparison_category<A, B>::type, Rest...> {};
+template <typename... Ts>
+using common_comparison_category_t =
+    typename common_comparison_category<Ts...>::type;
+
+// synth_three_way: use <=> if available, else synthesize from < and ==
+namespace __detail {
+template <typename T, typename U>
+concept __spaceship_ok = requires(const T& t, const U& u) { t <=> u; };
+
+template <typename T, typename U>
+concept __synth_less_ok =
+    !__spaceship_ok<T, U> && requires(const T& t, const U& u) {
+      t < u;
+      u < t;
+    };
+
+template <typename T, typename U>
+  requires __spaceship_ok<T, U> || __synth_less_ok<T, U>
+constexpr auto __synth_three_way(const T& t, const U& u) {
+  if constexpr (__spaceship_ok<T, U>)
+    return t <=> u;
+  else {
+    if (t == u)
+      return weak_ordering::equivalent;
+    if (t < u)
+      return weak_ordering::less;
+    return weak_ordering::greater;
+  }
+}
+} // namespace __detail
+
+} // namespace std

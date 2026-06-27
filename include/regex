@@ -1,0 +1,72 @@
+#pragma once
+#include <regex.h>
+#include <string>
+
+namespace std {
+
+class regex {
+public:
+  using flag_type = int;
+  static constexpr flag_type ECMAScript = 0;
+  static constexpr flag_type icase = REG_ICASE;
+  static constexpr flag_type extended = REG_EXTENDED;
+  static constexpr flag_type basic_ = 0;
+
+  regex() : valid_(false) {}
+
+  explicit regex(const string& pattern, flag_type flags = ECMAScript) {
+    int rf = REG_EXTENDED;
+    if (flags & icase)
+      rf |= REG_ICASE;
+    valid_ = (::regcomp(&re_, pattern.c_str(), rf) == 0);
+  }
+  explicit regex(const char* pattern, flag_type flags = ECMAScript) {
+    int rf = REG_EXTENDED;
+    if (flags & icase)
+      rf |= REG_ICASE;
+    valid_ = (::regcomp(&re_, pattern, rf) == 0);
+  }
+
+  ~regex() {
+    if (valid_)
+      ::regfree(&re_);
+  }
+
+  regex(const regex&) = delete;
+  regex& operator=(const regex&) = delete;
+  regex(regex&& o) noexcept : re_(o.re_), valid_(o.valid_) { o.valid_ = false; }
+
+  bool valid() const noexcept { return valid_; }
+
+  const regex_t& native() const noexcept { return re_; }
+
+private:
+  regex_t re_;
+  bool valid_;
+};
+
+// regex_match — full match (anchored to start and end)
+inline bool regex_match(const string& s, const regex& re) {
+  if (!re.valid())
+    return false;
+  regmatch_t m[1];
+  int r = ::regexec(&re.native(), s.c_str(), 1, m, 0);
+  if (r != 0)
+    return false;
+  // Must match the entire string
+  return m[0].rm_so == 0 && (size_t)m[0].rm_eo == s.size();
+}
+
+inline bool regex_match(const char* s, const regex& re) {
+  return regex_match(string(s), re);
+}
+
+// regex_search — partial match
+inline bool regex_search(const string& s, const regex& re) {
+  if (!re.valid())
+    return false;
+  regmatch_t m[1];
+  return ::regexec(&re.native(), s.c_str(), 1, m, 0) == 0;
+}
+
+} // namespace std

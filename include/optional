@@ -1,0 +1,166 @@
+#pragma once
+#include <memory>
+#include <stdexcept>
+#include <type_traits>
+#include <utility>
+
+namespace std {
+
+struct nullopt_t {
+  explicit constexpr nullopt_t(int) noexcept {}
+};
+inline constexpr nullopt_t nullopt{0};
+
+class bad_optional_access : public exception {
+public:
+  bad_optional_access() noexcept = default;
+  const char* what() const noexcept override { return "bad optional access"; }
+};
+
+template <typename T> class optional {
+  union {
+    T val_;
+    char _dummy;
+  };
+  bool has_;
+
+  constexpr T* ptr() noexcept { return addressof(val_); }
+  constexpr const T* ptr() const noexcept { return addressof(val_); }
+
+public:
+  using value_type = T;
+
+  constexpr optional() noexcept : _dummy(0), has_(false) {}
+  constexpr optional(nullopt_t) noexcept : _dummy(0), has_(false) {}
+
+  constexpr optional(const optional& o) : _dummy(0), has_(false) {
+    if (o.has_) {
+      construct_at(ptr(), *o.ptr());
+      has_ = true;
+    }
+  }
+  constexpr optional(optional&& o) noexcept : _dummy(0), has_(false) {
+    if (o.has_) {
+      construct_at(ptr(), move(*o.ptr()));
+      has_ = true;
+      o.reset();
+    }
+  }
+  template <typename U = T>
+    requires(!is_same_v<remove_cvref_t<U>, optional>)
+  constexpr optional(U&& v) : val_(forward<U>(v)), has_(true) {}
+
+  constexpr ~optional() { reset(); }
+
+  constexpr optional& operator=(nullopt_t) noexcept {
+    reset();
+    return *this;
+  }
+  constexpr optional& operator=(const optional& o) {
+    if (&o == this)
+      return *this;
+    if (has_ && o.has_) {
+      val_ = *o.ptr();
+    } else if (o.has_) {
+      construct_at(ptr(), *o.ptr());
+      has_ = true;
+    } else {
+      reset();
+    }
+    return *this;
+  }
+  constexpr optional& operator=(optional&& o) noexcept {
+    if (&o == this)
+      return *this;
+    if (has_ && o.has_) {
+      val_ = move(*o.ptr());
+      o.reset();
+    } else if (o.has_) {
+      construct_at(ptr(), move(*o.ptr()));
+      has_ = true;
+      o.reset();
+    } else {
+      reset();
+    }
+    return *this;
+  }
+
+  constexpr explicit operator bool() const noexcept { return has_; }
+  constexpr bool has_value() const noexcept { return has_; }
+
+  constexpr T& value() {
+    if (!has_)
+      throw bad_optional_access();
+    return val_;
+  }
+  constexpr const T& value() const {
+    if (!has_)
+      throw bad_optional_access();
+    return val_;
+  }
+  constexpr T& operator*() noexcept { return val_; }
+  constexpr const T& operator*() const noexcept { return val_; }
+  constexpr T* operator->() noexcept { return ptr(); }
+  constexpr const T* operator->() const noexcept { return ptr(); }
+
+  template <typename U> constexpr T value_or(U&& u) const& {
+    return has_ ? val_ : static_cast<T>(forward<U>(u));
+  }
+
+  constexpr void reset() noexcept {
+    if (has_) {
+      destroy_at(ptr());
+      has_ = false;
+    }
+  }
+
+  template <typename... Args> constexpr T& emplace(Args&&... args) {
+    reset();
+    construct_at(ptr(), forward<Args>(args)...);
+    has_ = true;
+    return val_;
+  }
+};
+
+template <typename T>
+constexpr bool operator==(const optional<T>& a, const optional<T>& b) {
+  if (a.has_value() != b.has_value())
+    return false;
+  return !a.has_value() || *a == *b;
+}
+template <typename T>
+constexpr bool operator==(const optional<T>& a, nullopt_t) noexcept {
+  return !a.has_value();
+}
+template <typename T>
+constexpr bool operator==(nullopt_t, const optional<T>& b) noexcept {
+  return !b.has_value();
+}
+template <typename T>
+constexpr bool operator!=(const optional<T>& a, const optional<T>& b) {
+  return !(a == b);
+}
+
+// Mixed comparisons: optional<T> vs T
+template <typename T, typename U>
+constexpr bool operator==(const optional<T>& a, const U& b) {
+  return a.has_value() && *a == b;
+}
+template <typename T, typename U>
+constexpr bool operator==(const U& a, const optional<T>& b) {
+  return b.has_value() && a == *b;
+}
+template <typename T, typename U>
+constexpr bool operator!=(const optional<T>& a, const U& b) {
+  return !(a == b);
+}
+template <typename T, typename U>
+constexpr bool operator!=(const U& a, const optional<T>& b) {
+  return !(a == b);
+}
+
+template <typename T> constexpr optional<decay_t<T>> make_optional(T&& v) {
+  return optional<decay_t<T>>(forward<T>(v));
+}
+
+} // namespace std

@@ -1,0 +1,82 @@
+#pragma once
+#include <ios>
+#include <ostream>
+
+namespace std {
+
+// setw
+struct _setw {
+  int n;
+};
+inline _setw setw(int n) { return {n}; }
+template <typename Char, typename Traits>
+basic_ostream<Char, Traits>& operator<<(basic_ostream<Char, Traits>& os,
+                                        _setw m) {
+  os.width(m.n);
+  return os;
+}
+
+// setfill
+template <typename Char> struct _setfill {
+  Char c;
+};
+template <typename Char> _setfill<Char> setfill(Char c) { return {c}; }
+template <typename Char, typename Traits>
+basic_ostream<Char, Traits>& operator<<(basic_ostream<Char, Traits>& os,
+                                        _setfill<Char> m) {
+  os.fill(m.c);
+  return os;
+}
+
+// setprecision
+struct _setprecision {
+  int n;
+};
+inline _setprecision setprecision(int n) { return {n}; }
+template <typename Char, typename Traits>
+basic_ostream<Char, Traits>& operator<<(basic_ostream<Char, Traits>& os,
+                                        _setprecision m) {
+  os.precision(m.n);
+  return os;
+}
+
+// setbase
+struct _setbase {
+  int base;
+};
+inline _setbase setbase(int b) { return {b}; }
+template <typename Char, typename Traits>
+basic_ostream<Char, Traits>& operator<<(basic_ostream<Char, Traits>& os,
+                                        _setbase m) {
+  if (m.base == 8)
+    os.setf(ios_base::oct, ios_base::basefield);
+  else if (m.base == 16)
+    os.setf(ios_base::hex, ios_base::basefield);
+  else
+    os.setf(ios_base::dec, ios_base::basefield);
+  return os;
+}
+
+// setiosflags / resetiosflags
+struct _setiosflags {
+  ios_base::fmtflags mask;
+};
+struct _resetiosflags {
+  ios_base::fmtflags mask;
+};
+inline _setiosflags setiosflags(ios_base::fmtflags m) { return {m}; }
+inline _resetiosflags resetiosflags(ios_base::fmtflags m) { return {m}; }
+template <typename Char, typename Traits>
+basic_ostream<Char, Traits>& operator<<(basic_ostream<Char, Traits>& os,
+                                        _setiosflags m) {
+  os.setf(m.mask);
+  return os;
+}
+template <typename Char, typename Traits>
+basic_ostream<Char, Traits>& operator<<(basic_ostream<Char, Traits>& os,
+                                        _resetiosflags m) {
+  os.unsetf(m.mask);
+  return os;
+}
+
+} // namespace std

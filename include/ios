@@ -1,0 +1,142 @@
+#pragma once
+#include <cstddef>
+#include <iosfwd>
+
+namespace std {
+
+class ios_base {
+public:
+  using fmtflags = unsigned;
+  using iostate = unsigned;
+  using openmode = unsigned;
+  using seekdir = int;
+
+  static constexpr fmtflags dec = 1 << 0;
+  static constexpr fmtflags oct = 1 << 1;
+  static constexpr fmtflags hex = 1 << 2;
+  static constexpr fmtflags left = 1 << 3;
+  static constexpr fmtflags right = 1 << 4;
+  static constexpr fmtflags fixed = 1 << 5;
+  static constexpr fmtflags scientific = 1 << 6;
+  static constexpr fmtflags boolalpha = 1 << 7;
+  static constexpr fmtflags showbase = 1 << 8;
+  static constexpr fmtflags showpoint = 1 << 9;
+  static constexpr fmtflags showpos = 1 << 10;
+  static constexpr fmtflags skipws = 1 << 11;
+  static constexpr fmtflags uppercase = 1 << 12;
+  static constexpr fmtflags adjustfield = left | right;
+  static constexpr fmtflags basefield = dec | oct | hex;
+  static constexpr fmtflags floatfield = fixed | scientific;
+
+  static constexpr iostate goodbit = 0;
+  static constexpr iostate badbit = 1;
+  static constexpr iostate failbit = 2;
+  static constexpr iostate eofbit = 4;
+
+  static constexpr openmode in = 1;
+  static constexpr openmode out = 2;
+  static constexpr openmode app = 4;
+  static constexpr openmode ate = 8;
+  static constexpr openmode trunc = 16;
+  static constexpr openmode binary = 32;
+
+  static constexpr seekdir beg = 0;
+  static constexpr seekdir cur = 1;
+  static constexpr seekdir end = 2;
+
+  fmtflags flags() const noexcept { return flags_; }
+  fmtflags flags(fmtflags f) {
+    fmtflags old = flags_;
+    flags_ = f;
+    return old;
+  }
+  fmtflags setf(fmtflags f) {
+    fmtflags old = flags_;
+    flags_ |= f;
+    return old;
+  }
+  fmtflags setf(fmtflags f, fmtflags mask) {
+    fmtflags old = flags_;
+    flags_ = (flags_ & ~mask) | f;
+    return old;
+  }
+  void unsetf(fmtflags f) { flags_ &= ~f; }
+
+  streamsize width() const noexcept { return width_; }
+  streamsize width(streamsize w) {
+    streamsize old = width_;
+    width_ = w;
+    return old;
+  }
+  streamsize precision() const noexcept { return prec_; }
+  streamsize precision(streamsize p) {
+    streamsize old = prec_;
+    prec_ = p;
+    return old;
+  }
+  char fill() const noexcept { return fill_; }
+  char fill(char c) {
+    char old = fill_;
+    fill_ = c;
+    return old;
+  }
+
+  iostate rdstate() const noexcept { return state_; }
+  bool good() const noexcept { return state_ == goodbit; }
+  bool eof() const noexcept { return state_ & eofbit; }
+  bool fail() const noexcept { return state_ & (failbit | badbit); }
+  bool bad() const noexcept { return state_ & badbit; }
+  explicit operator bool() const noexcept { return !fail(); }
+  bool operator!() const noexcept { return fail(); }
+  void clear(iostate s = goodbit) { state_ = s; }
+  void setstate(iostate s) { state_ |= s; }
+
+protected:
+  ios_base()
+      : flags_(dec | skipws), width_(0), prec_(6), state_(goodbit), fill_(' ') {
+  }
+  ~ios_base() = default;
+  ios_base(const ios_base&) = delete;
+  ios_base& operator=(const ios_base&) = delete;
+
+  fmtflags flags_;
+  streamsize width_;
+  streamsize prec_;
+  iostate state_;
+  char fill_;
+};
+
+template <typename Char, typename Traits> class basic_ios : public ios_base {
+public:
+  using char_type = Char;
+  using traits_type = Traits;
+  using int_type = typename Traits::int_type;
+  using off_type = typename Traits::off_type;
+  using pos_type = typename Traits::pos_type;
+
+  basic_streambuf<Char, Traits>* rdbuf() const noexcept { return buf_; }
+  basic_streambuf<Char, Traits>* rdbuf(basic_streambuf<Char, Traits>* sb) {
+    auto* old = buf_;
+    buf_ = sb;
+    return old;
+  }
+
+  // Copy formatting state from another stream
+  basic_ios& copyfmt(const basic_ios& rhs) {
+    if (this != &rhs) {
+      flags_ = rhs.flags_;
+      width_ = rhs.width_;
+      prec_ = rhs.prec_;
+      fill_ = rhs.fill_;
+    }
+    return *this;
+  }
+
+protected:
+  basic_ios() : buf_(nullptr) {}
+  void init(basic_streambuf<Char, Traits>* sb) { buf_ = sb; }
+
+  basic_streambuf<Char, Traits>* buf_;
+};
+
+} // namespace std

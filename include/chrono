@@ -1,0 +1,240 @@
+#pragma once
+#include <cstdint>
+#include <ctime>
+#include <ratio>
+#include <time.h>
+#include <type_traits>
+// For common_type deduction of Rep types (e.g. long long + int → long long).
+// We use decltype(d1.count() + d2.count()) instead of std::common_type to keep
+// things self-contained.
+
+namespace std::chrono {
+
+template <typename Rep, typename Period = ratio<1>> class duration {
+public:
+  using rep = Rep;
+  using period = Period;
+
+  constexpr duration() = default;
+  constexpr explicit duration(Rep v) : rep_(v) {}
+  template <typename Rep2, typename Period2>
+  constexpr duration(const duration<Rep2, Period2>& d)
+      : rep_(static_cast<Rep>(d.count() * Period2::num * Period::den /
+                              (Period2::den * Period::num))) {}
+
+  constexpr Rep count() const noexcept { return rep_; }
+  constexpr duration operator+() const { return *this; }
+  constexpr duration operator-() const { return duration(-rep_); }
+  constexpr duration& operator+=(const duration& d) {
+    rep_ += d.rep_;
+    return *this;
+  }
+  constexpr duration& operator-=(const duration& d) {
+    rep_ -= d.rep_;
+    return *this;
+  }
+  constexpr duration& operator*=(Rep r) {
+    rep_ *= r;
+    return *this;
+  }
+  constexpr duration& operator/=(Rep r) {
+    rep_ /= r;
+    return *this;
+  }
+
+  static constexpr duration zero() { return duration(0); }
+  static constexpr duration min() {
+    return duration(Rep(-1) < Rep(0) ? Rep(-1) << (sizeof(Rep) * 8 - 1)
+                                     : Rep(0));
+  }
+  static constexpr duration max() {
+    return duration(Rep(-1) < Rep(0) ? ~(Rep(-1) << (sizeof(Rep) * 8 - 1))
+                                     : Rep(-1));
+  }
+
+private:
+  Rep rep_{};
+};
+
+// Cross-period arithmetic and comparison: convert both operands to the common
+// duration (ratio_gcd period, wider rep) before comparing or combining.
+template <typename R1, typename P1, typename R2, typename P2>
+constexpr bool operator==(const duration<R1, P1>& a,
+                          const duration<R2, P2>& b) {
+  using CD =
+      duration<decltype(declval<R1>() + declval<R2>()), ratio_gcd<P1, P2>>;
+  return CD(a).count() == CD(b).count();
+}
+template <typename R1, typename P1, typename R2, typename P2>
+constexpr bool operator<(const duration<R1, P1>& a, const duration<R2, P2>& b) {
+  using CD =
+      duration<decltype(declval<R1>() + declval<R2>()), ratio_gcd<P1, P2>>;
+  return CD(a).count() < CD(b).count();
+}
+template <typename R1, typename P1, typename R2, typename P2>
+constexpr bool operator!=(const duration<R1, P1>& a,
+                          const duration<R2, P2>& b) {
+  return !(a == b);
+}
+template <typename R1, typename P1, typename R2, typename P2>
+constexpr bool operator<=(const duration<R1, P1>& a,
+                          const duration<R2, P2>& b) {
+  return !(b < a);
+}
+template <typename R1, typename P1, typename R2, typename P2>
+constexpr bool operator>(const duration<R1, P1>& a, const duration<R2, P2>& b) {
+  return b < a;
+}
+template <typename R1, typename P1, typename R2, typename P2>
+constexpr bool operator>=(const duration<R1, P1>& a,
+                          const duration<R2, P2>& b) {
+  return !(a < b);
+}
+
+template <typename R1, typename P1, typename R2, typename P2>
+constexpr auto operator+(const duration<R1, P1>& a, const duration<R2, P2>& b) {
+  using CD =
+      duration<decltype(declval<R1>() + declval<R2>()), ratio_gcd<P1, P2>>;
+  return CD(CD(a).count() + CD(b).count());
+}
+template <typename R1, typename P1, typename R2, typename P2>
+constexpr auto operator-(const duration<R1, P1>& a, const duration<R2, P2>& b) {
+  using CD =
+      duration<decltype(declval<R1>() - declval<R2>()), ratio_gcd<P1, P2>>;
+  return CD(CD(a).count() - CD(b).count());
+}
+template <typename Rep, typename Period, typename Scalar>
+constexpr duration<Rep, Period> operator*(const duration<Rep, Period>& d,
+                                          Scalar s) {
+  return duration<Rep, Period>(static_cast<Rep>(d.count() * s));
+}
+template <typename Scalar, typename Rep, typename Period>
+constexpr duration<Rep, Period> operator*(Scalar s,
+                                          const duration<Rep, Period>& d) {
+  return d * s;
+}
+template <typename Rep, typename Period, typename Scalar>
+constexpr duration<Rep, Period> operator/(const duration<Rep, Period>& d,
+                                          Scalar s) {
+  return duration<Rep, Period>(static_cast<Rep>(d.count() / s));
+}
+template <typename R1, typename P1, typename R2, typename P2>
+constexpr auto operator/(const duration<R1, P1>& a, const duration<R2, P2>& b) {
+  return a.count() / b.count();
+}
+
+template <typename ToDur, typename Rep, typename Period>
+constexpr ToDur duration_cast(const duration<Rep, Period>& d) {
+  using ToRep = typename ToDur::rep;
+  using ToPer = typename ToDur::period;
+  // scale = Period / ToPer = Period::num * ToPer::den / (Period::den *
+  // ToPer::num)
+  constexpr auto num = Period::num * ToPer::den;
+  constexpr auto den = Period::den * ToPer::num;
+  return ToDur(static_cast<ToRep>(d.count() * num / den));
+}
+
+using nanoseconds = duration<long long, nano>;
+using microseconds = duration<long long, micro>;
+using milliseconds = duration<long long, milli>;
+using seconds = duration<long long>;
+using minutes = duration<int, ratio<60>>;
+using hours = duration<int, ratio<3600>>;
+using days = duration<int, ratio<86400>>;
+
+template <typename Clock, typename Duration = typename Clock::duration>
+class time_point {
+public:
+  using clock = Clock;
+  using duration = Duration;
+  using rep = typename Duration::rep;
+  using period = typename Duration::period;
+
+  constexpr time_point() = default;
+  constexpr explicit time_point(const Duration& d) : d_(d) {}
+  template <typename Duration2>
+  constexpr time_point(const time_point<Clock, Duration2>& t)
+      : d_(t.time_since_epoch()) {}
+
+  constexpr Duration time_since_epoch() const { return d_; }
+
+  constexpr time_point& operator+=(const Duration& d) {
+    d_ += d;
+    return *this;
+  }
+  constexpr time_point& operator-=(const Duration& d) {
+    d_ -= d;
+    return *this;
+  }
+
+  static constexpr time_point min() { return time_point(Duration::min()); }
+  static constexpr time_point max() { return time_point(Duration::max()); }
+
+private:
+  Duration d_{};
+};
+
+template <typename C, typename D1, typename D2>
+constexpr auto operator-(const time_point<C, D1>& a,
+                         const time_point<C, D2>& b) {
+  return a.time_since_epoch() - b.time_since_epoch();
+}
+template <typename C, typename D, typename R, typename P>
+constexpr time_point<C, D> operator+(const time_point<C, D>& tp,
+                                     const duration<R, P>& d) {
+  return time_point<C, D>(tp.time_since_epoch() + d);
+}
+
+template <typename ToDur, typename Clock, typename Dur>
+constexpr time_point<Clock, ToDur>
+time_point_cast(const time_point<Clock, Dur>& tp) {
+  return time_point<Clock, ToDur>(duration_cast<ToDur>(tp.time_since_epoch()));
+}
+
+template <typename C, typename D>
+constexpr bool operator==(const time_point<C, D>& a,
+                          const time_point<C, D>& b) {
+  return a.time_since_epoch() == b.time_since_epoch();
+}
+template <typename C, typename D>
+constexpr bool operator<(const time_point<C, D>& a, const time_point<C, D>& b) {
+  return a.time_since_epoch() < b.time_since_epoch();
+}
+
+// Clocks
+struct system_clock {
+  using duration = nanoseconds;
+  using rep = duration::rep;
+  using period = duration::period;
+  using time_point = chrono::time_point<system_clock>;
+  static constexpr bool is_steady = false;
+  static time_point now() noexcept {
+    struct timespec ts;
+    clock_gettime(CLOCK_REALTIME, &ts);
+    return time_point(duration(ts.tv_sec * 1000000000LL + ts.tv_nsec));
+  }
+  static time_t to_time_t(const time_point& tp) noexcept {
+    return static_cast<time_t>(
+        duration_cast<seconds>(tp.time_since_epoch()).count());
+  }
+  static time_point from_time_t(time_t t) noexcept {
+    return time_point(duration(static_cast<long long>(t) * 1000000000LL));
+  }
+};
+
+struct steady_clock {
+  using duration = nanoseconds;
+  using rep = duration::rep;
+  using period = duration::period;
+  using time_point = chrono::time_point<steady_clock>;
+  static constexpr bool is_steady = true;
+  static time_point now() noexcept {
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return time_point(duration(ts.tv_sec * 1000000000LL + ts.tv_nsec));
+  }
+};
+
+using high_resolution_clock = steady_clock;
+
+} // namespace std::chrono

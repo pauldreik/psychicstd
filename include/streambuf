@@ -1,0 +1,98 @@
+#pragma once
+#include <cstddef>
+#include <iosfwd>
+
+namespace std {
+
+template <typename Char, typename Traits> class basic_streambuf {
+public:
+  using char_type = Char;
+  using traits_type = Traits;
+  using int_type = typename Traits::int_type;
+
+  virtual ~basic_streambuf() = default;
+
+  // --- Put area ---
+  char_type* pbase() const noexcept { return pbase_; }
+  char_type* pptr() const noexcept { return pptr_; }
+  char_type* epptr() const noexcept { return epptr_; }
+
+  void pbump(int n) noexcept { pptr_ += n; }
+
+  // write n chars to put area
+  streamsize sputn(const char_type* s, streamsize n) { return xsputn(s, n); }
+
+  int_type sputc(char_type c) {
+    if (pptr_ < epptr_) {
+      *pptr_++ = c;
+      return traits_type::to_int_type(c);
+    }
+    return overflow(traits_type::to_int_type(c));
+  }
+
+  // --- Get area ---
+  char_type* eback() const noexcept { return eback_; }
+  char_type* gptr() const noexcept { return gptr_; }
+  char_type* egptr() const noexcept { return egptr_; }
+
+  void gbump(int n) noexcept { gptr_ += n; }
+
+  int_type sgetc() {
+    if (gptr_ < egptr_)
+      return traits_type::to_int_type(*gptr_++);
+    return underflow();
+  }
+
+  // --- Sync ---
+  int pubsync() { return sync(); }
+
+protected:
+  basic_streambuf() noexcept
+      : pbase_(nullptr), pptr_(nullptr), epptr_(nullptr), eback_(nullptr),
+        gptr_(nullptr), egptr_(nullptr) {}
+
+  void setp(char_type* pbeg, char_type* pend) noexcept {
+    pbase_ = pbeg;
+    pptr_ = pbeg;
+    epptr_ = pend;
+  }
+  void setg(char_type* gbeg, char_type* gcurr, char_type* gend) noexcept {
+    eback_ = gbeg;
+    gptr_ = gcurr;
+    egptr_ = gend;
+  }
+
+  // Virtual hooks — subclasses override these
+  virtual int_type overflow(int_type c = traits_type::eof()) {
+    // default: unbuffered, every call is a failure
+    (void)c;
+    return traits_type::eof();
+  }
+
+  virtual int_type underflow() { return traits_type::eof(); }
+
+  virtual streamsize xsputn(const char_type* s, streamsize n) {
+    streamsize written = 0;
+    while (n-- > 0) {
+      if (sputc(*s++) == traits_type::eof())
+        break;
+      ++written;
+    }
+    return written;
+  }
+
+  virtual int sync() { return 0; }
+
+private:
+  char_type* pbase_;
+  char_type* pptr_;
+  char_type* epptr_;
+  char_type* eback_;
+  char_type* gptr_;
+  char_type* egptr_;
+};
+
+using streambuf = basic_streambuf<char, char_traits<char>>;
+using wstreambuf = basic_streambuf<wchar_t, char_traits<wchar_t>>;
+
+} // namespace std

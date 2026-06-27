@@ -1,0 +1,155 @@
+#pragma once
+#include <concepts>
+#include <iterator>
+#include <type_traits>
+#include <utility>
+
+namespace std::ranges {
+
+// -- CPOs: begin / end -------------------------------------------------------
+namespace __detail {
+struct __begin_fn {
+  template <typename R> constexpr auto operator()(R&& r) const {
+    return r.begin();
+  }
+  template <typename T, size_t N>
+  constexpr T* operator()(T (&a)[N]) const noexcept {
+    return a;
+  }
+};
+struct __end_fn {
+  template <typename R> constexpr auto operator()(R&& r) const {
+    return r.end();
+  }
+  template <typename T, size_t N>
+  constexpr T* operator()(T (&a)[N]) const noexcept {
+    return a + N;
+  }
+};
+struct __size_fn {
+  template <typename R> constexpr auto operator()(R&& r) const {
+    return r.size();
+  }
+};
+// Poison pill to prevent recursive ADL in __iter_move_fn
+void iter_move() = delete;
+void iter_swap() = delete;
+
+template <typename I>
+concept __has_adl_iter_move =
+    requires(I&& i) { iter_move(static_cast<I&&>(i)); };
+
+template <typename I>
+concept __has_adl_iter_swap = requires(I&& a, I&& b) {
+  iter_swap(static_cast<I&&>(a), static_cast<I&&>(b));
+};
+
+struct __iter_move_fn {
+  template <typename I> constexpr auto operator()(I&& i) const {
+    if constexpr (__has_adl_iter_move<I&&>) {
+      return iter_move(static_cast<I&&>(i));
+    } else {
+      return std::move(*i);
+    }
+  }
+};
+struct __iter_swap_fn {
+  template <typename I1, typename I2>
+  constexpr void operator()(I1&& a, I2&& b) const {
+    if constexpr (__has_adl_iter_swap<I1&&>) {
+      iter_swap(static_cast<I1&&>(a), static_cast<I2&&>(b));
+    } else {
+      auto tmp = std::move(*a);
+      *a = std::move(*b);
+      *b = std::move(tmp);
+    }
+  }
+};
+} // namespace __detail
+
+inline constexpr __detail::__begin_fn begin{};
+inline constexpr __detail::__end_fn end{};
+inline constexpr __detail::__size_fn size{};
+inline constexpr __detail::__iter_move_fn iter_move{};
+inline constexpr __detail::__iter_swap_fn iter_swap{};
+
+// -- Concepts ----------------------------------------------------------------
+template <typename T>
+concept range = requires(T& t) {
+  std::ranges::begin(t);
+  std::ranges::end(t);
+};
+
+template <typename T>
+concept borrowed_range = range<T>;
+
+template <typename T>
+concept sized_range = range<T> && requires(T& t) { std::ranges::size(t); };
+
+template <typename T>
+concept input_range = range<T>;
+
+template <typename T>
+concept forward_range = range<T>;
+
+template <typename T>
+concept bidirectional_range = range<T>;
+
+template <typename T>
+concept random_access_range = range<T>;
+
+template <typename T>
+concept contiguous_range = range<T>;
+
+template <typename T>
+concept common_range = range<T>;
+
+template <typename T>
+concept output_range = range<T>;
+
+// view: a range that is semiregular
+template <typename T>
+concept view = range<T> && std::movable<T>;
+
+template <typename R>
+concept viewable_range = range<R> && (view<std::remove_cvref_t<R>> || true);
+
+// range_value_t etc.
+template <typename R>
+using iterator_t = decltype(std::ranges::begin(std::declval<R&>()));
+
+template <typename R>
+using sentinel_t = decltype(std::ranges::end(std::declval<R&>()));
+
+template <typename I>
+using iter_value_t = typename std::iterator_traits<I>::value_type;
+
+template <typename I>
+using iter_reference_t = typename std::iterator_traits<I>::reference;
+
+template <typename R> using range_value_t = iter_value_t<iterator_t<R>>;
+
+template <typename R> using range_reference_t = iter_reference_t<iterator_t<R>>;
+
+// enable_view
+template <typename T> inline constexpr bool enable_view = false;
+
+// view_base
+struct view_base {};
+
+} // namespace std::ranges
+
+namespace std::views {
+
+// all_t: for simplicity, wraps R as-is (our ranges are all "view-like" for test
+// purposes)
+template <typename R> using all_t = std::remove_cvref_t<R>;
+
+struct __all_fn {
+  template <typename R> constexpr auto operator()(R&& r) const noexcept -> R&& {
+    return static_cast<R&&>(r);
+  }
+};
+inline constexpr __all_fn all{};
+
+} // namespace std::views

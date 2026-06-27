@@ -1,0 +1,889 @@
+#pragma once
+#include <compare>
+#include <cstddef>
+#include <initializer_list>
+#include <iterator>
+#include <memory>
+#include <new>
+#include <stdexcept>
+#include <type_traits>
+#include <utility>
+
+namespace std {
+
+// Minimal contiguous iterator wrapper.
+// Wrapping T* allows pre/post decrement on rvalues (e.g. --v.end()),
+// which raw pointer rvalues do not support.
+template <typename T> struct __vec_iter {
+  using difference_type = ptrdiff_t;
+  using value_type = remove_cv_t<T>;
+  using pointer = T*;
+  using reference = T&;
+  using iterator_category = random_access_iterator_tag;
+  using iterator_concept = contiguous_iterator_tag;
+
+  T* ptr_;
+
+  constexpr __vec_iter() noexcept : ptr_(nullptr) {}
+  constexpr explicit __vec_iter(T* p) noexcept : ptr_(p) {}
+  // Allow iterator → const_iterator conversion
+  template <typename U>
+    requires(is_same_v<U, remove_cv_t<T>>)
+  constexpr __vec_iter(const __vec_iter<U>& o) noexcept : ptr_(o.ptr_) {}
+
+  constexpr T& operator*() const noexcept { return *ptr_; }
+  constexpr T* operator->() const noexcept { return ptr_; }
+  constexpr T& operator[](ptrdiff_t n) const noexcept { return ptr_[n]; }
+
+  constexpr __vec_iter& operator++() noexcept {
+    ++ptr_;
+    return *this;
+  }
+  constexpr __vec_iter operator++(int) noexcept {
+    auto t = *this;
+    ++ptr_;
+    return t;
+  }
+  constexpr __vec_iter& operator--() noexcept {
+    --ptr_;
+    return *this;
+  }
+  constexpr __vec_iter operator--(int) noexcept {
+    auto t = *this;
+    --ptr_;
+    return t;
+  }
+  constexpr __vec_iter& operator+=(ptrdiff_t n) noexcept {
+    ptr_ += n;
+    return *this;
+  }
+  constexpr __vec_iter& operator-=(ptrdiff_t n) noexcept {
+    ptr_ -= n;
+    return *this;
+  }
+  constexpr __vec_iter operator+(ptrdiff_t n) const noexcept {
+    return __vec_iter{ptr_ + n};
+  }
+  constexpr __vec_iter operator-(ptrdiff_t n) const noexcept {
+    return __vec_iter{ptr_ - n};
+  }
+
+  template <typename U>
+  constexpr ptrdiff_t operator-(const __vec_iter<U>& o) const noexcept {
+    return ptr_ - o.ptr_;
+  }
+  template <typename U>
+  constexpr bool operator==(const __vec_iter<U>& o) const noexcept {
+    return ptr_ == o.ptr_;
+  }
+  template <typename U>
+  constexpr bool operator!=(const __vec_iter<U>& o) const noexcept {
+    return ptr_ != o.ptr_;
+  }
+  template <typename U>
+  constexpr bool operator<(const __vec_iter<U>& o) const noexcept {
+    return ptr_ < o.ptr_;
+  }
+  template <typename U>
+  constexpr bool operator<=(const __vec_iter<U>& o) const noexcept {
+    return ptr_ <= o.ptr_;
+  }
+  template <typename U>
+  constexpr bool operator>(const __vec_iter<U>& o) const noexcept {
+    return ptr_ > o.ptr_;
+  }
+  template <typename U>
+  constexpr bool operator>=(const __vec_iter<U>& o) const noexcept {
+    return ptr_ >= o.ptr_;
+  }
+
+  // Implicit conversion to raw pointer for compatibility with data()/pointer
+  // arithmetic
+  constexpr operator T*() const noexcept { return ptr_; }
+
+  // base(): returns raw pointer (for algorithms that need it)
+  constexpr T* base() const noexcept { return ptr_; }
+};
+
+template <typename T>
+constexpr __vec_iter<T> operator+(ptrdiff_t n,
+                                  const __vec_iter<T>& it) noexcept {
+  return __vec_iter<T>{it.ptr_ + n};
+}
+
+// Uniform constexpr strategy: GCC 12 special-cases std::allocator<T> (in std
+// namespace) so that allocate/deallocate + construct_at/destroy_at are all
+// constexpr-capable. This allows a single code path for both constexpr and
+// runtime contexts.
+
+template <typename T, typename Alloc = allocator<T>> class vector {
+public:
+  // Types first so they're visible throughout the class body
+  using value_type = T;
+  using allocator_type = Alloc;
+  using size_type = size_t;
+  using difference_type = ptrdiff_t;
+  using reference = T&;
+  using const_reference = const T&;
+  using pointer = T*;
+  using const_pointer = const T*;
+  using iterator = __vec_iter<T>;
+  using const_iterator = __vec_iter<const T>;
+  using reverse_iterator = std::reverse_iterator<iterator>;
+  using const_reverse_iterator = std::reverse_iterator<const_iterator>;
+
+private:
+  T* data_;
+  size_type size_;
+  size_type cap_;
+  [[no_unique_address]] Alloc alloc_;
+
+  // Internal helpers
+
+  // Always use std::allocator<T> for raw memory. We store alloc_ to honour
+  // get_allocator(), POCCA/POCMA/POCS, and
+  // select_on_container_copy_construction, but we don't route memory through it
+  // because custom allocators often use fancy pointer types (e.g. min_pointer)
+  // that we can't reconstruct after converting to T*. GCC 12 special-cases
+  // std::allocator<T> (in namespace std) so that its allocate/deallocate are
+  // constexpr-capable.
+  constexpr T* _alloc_mem(size_type n) { return allocator<T>{}.allocate(n); }
+  constexpr void _free_mem(T* p, size_type n) noexcept {
+    if (p)
+      allocator<T>{}.deallocate(p, n);
+  }
+  template <typename... Args> constexpr void _construct(T* p, Args&&... args) {
+    allocator_traits<Alloc>::construct(alloc_, p, forward<Args>(args)...);
+  }
+  constexpr void _destroy(T* p) noexcept {
+    allocator_traits<Alloc>::destroy(alloc_, p);
+  }
+  constexpr void _destroy_all() noexcept {
+    for (size_type i = 0; i < size_; ++i)
+      _destroy(data_ + i);
+  }
+
+  constexpr void _grow() {
+    if (size_ < cap_)
+      return;
+    reserve(cap_ ? cap_ * 2 : 4);
+  }
+
+  // Shift elements [idx, size_) right by n positions.
+  // Slots [size_, cap_) are raw; slots [0, size_) are live objects.
+  constexpr void _shift_right(size_type idx, size_type n) {
+    for (size_type i = size_; i-- > idx;) {
+      if (i + n >= size_)
+        _construct(data_ + i + n, move(data_[i])); // raw slot: construct_at
+      else
+        data_[i + n] = move(data_[i]); // live slot: move-assign
+    }
+  }
+
+  // Shift elements [from, size_) left by n positions.
+  constexpr void _shift_left(size_type from, size_type n) {
+    for (size_type i = from; i < size_; ++i)
+      data_[i - n] = move(data_[i]);
+  }
+
+  constexpr void _grow_and_shift(size_type idx, size_type n) {
+    if (size_ + n > cap_) {
+      size_type nc = cap_ ? cap_ * 2 : 4;
+      while (nc < size_ + n)
+        nc *= 2;
+      reserve(nc);
+    }
+    _shift_right(idx, n);
+  }
+  constexpr void _reserve_and_shift(size_type idx, size_type n) {
+    reserve(size_ + n);
+    _shift_right(idx, n);
+  }
+
+  // Copy-assign src[0..n) into *this, reusing existing capacity where possible.
+  constexpr void _assign_copy(const T* src, size_type n) {
+    if (n <= cap_) {
+      size_type mn = (size_ < n) ? size_ : n;
+      for (size_type i = 0; i < mn; ++i)
+        data_[i] = src[i];
+      for (size_type i = size_; i < n; ++i)
+        _construct(data_ + i, src[i]);
+      for (size_type i = n; i < size_; ++i)
+        _destroy(data_ + i);
+      size_ = n;
+    } else {
+      _destroy_all();
+      _free_mem(data_, cap_);
+      data_ = nullptr;
+      size_ = 0;
+      cap_ = 0;
+      if (n) {
+        data_ = _alloc_mem(n);
+        for (size_type i = 0; i < n; ++i)
+          _construct(data_ + i, src[i]);
+        size_ = n;
+        cap_ = n;
+      }
+    }
+  }
+
+  // Range initialization: for forward-or-better iterators, count then
+  // pre-allocate (avoids growth/moves, needed for non-movable types like
+  // EmplaceConstructible). For input iterators, fall back to emplace_back one
+  // at a time.
+  template <typename It> constexpr void _range_init(It first, It last) {
+    // Use iterator_traits which handles raw pointers too
+    if constexpr (requires {
+                    typename iterator_traits<It>::iterator_category;
+                  } &&
+                  is_base_of_v<
+                      forward_iterator_tag,
+                      typename iterator_traits<It>::iterator_category>) {
+      size_type n = 0;
+      for (auto it = first; it != last; ++it)
+        ++n;
+      if (n) {
+        data_ = _alloc_mem(n);
+        size_type i = 0;
+        for (auto it = first; it != last; ++it) {
+          _construct(data_ + i, *it);
+          ++i;
+        }
+        size_ = n;
+        cap_ = n;
+      }
+    } else {
+      for (auto it = first; it != last; ++it)
+        emplace_back(*it);
+    }
+  }
+
+  // Undo a _shift_right(idx, n) after i elements at [idx, idx+i) have been
+  // destroyed. Restores the vector to its pre-shift state.
+  constexpr void _undo_shift(size_type idx, size_type n, size_type i) noexcept {
+    if (idx >= size_)
+      return; // insert-at-end: no shift was done
+    // Restore [idx, size_) from [idx+n, size_+n)
+    // [idx, idx+i): just destroyed → use construct_at
+    for (size_type j = 0; j < i; ++j)
+      construct_at(data_ + idx + j, move(data_[idx + j + n]));
+    // [idx+i, size_): still live moved-from → use move-assign
+    for (size_type j = i; j + idx < size_; ++j)
+      data_[idx + j] = move(data_[idx + j + n]);
+    // Destroy construct_at'd elements at [size_, size_+n)
+    for (size_type j = 0; j < n; ++j)
+      _destroy(data_ + size_ + j);
+  }
+
+public:
+  // Constructors
+
+  constexpr vector() noexcept(is_nothrow_default_constructible_v<Alloc>)
+      : data_(nullptr), size_(0), cap_(0), alloc_() {}
+
+  constexpr explicit vector(const Alloc& a) noexcept
+      : data_(nullptr), size_(0), cap_(0), alloc_(a) {}
+
+  constexpr explicit vector(size_type n)
+      : data_(nullptr), size_(0), cap_(0), alloc_() {
+    if (n) {
+      data_ = _alloc_mem(n);
+      for (size_type i = 0; i < n; ++i)
+        _construct(data_ + i);
+      size_ = n;
+      cap_ = n;
+    }
+  }
+  constexpr vector(size_type n, const Alloc& a)
+      : data_(nullptr), size_(0), cap_(0), alloc_(a) {
+    if (n) {
+      data_ = _alloc_mem(n);
+      for (size_type i = 0; i < n; ++i)
+        _construct(data_ + i);
+      size_ = n;
+      cap_ = n;
+    }
+  }
+
+  constexpr vector(size_type n, const T& val)
+      : data_(nullptr), size_(0), cap_(0), alloc_() {
+    if (n) {
+      data_ = _alloc_mem(n);
+      for (size_type i = 0; i < n; ++i)
+        _construct(data_ + i, val);
+      size_ = n;
+      cap_ = n;
+    }
+  }
+  constexpr vector(size_type n, const T& val, const Alloc& a)
+      : data_(nullptr), size_(0), cap_(0), alloc_(a) {
+    if (n) {
+      data_ = _alloc_mem(n);
+      for (size_type i = 0; i < n; ++i)
+        _construct(data_ + i, val);
+      size_ = n;
+      cap_ = n;
+    }
+  }
+
+  constexpr vector(const vector& o)
+      : data_(nullptr), size_(0), cap_(0),
+        alloc_(allocator_traits<Alloc>::select_on_container_copy_construction(
+            o.alloc_)) {
+    if (o.size_) {
+      data_ = _alloc_mem(o.size_);
+      for (size_type i = 0; i < o.size_; ++i)
+        _construct(data_ + i, o.data_[i]);
+      size_ = o.size_;
+      cap_ = o.size_;
+    }
+  }
+  constexpr vector(const vector& o, const Alloc& a)
+      : data_(nullptr), size_(0), cap_(0), alloc_(a) {
+    if (o.size_) {
+      data_ = _alloc_mem(o.size_);
+      for (size_type i = 0; i < o.size_; ++i)
+        _construct(data_ + i, o.data_[i]);
+      size_ = o.size_;
+      cap_ = o.size_;
+    }
+  }
+
+  constexpr vector(vector&& o) noexcept
+      : data_(o.data_), size_(o.size_), cap_(o.cap_), alloc_(move(o.alloc_)) {
+    o.data_ = nullptr;
+    o.size_ = 0;
+    o.cap_ = 0;
+  }
+  constexpr vector(vector&& o, const Alloc& a)
+      : data_(nullptr), size_(0), cap_(0), alloc_(a) {
+    if (a == o.alloc_) {
+      data_ = o.data_;
+      size_ = o.size_;
+      cap_ = o.cap_;
+      o.data_ = nullptr;
+      o.size_ = 0;
+      o.cap_ = 0;
+    } else {
+      if (o.size_) {
+        data_ = _alloc_mem(o.size_);
+        for (size_type i = 0; i < o.size_; ++i)
+          _construct(data_ + i, move(o.data_[i]));
+        size_ = o.size_;
+        cap_ = o.size_;
+      }
+    }
+  }
+
+  constexpr vector(std::initializer_list<T> il)
+      : data_(nullptr), size_(0), cap_(0), alloc_() {
+    if (il.size()) {
+      data_ = _alloc_mem(il.size());
+      size_type i = 0;
+      for (const T& v : il)
+        _construct(data_ + i++, v);
+      size_ = il.size();
+      cap_ = il.size();
+    }
+  }
+  constexpr vector(std::initializer_list<T> il, const Alloc& a)
+      : data_(nullptr), size_(0), cap_(0), alloc_(a) {
+    if (il.size()) {
+      data_ = _alloc_mem(il.size());
+      size_type i = 0;
+      for (const T& v : il)
+        _construct(data_ + i++, v);
+      size_ = il.size();
+      cap_ = il.size();
+    }
+  }
+
+  template <typename It>
+    requires(!is_integral_v<It>)
+  constexpr vector(It first, It last)
+      : data_(nullptr), size_(0), cap_(0), alloc_() {
+    _range_init(first, last);
+  }
+  template <typename It>
+    requires(!is_integral_v<It>)
+  constexpr vector(It first, It last, const Alloc& a)
+      : data_(nullptr), size_(0), cap_(0), alloc_(a) {
+    _range_init(first, last);
+  }
+
+  constexpr ~vector() noexcept {
+    _destroy_all();
+    _free_mem(data_, cap_);
+  }
+
+  constexpr vector& operator=(const vector& o) {
+    if (this == &o)
+      return *this;
+    using traits = allocator_traits<Alloc>;
+    if constexpr (traits::propagate_on_container_copy_assignment::value) {
+      if (alloc_ != o.alloc_) {
+        _destroy_all();
+        _free_mem(data_, cap_);
+        data_ = nullptr;
+        size_ = 0;
+        cap_ = 0;
+      }
+      alloc_ = o.alloc_;
+    }
+    _assign_copy(o.data_, o.size_);
+    return *this;
+  }
+
+  constexpr vector& operator=(vector&& o) noexcept(
+      allocator_traits<Alloc>::propagate_on_container_move_assignment::value ||
+      allocator_traits<Alloc>::is_always_equal::value) {
+    if (this == &o)
+      return *this;
+    using traits = allocator_traits<Alloc>;
+    if constexpr (traits::propagate_on_container_move_assignment::value) {
+      _destroy_all();
+      _free_mem(data_, cap_);
+      data_ = o.data_;
+      size_ = o.size_;
+      cap_ = o.cap_;
+      alloc_ = move(o.alloc_);
+      o.data_ = nullptr;
+      o.size_ = 0;
+      o.cap_ = 0;
+    } else if (alloc_ == o.alloc_) {
+      _destroy_all();
+      _free_mem(data_, cap_);
+      data_ = o.data_;
+      size_ = o.size_;
+      cap_ = o.cap_;
+      o.data_ = nullptr;
+      o.size_ = 0;
+      o.cap_ = 0;
+    } else {
+      // Different allocators: must move elements individually
+      if (o.size_ <= cap_) {
+        size_type mn = (size_ < o.size_) ? size_ : o.size_;
+        for (size_type i = 0; i < mn; ++i)
+          data_[i] = move(o.data_[i]);
+        for (size_type i = size_; i < o.size_; ++i)
+          _construct(data_ + i, move(o.data_[i]));
+        for (size_type i = o.size_; i < size_; ++i)
+          _destroy(data_ + i);
+        size_ = o.size_;
+      } else {
+        _destroy_all();
+        _free_mem(data_, cap_);
+        data_ = nullptr;
+        size_ = 0;
+        cap_ = 0;
+        if (o.size_) {
+          data_ = _alloc_mem(o.size_);
+          for (size_type i = 0; i < o.size_; ++i)
+            _construct(data_ + i, move(o.data_[i]));
+          size_ = o.size_;
+          cap_ = o.size_;
+        }
+      }
+      o.clear();
+    }
+    return *this;
+  }
+
+  constexpr vector& operator=(std::initializer_list<T> il) {
+    _assign_copy(il.begin(), il.size());
+    return *this;
+  }
+
+  constexpr allocator_type get_allocator() const noexcept { return alloc_; }
+
+  // Element access
+  constexpr T& operator[](size_type i) noexcept { return data_[i]; }
+  constexpr const T& operator[](size_type i) const noexcept { return data_[i]; }
+  constexpr T& at(size_type i) {
+    if (i >= size_)
+      throw out_of_range("vector::at");
+    return data_[i];
+  }
+  constexpr const T& at(size_type i) const {
+    if (i >= size_)
+      throw out_of_range("vector::at");
+    return data_[i];
+  }
+  constexpr T& front() noexcept { return data_[0]; }
+  constexpr const T& front() const noexcept { return data_[0]; }
+  constexpr T& back() noexcept { return data_[size_ - 1]; }
+  constexpr const T& back() const noexcept { return data_[size_ - 1]; }
+  constexpr T* data() noexcept { return data_; }
+  constexpr const T* data() const noexcept { return data_; }
+
+  // Iterators
+  constexpr iterator begin() noexcept { return iterator{data_}; }
+  constexpr iterator end() noexcept { return iterator{data_ + size_}; }
+  constexpr const_iterator begin() const noexcept {
+    return const_iterator{data_};
+  }
+  constexpr const_iterator end() const noexcept {
+    return const_iterator{data_ + size_};
+  }
+  constexpr const_iterator cbegin() const noexcept {
+    return const_iterator{data_};
+  }
+  constexpr const_iterator cend() const noexcept {
+    return const_iterator{data_ + size_};
+  }
+  constexpr reverse_iterator rbegin() noexcept {
+    return reverse_iterator(end());
+  }
+  constexpr reverse_iterator rend() noexcept {
+    return reverse_iterator(begin());
+  }
+  constexpr const_reverse_iterator rbegin() const noexcept {
+    return const_reverse_iterator(end());
+  }
+  constexpr const_reverse_iterator rend() const noexcept {
+    return const_reverse_iterator(begin());
+  }
+  constexpr const_reverse_iterator crbegin() const noexcept {
+    return const_reverse_iterator(cend());
+  }
+  constexpr const_reverse_iterator crend() const noexcept {
+    return const_reverse_iterator(cbegin());
+  }
+
+  // Capacity
+  constexpr size_type size() const noexcept { return size_; }
+  constexpr size_type capacity() const noexcept { return cap_; }
+  constexpr bool empty() const noexcept { return size_ == 0; }
+  constexpr size_type max_size() const noexcept {
+    const size_type ma = allocator_traits<Alloc>::max_size(alloc_);
+    const size_type md = size_type(__PTRDIFF_MAX__) / sizeof(T);
+    return ma < md ? ma : md;
+  }
+
+  constexpr void reserve(size_type n) {
+    if (n <= cap_)
+      return;
+    T* np = _alloc_mem(n);
+    for (size_type i = 0; i < size_; ++i) {
+      _construct(np + i, move(data_[i]));
+      _destroy(data_ + i);
+    }
+    _free_mem(data_, cap_);
+    data_ = np;
+    cap_ = n;
+  }
+
+  constexpr void shrink_to_fit() {}
+
+  // Modifiers
+  constexpr void clear() noexcept {
+    _destroy_all();
+    size_ = 0;
+  }
+
+  constexpr void push_back(const T& v) {
+    T tmp(v);
+    _grow();
+    _construct(data_ + size_, move(tmp));
+    ++size_;
+  }
+  constexpr void push_back(T&& v) {
+    T tmp(move(v));
+    _grow();
+    _construct(data_ + size_, move(tmp));
+    ++size_;
+  }
+
+  template <typename... Args> constexpr T& emplace_back(Args&&... args) {
+    if (size_ < cap_) {
+      _construct(data_ + size_, forward<Args>(args)...);
+      return data_[size_++];
+    }
+    // Need to grow. Construct the new element into the new buffer BEFORE
+    // freeing old storage so that references into old storage (e.g.
+    // v.emplace_back(v[0])) remain valid during construction.
+    size_type nc = cap_ ? cap_ * 2 : 4;
+    T* np = _alloc_mem(nc);
+    for (size_type i = 0; i < size_; ++i)
+      _construct(np + i, move(data_[i]));
+    _construct(np + size_, forward<Args>(args)...);
+    _destroy_all();
+    _free_mem(data_, cap_);
+    data_ = np;
+    cap_ = nc;
+    return data_[size_++];
+  }
+
+  constexpr void pop_back() noexcept {
+    --size_;
+    _destroy(data_ + size_);
+  }
+
+  constexpr iterator insert(const_iterator pos, const T& v) {
+    size_type idx = pos.ptr_ - data_;
+    T tmp(v);
+    _grow_and_shift(idx, 1);
+    _construct(data_ + idx, move(tmp));
+    ++size_;
+    return iterator{data_ + idx};
+  }
+  constexpr iterator insert(const_iterator pos, T&& v) {
+    size_type idx = pos.ptr_ - data_;
+    T tmp(move(v));
+    _grow_and_shift(idx, 1);
+    _construct(data_ + idx, move(tmp));
+    ++size_;
+    return iterator{data_ + idx};
+  }
+  constexpr iterator insert(const_iterator pos, size_type n, const T& v) {
+    size_type idx = pos.ptr_ - data_;
+    if (n == 0)
+      return iterator{data_ + idx};
+    _reserve_and_shift(idx, n);
+    size_type i = 0;
+    try {
+      for (; i < n; ++i)
+        _construct(data_ + idx + i, v);
+    } catch (...) {
+      for (size_type j = 0; j < i; ++j)
+        _destroy(data_ + idx + j);
+      _undo_shift(idx, n, i);
+      throw;
+    }
+    size_ += n;
+    return iterator{data_ + idx};
+  }
+  constexpr iterator insert(const_iterator pos, std::initializer_list<T> il) {
+    return insert(pos, il.begin(), il.end());
+  }
+  template <typename It>
+    requires(!is_integral_v<It>)
+  constexpr iterator insert(const_iterator pos, It first, It last) {
+    size_type idx = pos.ptr_ - data_, n = 0;
+    for (auto it = first; it != last; ++it)
+      ++n;
+    _reserve_and_shift(idx, n);
+    size_type i = 0;
+    try {
+      for (auto it = first; it != last; ++it) {
+        _construct(data_ + idx + i, *it);
+        ++i;
+      }
+    } catch (...) {
+      for (size_type j = 0; j < i; ++j)
+        _destroy(data_ + idx + j);
+      _undo_shift(idx, n, i);
+      throw;
+    }
+    size_ += n;
+    return iterator{data_ + idx};
+  }
+
+  constexpr iterator erase(const_iterator pos) {
+    size_type idx = pos.ptr_ - data_;
+    _shift_left(idx + 1, 1);
+    --size_;
+    _destroy(data_ + size_);
+    return iterator{data_ + idx};
+  }
+  constexpr iterator erase(const_iterator first, const_iterator last) {
+    size_type idx = first.ptr_ - data_, n = last.ptr_ - first.ptr_;
+    _shift_left(idx + n, n);
+    size_ -= n;
+    for (size_type i = 0; i < n; ++i)
+      _destroy(data_ + size_ + i);
+    return iterator{data_ + idx};
+  }
+
+  constexpr void resize(size_type n) {
+    if (n > size_) {
+      reserve(n);
+      for (size_type i = size_; i < n; ++i)
+        _construct(data_ + i);
+      size_ = n;
+    } else {
+      for (size_type i = n; i < size_; ++i)
+        _destroy(data_ + i);
+      size_ = n;
+    }
+  }
+  constexpr void resize(size_type n, const T& val) {
+    if (n > size_) {
+      reserve(n);
+      for (size_type i = size_; i < n; ++i)
+        _construct(data_ + i, val);
+    } else {
+      for (size_type i = n; i < size_; ++i)
+        _destroy(data_ + i);
+    }
+    size_ = n;
+  }
+
+  constexpr void swap(vector& o) noexcept {
+    T* td = data_;
+    size_type ts = size_, tc = cap_;
+    data_ = o.data_;
+    size_ = o.size_;
+    cap_ = o.cap_;
+    o.data_ = td;
+    o.size_ = ts;
+    o.cap_ = tc;
+    if constexpr (allocator_traits<Alloc>::propagate_on_container_swap::value) {
+      Alloc ta = move(alloc_);
+      alloc_ = move(o.alloc_);
+      o.alloc_ = move(ta);
+    }
+  }
+
+  constexpr void assign(size_type n, const T& v) {
+    if (n <= cap_) {
+      size_type mn = (size_ < n) ? size_ : n;
+      for (size_type i = 0; i < mn; ++i)
+        data_[i] = v;
+      for (size_type i = size_; i < n; ++i)
+        _construct(data_ + i, v);
+      for (size_type i = n; i < size_; ++i)
+        _destroy(data_ + i);
+      size_ = n;
+    } else {
+      _destroy_all();
+      _free_mem(data_, cap_);
+      data_ = nullptr;
+      size_ = 0;
+      cap_ = 0;
+      if (n) {
+        data_ = _alloc_mem(n);
+        for (size_type i = 0; i < n; ++i)
+          _construct(data_ + i, v);
+        size_ = n;
+        cap_ = n;
+      }
+    }
+  }
+  template <typename It>
+    requires(!is_integral_v<It>)
+  constexpr void assign(It first, It last) {
+    clear();
+    for (auto it = first; it != last; ++it)
+      emplace_back(*it);
+  }
+  constexpr void assign(std::initializer_list<T> il) {
+    _assign_copy(il.begin(), il.size());
+  }
+};
+
+template <typename T, typename A>
+constexpr bool operator==(const vector<T, A>& a, const vector<T, A>& b) {
+  if (a.size() != b.size())
+    return false;
+  for (size_t i = 0; i < a.size(); ++i)
+    if (!(a[i] == b[i]))
+      return false;
+  return true;
+}
+template <typename T, typename A>
+constexpr bool operator!=(const vector<T, A>& a, const vector<T, A>& b) {
+  return !(a == b);
+}
+template <typename T, typename A>
+constexpr bool operator<(const vector<T, A>& a, const vector<T, A>& b) {
+  for (size_t i = 0; i < a.size() && i < b.size(); ++i) {
+    if (a[i] < b[i])
+      return true;
+    if (b[i] < a[i])
+      return false;
+  }
+  return a.size() < b.size();
+}
+template <typename T, typename A>
+constexpr bool operator<=(const vector<T, A>& a, const vector<T, A>& b) {
+  return !(b < a);
+}
+template <typename T, typename A>
+constexpr bool operator>(const vector<T, A>& a, const vector<T, A>& b) {
+  return b < a;
+}
+template <typename T, typename A>
+constexpr bool operator>=(const vector<T, A>& a, const vector<T, A>& b) {
+  return !(a < b);
+}
+
+namespace __vec_detail {
+// Native three-way: T has operator<=>
+template <typename T>
+concept __ntw = requires(const T& a, const T& b) { a <=> b; };
+// Synth three-way: T only has < and ==
+template <typename T>
+concept __stw = !__ntw<T> && requires(const T& a, const T& b) {
+  (bool)(a == b);
+  (bool)(a < b);
+};
+
+template <typename T> constexpr auto __cmp_result() {
+  if constexpr (__ntw<T>)
+    return declval<const T&>() <=> declval<const T&>();
+  else
+    return weak_ordering::equivalent;
+}
+template <typename T> using __cmp_t = decltype(__cmp_result<T>());
+
+template <typename T> constexpr __cmp_t<T> __cmp(const T& a, const T& b) {
+  if constexpr (__ntw<T>)
+    return a <=> b;
+  else
+    return a == b  ? weak_ordering::equivalent
+           : a < b ? weak_ordering::less
+                   : weak_ordering::greater;
+}
+} // namespace __vec_detail
+
+template <typename T, typename A>
+  requires(__vec_detail::__ntw<T> || __vec_detail::__stw<T>)
+constexpr auto operator<=>(const vector<T, A>& a, const vector<T, A>& b)
+    -> __vec_detail::__cmp_t<T> {
+  using R = __vec_detail::__cmp_t<T>;
+  size_t n = a.size() < b.size() ? a.size() : b.size();
+  for (size_t i = 0; i < n; ++i) {
+    R c = __vec_detail::__cmp(a[i], b[i]);
+    if (c != 0)
+      return c;
+  }
+  return static_cast<R>(a.size() <=> b.size());
+}
+
+template <typename T, typename A>
+constexpr void swap(vector<T, A>& a, vector<T, A>& b) noexcept {
+  a.swap(b);
+}
+
+// std::erase / std::erase_if (C++20)
+template <typename T, typename A, typename U>
+constexpr typename vector<T, A>::size_type erase(vector<T, A>& c,
+                                                 const U& value) {
+  typename vector<T, A>::size_type n = 0;
+  auto it = c.begin();
+  while (it != c.end()) {
+    if (*it == value) {
+      it = c.erase(it);
+      ++n;
+    } else
+      ++it;
+  }
+  return n;
+}
+template <typename T, typename A, typename Pred>
+constexpr typename vector<T, A>::size_type erase_if(vector<T, A>& c,
+                                                    Pred pred) {
+  typename vector<T, A>::size_type n = 0;
+  auto it = c.begin();
+  while (it != c.end()) {
+    if (pred(*it)) {
+      it = c.erase(it);
+      ++n;
+    } else
+      ++it;
+  }
+  return n;
+}
+
+} // namespace std

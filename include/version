@@ -1,0 +1,9 @@
+#pragma once
+// Minimal feature-test macro header for psychicstd.
+// Define the macros for features we actually provide so that third-party code
+// does not define conflicting polyfills.
+
+// std::size, std::empty, std::data (C++17, <iterator>/<array>/<string_view>)
+#ifndef __cpp_lib_nonmember_container_access
+#define __cpp_lib_nonmember_container_access 201411L
+#endif

@@ -1,0 +1,17 @@
+#pragma once
+#include <time.h>
+
+namespace std {
+using ::asctime;
+using ::clock;
+using ::clock_t;
+using ::ctime;
+using ::difftime;
+using ::gmtime;
+using ::localtime;
+using ::mktime;
+using ::strftime;
+using ::time;
+using ::time_t;
+using ::tm;
+} // namespace std

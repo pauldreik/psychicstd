@@ -1,0 +1,215 @@
+#pragma once
+#include <cstddef>
+#include <functional>
+#include <initializer_list>
+#include <memory>
+#include <utility>
+#include <vector>
+
+namespace std {
+
+template <typename Key, typename T, typename Hash = hash<Key>,
+          typename KeyEqual = equal_to<Key>,
+          typename Allocator = allocator<pair<const Key, T>>>
+class unordered_map {
+  static constexpr size_t NBUCKETS = 16;
+  using bucket_t = vector<pair<const Key, T>>;
+  vector<bucket_t> buckets_{NBUCKETS};
+  size_t size_ = 0;
+  Hash hasher_{};
+  KeyEqual eq_{};
+
+  size_t bucket(const Key& k) const { return hasher_(k) % buckets_.size(); }
+
+public:
+  using key_type = Key;
+  using mapped_type = T;
+  using value_type = pair<const Key, T>;
+  using allocator_type = Allocator;
+  using size_type = size_t;
+  using difference_type = ptrdiff_t;
+  using reference = value_type&;
+  using const_reference = const value_type&;
+
+  struct iterator {
+    unordered_map* m;
+    size_t b;
+    size_t i;
+    iterator(unordered_map* m, size_t b, size_t i) : m(m), b(b), i(i) {}
+    value_type& operator*() { return m->buckets_[b][i]; }
+    value_type* operator->() { return &m->buckets_[b][i]; }
+    bool operator==(const iterator& o) const { return b == o.b && i == o.i; }
+    bool operator!=(const iterator& o) const { return !(*this == o); }
+    iterator& operator++() {
+      ++i;
+      while (b < m->buckets_.size()) {
+        if (i < m->buckets_[b].size())
+          return *this;
+        ++b;
+        i = 0;
+      }
+      return *this;
+    }
+  };
+  struct const_iterator {
+    const unordered_map* m;
+    size_t b;
+    size_t i;
+    const_iterator(const unordered_map* m, size_t b, size_t i)
+        : m(m), b(b), i(i) {}
+    const_iterator(iterator it) : m(it.m), b(it.b), i(it.i) {}
+    const value_type& operator*() const { return m->buckets_[b][i]; }
+    const value_type* operator->() const { return &m->buckets_[b][i]; }
+    bool operator==(const const_iterator& o) const {
+      return b == o.b && i == o.i;
+    }
+    bool operator!=(const const_iterator& o) const { return !(*this == o); }
+    const_iterator& operator++() {
+      ++i;
+      while (b < m->buckets_.size()) {
+        if (i < m->buckets_[b].size())
+          return *this;
+        ++b;
+        i = 0;
+      }
+      return *this;
+    }
+  };
+
+  unordered_map() = default;
+  explicit unordered_map(const Allocator&) {}
+  unordered_map(initializer_list<value_type> il) {
+    for (const auto& kv : il)
+      insert(kv);
+  }
+  template <typename It> unordered_map(It first, It last) {
+    for (; first != last; ++first)
+      insert(*first);
+  }
+
+  size_type size() const noexcept { return size_; }
+  bool empty() const noexcept { return size_ == 0; }
+
+  iterator begin() {
+    for (size_t b = 0; b < buckets_.size(); ++b)
+      if (!buckets_[b].empty())
+        return {this, b, 0};
+    return end();
+  }
+  iterator end() { return {this, buckets_.size(), 0}; }
+  const_iterator begin() const {
+    for (size_t b = 0; b < buckets_.size(); ++b)
+      if (!buckets_[b].empty())
+        return {this, b, 0};
+    return end();
+  }
+  const_iterator end() const { return {this, buckets_.size(), 0}; }
+  const_iterator cbegin() const { return begin(); }
+  const_iterator cend() const { return end(); }
+
+  iterator find(const Key& k) {
+    size_t b = bucket(k);
+    for (size_t i = 0; i < buckets_[b].size(); ++i)
+      if (eq_(buckets_[b][i].first, k))
+        return {this, b, i};
+    return end();
+  }
+  const_iterator find(const Key& k) const {
+    size_t b = bucket(k);
+    for (size_t i = 0; i < buckets_[b].size(); ++i)
+      if (eq_(buckets_[b][i].first, k))
+        return {this, b, i};
+    return end();
+  }
+
+  T& operator[](const Key& k) {
+    size_t b = bucket(k);
+    for (auto& kv : buckets_[b])
+      if (eq_(kv.first, k))
+        return kv.second;
+    buckets_[b].push_back({k, T{}});
+    ++size_;
+    return buckets_[b].back().second;
+  }
+  T& operator[](Key&& k) {
+    size_t b = bucket(k);
+    for (auto& kv : buckets_[b])
+      if (eq_(kv.first, k))
+        return kv.second;
+    buckets_[b].push_back({static_cast<Key&&>(k), T{}});
+    ++size_;
+    return buckets_[b].back().second;
+  }
+  T& at(const Key& k) {
+    auto it = find(k);
+    if (it == end())
+      __builtin_trap();
+    return it->second;
+  }
+  const T& at(const Key& k) const {
+    auto it = find(k);
+    if (it == end())
+      __builtin_trap();
+    return it->second;
+  }
+  size_type count(const Key& k) const { return find(k) != end() ? 1 : 0; }
+
+  pair<iterator, bool> insert(const value_type& kv) {
+    size_t b = bucket(kv.first);
+    for (size_t i = 0; i < buckets_[b].size(); ++i)
+      if (eq_(buckets_[b][i].first, kv.first))
+        return {{this, b, i}, false};
+    buckets_[b].push_back(kv);
+    ++size_;
+    return {{this, b, buckets_[b].size() - 1}, true};
+  }
+  template <typename... Args> pair<iterator, bool> emplace(Args&&... args) {
+    return insert(value_type(static_cast<Args&&>(args)...));
+  }
+  iterator erase(const_iterator pos) {
+    auto b = pos.b;
+    auto i = pos.i;
+    buckets_[b].erase(buckets_[b].begin() + i);
+    --size_;
+    iterator next{this, b, i};
+    if (i >= buckets_[b].size()) {
+      next.i = 0;
+      ++next.b;
+      while (next.b < buckets_.size() && buckets_[next.b].empty())
+        ++next.b;
+    }
+    return next;
+  }
+  size_type erase(const Key& k) {
+    size_t b = bucket(k);
+    for (size_t i = 0; i < buckets_[b].size(); ++i) {
+      if (eq_(buckets_[b][i].first, k)) {
+        buckets_[b].erase(buckets_[b].begin() + i);
+        --size_;
+        return 1;
+      }
+    }
+    return 0;
+  }
+  void clear() {
+    for (auto& b : buckets_)
+      b.clear();
+    size_ = 0;
+  }
+};
+
+template <typename Key, typename T, typename Hash = hash<Key>,
+          typename KeyEqual = equal_to<Key>,
+          typename Allocator = allocator<pair<const Key, T>>>
+class unordered_multimap {
+public:
+  using key_type = Key;
+  using mapped_type = T;
+  using value_type = pair<const Key, T>;
+  using allocator_type = Allocator;
+  using size_type = size_t;
+
+  unordered_multimap() = default;
+};
+
+} // namespace std

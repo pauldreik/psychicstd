@@ -1,0 +1,869 @@
+#pragma once
+#include <algorithm>
+#include <cstddef>
+#include <cstdlib>
+#include <cstring>
+#include <iosfwd>
+#include <iterator>
+#include <memory>
+#include <string_view>
+#include <utility>
+#include <version>
+
+namespace std {
+
+// char_traits<char>
+template <typename Char> struct char_traits {
+  using char_type = Char;
+  using int_type = int;
+  using off_type = long long;
+  using pos_type = long long;
+
+  static constexpr void assign(char_type& r, const char_type& c) noexcept {
+    r = c;
+  }
+  static constexpr bool eq(char_type a, char_type b) noexcept { return a == b; }
+  static constexpr bool lt(char_type a, char_type b) noexcept { return a < b; }
+  static constexpr size_t length(const char_type* s) noexcept {
+    size_t n = 0;
+    while (s[n])
+      ++n;
+    return n;
+  }
+  static constexpr char_type* copy(char_type* dst, const char_type* src,
+                                   size_t n) noexcept {
+    return (char_type*)__builtin_memcpy(dst, src, n * sizeof(char_type));
+  }
+  static constexpr char_type* move(char_type* dst, const char_type* src,
+                                   size_t n) noexcept {
+    return (char_type*)__builtin_memmove(dst, src, n * sizeof(char_type));
+  }
+  static constexpr const char_type* find(const char_type* s, size_t n,
+                                         const char_type& c) noexcept {
+    for (size_t i = 0; i < n; ++i)
+      if (s[i] == c)
+        return s + i;
+    return nullptr;
+  }
+  static constexpr int compare(const char_type* s1, const char_type* s2,
+                               size_t n) noexcept {
+    for (size_t i = 0; i < n; ++i) {
+      if (s1[i] < s2[i])
+        return -1;
+      if (s1[i] > s2[i])
+        return 1;
+    }
+    return 0;
+  }
+  static constexpr char_type to_char_type(int_type i) noexcept {
+    return char_type(i);
+  }
+  static constexpr int_type to_int_type(char_type c) noexcept {
+    return int_type(c);
+  }
+  static constexpr bool eq_int_type(int_type a, int_type b) noexcept {
+    return a == b;
+  }
+  static constexpr int_type eof() noexcept { return int_type(-1); }
+  static constexpr int_type not_eof(int_type i) noexcept {
+    return eq_int_type(i, eof()) ? int_type(0) : i;
+  }
+};
+
+// char specialization using faster builtins
+template <> struct char_traits<char> {
+  using char_type = char;
+  using int_type = int;
+  using off_type = long long;
+  using pos_type = long long;
+  static constexpr void assign(char& r, char c) noexcept { r = c; }
+  static constexpr bool eq(char a, char b) noexcept { return a == b; }
+  static constexpr bool lt(char a, char b) noexcept {
+    return (unsigned char)a < (unsigned char)b;
+  }
+  static constexpr int compare(const char* s1, const char* s2,
+                               size_t n) noexcept {
+    return __builtin_memcmp(s1, s2, n);
+  }
+  static constexpr size_t length(const char* s) noexcept {
+    return __builtin_strlen(s);
+  }
+  static constexpr char* copy(char* d, const char* s, size_t n) noexcept {
+    return (char*)__builtin_memcpy(d, s, n);
+  }
+  static constexpr char* move(char* d, const char* s, size_t n) noexcept {
+    return (char*)__builtin_memmove(d, s, n);
+  }
+  static constexpr const char* find(const char* s, size_t n, char c) noexcept {
+    return (const char*)__builtin_memchr(s, c, n);
+  }
+  static constexpr char to_char_type(int i) noexcept { return char(i); }
+  static constexpr int to_int_type(char c) noexcept {
+    return int((unsigned char)c);
+  }
+  static constexpr bool eq_int_type(int a, int b) noexcept { return a == b; }
+  static constexpr int eof() noexcept { return -1; }
+  static constexpr int not_eof(int i) noexcept { return i == -1 ? 0 : i; }
+};
+
+template <typename Char, typename Traits = char_traits<Char>,
+          typename Alloc = allocator<Char>>
+class basic_string;
+
+using string = basic_string<char>;
+using wstring = basic_string<wchar_t>;
+using u8string = basic_string<char8_t>;
+using u16string = basic_string<char16_t>;
+using u32string = basic_string<char32_t>;
+
+template <typename Char, typename Traits, typename Alloc> class basic_string {
+public:
+  using value_type = Char;
+  using size_type = size_t;
+  using difference_type = ptrdiff_t;
+  using reference = Char&;
+  using const_reference = const Char&;
+  using pointer = Char*;
+  using const_pointer = const Char*;
+  using iterator = Char*;
+  using const_iterator = const Char*;
+  using reverse_iterator = std::reverse_iterator<iterator>;
+  using const_reverse_iterator = std::reverse_iterator<const_iterator>;
+  using traits_type = Traits;
+
+  static constexpr size_type npos = size_type(-1);
+
+  // Constructors
+  basic_string() noexcept : data_(nullptr), size_(0), cap_(0) {}
+
+  basic_string(const Char* s) : basic_string(s, s ? Traits::length(s) : 0) {}
+
+  basic_string(const Char* s, size_type n) : size_(n), cap_(n) {
+    data_ = alloc(n + 1);
+    Traits::copy(data_, s, n);
+    data_[n] = 0;
+  }
+
+  basic_string(size_type n, Char c) : size_(n), cap_(n) {
+    data_ = alloc(n + 1);
+    for (size_type i = 0; i < n; ++i)
+      data_[i] = c;
+    data_[n] = 0;
+  }
+
+  basic_string(const basic_string& o) : basic_string(o.data_, o.size_) {}
+
+  basic_string(basic_string&& o) noexcept
+      : data_(o.data_), size_(o.size_), cap_(o.cap_) {
+    o.data_ = nullptr;
+    o.size_ = 0;
+    o.cap_ = 0;
+  }
+
+  basic_string(basic_string_view<Char> sv)
+      : basic_string(sv.data(), sv.size()) {}
+
+  template <typename It> basic_string(It first, It last) {
+    size_ = cap_ = 0;
+    data_ = nullptr;
+    for (auto it = first; it != last; ++it)
+      push_back(*it);
+  }
+
+  ~basic_string() { dealloc(data_); }
+
+  basic_string& operator=(const basic_string& o) {
+    if (this != &o) {
+      basic_string tmp(o);
+      swap(tmp);
+    }
+    return *this;
+  }
+  basic_string& operator=(basic_string&& o) noexcept {
+    swap(o);
+    return *this;
+  }
+  basic_string& operator=(const Char* s) { return *this = basic_string(s); }
+  basic_string& operator=(Char c) { return *this = basic_string(1, c); }
+  basic_string& operator=(basic_string_view<Char> sv) {
+    return *this = basic_string(sv);
+  }
+
+  // Element access
+  Char& operator[](size_type i) noexcept { return data_[i]; }
+  const Char& operator[](size_type i) const noexcept { return data_[i]; }
+  Char& at(size_type i) { return data_[i]; }
+  const Char& at(size_type i) const { return data_[i]; }
+  Char& front() noexcept { return data_[0]; }
+  const Char& front() const noexcept { return data_[0]; }
+  Char& back() noexcept { return data_[size_ - 1]; }
+  const Char& back() const noexcept { return data_[size_ - 1]; }
+  Char* data() noexcept { return data_ ? data_ : empty_str(); }
+  const Char* data() const noexcept { return data_ ? data_ : empty_str(); }
+  const Char* c_str() const noexcept { return data(); }
+  operator basic_string_view<Char>() const noexcept { return {data(), size_}; }
+
+  // Capacity
+  size_type size() const noexcept { return size_; }
+  size_type length() const noexcept { return size_; }
+  size_type capacity() const noexcept { return cap_; }
+  bool empty() const noexcept { return size_ == 0; }
+  size_type max_size() const noexcept { return size_type(-1) / sizeof(Char); }
+
+  void reserve(size_type n) {
+    if (n <= cap_)
+      return;
+    Char* p = alloc(n + 1);
+    if (data_) {
+      Traits::copy(p, data_, size_ + 1);
+      dealloc(data_);
+    } else
+      p[0] = 0;
+    data_ = p;
+    cap_ = n;
+  }
+
+  void resize(size_type n, Char c = Char()) {
+    if (n < size_) {
+      size_ = n;
+      data_[n] = 0;
+    } else {
+      reserve(n);
+      while (size_ < n)
+        push_back(c);
+    }
+  }
+
+  void clear() noexcept {
+    size_ = 0;
+    if (data_)
+      data_[0] = 0;
+  }
+  void shrink_to_fit() {}
+
+  // Iterators
+  iterator begin() noexcept { return data(); }
+  iterator end() noexcept { return data() + size_; }
+  const_iterator begin() const noexcept { return data(); }
+  const_iterator end() const noexcept { return data() + size_; }
+  const_iterator cbegin() const noexcept { return begin(); }
+  const_iterator cend() const noexcept { return end(); }
+  reverse_iterator rbegin() noexcept { return reverse_iterator(end()); }
+  reverse_iterator rend() noexcept { return reverse_iterator(begin()); }
+  const_reverse_iterator rbegin() const noexcept {
+    return const_reverse_iterator(end());
+  }
+  const_reverse_iterator rend() const noexcept {
+    return const_reverse_iterator(begin());
+  }
+  const_reverse_iterator crbegin() const noexcept {
+    return const_reverse_iterator(end());
+  }
+  const_reverse_iterator crend() const noexcept {
+    return const_reverse_iterator(begin());
+  }
+
+  // Modifiers
+  basic_string& append(const Char* s, size_type n) {
+    if (!n)
+      return *this;
+    grow(size_ + n);
+    Traits::copy(data_ + size_, s, n);
+    size_ += n;
+    data_[size_] = 0;
+    return *this;
+  }
+  basic_string& append(const basic_string& o) {
+    return append(o.data(), o.size());
+  }
+  basic_string& append(const basic_string& o, size_type pos,
+                       size_type count = npos) {
+    size_type len = count < o.size_ - pos ? count : o.size_ - pos;
+    return append(o.data_ + pos, len);
+  }
+  basic_string& append(const Char* s) { return append(s, Traits::length(s)); }
+  basic_string& append(size_type n, Char c) {
+    while (n--)
+      push_back(c);
+    return *this;
+  }
+  basic_string& append(basic_string_view<Char> sv) {
+    return append(sv.data(), sv.size());
+  }
+
+  basic_string& operator+=(const basic_string& o) { return append(o); }
+  basic_string& operator+=(const Char* s) { return append(s); }
+  basic_string& operator+=(Char c) {
+    push_back(c);
+    return *this;
+  }
+  basic_string& operator+=(basic_string_view<Char> sv) { return append(sv); }
+
+  void push_back(Char c) {
+    grow(size_ + 1);
+    data_[size_++] = c;
+    data_[size_] = 0;
+  }
+  void pop_back() noexcept {
+    if (size_)
+      data_[--size_] = 0;
+  }
+
+  basic_string& insert(size_type pos, const Char* s, size_type n) {
+    grow(size_ + n);
+    Traits::move(data_ + pos + n, data_ + pos, size_ - pos + 1);
+    Traits::copy(data_ + pos, s, n);
+    size_ += n;
+    return *this;
+  }
+  basic_string& insert(size_type pos, size_type n, Char c) {
+    grow(size_ + n);
+    Traits::move(data_ + pos + n, data_ + pos, size_ - pos + 1);
+    for (size_type i = 0; i < n; ++i)
+      data_[pos + i] = c;
+    size_ += n;
+    return *this;
+  }
+  basic_string& insert(size_type pos, const basic_string& o) {
+    return insert(pos, o.data(), o.size());
+  }
+  basic_string& insert(size_type pos, const Char* s) {
+    return insert(pos, s, Traits::length(s));
+  }
+
+  basic_string& erase(size_type pos = 0, size_type n = npos) {
+    if (n > size_ - pos)
+      n = size_ - pos;
+    Traits::move(data_ + pos, data_ + pos + n, size_ - pos - n + 1);
+    size_ -= n;
+    return *this;
+  }
+  iterator erase(const_iterator pos) {
+    size_type idx = pos - data_;
+    erase(idx, 1);
+    return data_ + idx;
+  }
+  iterator erase(const_iterator first, const_iterator last) {
+    size_type pos = first - data_;
+    size_type n = last - first;
+    erase(pos, n);
+    return data_ + pos;
+  }
+
+  basic_string& replace(size_type pos, size_type n, const basic_string& o) {
+    erase(pos, n);
+    insert(pos, o);
+    return *this;
+  }
+
+  // Search
+  size_type find(Char c, size_type pos = 0) const noexcept {
+    for (size_type i = pos; i < size_; ++i)
+      if (Traits::eq(data_[i], c))
+        return i;
+    return npos;
+  }
+  size_type find(const Char* s, size_type pos, size_type n) const noexcept {
+    if (n == 0)
+      return pos <= size_ ? pos : npos;
+    if (n > size_)
+      return npos;
+    for (size_type i = pos; i <= size_ - n; ++i)
+      if (Traits::compare(data_ + i, s, n) == 0)
+        return i;
+    return npos;
+  }
+  size_type find(const Char* s, size_type pos = 0) const noexcept {
+    return find(s, pos, Traits::length(s));
+  }
+  size_type find(const basic_string& o, size_type pos = 0) const noexcept {
+    return find(o.data(), pos, o.size());
+  }
+
+  size_type rfind(Char c, size_type pos = npos) const noexcept {
+    size_type i = (pos < size_ ? pos : size_);
+    while (i-- > 0)
+      if (Traits::eq(data_[i], c))
+        return i;
+    return npos;
+  }
+  size_type rfind(const Char* s, size_type pos = npos) const noexcept {
+    return rfind(s, pos, Traits::length(s));
+  }
+  size_type rfind(const Char* s, size_type pos, size_type n) const noexcept {
+    if (n == 0)
+      return pos < size_ ? pos : size_;
+    if (n > size_)
+      return npos;
+    size_type i = (pos < size_ - n ? pos : size_ - n) + 1;
+    while (i-- > 0)
+      if (Traits::compare(data_ + i, s, n) == 0)
+        return i;
+    return npos;
+  }
+  size_type rfind(const basic_string& o, size_type pos = npos) const noexcept {
+    return rfind(o.data(), pos, o.size());
+  }
+
+  // find_first_of / find_last_of / find_first_not_of / find_last_not_of
+  size_type find_first_of(const Char* s, size_type pos,
+                          size_type n) const noexcept {
+    for (size_type i = pos; i < size_; ++i)
+      for (size_type j = 0; j < n; ++j)
+        if (Traits::eq(data_[i], s[j]))
+          return i;
+    return npos;
+  }
+  size_type find_first_of(Char c, size_type pos = 0) const noexcept {
+    return find(c, pos);
+  }
+  size_type find_first_of(const Char* s, size_type pos = 0) const noexcept {
+    return find_first_of(s, pos, Traits::length(s));
+  }
+  size_type find_first_of(const basic_string& o,
+                          size_type pos = 0) const noexcept {
+    return find_first_of(o.data(), pos, o.size());
+  }
+
+  size_type find_last_of(const Char* s, size_type pos,
+                         size_type n) const noexcept {
+    size_type i = (pos < size_ ? pos : size_);
+    while (i-- > 0)
+      for (size_type j = 0; j < n; ++j)
+        if (Traits::eq(data_[i], s[j]))
+          return i;
+    return npos;
+  }
+  size_type find_last_of(Char c, size_type pos = npos) const noexcept {
+    return rfind(c, pos);
+  }
+  size_type find_last_of(const Char* s, size_type pos = npos) const noexcept {
+    return find_last_of(s, pos, Traits::length(s));
+  }
+  size_type find_last_of(const basic_string& o,
+                         size_type pos = npos) const noexcept {
+    return find_last_of(o.data(), pos, o.size());
+  }
+
+  size_type find_first_not_of(const Char* s, size_type pos,
+                              size_type n) const noexcept {
+    for (size_type i = pos; i < size_; ++i) {
+      bool found = false;
+      for (size_type j = 0; j < n; ++j)
+        if (Traits::eq(data_[i], s[j])) {
+          found = true;
+          break;
+        }
+      if (!found)
+        return i;
+    }
+    return npos;
+  }
+  size_type find_first_not_of(Char c, size_type pos = 0) const noexcept {
+    for (size_type i = pos; i < size_; ++i)
+      if (!Traits::eq(data_[i], c))
+        return i;
+    return npos;
+  }
+  size_type find_first_not_of(const Char* s, size_type pos = 0) const noexcept {
+    return find_first_not_of(s, pos, Traits::length(s));
+  }
+  size_type find_first_not_of(const basic_string& o,
+                              size_type pos = 0) const noexcept {
+    return find_first_not_of(o.data(), pos, o.size());
+  }
+
+  size_type find_last_not_of(const Char* s, size_type pos,
+                             size_type n) const noexcept {
+    size_type i = (pos < size_ ? pos : size_);
+    while (i-- > 0) {
+      bool found = false;
+      for (size_type j = 0; j < n; ++j)
+        if (Traits::eq(data_[i], s[j])) {
+          found = true;
+          break;
+        }
+      if (!found)
+        return i;
+    }
+    return npos;
+  }
+  size_type find_last_not_of(Char c, size_type pos = npos) const noexcept {
+    size_type i = (pos < size_ ? pos : size_);
+    while (i-- > 0)
+      if (!Traits::eq(data_[i], c))
+        return i;
+    return npos;
+  }
+  size_type find_last_not_of(const Char* s,
+                             size_type pos = npos) const noexcept {
+    return find_last_not_of(s, pos, Traits::length(s));
+  }
+  size_type find_last_not_of(const basic_string& o,
+                             size_type pos = npos) const noexcept {
+    return find_last_not_of(o.data(), pos, o.size());
+  }
+
+  bool starts_with(basic_string_view<Char> sv) const noexcept {
+    return size_ >= sv.size() &&
+           Traits::compare(data_, sv.data(), sv.size()) == 0;
+  }
+  bool ends_with(basic_string_view<Char> sv) const noexcept {
+    return size_ >= sv.size() && Traits::compare(data_ + size_ - sv.size(),
+                                                 sv.data(), sv.size()) == 0;
+  }
+  bool contains(basic_string_view<Char> sv) const noexcept {
+    return find(sv.data(), 0, sv.size()) != npos;
+  }
+
+  // Substring
+  basic_string substr(size_type pos = 0, size_type n = npos) const {
+    if (pos > size_)
+      pos = size_;
+    if (n > size_ - pos)
+      n = size_ - pos;
+    return basic_string(data_ + pos, n);
+  }
+
+  int compare(const basic_string& o) const noexcept {
+    size_type n = size_ < o.size_ ? size_ : o.size_;
+    int r = Traits::compare(data(), o.data(), n);
+    if (r)
+      return r;
+    if (size_ < o.size_)
+      return -1;
+    if (size_ > o.size_)
+      return 1;
+    return 0;
+  }
+  int compare(const Char* s) const noexcept { return compare(basic_string(s)); }
+  int compare(size_type pos1, size_type n1, const Char* s) const {
+    size_type slen = Traits::length(s);
+    size_type clen = n1 < slen ? n1 : slen;
+    int r = Traits::compare(data_ + pos1, s, clen);
+    if (r)
+      return r;
+    if (n1 < slen)
+      return -1;
+    if (n1 > slen)
+      return 1;
+    return 0;
+  }
+  int compare(size_type pos1, size_type n1, const basic_string& o) const {
+    size_type clen = n1 < o.size_ ? n1 : o.size_;
+    int r = Traits::compare(data_ + pos1, o.data_, clen);
+    if (r)
+      return r;
+    if (n1 < o.size_)
+      return -1;
+    if (n1 > o.size_)
+      return 1;
+    return 0;
+  }
+  int compare(size_type pos1, size_type n1, const Char* s, size_type n2) const {
+    size_type clen = n1 < n2 ? n1 : n2;
+    int r = Traits::compare(data_ + pos1, s, clen);
+    if (r)
+      return r;
+    if (n1 < n2)
+      return -1;
+    if (n1 > n2)
+      return 1;
+    return 0;
+  }
+
+  void swap(basic_string& o) noexcept {
+    Char* td = data_;
+    size_type ts = size_;
+    size_type tc = cap_;
+    data_ = o.data_;
+    size_ = o.size_;
+    cap_ = o.cap_;
+    o.data_ = td;
+    o.size_ = ts;
+    o.cap_ = tc;
+  }
+
+private:
+  Char* data_;
+  size_type size_;
+  size_type cap_;
+
+  static Char* alloc(size_type n) { return (Char*)::malloc(n * sizeof(Char)); }
+  static void dealloc(Char* p) { ::free(p); }
+
+  static Char* empty_str() {
+    static Char z = 0;
+    return &z;
+  }
+
+  void grow(size_type needed) {
+    if (needed <= cap_)
+      return;
+    size_type new_cap = cap_ ? cap_ * 2 : 16;
+    if (new_cap < needed)
+      new_cap = needed;
+    reserve(new_cap);
+  }
+};
+
+// Concatenation
+template <typename C, typename T, typename A>
+basic_string<C, T, A> operator+(const basic_string<C, T, A>& a,
+                                const basic_string<C, T, A>& b) {
+  basic_string<C, T, A> r;
+  r.reserve(a.size() + b.size());
+  r.append(a);
+  r.append(b);
+  return r;
+}
+template <typename C, typename T, typename A>
+basic_string<C, T, A> operator+(const basic_string<C, T, A>& a, const C* b) {
+  basic_string<C, T, A> r;
+  r.append(a);
+  r.append(b);
+  return r;
+}
+template <typename C, typename T, typename A>
+basic_string<C, T, A> operator+(const C* a, const basic_string<C, T, A>& b) {
+  basic_string<C, T, A> r;
+  r.append(a);
+  r.append(b);
+  return r;
+}
+template <typename C, typename T, typename A>
+basic_string<C, T, A> operator+(basic_string<C, T, A>&& a,
+                                const basic_string<C, T, A>& b) {
+  a.append(b);
+  return move(a);
+}
+template <typename C, typename T, typename A>
+basic_string<C, T, A> operator+(basic_string<C, T, A>&& a, const C* b) {
+  a.append(b);
+  return move(a);
+}
+template <typename C, typename T, typename A>
+basic_string<C, T, A> operator+(const basic_string<C, T, A>& a, C c) {
+  basic_string<C, T, A> r;
+  r.reserve(a.size() + 1);
+  r.append(a);
+  r.push_back(c);
+  return r;
+}
+template <typename C, typename T, typename A>
+basic_string<C, T, A> operator+(basic_string<C, T, A>&& a, C c) {
+  a.push_back(c);
+  return move(a);
+}
+template <typename C, typename T, typename A>
+basic_string<C, T, A> operator+(C c, const basic_string<C, T, A>& b) {
+  basic_string<C, T, A> r;
+  r.push_back(c);
+  r.append(b);
+  return r;
+}
+
+// Comparison — use string_view for all combinations
+template <typename C, typename T, typename A>
+bool operator==(const basic_string<C, T, A>& a,
+                const basic_string<C, T, A>& b) noexcept {
+  return a.size() == b.size() && T::compare(a.data(), b.data(), a.size()) == 0;
+}
+template <typename C, typename T, typename A>
+bool operator==(const basic_string<C, T, A>& a, const C* b) noexcept {
+  return a == basic_string<C, T, A>(b);
+}
+template <typename C, typename T, typename A>
+bool operator==(const C* a, const basic_string<C, T, A>& b) noexcept {
+  return b == a;
+}
+
+template <typename C, typename T, typename A>
+bool operator!=(const basic_string<C, T, A>& a,
+                const basic_string<C, T, A>& b) noexcept {
+  return !(a == b);
+}
+template <typename C, typename T, typename A>
+bool operator!=(const basic_string<C, T, A>& a, const C* b) noexcept {
+  return !(a == b);
+}
+template <typename C, typename T, typename A>
+bool operator!=(const C* a, const basic_string<C, T, A>& b) noexcept {
+  return !(a == b);
+}
+
+template <typename C, typename T, typename A>
+bool operator<(const basic_string<C, T, A>& a,
+               const basic_string<C, T, A>& b) noexcept {
+  return a.compare(b) < 0;
+}
+template <typename C, typename T, typename A>
+bool operator<(const basic_string<C, T, A>& a, const C* b) noexcept {
+  return a.compare(b) < 0;
+}
+template <typename C, typename T, typename A>
+bool operator<(const C* a, const basic_string<C, T, A>& b) noexcept {
+  return b.compare(a) > 0;
+}
+template <typename C, typename T, typename A>
+bool operator<=(const basic_string<C, T, A>& a,
+                const basic_string<C, T, A>& b) noexcept {
+  return a.compare(b) <= 0;
+}
+template <typename C, typename T, typename A>
+bool operator<=(const basic_string<C, T, A>& a, const C* b) noexcept {
+  return a.compare(b) <= 0;
+}
+template <typename C, typename T, typename A>
+bool operator<=(const C* a, const basic_string<C, T, A>& b) noexcept {
+  return b.compare(a) >= 0;
+}
+template <typename C, typename T, typename A>
+bool operator>(const basic_string<C, T, A>& a,
+               const basic_string<C, T, A>& b) noexcept {
+  return a.compare(b) > 0;
+}
+template <typename C, typename T, typename A>
+bool operator>(const basic_string<C, T, A>& a, const C* b) noexcept {
+  return a.compare(b) > 0;
+}
+template <typename C, typename T, typename A>
+bool operator>(const C* a, const basic_string<C, T, A>& b) noexcept {
+  return b.compare(a) < 0;
+}
+template <typename C, typename T, typename A>
+bool operator>=(const basic_string<C, T, A>& a,
+                const basic_string<C, T, A>& b) noexcept {
+  return a.compare(b) >= 0;
+}
+template <typename C, typename T, typename A>
+bool operator>=(const basic_string<C, T, A>& a, const C* b) noexcept {
+  return a.compare(b) >= 0;
+}
+template <typename C, typename T, typename A>
+bool operator>=(const C* a, const basic_string<C, T, A>& b) noexcept {
+  return b.compare(a) <= 0;
+}
+
+template <typename C, typename T, typename A>
+void swap(basic_string<C, T, A>& a, basic_string<C, T, A>& b) noexcept {
+  a.swap(b);
+}
+
+// to_string
+inline string to_string(int v) {
+  char b[32];
+  int n = __builtin_sprintf(b, "%d", v);
+  return {b, (size_t)n};
+}
+inline string to_string(long v) {
+  char b[32];
+  int n = __builtin_sprintf(b, "%ld", v);
+  return {b, (size_t)n};
+}
+inline string to_string(long long v) {
+  char b[32];
+  int n = __builtin_sprintf(b, "%lld", v);
+  return {b, (size_t)n};
+}
+inline string to_string(unsigned v) {
+  char b[32];
+  int n = __builtin_sprintf(b, "%u", v);
+  return {b, (size_t)n};
+}
+inline string to_string(unsigned long v) {
+  char b[32];
+  int n = __builtin_sprintf(b, "%lu", v);
+  return {b, (size_t)n};
+}
+inline string to_string(unsigned long long v) {
+  char b[32];
+  int n = __builtin_sprintf(b, "%llu", v);
+  return {b, (size_t)n};
+}
+inline string to_string(float v) {
+  char b[64];
+  int n = __builtin_sprintf(b, "%f", v);
+  return {b, (size_t)n};
+}
+inline string to_string(double v) {
+  char b[64];
+  int n = __builtin_sprintf(b, "%f", v);
+  return {b, (size_t)n};
+}
+inline string to_string(long double v) {
+  char b[64];
+  int n = __builtin_sprintf(b, "%Lf", v);
+  return {b, (size_t)n};
+}
+
+// sto* — string to arithmetic conversions
+inline int stoi(const string& s, size_t* pos = nullptr, int base = 10) {
+  char* end;
+  auto v = ::strtol(s.c_str(), &end, base);
+  if (pos)
+    *pos = end - s.c_str();
+  return (int)v;
+}
+inline long stol(const string& s, size_t* pos = nullptr, int base = 10) {
+  char* end;
+  auto v = ::strtol(s.c_str(), &end, base);
+  if (pos)
+    *pos = end - s.c_str();
+  return v;
+}
+inline long long stoll(const string& s, size_t* pos = nullptr, int base = 10) {
+  char* end;
+  auto v = ::strtoll(s.c_str(), &end, base);
+  if (pos)
+    *pos = end - s.c_str();
+  return v;
+}
+inline unsigned long stoul(const string& s, size_t* pos = nullptr,
+                           int base = 10) {
+  char* end;
+  auto v = ::strtoul(s.c_str(), &end, base);
+  if (pos)
+    *pos = end - s.c_str();
+  return v;
+}
+inline unsigned long long stoull(const string& s, size_t* pos = nullptr,
+                                 int base = 10) {
+  char* end;
+  auto v = ::strtoull(s.c_str(), &end, base);
+  if (pos)
+    *pos = end - s.c_str();
+  return v;
+}
+inline float stof(const string& s, size_t* pos = nullptr) {
+  char* end;
+  auto v = ::strtof(s.c_str(), &end);
+  if (pos)
+    *pos = end - s.c_str();
+  return v;
+}
+inline double stod(const string& s, size_t* pos = nullptr) {
+  char* end;
+  auto v = ::strtod(s.c_str(), &end);
+  if (pos)
+    *pos = end - s.c_str();
+  return v;
+}
+inline long double stold(const string& s, size_t* pos = nullptr) {
+  char* end;
+  auto v = ::strtold(s.c_str(), &end);
+  if (pos)
+    *pos = end - s.c_str();
+  return v;
+}
+
+inline namespace literals {
+inline namespace string_literals {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wliteral-suffix"
+inline string operator""s(const char* s, size_t n) { return {s, n}; }
+#pragma GCC diagnostic pop
+} // namespace string_literals
+} // namespace literals
+
+} // namespace std

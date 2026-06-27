@@ -1,0 +1,34 @@
+#pragma once
+#include <cstddef>
+
+// GCC's typeid operator requires std::type_info to be declared before use.
+// The actual vtable and implementations live in libsupc++ (which we link).
+namespace std {
+
+class type_info {
+public:
+  virtual ~type_info();
+  // Inline: libstdc++ defines this in the header, not in libsupc++.
+  // Pointer equality is sufficient when the linker has merged string constants
+  // (ELF); strcmp is the fallback for non-merged names.
+  bool operator==(const type_info& rhs) const noexcept {
+    return (__name == rhs.__name) ||
+           (__builtin_strcmp(__name, rhs.__name) == 0);
+  }
+  bool operator!=(const type_info& rhs) const noexcept {
+    return !operator==(rhs);
+  }
+  bool before(const type_info& rhs) const noexcept;
+  size_t hash_code() const noexcept;
+  const char* name() const noexcept;
+
+protected:
+  const char* __name;
+  explicit type_info(const char* __n) : __name(__n) {}
+
+private:
+  type_info& operator=(const type_info&) = delete;
+  type_info(const type_info&) = delete;
+};
+
+} // namespace std

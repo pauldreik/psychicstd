@@ -1,0 +1,25 @@
+#pragma once
+// Minimal <complex> stub — only the class template definition is provided.
+// Full arithmetic operations are not implemented.
+#include <cmath>
+
+namespace std {
+
+template <typename T> class complex {
+public:
+  using value_type = T;
+  constexpr complex(T r = T(), T i = T()) : re_(r), im_(i) {}
+  constexpr T real() const noexcept { return re_; }
+  constexpr T imag() const noexcept { return im_; }
+  constexpr void real(T r) noexcept { re_ = r; }
+  constexpr void imag(T i) noexcept { im_ = i; }
+
+private:
+  T re_, im_;
+};
+
+template <> class complex<float>;
+template <> class complex<double>;
+template <> class complex<long double>;
+
+} // namespace std

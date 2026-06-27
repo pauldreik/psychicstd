@@ -1,0 +1,108 @@
+#pragma once
+#include <cstddef>
+#include <typeinfo>
+
+namespace std {
+
+class exception {
+public:
+  exception() noexcept = default;
+  exception(const exception&) noexcept = default;
+  exception& operator=(const exception&) noexcept = default;
+  virtual ~exception() = default;
+  virtual const char* what() const noexcept { return "std::exception"; }
+};
+
+class bad_exception : public exception {
+public:
+  const char* what() const noexcept override { return "std::bad_exception"; }
+};
+
+class bad_alloc : public exception {
+public:
+  const char* what() const noexcept override { return "std::bad_alloc"; }
+};
+
+class bad_array_new_length : public bad_alloc {
+public:
+  const char* what() const noexcept override {
+    return "std::bad_array_new_length";
+  }
+};
+
+class bad_cast : public exception {
+public:
+  const char* what() const noexcept override { return "std::bad_cast"; }
+};
+
+class bad_typeid : public exception {
+public:
+  const char* what() const noexcept override { return "std::bad_typeid"; }
+};
+
+[[noreturn]] void terminate() noexcept;
+
+using terminate_handler = void (*)();
+terminate_handler get_terminate() noexcept;
+terminate_handler set_terminate(terminate_handler) noexcept;
+
+bool uncaught_exception() noexcept;
+int uncaught_exceptions() noexcept;
+
+// Itanium ABI exception-handling globals — layout is ABI-stable across GCC.
+namespace __cxxabiv1 {
+struct __cxa_exception;
+struct __cxa_eh_globals {
+  __cxa_exception* caughtExceptions;
+  unsigned int uncaughtExceptions;
+};
+extern "C" __cxa_eh_globals* __cxa_get_globals() noexcept;
+extern "C" [[noreturn]] void __cxa_rethrow();
+} // namespace __cxxabiv1
+
+// exception_ptr — opaque pointer to an exception
+class exception_ptr {
+  void* ptr_ = nullptr;
+
+  explicit exception_ptr(void* p) noexcept : ptr_(p) {}
+  friend exception_ptr current_exception() noexcept;
+
+public:
+  exception_ptr() noexcept = default;
+  exception_ptr(nullptr_t) noexcept {}
+  exception_ptr(const exception_ptr& o) noexcept : ptr_(o.ptr_) {}
+  exception_ptr& operator=(const exception_ptr& o) noexcept {
+    ptr_ = o.ptr_;
+    return *this;
+  }
+  ~exception_ptr() {}
+  explicit operator bool() const noexcept { return ptr_ != nullptr; }
+  friend bool operator==(const exception_ptr& a,
+                         const exception_ptr& b) noexcept {
+    return a.ptr_ == b.ptr_;
+  }
+  friend bool operator!=(const exception_ptr& a,
+                         const exception_ptr& b) noexcept {
+    return !(a == b);
+  }
+};
+
+// Returns non-null when called from within a catch block (active exception).
+// Uses the Itanium ABI globals rather than __cxa_current_primary_exception
+// (the latter is in libstdc++, not libsupc++).
+inline exception_ptr current_exception() noexcept {
+  auto* g = __cxxabiv1::__cxa_get_globals();
+  return exception_ptr(g ? static_cast<void*>(g->caughtExceptions) : nullptr);
+}
+
+[[noreturn]] inline void rethrow_exception(exception_ptr p) {
+  // __cxa_rethrow() rethrows the exception currently being handled.
+  (void)p;
+  __cxxabiv1::__cxa_rethrow();
+}
+
+template <typename E> exception_ptr make_exception_ptr(E e) noexcept {
+  return exception_ptr{}; // stub
+}
+
+} // namespace std

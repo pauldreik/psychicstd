@@ -1,0 +1,21 @@
+#pragma once
+#include <chrono>
+#include <ratio>
+#include <time.h>
+
+namespace std {
+namespace this_thread {
+
+template <typename Rep, typename Period>
+void sleep_for(const chrono::duration<Rep, Period>& d) {
+  auto ns = chrono::duration_cast<chrono::nanoseconds>(d).count();
+  if (ns <= 0)
+    return;
+  struct timespec ts;
+  ts.tv_sec = ns / 1'000'000'000LL;
+  ts.tv_nsec = ns % 1'000'000'000LL;
+  ::nanosleep(&ts, nullptr);
+}
+
+} // namespace this_thread
+} // namespace std

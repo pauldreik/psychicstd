@@ -1,0 +1,2 @@
+#pragma once
+// C++23 removed <ciso646>; this stub satisfies includes from older test code

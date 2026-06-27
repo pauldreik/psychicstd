@@ -1,0 +1,28 @@
+#pragma once
+#include <cstddef>
+#include <exception>
+
+// placement new is a language built-in; the header just declares the
+// signatures. global operator new/delete are provided by the runtime
+// (libstdc++/libc).
+void* operator new(std::size_t) noexcept(false);
+void* operator new[](std::size_t) noexcept(false);
+void operator delete(void*) noexcept;
+void operator delete[](void*) noexcept;
+void operator delete(void*, std::size_t) noexcept;
+void operator delete[](void*, std::size_t) noexcept;
+
+// placement new — constexpr so it works in C++20 constexpr contexts
+inline constexpr void* operator new(std::size_t, void* p) noexcept { return p; }
+inline constexpr void* operator new[](std::size_t, void* p) noexcept {
+  return p;
+}
+inline constexpr void operator delete(void*, void*) noexcept {}
+inline constexpr void operator delete[](void*, void*) noexcept {}
+
+namespace std {
+struct nothrow_t {
+  explicit nothrow_t() = default;
+};
+inline constexpr nothrow_t nothrow{};
+} // namespace std
