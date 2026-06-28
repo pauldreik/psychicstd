@@ -1,5 +1,6 @@
 #pragma once
 #include <cstddef>
+#include <initializer_list>
 #include <type_traits>
 
 namespace std {
@@ -299,6 +300,24 @@ template <typename C> constexpr auto size(const C& c) -> decltype(c.size()) {
 }
 template <typename T, size_t N> constexpr size_t size(const T (&)[N]) noexcept {
   return N;
+}
+template <typename C> constexpr auto empty(const C& c) -> decltype(c.empty()) {
+  return c.empty();
+}
+template <typename T, size_t N> constexpr bool empty(const T (&)[N]) noexcept {
+  return N == 0;
+}
+template <typename T> constexpr bool empty(initializer_list<T> il) noexcept {
+  return il.size() == 0;
+}
+template <typename C> constexpr auto data(C& c) -> decltype(c.data()) {
+  return c.data();
+}
+template <typename C> constexpr auto data(const C& c) -> decltype(c.data()) {
+  return c.data();
+}
+template <typename T, size_t N> constexpr T* data(T (&a)[N]) noexcept {
+  return a;
 }
 
 } // namespace std

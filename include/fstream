@@ -193,6 +193,7 @@ template <typename Char, typename Traits>
 class basic_fstream : public basic_ostream<Char, Traits> {
 public:
   using string_type = basic_string<Char, Traits>;
+  using off_type = typename Traits::off_type;
 
   basic_fstream() : basic_ostream<Char, Traits>(&buf_) {}
   explicit basic_fstream(const char* path,
@@ -213,8 +214,38 @@ public:
     else
       this->clear();
   }
+  void open(const string_type& path,
+            ios_base::openmode mode = ios_base::in | ios_base::out) {
+    open(path.c_str(), mode);
+  }
   void close() { buf_.close(); }
   bool is_open() const { return buf_.is_open(); }
+
+  basic_fstream& read(Char* buf, streamsize n) {
+    if (!buf_.fp_) {
+      gcount_ = 0;
+      this->setstate(ios_base::failbit);
+      return *this;
+    }
+    gcount_ = (streamsize)::fread(buf, sizeof(Char), (size_t)n, buf_.fp_);
+    if (gcount_ < n) {
+      if (::feof(buf_.fp_))
+        this->setstate(ios_base::eofbit);
+      this->setstate(ios_base::failbit);
+    }
+    return *this;
+  }
+
+  basic_fstream& seekg(off_type off, ios_base::seekdir dir) {
+    int whence = (dir == ios_base::beg)   ? SEEK_SET
+                 : (dir == ios_base::cur) ? SEEK_CUR
+                                          : SEEK_END;
+    if (buf_.fp_)
+      ::fseeko(buf_.fp_, (off_t)off, whence);
+    return *this;
+  }
+
+  streamsize gcount() const { return gcount_; }
 
   basic_filebuf<Char, Traits>* rdbuf() const {
     return const_cast<basic_filebuf<Char, Traits>*>(&buf_);
@@ -222,6 +253,7 @@ public:
 
 private:
   basic_filebuf<Char, Traits> buf_;
+  streamsize gcount_ = 0;
 };
 
 // getline

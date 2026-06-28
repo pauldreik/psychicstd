@@ -4,6 +4,9 @@
 #include <ratio>
 #include <time.h>
 #include <type_traits>
+// For common_type deduction of Rep types (e.g. long long + int → long long).
+// We use decltype(d1.count() + d2.count()) instead of std::common_type to keep
+// things self-contained.
 
 namespace std::chrono {
 
@@ -53,14 +56,20 @@ private:
   Rep rep_{};
 };
 
+// Cross-period arithmetic and comparison: convert both operands to the common
+// duration (ratio_gcd period, wider rep) before comparing or combining.
 template <typename R1, typename P1, typename R2, typename P2>
 constexpr bool operator==(const duration<R1, P1>& a,
                           const duration<R2, P2>& b) {
-  return a.count() == b.count();
+  using CD =
+      duration<decltype(declval<R1>() + declval<R2>()), ratio_gcd<P1, P2>>;
+  return CD(a).count() == CD(b).count();
 }
 template <typename R1, typename P1, typename R2, typename P2>
 constexpr bool operator<(const duration<R1, P1>& a, const duration<R2, P2>& b) {
-  return a.count() < b.count();
+  using CD =
+      duration<decltype(declval<R1>() + declval<R2>()), ratio_gcd<P1, P2>>;
+  return CD(a).count() < CD(b).count();
 }
 template <typename R1, typename P1, typename R2, typename P2>
 constexpr bool operator!=(const duration<R1, P1>& a,
@@ -84,13 +93,34 @@ constexpr bool operator>=(const duration<R1, P1>& a,
 
 template <typename R1, typename P1, typename R2, typename P2>
 constexpr auto operator+(const duration<R1, P1>& a, const duration<R2, P2>& b) {
-  using R = duration<decltype(declval<R1>() + declval<R2>()), P1>;
-  return R(a.count() + b.count());
+  using CD =
+      duration<decltype(declval<R1>() + declval<R2>()), ratio_gcd<P1, P2>>;
+  return CD(CD(a).count() + CD(b).count());
 }
 template <typename R1, typename P1, typename R2, typename P2>
 constexpr auto operator-(const duration<R1, P1>& a, const duration<R2, P2>& b) {
-  using R = duration<decltype(declval<R1>() - declval<R2>()), P1>;
-  return R(a.count() - b.count());
+  using CD =
+      duration<decltype(declval<R1>() - declval<R2>()), ratio_gcd<P1, P2>>;
+  return CD(CD(a).count() - CD(b).count());
+}
+template <typename Rep, typename Period, typename Scalar>
+constexpr duration<Rep, Period> operator*(const duration<Rep, Period>& d,
+                                          Scalar s) {
+  return duration<Rep, Period>(static_cast<Rep>(d.count() * s));
+}
+template <typename Scalar, typename Rep, typename Period>
+constexpr duration<Rep, Period> operator*(Scalar s,
+                                          const duration<Rep, Period>& d) {
+  return d * s;
+}
+template <typename Rep, typename Period, typename Scalar>
+constexpr duration<Rep, Period> operator/(const duration<Rep, Period>& d,
+                                          Scalar s) {
+  return duration<Rep, Period>(static_cast<Rep>(d.count() / s));
+}
+template <typename R1, typename P1, typename R2, typename P2>
+constexpr auto operator/(const duration<R1, P1>& a, const duration<R2, P2>& b) {
+  return a.count() / b.count();
 }
 
 template <typename ToDur, typename Rep, typename Period>
@@ -122,6 +152,9 @@ public:
 
   constexpr time_point() = default;
   constexpr explicit time_point(const Duration& d) : d_(d) {}
+  template <typename Duration2>
+  constexpr time_point(const time_point<Clock, Duration2>& t)
+      : d_(t.time_since_epoch()) {}
 
   constexpr Duration time_since_epoch() const { return d_; }
 

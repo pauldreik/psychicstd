@@ -110,6 +110,9 @@ template <typename Char, typename Traits> class basic_ios : public ios_base {
 public:
   using char_type = Char;
   using traits_type = Traits;
+  using int_type = typename Traits::int_type;
+  using off_type = typename Traits::off_type;
+  using pos_type = typename Traits::pos_type;
 
   basic_streambuf<Char, Traits>* rdbuf() const noexcept { return buf_; }
   basic_streambuf<Char, Traits>* rdbuf(basic_streambuf<Char, Traits>* sb) {

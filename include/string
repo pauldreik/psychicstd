@@ -8,6 +8,7 @@
 #include <memory>
 #include <string_view>
 #include <utility>
+#include <version>
 
 namespace std {
 
@@ -191,6 +192,8 @@ public:
   // Element access
   Char& operator[](size_type i) noexcept { return data_[i]; }
   const Char& operator[](size_type i) const noexcept { return data_[i]; }
+  Char& at(size_type i) { return data_[i]; }
+  const Char& at(size_type i) const { return data_[i]; }
   Char& front() noexcept { return data_[0]; }
   const Char& front() const noexcept { return data_[0]; }
   Char& back() noexcept { return data_[size_ - 1]; }
@@ -695,9 +698,25 @@ bool operator<(const basic_string<C, T, A>& a,
   return a.compare(b) < 0;
 }
 template <typename C, typename T, typename A>
+bool operator<(const basic_string<C, T, A>& a, const C* b) noexcept {
+  return a.compare(b) < 0;
+}
+template <typename C, typename T, typename A>
+bool operator<(const C* a, const basic_string<C, T, A>& b) noexcept {
+  return b.compare(a) > 0;
+}
+template <typename C, typename T, typename A>
 bool operator<=(const basic_string<C, T, A>& a,
                 const basic_string<C, T, A>& b) noexcept {
   return a.compare(b) <= 0;
+}
+template <typename C, typename T, typename A>
+bool operator<=(const basic_string<C, T, A>& a, const C* b) noexcept {
+  return a.compare(b) <= 0;
+}
+template <typename C, typename T, typename A>
+bool operator<=(const C* a, const basic_string<C, T, A>& b) noexcept {
+  return b.compare(a) >= 0;
 }
 template <typename C, typename T, typename A>
 bool operator>(const basic_string<C, T, A>& a,
@@ -705,9 +724,25 @@ bool operator>(const basic_string<C, T, A>& a,
   return a.compare(b) > 0;
 }
 template <typename C, typename T, typename A>
+bool operator>(const basic_string<C, T, A>& a, const C* b) noexcept {
+  return a.compare(b) > 0;
+}
+template <typename C, typename T, typename A>
+bool operator>(const C* a, const basic_string<C, T, A>& b) noexcept {
+  return b.compare(a) < 0;
+}
+template <typename C, typename T, typename A>
 bool operator>=(const basic_string<C, T, A>& a,
                 const basic_string<C, T, A>& b) noexcept {
   return a.compare(b) >= 0;
+}
+template <typename C, typename T, typename A>
+bool operator>=(const basic_string<C, T, A>& a, const C* b) noexcept {
+  return a.compare(b) >= 0;
+}
+template <typename C, typename T, typename A>
+bool operator>=(const C* a, const basic_string<C, T, A>& b) noexcept {
+  return b.compare(a) <= 0;
 }
 
 template <typename C, typename T, typename A>

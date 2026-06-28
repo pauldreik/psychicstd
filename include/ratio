@@ -8,6 +8,9 @@ namespace detail {
 constexpr intmax_t gcd(intmax_t a, intmax_t b) noexcept {
   return b == 0 ? a : gcd(b, a % b);
 }
+constexpr intmax_t lcm(intmax_t a, intmax_t b) noexcept {
+  return (a / gcd(a, b)) * b;
+}
 } // namespace detail
 
 template <intmax_t Num, intmax_t Den = 1> struct ratio {
@@ -34,6 +37,12 @@ using ratio_multiply = ratio<R1::num * R2::num, R1::den * R2::den>;
 
 template <typename R1, typename R2>
 using ratio_divide = ratio<R1::num * R2::den, R1::den * R2::num>;
+
+// ratio_gcd: greatest common ratio (finest period covering both)
+// gcd(num1,num2) / lcm(den1,den2)
+template <typename R1, typename R2>
+using ratio_gcd =
+    ratio<detail::gcd(R1::num, R2::num), detail::lcm(R1::den, R2::den)>;
 
 template <typename R1, typename R2>
 struct ratio_equal : bool_constant<R1::num == R2::num && R1::den == R2::den> {};

@@ -5,6 +5,9 @@
 
 foreach(t test_basic test_algorithms test_strings)
     add_executable(validation_catch2_${t} ${t}.cpp)
-    target_link_libraries(validation_catch2_${t} PRIVATE psychicstd::psychicstd Catch2::Catch2WithMain)
+    target_link_libraries(
+        validation_catch2_${t}
+        PRIVATE psychicstd::psychicstd Catch2::Catch2WithMain
+    )
     add_test(NAME validation_catch2_${t} COMMAND validation_catch2_${t})
 endforeach()

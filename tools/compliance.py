@@ -30,17 +30,21 @@ import subprocess
 import sys
 import tempfile
 import time
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).parent.parent.resolve()
 PSYCHICSTD = REPO_ROOT / "include"
-LLVM_ROOT = Path.home() / "code/thirdparty/llvm-project"
+LLVM_ROOT = Path(
+    os.environ.get("LLVM_ROOT", Path.home() / "code/thirdparty/llvm-project")
+)
 LIBCXX_TEST = LLVM_ROOT / "libcxx" / "test"
 SUPPORT_DIR = LIBCXX_TEST / "support"
 
 N_SAMPLE = 15  # new tests to add per header per run (default)
 N_BENCH = 1  # compile runs for timing
+N_WORKERS = os.cpu_count() or 1
 SEED = 42
 SPEED_GREEN = 1.2
 SPEED_RED = 0.8
@@ -121,29 +125,24 @@ def run_cmd(cmd: list[str], timeout: int = 20) -> tuple[bool, str]:
 
 def try_compile_run(
     src: Path, flags: list[str], xflags: list[str], run_exe: bool
-) -> str:
-    """Returns 'pass', 'rfail', or 'cfail'."""
+) -> tuple[str, float | None]:
+    """Returns ('pass'/'rfail'/'cfail', compile_ms or None if compile failed)."""
     with tempfile.NamedTemporaryFile(suffix="", delete=False, dir="/tmp") as f:
         exe = f.name
     try:
-        ok, _ = run_cmd(
-            [
-                CXX,
-                "-std=c++23",
-                *flags,
-                *xflags,
-                f"-I{SUPPORT_DIR}",
-                str(src),
-                "-o",
-                exe,
-            ]
-        )
-        if not ok:
-            return "cfail"
+        cmd = [CXX, "-std=c++23", *flags, *xflags, f"-I{SUPPORT_DIR}", str(src), "-o", exe]
+        t0 = time.perf_counter()
+        try:
+            r = subprocess.run(cmd, capture_output=True, timeout=20)
+        except (subprocess.TimeoutExpired, FileNotFoundError) as e:
+            return "cfail", None
+        compile_ms = (time.perf_counter() - t0) * 1000
+        if r.returncode != 0:
+            return "cfail", None
         if not run_exe:
-            return "pass"
+            return "pass", compile_ms
         ok, _ = run_cmd([exe])
-        return "pass" if ok else "rfail"
+        return ("pass" if ok else "rfail"), compile_ms
     finally:
         try:
             os.unlink(exe)
@@ -159,28 +158,6 @@ def collect_eligible(dirs: list[str]) -> list[Path]:
             tests.extend(base.rglob("*.cpp"))
     return sorted(p for p in set(tests) if not should_skip(p))
 
-
-def median_compile_ms(src: Path, flags: list[str], xflags: list[str]) -> float | None:
-    """Median compile time in ms over N_BENCH runs; None if compilation fails."""
-    cmd = [
-        CXX,
-        "-std=c++23",
-        *flags,
-        *xflags,
-        f"-I{SUPPORT_DIR}",
-        str(src),
-        "-c",
-        "-o",
-        "/dev/null",
-    ]
-    times = []
-    for _ in range(N_BENCH):
-        t0 = time.perf_counter()
-        r = subprocess.run(cmd, capture_output=True)
-        if r.returncode != 0:
-            return None
-        times.append((time.perf_counter() - t0) * 1000)
-    return statistics.median(times)
 
 
 def speed_emoji(ratio: float) -> str:
@@ -203,9 +180,7 @@ def compliance_emoji(n_pass: int, n_compile_ok: int, useful: int) -> str:
 
 CACHE_FILE = REPO_ROOT / ".compliance_cache.json"
 # Required keys in each cache entry (new per-test format)
-_CACHE_KEYS = frozenset(
-    {"tests", "bench_file", "sys_ms", "psy_ms", "lines", "eligible"}
-)
+_CACHE_KEYS = frozenset({"tests", "sys_ms", "psy_ms", "lines", "eligible"})
 
 
 def load_cache() -> dict:
@@ -235,10 +210,24 @@ def header_lines(name: str) -> int:
         return 0
 
 
+def _test_one(
+    src: Path, sys_flags: list[str], psy_flags: list[str]
+) -> tuple[str, dict]:
+    """Compile/run one test with both sys and psy flags; return (path_str, entry)."""
+    xf = extra_flags(src.read_text(errors="replace"))
+    is_exec = not src.stem.endswith(".compile.pass")
+    sys_status, sys_ms = try_compile_run(src, sys_flags, xf, is_exec)
+    entry: dict = {"sys": sys_status, "sys_ms": sys_ms, "psy": None, "psy_ms": None}
+    if sys_status == "pass":
+        psy_status, psy_ms = try_compile_run(src, psy_flags, xf, is_exec)
+        entry["psy"] = psy_status
+        entry["psy_ms"] = psy_ms
+    return str(src), entry
+
+
 def _empty_header_cache() -> dict:
     return {
         "tests": {},
-        "bench_file": None,
         "sys_ms": None,
         "psy_ms": None,
         "lines": 0,
@@ -283,9 +272,6 @@ def check_header(
     eligible = collect_eligible(dirs)
 
     cached_tests: dict = dict(header_cache.get("tests", {}))
-    bench_file_str: str | None = header_cache.get("bench_file")
-    sys_ms: float | None = header_cache.get("sys_ms")
-    psy_ms: float | None = header_cache.get("psy_ms")
 
     sys_flags: list[str] = []
     psy_flags = ["-nostdinc++", f"-I{PSYCHICSTD}"]
@@ -294,9 +280,6 @@ def check_header(
         # Re-run previously cached tests; reset results so they run fresh
         to_run = sorted(Path(p) for p in cached_tests if Path(p).exists())
         cached_tests = {}
-        bench_file_str = None
-        sys_ms = None
-        psy_ms = None
     else:
         # Run up to n_sample tests not yet in the cache
         uncached = sorted(p for p in eligible if str(p) not in cached_tests)
@@ -304,25 +287,17 @@ def check_header(
         to_run = rng.sample(uncached, min(n_sample, len(uncached)))
         to_run.sort()
 
-    for src in to_run:
-        xf = extra_flags(src.read_text(errors="replace"))
-        is_exec = not src.stem.endswith(".compile.pass")
-        sys_status = try_compile_run(src, sys_flags, xf, is_exec)
-        entry: dict = {"sys": sys_status, "psy": None}
-        if sys_status == "pass":
-            if bench_file_str is None:
-                bench_file_str = str(src)
-            entry["psy"] = try_compile_run(src, psy_flags, xf, is_exec)
-        cached_tests[str(src)] = entry
+    with ThreadPoolExecutor(max_workers=N_WORKERS) as pool:
+        futs = [pool.submit(_test_one, src, sys_flags, psy_flags) for src in to_run]
+        for fut in futs:
+            path_str, entry = fut.result()
+            cached_tests[path_str] = entry
 
-    if to_run:
-        # Measure timing once we have a bench file (if not already timed)
-        if bench_file_str is not None and sys_ms is None:
-            bench_path = Path(bench_file_str)
-            if bench_path.exists():
-                xf = extra_flags(bench_path.read_text(errors="replace"))
-                sys_ms = median_compile_ms(bench_path, sys_flags, xf)
-                psy_ms = median_compile_ms(bench_path, psy_flags, xf)
+    # Derive header-level timing as median of per-test measurements
+    sys_times = [v["sys_ms"] for v in cached_tests.values() if v.get("sys_ms") is not None]
+    psy_times = [v["psy_ms"] for v in cached_tests.values() if v.get("psy_ms") is not None]
+    sys_ms: float | None = statistics.median(sys_times) if sys_times else None
+    psy_ms: float | None = statistics.median(psy_times) if psy_times else None
 
     n_pass = sum(1 for v in cached_tests.values() if v.get("psy") == "pass")
     n_cfail = sum(1 for v in cached_tests.values() if v.get("psy") == "cfail")
@@ -332,7 +307,6 @@ def check_header(
     lines = header_lines(header)
     updated = {
         "tests": cached_tests,
-        "bench_file": bench_file_str,
         "sys_ms": sys_ms,
         "psy_ms": psy_ms,
         "lines": lines,

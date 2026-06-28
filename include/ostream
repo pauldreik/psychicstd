@@ -80,6 +80,16 @@ public:
     pad_and_write(&c, 1);
     return *this;
   }
+  basic_ostream& operator<<(signed char c) {
+    char ch = static_cast<char>(c);
+    pad_and_write(&ch, 1);
+    return *this;
+  }
+  basic_ostream& operator<<(unsigned char c) {
+    char ch = static_cast<char>(c);
+    pad_and_write(&ch, 1);
+    return *this;
+  }
   basic_ostream& operator<<(const char* s) {
     if (s) {
       pad_and_write(s, (streamsize)__builtin_strlen(s));

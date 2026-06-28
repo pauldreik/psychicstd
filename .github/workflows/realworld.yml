@@ -1,0 +1,26 @@
+---
+name: real-world project builds
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+jobs:
+  rdfind:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Enable deb-src
+        run: |
+          sudo sed -i 's/^Types: deb$/Types: deb deb-src/' /etc/apt/sources.list.d/ubuntu.sources
+          sudo apt-get update
+      - name: Install rdfind build dependencies
+        run: sudo apt-get build-dep -y rdfind
+      - name: Benchmark rdfind (system STL vs psychicstd)
+        run: bash use_on_realworld_projects/benchmark_rdfind.sh
+      - name: Upload speed report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rdfind-speed-report
+          path: use_on_realworld_projects/rdfind_speed_report.md

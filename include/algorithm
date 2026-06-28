@@ -2,6 +2,7 @@
 #include <functional>
 #include <initializer_list>
 #include <iterator>
+#include <tuple>
 #include <type_traits>
 #include <utility>
 
@@ -499,6 +500,11 @@ template <typename It, typename T>
 pair<It, It> equal_range(It first, It last, const T& value) {
   return {lower_bound(first, last, value), upper_bound(first, last, value)};
 }
+template <typename It, typename T, typename Compare>
+pair<It, It> equal_range(It first, It last, const T& value, Compare cmp) {
+  return {lower_bound(first, last, value, cmp),
+          upper_bound(first, last, value, cmp)};
+}
 
 // is_sorted / is_sorted_until
 template <typename It> constexpr bool is_sorted(It first, It last) {
@@ -786,6 +792,107 @@ constexpr void inplace_merge(It first, It middle, It last) {
       ++first;
     }
   }
+}
+
+// next_permutation
+template <typename BidirIt> bool next_permutation(BidirIt first, BidirIt last) {
+  if (first == last || first == --last)
+    return false;
+  BidirIt it = last;
+  while (true) {
+    BidirIt it1 = it;
+    if (*--it < *it1) {
+      BidirIt it2 = last;
+      while (!(*it < *it2))
+        --it2;
+      swap(*it, *it2);
+      reverse(it1, ++last);
+      return true;
+    }
+    if (it == first) {
+      reverse(first, ++last);
+      return false;
+    }
+  }
+}
+template <typename BidirIt, typename Compare>
+bool next_permutation(BidirIt first, BidirIt last, Compare cmp) {
+  if (first == last || first == --last)
+    return false;
+  BidirIt it = last;
+  while (true) {
+    BidirIt it1 = it;
+    if (cmp(*--it, *it1)) {
+      BidirIt it2 = last;
+      while (!cmp(*it, *it2))
+        --it2;
+      swap(*it, *it2);
+      reverse(it1, ++last);
+      return true;
+    }
+    if (it == first) {
+      reverse(first, ++last);
+      return false;
+    }
+  }
+}
+
+// is_permutation
+template <typename It1, typename It2>
+bool is_permutation(It1 first1, It1 last1, It2 first2) {
+  // skip matching prefix
+  for (; first1 != last1; ++first1, ++first2)
+    if (!(*first1 == *first2))
+      break;
+  if (first1 == last1)
+    return true;
+  It2 last2 = first2;
+  for (auto it = first1; it != last1; ++it)
+    ++last2;
+  for (auto it = first1; it != last1; ++it) {
+    // already counted?
+    bool seen = false;
+    for (auto jt = first1; jt != it; ++jt)
+      if (*jt == *it) {
+        seen = true;
+        break;
+      }
+    if (seen)
+      continue;
+    // count occurrences in each range
+    auto c1 = count(it, last1, *it);
+    auto c2 = count(first2, last2, *it);
+    if (c1 != c2)
+      return false;
+  }
+  return true;
+}
+template <typename It1, typename It2, typename BinaryPredicate>
+bool is_permutation(It1 first1, It1 last1, It2 first2, BinaryPredicate pred) {
+  for (; first1 != last1; ++first1, ++first2)
+    if (!pred(*first1, *first2))
+      break;
+  if (first1 == last1)
+    return true;
+  It2 last2 = first2;
+  for (auto it = first1; it != last1; ++it)
+    ++last2;
+  for (auto it = first1; it != last1; ++it) {
+    bool seen = false;
+    for (auto jt = first1; jt != it; ++jt)
+      if (pred(*jt, *it)) {
+        seen = true;
+        break;
+      }
+    if (seen)
+      continue;
+    auto eq = [&](const auto& x) { return pred(*it, x); };
+    auto c1 = count_if(it, last1, eq);
+    auto c2 = count_if(first2, last2, eq);
+    if (c1 != c2)
+      return false;
+  }
+  return true;
 }
 
 } // namespace std

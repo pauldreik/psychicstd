@@ -21,6 +21,19 @@ template <size_t I, typename T> struct tuple_leaf {
   template <typename U>
   explicit tuple_leaf(U&& v) : value(static_cast<U&&>(v)) {}
 };
+// Reference-type specialisation: value is a reference, so assign through it.
+template <size_t I, typename T> struct tuple_leaf<I, T&> {
+  T& value;
+  explicit tuple_leaf(T& v) : value(v) {}
+  tuple_leaf& operator=(const tuple_leaf& o) {
+    value = o.value;
+    return *this;
+  }
+  tuple_leaf& operator=(tuple_leaf&& o) {
+    value = o.value;
+    return *this;
+  }
+};
 
 template <typename Indices, typename... Ts> struct tuple_impl;
 
@@ -45,17 +58,35 @@ public:
   tuple& operator=(const tuple&) = default;
   tuple& operator=(tuple&&) = default;
 
+  // Non-template constructor: allows {} to initialise individual element types.
+  explicit tuple(Ts&&... args)
+    requires(sizeof...(Ts) != 0)
+      : base(static_cast<Ts&&>(args)...) {}
+
   template <typename... Us>
     requires(sizeof...(Us) == sizeof...(Ts) && sizeof...(Ts) != 0)
   explicit tuple(Us&&... args) : base(static_cast<Us&&>(args)...) {}
 
-  template <typename... Us>
-  tuple(const tuple<Us...>& other)
+  template <typename... Us, size_t... Is>
+  tuple(const tuple<Us...>& other, index_sequence<Is...>)
       : base(static_cast<const Us&>(
-            static_cast<
-                const detail::tuple_leaf<__integer_pack(sizeof...(Ts)), Us>&>(
-                other)
-                .value)...) {}
+            static_cast<const detail::tuple_leaf<Is, Us>&>(other).value)...) {}
+  template <typename... Us>
+    requires(sizeof...(Us) == sizeof...(Ts) &&
+             (is_constructible_v<Ts, const Us&> && ...))
+  tuple(const tuple<Us...>& other)
+      : tuple(other, make_index_sequence<sizeof...(Ts)>{}) {}
+
+  // Heterogeneous assignment — needed for std::tie(a,b) = tuple<Us...>{...}
+  // where Ts are reference types and Us are value types.
+  template <typename... Us>
+    requires(sizeof...(Us) == sizeof...(Ts))
+  tuple& operator=(const tuple<Us...>& other) {
+    [&]<size_t... Is>(index_sequence<Is...>) {
+      ((get<Is>(*this) = get<Is>(other)), ...);
+    }(make_index_sequence<sizeof...(Ts)>{});
+    return *this;
+  }
 };
 
 template <> class tuple<> {};

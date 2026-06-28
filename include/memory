@@ -268,9 +268,66 @@ private:
   T* ptr_;
 };
 
+// Array specialisation of unique_ptr
+template <typename T, typename D> class unique_ptr<T[], D> {
+public:
+  using pointer = T*;
+  using element_type = T;
+  using deleter_type = D;
+
+  constexpr unique_ptr() noexcept : ptr_(nullptr) {}
+  constexpr unique_ptr(nullptr_t) noexcept : ptr_(nullptr) {}
+  explicit unique_ptr(T* p) noexcept : ptr_(p) {}
+  unique_ptr(unique_ptr&& o) noexcept : ptr_(o.release()) {}
+  ~unique_ptr() {
+    if (ptr_)
+      D{}(ptr_);
+  }
+  unique_ptr& operator=(unique_ptr&& o) noexcept {
+    reset(o.release());
+    return *this;
+  }
+  unique_ptr& operator=(nullptr_t) noexcept {
+    reset();
+    return *this;
+  }
+  unique_ptr(const unique_ptr&) = delete;
+  unique_ptr& operator=(const unique_ptr&) = delete;
+
+  T& operator[](size_t i) const noexcept { return ptr_[i]; }
+  T* get() const noexcept { return ptr_; }
+  explicit operator bool() const noexcept { return ptr_ != nullptr; }
+  T* release() noexcept {
+    T* p = ptr_;
+    ptr_ = nullptr;
+    return p;
+  }
+  void reset(T* p = nullptr) noexcept {
+    T* old = ptr_;
+    ptr_ = p;
+    if (old)
+      D{}(old);
+  }
+  void swap(unique_ptr& o) noexcept {
+    T* tmp = ptr_;
+    ptr_ = o.ptr_;
+    o.ptr_ = tmp;
+  }
+
+private:
+  T* ptr_;
+};
+
 template <typename T, typename... Args>
 unique_ptr<T> make_unique(Args&&... args) {
   return unique_ptr<T>(new T(forward<Args>(args)...));
+}
+template <typename T>
+unique_ptr<T> make_unique(size_t n)
+  requires(is_array_v<T>)
+{
+  using Elem = remove_extent_t<T>;
+  return unique_ptr<T>(new Elem[n]());
 }
 
 // shared_ptr — non-atomic reference counting (thread-unsafe by design)

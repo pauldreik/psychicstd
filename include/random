@@ -93,12 +93,17 @@ class mt19937 {
 public:
   using result_type = uint32_t;
   static constexpr result_type default_seed = 5489U;
+  static constexpr size_t state_size = 624;
 
   explicit mt19937(result_type seed = default_seed) { this->seed(seed); }
   void seed(result_type s) {
     mt_[0] = s;
     for (int i = 1; i < N; ++i)
       mt_[i] = 1812433253U * (mt_[i - 1] ^ (mt_[i - 1] >> 30)) + i;
+    index_ = N;
+  }
+  template <typename SSeq> void seed(SSeq& sq) {
+    sq.generate(mt_, mt_ + N);
     index_ = N;
   }
 
@@ -278,21 +283,43 @@ private:
   param_type p_;
 };
 
-// seed_seq (minimal stub — Catch2 does not use it)
+// seed_seq
 class seed_seq {
 public:
   using result_type = uint32_t;
   seed_seq() = default;
-  seed_seq(initializer_list<result_type>) {}
+  seed_seq(initializer_list<result_type> il) {
+    for (auto v : il)
+      push(v);
+  }
+  template <typename It> seed_seq(It first, It last) {
+    for (; first != last; ++first)
+      push(static_cast<result_type>(*first));
+  }
 
   template <typename It> void generate(It first, It last) {
-    uint32_t s = 0x12345678u;
-    for (auto it = first; it != last; ++it) {
-      s = s * 1664525u + 1013904223u;
-      *it = s;
+    // Mix stored seeds into a state, then LCG-expand to fill output
+    result_type a = 0x12345678u;
+    for (size_t i = 0; i < n_; ++i)
+      a ^= v_[i] * static_cast<result_type>(i + 1);
+    size_t i = 0;
+    for (auto it = first; it != last; ++it, ++i) {
+      a = a * 1664525u + 1013904223u;
+      if (i < n_)
+        a ^= v_[i];
+      *it = a;
     }
   }
-  size_t size() const { return 0; }
+  size_t size() const { return n_; }
+
+private:
+  static constexpr size_t cap_ = 1024;
+  result_type v_[cap_]{};
+  size_t n_ = 0;
+  void push(result_type v) {
+    if (n_ < cap_)
+      v_[n_++] = v;
+  }
 };
 
 } // namespace std

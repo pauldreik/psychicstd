@@ -67,15 +67,35 @@ Unit tests should pass. The compliance test need not, getting 100% compliance is
 
 ## Use in your project
 
-No changes to your source or `CMakeLists.txt` are needed. Just pass these flags at configure time for your project:
+No changes to your source code are needed.
+
+### CMake
+
+Pass these flags at configure time:
 
 ```bash
 cmake -S . -B build-with-psychic \
-    -DCMAKE_CXX_STANDARD=23 \
-    -DCMAKE_CXX_FLAGS="-nostdinc++ -I/path/to/psychicstd/include"
+    -DCMAKE_CXX_STANDARD=20 \
+    -DCMAKE_CXX_FLAGS="-nostdinc++ -isystem /path/to/psychicstd/include"
 ```
 
+(`-isystem` rather than `-I` suppresses warnings from psychicstd headers.)
+
 To switch back to the system STL, configure without those flags. See `tests/external_project/run.sh` for a self-contained example.
+
+### Autoconf/make
+
+Pass flags as `./configure` arguments so they are baked into the Makefile — plain `make` then works without extra flags:
+
+```bash
+./configure \
+    CXXFLAGS="-std=c++20 -nostdinc++ -isystem /path/to/psychicstd/include" \
+    LDFLAGS="-nodefaultlibs" \
+    LIBS="-lsupc++ -lm -lc -lgcc_s -lgcc"
+make
+```
+
+`-nodefaultlibs` drops the default libstdc++; the explicit `LIBS` supply the necessary C++ runtime support (exceptions, operator new/delete, etc.). GCC's own library search path is unaffected so `-lsupc++` is found without a full path.
 
 ## Building and testing psychicstd itself
 

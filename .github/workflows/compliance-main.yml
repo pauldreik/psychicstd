@@ -1,0 +1,25 @@
+---
+name: compliance baseline
+on:
+  push:
+    branches: [main]
+jobs:
+  baseline:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Sparse-clone llvm-project (libcxx/test only)
+        run: |
+          git clone --depth 1 --filter=blob:none --sparse \
+            https://github.com/llvm/llvm-project.git llvm-project
+          git -C llvm-project sparse-checkout set libcxx/test
+      - name: Run compliance
+        env:
+          LLVM_ROOT: ${{ github.workspace }}/llvm-project
+        run: python3 tools/compliance.py
+      - name: Upload cache as baseline artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: compliance-baseline
+          path: .compliance_cache.json
+          retention-days: 90

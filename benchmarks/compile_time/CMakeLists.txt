@@ -7,9 +7,10 @@ set_target_properties(bench_rapidjson PROPERTIES EXCLUDE_FROM_ALL TRUE)
 target_link_libraries(bench_rapidjson PRIVATE psychicstd::psychicstd)
 target_include_directories(bench_rapidjson PRIVATE ${rapidjson_SOURCE_DIR}/include)
 
-set(RJ_DIR  ${CMAKE_SOURCE_DIR}/validation/rapidjson)
-set(C2_DIR  ${CMAKE_SOURCE_DIR}/validation/catch2)
+set(RJ_DIR ${CMAKE_SOURCE_DIR}/validation/rapidjson)
+set(C2_DIR ${CMAKE_SOURCE_DIR}/validation/catch2)
 
+# fmt: off
 add_custom_target(bench
     COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/run_bench.py
             ${CMAKE_CXX_COMPILER}
@@ -25,3 +26,4 @@ add_custom_target(bench
     COMMENT "Running compile-time benchmarks"
     VERBATIM
 )
+# fmt: on
