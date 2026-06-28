@@ -3,6 +3,8 @@ name: compliance diff
 on:
   pull_request:
     branches: [main]
+permissions:
+  pull-requests: write
 jobs:
   diff:
     runs-on: ubuntu-latest
@@ -48,6 +50,6 @@ jobs:
           cat diff.md
       - name: Post compliance diff as PR comment
         if: steps.baseline.outcome == 'success'
-        uses: marocchino/sticky-pull-request-comment@v2
+        uses: marocchino/sticky-pull-request-comment@v3
         with:
           path: diff.md
