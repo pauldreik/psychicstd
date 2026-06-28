@@ -9,6 +9,9 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      - name: Install Markdown formatter
+        run: pipx install mdformat
+
       - name: Download baseline from latest main run
         id: baseline
         continue-on-error: true # first PR before any main run has no artifact yet

@@ -8,6 +8,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+      - name: Install Markdown formatter
+        run: pipx install mdformat
       - name: Sparse-clone llvm-project (libcxx/test only)
         run: |
           git clone --depth 1 --filter=blob:none --sparse \
@@ -18,7 +20,7 @@ jobs:
           LLVM_ROOT: ${{ github.workspace }}/llvm-project
         run: python3 tools/compliance.py
       - name: Upload cache as baseline artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: compliance-baseline
           path: .compliance_cache.json
