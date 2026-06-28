@@ -1,25 +1,18 @@
+---
 name: compliance check
-
 on:
   push:
-    branches: [ "main" ]
+    branches: [main]
   pull_request:
-    branches: [ "main" ]
-
+    branches: [main]
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
-    - uses: actions/checkout@v7
-
-    - name: install packages
-      run: sudo apt update && sudo apt install pipx && pipx install mdformat
-
-    - name: check out llvm
-      run: |
-        mkdir -p ~/code/thirdparty
-        git -C ~/code/thirdparty/ clone --depth 1 https://github.com/llvm/llvm-project
-
-    - name: run compliance
-      run: python3 tools/compliance.py
+      - uses: actions/checkout@v7
+      - name: check out llvm
+        run: |
+          mkdir -p ~/code/thirdparty
+          git -C ~/code/thirdparty/ clone --depth 1 https://github.com/llvm/llvm-project
+      - name: run compliance
+        run: python3 tools/compliance.py

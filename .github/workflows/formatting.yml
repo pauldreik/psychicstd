@@ -1,0 +1,55 @@
+---
+name: formatting check
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install clang-format-21
+        run: |
+          wget https://apt.llvm.org/llvm.sh && chmod +x llvm.sh && sudo ./llvm.sh 21 && rm llvm.sh
+          sudo apt-get install -y clang-format-21
+      - name: Install CMake formatter
+        run: pipx install gersemi
+      - name: Install Python formatter and linter
+        run: pipx install ruff
+      - name: Install Markdown formatter
+        run: pipx install mdformat
+      - name: Install YAML formatter
+        run: pipx install yamlfix
+      - name: Install shell formatter
+        run: sudo apt-get install -y shfmt
+      - name: Run formatting scripts
+        run: |
+          ./run_clang_format.sh
+          ./run_cmake_format.sh
+          ./run_python_lint.sh
+          ./run_shell_format.sh
+          ./run_markdown_format.sh
+          ./run_yaml_format.sh
+      - name: Check for formatting differences
+        id: diff
+        run: |
+          git diff > formatting.patch
+          if [ -s formatting.patch ]; then
+            echo "has_diff=true" >> "$GITHUB_OUTPUT"
+            echo "Unformatted files detected:"
+            git diff --name-only
+          fi
+      - name: Upload formatting patch
+        if: steps.diff.outputs.has_diff == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: formatting-patch
+          path: formatting.patch
+      - name: Fail if unformatted code found
+        if: steps.diff.outputs.has_diff == 'true'
+        run: |-
+          echo "Formatting issues found. Download the 'formatting-patch' artifact and apply it:"
+          echo "  git apply formatting.patch"
+          exit 1

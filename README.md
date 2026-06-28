@@ -61,6 +61,7 @@ All code and text should be auto formatted. Use the following:
 - `run_markdown_format.sh`
 - `run_python_lint.sh` (formats and checks with ruff)
 - `run_shell_format.sh`
+- `run_yaml_format.sh` (formats with yamlfix)
 
 Unit tests should pass. The compliance test need not, getting 100% compliance is utopic.
 
