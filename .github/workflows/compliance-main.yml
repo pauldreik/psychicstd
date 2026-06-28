@@ -19,9 +19,11 @@ jobs:
         env:
           LLVM_ROOT: ${{ github.workspace }}/llvm-project
         run: python3 tools/compliance.py
+      - name: rename results
+        run: mv .compliance_cache.json base_cache.json
       - name: Upload cache as baseline artifact
         uses: actions/upload-artifact@v7
         with:
           name: compliance-baseline
-          path: .compliance_cache.json
+          path: base_cache.json
           retention-days: 90
