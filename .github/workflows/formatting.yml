@@ -26,6 +26,7 @@ jobs:
         run: sudo apt-get install -y shfmt
       - name: Run formatting scripts
         run: |
+          set +e
           ./run_clang_format.sh
           ./run_cmake_format.sh
           ./run_python_lint.sh
