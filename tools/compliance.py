@@ -130,11 +130,20 @@ def try_compile_run(
     with tempfile.NamedTemporaryFile(suffix="", delete=False, dir="/tmp") as f:
         exe = f.name
     try:
-        cmd = [CXX, "-std=c++23", *flags, *xflags, f"-I{SUPPORT_DIR}", str(src), "-o", exe]
+        cmd = [
+            CXX,
+            "-std=c++23",
+            *flags,
+            *xflags,
+            f"-I{SUPPORT_DIR}",
+            str(src),
+            "-o",
+            exe,
+        ]
         t0 = time.perf_counter()
         try:
             r = subprocess.run(cmd, capture_output=True, timeout=20)
-        except (subprocess.TimeoutExpired, FileNotFoundError) as e:
+        except (subprocess.TimeoutExpired, FileNotFoundError):
             return "cfail", None
         compile_ms = (time.perf_counter() - t0) * 1000
         if r.returncode != 0:
@@ -157,7 +166,6 @@ def collect_eligible(dirs: list[str]) -> list[Path]:
         if base.exists():
             tests.extend(base.rglob("*.cpp"))
     return sorted(p for p in set(tests) if not should_skip(p))
-
 
 
 def speed_emoji(ratio: float) -> str:
@@ -294,8 +302,12 @@ def check_header(
             cached_tests[path_str] = entry
 
     # Derive header-level timing as median of per-test measurements
-    sys_times = [v["sys_ms"] for v in cached_tests.values() if v.get("sys_ms") is not None]
-    psy_times = [v["psy_ms"] for v in cached_tests.values() if v.get("psy_ms") is not None]
+    sys_times = [
+        v["sys_ms"] for v in cached_tests.values() if v.get("sys_ms") is not None
+    ]
+    psy_times = [
+        v["psy_ms"] for v in cached_tests.values() if v.get("psy_ms") is not None
+    ]
     sys_ms: float | None = statistics.median(sys_times) if sys_times else None
     psy_ms: float | None = statistics.median(psy_times) if psy_times else None
 
