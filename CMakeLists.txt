@@ -10,7 +10,7 @@ target_compile_features(psychicstd INTERFACE cxx_std_23)
 target_compile_options(psychicstd INTERFACE -nostdinc++ -fvisibility=hidden)
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-    if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS "16")
+    if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS "17")
         # GCC 12 lacks -nostdlib++ (added in later versions), so use -nodefaultlibs instead.
         # That strips everything, so add back: libsupc++ (C++ runtime ABI: operator
         # new/delete, __gxx_personality_v0), libm, libc, libgcc_s/libgcc.
@@ -36,7 +36,7 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     else()
         message(
             FATAL_ERROR
-            "GCC ${CMAKE_CXX_COMPILER_VERSION} is not yet supported; only GCC 12-15 are tested"
+            "GCC ${CMAKE_CXX_COMPILER_VERSION} is not yet supported; only GCC 12-16 are tested"
         )
     endif()
 elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
