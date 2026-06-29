@@ -10,7 +10,7 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PSYCHICSTD_ROOT="${1:-$(cd "$SCRIPT_DIR/../.." && pwd)}"
 BUILD_DIR="$SCRIPT_DIR/build"
-rm -r "$BUILD_DIR"
+rm -rf "$BUILD_DIR"
 cmake -S "$SCRIPT_DIR" -B "$BUILD_DIR" \
   -DCMAKE_CXX_STANDARD=23 \
   -DCMAKE_CXX_COMPILER_WORKS=1 \
