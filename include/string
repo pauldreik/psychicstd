@@ -89,7 +89,10 @@ template <> struct char_traits<char> {
     return __builtin_strlen(s);
   }
   static constexpr char* copy(char* d, const char* s, size_t n) noexcept {
-    return (char*)__builtin_memcpy(d, s, n);
+    if (n) {
+      return (char*)__builtin_memcpy(d, s, n);
+    }
+    return d;
   }
   static constexpr char* move(char* d, const char* s, size_t n) noexcept {
     return (char*)__builtin_memmove(d, s, n);

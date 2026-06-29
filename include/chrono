@@ -131,6 +131,10 @@ constexpr ToDur duration_cast(const duration<Rep, Period>& d) {
   // ToPer::num)
   constexpr auto num = Period::num * ToPer::den;
   constexpr auto den = Period::den * ToPer::num;
+  // When periods are identical, skip multiply-divide to avoid overflow.
+  if constexpr (num == den) {
+    return ToDur(static_cast<ToRep>(d.count()));
+  }
   return ToDur(static_cast<ToRep>(d.count() * num / den));
 }
 
