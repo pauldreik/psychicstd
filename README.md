@@ -67,25 +67,70 @@ Unit tests should pass. The compliance test need not, getting 100% compliance is
 
 ## Use in your project
 
-No changes to your source code are needed.
+No changes to your source code are needed. You inject compile and link flags
+at configure time; your project's own build files stay untouched.
 
-### CMake
+### CMake / GCC 12
 
-Pass these flags at configure time:
+GCC 12 lacks `-nostdlib++`, so you need `-nodefaultlibs` and all the
+libraries spelled out:
 
 ```bash
 cmake -S . -B build-with-psychic \
     -DCMAKE_CXX_STANDARD=20 \
-    -DCMAKE_CXX_FLAGS="-nostdinc++ -isystem /path/to/psychicstd/include"
+    -DCMAKE_CXX_COMPILER_WORKS=1 \
+    -DCMAKE_CXX_FLAGS="-nostdinc++ -fvisibility=hidden -isystem /path/to/psychicstd/include" \
+    -DCMAKE_EXE_LINKER_FLAGS="-nodefaultlibs" \
+    -DCMAKE_CXX_STANDARD_LIBRARIES="-lsupc++ -lm -lc -lgcc_s -lgcc"
 ```
 
-(`-isystem` rather than `-I` suppresses warnings from psychicstd headers.)
+`CMAKE_CXX_COMPILER_WORKS=1` skips the compiler detection link test (the test
+program needs libc, but `CMAKE_CXX_STANDARD_LIBRARIES` isn't applied during
+detection).
 
-To switch back to the system STL, configure without those flags. See `tests/external_project/run.sh` for a self-contained example.
+### CMake / GCC 13+
+
+GCC 13 added `-nostdlib++`, which drops libstdc++ while keeping libc, libm,
+libgcc_s and libgcc — only `-lsupc++` needs to be added back:
+
+```bash
+cmake -S . -B build-with-psychic \
+    -DCMAKE_CXX_STANDARD=20 \
+    -DCMAKE_CXX_FLAGS="-nostdinc++ -fvisibility=hidden -isystem /path/to/psychicstd/include" \
+    -DCMAKE_EXE_LINKER_FLAGS="-nostdlib++" \
+    -DCMAKE_CXX_STANDARD_LIBRARIES="-lsupc++"
+```
+
+No `CMAKE_CXX_COMPILER_WORKS` needed — libc is still linked by default.
+
+### CMake / Clang
+
+```bash
+cmake -S . -B build-with-psychic \
+    -DCMAKE_CXX_STANDARD=20 \
+    -DCMAKE_CXX_COMPILER=clang++ \
+    -DCMAKE_CXX_FLAGS="-nostdinc++ -fvisibility=hidden -isystem /path/to/psychicstd/include" \
+    -DCMAKE_EXE_LINKER_FLAGS="-nostdlib++" \
+    -DCMAKE_CXX_STANDARD_LIBRARIES="-lsupc++"
+```
+
+### Notes for all configurations
+
+`-fvisibility=hidden` prevents psychicstd's symbols from interposing with
+libstdc++ at runtime (needed when sanitizers pull in `libstdc++.so`).
+`-isystem` (rather than `-I`) suppresses warnings from psychicstd headers.
+
+`CMAKE_CXX_STANDARD_LIBRARIES` places the libraries *after* the object files
+on the link line. This is required because `-lsupc++` is a static archive
+and the linker processes archives in order.
+
+To switch back to the system STL, configure without these flags.
+See `tests/external_project/run.sh` for a self-contained working example.
 
 ### Autoconf/make
 
-Pass flags as `./configure` arguments so they are baked into the Makefile — plain `make` then works without extra flags:
+Pass flags as `./configure` arguments so they are baked into the Makefile —
+plain `make` then works without extra flags:
 
 ```bash
 ./configure \
@@ -95,7 +140,10 @@ Pass flags as `./configure` arguments so they are baked into the Makefile — pl
 make
 ```
 
-`-nodefaultlibs` drops the default libstdc++; the explicit `LIBS` supply the necessary C++ runtime support (exceptions, operator new/delete, etc.). GCC's own library search path is unaffected so `-lsupc++` is found without a full path.
+`-nodefaultlibs` drops the default libstdc++; the explicit `LIBS` supply
+the necessary C++ runtime support (exceptions, operator new/delete, etc.).
+GCC's own library search path is unaffected so `-lsupc++` is found without
+a full path.
 
 ## Building and testing psychicstd itself
 
