@@ -56,27 +56,55 @@ HEADER_TO_DIRS: dict[str, list[str]] = {
     "array": ["containers/sequences/array"],
     "cassert": ["language.support/support.runtime"],
     "cctype": ["strings/c.strings"],
+    "cerrno": ["depr/depr.c.headers"],
+    "cfloat": ["depr/depr.c.headers"],
+    "chrono": ["time"],
+    "ciso646": ["depr/depr.c.headers"],
     "climits": ["language.support/support.limits"],
     "cmath": ["numerics/c.math"],
+    "compare": ["language.support/cmp"],
+    "complex": ["numerics/complex.number"],
+    "concepts": ["concepts"],
     "cstddef": ["language.support/support.types"],
     "cstdint": ["utilities/intseq"],
+    "cstdio": ["depr/depr.c.headers"],
     "cstdlib": ["language.support/support.runtime"],
     "cstring": ["strings/c.strings"],
+    "ctime": ["depr/depr.c.headers"],
+    "cwchar": ["depr/depr.c.headers"],
+    "deque": ["containers/sequences/deque"],
     "exception": ["language.support/support.exception"],
+    "fstream": ["input.output/file.streams"],
     "functional": ["utilities/function.objects"],
+    "initializer_list": ["utilities/initializer.list"],
+    "iomanip": ["input.output/iostream.format"],
+    "iostream": ["input.output/iostream.objects"],
     "iterator": ["iterators"],
     "limits": ["language.support/support.limits/limits"],
+    "list": ["containers/sequences/list"],
     "map": ["containers/associative/map"],
     "memory": ["utilities/memory"],
+    "new": ["language.support/support.dynamic"],
     "numeric": ["numerics/numeric.ops"],
     "optional": ["utilities/optional"],
+    "ostream": ["input.output/iostream.format/output.streams"],
     "random": ["numerics/rand"],
+    "ranges": ["ranges"],
+    "ratio": ["utilities/ratio"],
+    "regex": ["re"],
     "set": ["containers/associative/set"],
+    "sstream": ["input.output/string.streams"],
+    "stack": ["containers/container.adaptors/stack"],
     "stdexcept": ["diagnostics/std.exceptions"],
+    "streambuf": ["input.output/stream.buffers"],
     "string": ["strings/basic.string"],
     "string_view": ["strings/string.view"],
+    "thread": ["thread"],
     "tuple": ["utilities/tuple"],
+    "typeinfo": ["language.support/support.rtti"],
     "type_traits": ["utilities/meta"],
+    "unordered_map": ["containers/unord/unord.map"],
+    "unordered_set": ["containers/unord/unord.set"],
     "utility": ["utilities/utility"],
     "vector": ["containers/sequences/vector"],
 }
@@ -170,20 +198,20 @@ def collect_eligible(dirs: list[str]) -> list[Path]:
 
 def speed_emoji(ratio: float) -> str:
     if ratio > SPEED_GREEN:
-        return "🟢"
+        return "\U0001f7e2"
     if ratio >= SPEED_RED:
-        return "🟡"
-    return "🔴"
+        return "\U0001f7e1"
+    return "\U0001f534"
 
 
 def compliance_emoji(n_pass: int, n_compile_ok: int, useful: int) -> str:
     if useful == 0:
-        return "⬜"
+        return "\u2b1c"
     if n_pass == useful:
-        return "🟢"
+        return "\U0001f7e2"
     if n_compile_ok > 0:
-        return "🟡"
-    return "🔴"
+        return "\U0001f7e1"
+    return "\U0001f534"
 
 
 CACHE_FILE = REPO_ROOT / ".compliance_cache.json"
@@ -474,9 +502,9 @@ def main() -> None:
             "- **w** — total eligible tests available for that header in the LLVM suite\n\n"
         )
         f.write(
-            "🟢 all sampled tests pass  "
-            "🟡 at least one test compiles (but not all pass)  "
-            "🔴 nothing compiles\n\n"
+            "\U0001f7e2 all sampled tests pass  "
+            "\U0001f7e1 at least one test compiles (but not all pass)  "
+            "\U0001f534 nothing compiles\n\n"
         )
 
         f.write("## Compilation speed\n\n")
@@ -488,7 +516,7 @@ def main() -> None:
             "STL in the sample, so no timing was available.\n\n"
         )
         f.write(
-            f"🟢 >{SPEED_GREEN}×  🟡 {SPEED_RED}×–{SPEED_GREEN}×  🔴 <{SPEED_RED}×\n\n"
+            f"\U0001f7e2 >{SPEED_GREEN}\u00d7  \U0001f7e1 {SPEED_RED}\u00d7\u2013{SPEED_GREEN}\u00d7  \U0001f534 <{SPEED_RED}\u00d7\n\n"
         )
 
         f.write("## Results\n\n")
@@ -507,18 +535,18 @@ def main() -> None:
             if useful or n_sampled:
                 conform_cell = f"{c_emoji} {n_pass}/{useful}/{n_sampled}/{eligible}"
             else:
-                conform_cell = f"⬜ 0/0/0/{eligible}"
+                conform_cell = f"\u2b1c 0/0/0/{eligible}"
 
             if r["sys_ms"] and r["psy_ms"]:
                 ratio = r["sys_ms"] / r["psy_ms"]
                 s_emoji = speed_emoji(ratio)
                 sys_cell = f"{r['sys_ms']:.0f} ms"
                 psy_cell = f"{r['psy_ms']:.0f} ms"
-                spd_cell = f"{s_emoji} {ratio:.1f}×"
+                spd_cell = f"{s_emoji} {ratio:.1f}\u00d7"
             else:
                 sys_cell = "n/a"
                 psy_cell = "n/a"
-                spd_cell = "⬜ n/a"
+                spd_cell = "\u2b1c n/a"
 
             f.write(
                 f"| {c_emoji} | `{header}` | {conform_cell} | {sys_cell} | {psy_cell} | {spd_cell} | {r['lines']} |\n"
