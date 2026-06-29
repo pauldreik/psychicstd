@@ -7,7 +7,7 @@ add_library(psychicstd INTERFACE)
 add_library(psychicstd::psychicstd ALIAS psychicstd)
 
 target_compile_features(psychicstd INTERFACE cxx_std_23)
-target_compile_options(psychicstd INTERFACE -nostdinc++)
+target_compile_options(psychicstd INTERFACE -nostdinc++ -fvisibility=hidden)
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS "16")
@@ -17,10 +17,22 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
         # GCC's own library search path is unaffected by -nodefaultlibs, so -lsupc++
         # is sufficient without a full path.
         target_link_options(psychicstd INTERFACE -nodefaultlibs)
-        target_link_libraries(
-            psychicstd
-            INTERFACE -lsupc++ -lm -lc -lgcc_s -lgcc
+        set(__psychicstd_libs
+            -lsupc++
+            -lm
+            -lc
+            -lgcc_s
+            -lgcc
         )
+        # Sanitizer runtimes must come before the gcc support libs so their
+        # interceptors shadow the real functions.
+        if(CMAKE_CXX_FLAGS MATCHES "-fsanitize=address")
+            list(INSERT __psychicstd_libs 0 -lasan)
+        endif()
+        if(CMAKE_CXX_FLAGS MATCHES "-fsanitize=undefined")
+            list(INSERT __psychicstd_libs 0 -lubsan)
+        endif()
+        target_link_libraries(psychicstd INTERFACE ${__psychicstd_libs})
     else()
         message(
             FATAL_ERROR

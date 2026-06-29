@@ -18,4 +18,30 @@ jobs:
         run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
       - name: Test
         working-directory: ${{github.workspace}}/build
-        run: ctest -C ${{env.BUILD_TYPE}}
+        run: ctest -C ${{env.BUILD_TYPE}} --output-on-failure
+  ubsan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Configure CMake (UBSan)
+        run: cmake -B ${{github.workspace}}/build_ubsan -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
+          -DCMAKE_CXX_FLAGS="-fsanitize=undefined -fsanitize-trap=undefined" -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=undefined"
+          -DCMAKE_SHARED_LINKER_FLAGS="-fsanitize=undefined"
+      - name: Build (UBSan)
+        run: cmake --build ${{github.workspace}}/build_ubsan --config ${{env.BUILD_TYPE}}
+      - name: Test (UBSan)
+        working-directory: ${{github.workspace}}/build_ubsan
+        run: ctest -C ${{env.BUILD_TYPE}} --output-on-failure
+  asan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Configure CMake (ASan)
+        run: cmake -B ${{github.workspace}}/build_asan -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
+          -DCMAKE_CXX_FLAGS="-fsanitize=address" -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=address"
+          -DCMAKE_SHARED_LINKER_FLAGS="-fsanitize=address"
+      - name: Build (ASan)
+        run: cmake --build ${{github.workspace}}/build_asan --config ${{env.BUILD_TYPE}}
+      - name: Test (ASan)
+        working-directory: ${{github.workspace}}/build_asan
+        run: ctest -C ${{env.BUILD_TYPE}} --output-on-failure
