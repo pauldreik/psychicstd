@@ -22,9 +22,9 @@ template <typename T>
   requires(is_move_constructible_v<T> && is_move_assignable_v<T>)
 constexpr void swap(T& a, T& b) noexcept(is_nothrow_move_constructible_v<T> &&
                                          is_nothrow_move_assignable_v<T>) {
-  T tmp = move(a);
-  a = move(b);
-  b = move(tmp);
+  T tmp = std::move(a);
+  a = std::move(b);
+  b = std::move(tmp);
 }
 template <typename T, size_t N>
 constexpr void swap(T (&a)[N], T (&b)[N]) noexcept(noexcept(swap(*a, *b))) {
@@ -34,8 +34,8 @@ constexpr void swap(T (&a)[N], T (&b)[N]) noexcept(noexcept(swap(*a, *b))) {
 
 template <typename T, typename U = T>
 constexpr T exchange(T& obj, U&& new_val) {
-  T old = move(obj);
-  obj = forward<U>(new_val);
+  T old = std::move(obj);
+  obj = std::forward<U>(new_val);
   return old;
 }
 
@@ -70,12 +70,12 @@ template <typename T1, typename T2> struct pair {
   template <typename U1, typename U2>
     requires(is_constructible_v<T1, U1> && is_constructible_v<T2, U2>)
   constexpr pair(U1&& a, U2&& b)
-      : first(forward<U1>(a)), second(forward<U2>(b)) {}
+      : first(std::forward<U1>(a)), second(std::forward<U2>(b)) {}
   template <typename U1, typename U2>
   constexpr pair(const pair<U1, U2>& p) : first(p.first), second(p.second) {}
   template <typename U1, typename U2>
   constexpr pair(pair<U1, U2>&& p)
-      : first(forward<U1>(p.first)), second(forward<U2>(p.second)) {}
+      : first(std::forward<U1>(p.first)), second(std::forward<U2>(p.second)) {}
   constexpr pair(const pair&) = default;
   constexpr pair(pair&&) = default;
   pair& operator=(const pair&) = default;
@@ -89,7 +89,7 @@ template <typename T1, typename T2> struct pair {
 
 template <typename T1, typename T2>
 constexpr pair<decay_t<T1>, decay_t<T2>> make_pair(T1&& a, T2&& b) {
-  return {forward<T1>(a), forward<T2>(b)};
+  return {std::forward<T1>(a), std::forward<T2>(b)};
 }
 
 template <typename T1, typename T2, typename U1, typename U2>

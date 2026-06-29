@@ -101,7 +101,8 @@ inline exception_ptr current_exception() noexcept {
   __cxxabiv1::__cxa_rethrow();
 }
 
-template <typename E> exception_ptr make_exception_ptr(E e) noexcept {
+template <typename E>
+exception_ptr make_exception_ptr([[maybe_unused]] E e) noexcept {
   return exception_ptr{}; // stub
 }
 

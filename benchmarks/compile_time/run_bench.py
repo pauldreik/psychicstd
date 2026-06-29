@@ -8,12 +8,14 @@ Usage: run_bench.py [cxx_compiler] [psychicstd_include_dir]
 """
 
 import argparse
-import shutil
+import os
 import statistics
 import subprocess
 import time
 from datetime import datetime
 from pathlib import Path
+
+os.environ["CCACHE_DISABLE"] = "1"
 
 BENCH_DIR = Path(__file__).parent.resolve()
 REPO_ROOT = BENCH_DIR.parent.parent
@@ -27,21 +29,6 @@ YELLOW = "\033[33m"
 GREEN = "\033[32m"
 DIM = "\033[2m"
 RESET = "\033[0m"
-
-
-def resolve_compiler(cxx: str) -> str:
-    """Return the real compiler path, bypassing any ccache wrapper."""
-    import os
-
-    path = shutil.which(cxx) or cxx
-    if Path(path).resolve().name == "ccache":
-        clean_path = os.pathsep.join(
-            p for p in os.environ.get("PATH", "").split(os.pathsep) if "ccache" not in p
-        )
-        real = shutil.which(Path(cxx).name, path=clean_path)
-        if real:
-            return real
-    return cxx
 
 
 def compile_ms(cxx: str, flags: list[str], file: Path) -> float:
@@ -102,7 +89,7 @@ def main() -> None:
         if name and paths_str:
             extra_includes[name] = [Path(p) for p in paths_str.split(":") if p]
 
-    cxx = resolve_compiler(args.compiler)
+    cxx = args.compiler
     psychicstd_flags = ["-nostdinc++", f"-I{args.psychicstd_inc}"]
 
     # Auto-discover third_party/<name>/include dirs; CLI --extra-include takes precedence.

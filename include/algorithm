@@ -776,7 +776,6 @@ template <typename It> constexpr It adjacent_find(It first, It last) {
 template <typename It>
 constexpr void inplace_merge(It first, It middle, It last) {
   // simple O(n) extra space implementation
-  using value_type = typename iterator_traits<It>::value_type;
   // fall back to rotate-based in-place
   if (first == middle || middle == last)
     return;

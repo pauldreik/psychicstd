@@ -20,7 +20,7 @@ public:
     result_type val;
     int fd = ::open("/dev/urandom", O_RDONLY | O_CLOEXEC);
     if (fd >= 0) {
-      (void)::read(fd, &val, sizeof(val));
+      [[maybe_unused]] auto _ = ::read(fd, &val, sizeof(val));
       ::close(fd);
     } else {
       // fallback: use address entropy + a counter
