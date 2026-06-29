@@ -1,0 +1,46 @@
+---
+name: clang sanitizers
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+jobs:
+  asan:
+    name: AddressSanitizer
+    runs-on: ubuntu-latest
+    env:
+      ASAN_OPTIONS: halt_on_error=1:abort_on_error=1
+    steps:
+      - uses: actions/checkout@v7
+      - name: Configure
+        run: |
+          cmake -B "${{github.workspace}}/build" \
+            -DCMAKE_CXX_COMPILER=clang++ \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DCMAKE_CXX_FLAGS="-fsanitize=address -fno-omit-frame-pointer" \
+            -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=address"
+      - name: Build
+        run: cmake --build "${{github.workspace}}/build"
+      - name: Test
+        working-directory: ${{github.workspace}}/build
+        run: ctest --output-on-failure
+  ubsan:
+    name: UndefinedBehaviorSanitizer
+    runs-on: ubuntu-latest
+    env:
+      UBSAN_OPTIONS: halt_on_error=1:abort_on_error=1:print_stacktrace=1
+    steps:
+      - uses: actions/checkout@v7
+      - name: Configure
+        run: |
+          cmake -B "${{github.workspace}}/build" \
+            -DCMAKE_CXX_COMPILER=clang++ \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DCMAKE_CXX_FLAGS="-fsanitize=undefined" \
+            -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=undefined"
+      - name: Build
+        run: cmake --build "${{github.workspace}}/build"
+      - name: Test
+        working-directory: ${{github.workspace}}/build
+        run: ctest --output-on-failure
