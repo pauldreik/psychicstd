@@ -455,10 +455,17 @@ template <typename T>
 inline constexpr bool has_virtual_destructor_v =
     has_virtual_destructor<T>::value;
 
-// is_trivially_destructible (use __has_trivial_destructor for GCC < 13)
+// __is_trivially_destructible is a Clang builtin. GCC uses
+// __has_trivial_destructor instead (available in all GCC versions we support).
+#if defined(__clang__)
+template <typename T>
+struct is_trivially_destructible
+    : bool_constant<__is_trivially_destructible(T)> {};
+#else
 template <typename T>
 struct is_trivially_destructible : bool_constant<__has_trivial_destructor(T)> {
 };
+#endif
 template <typename T>
 inline constexpr bool is_trivially_destructible_v =
     is_trivially_destructible<T>::value;

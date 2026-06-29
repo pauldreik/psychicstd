@@ -5,7 +5,7 @@ namespace std {
 
 template <typename Char> struct char_traits;
 
-template <typename T> class allocator;
+template <typename T> struct allocator;
 
 template <typename Char, typename Traits = char_traits<Char>> class basic_ios;
 template <typename Char, typename Traits = char_traits<Char>>

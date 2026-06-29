@@ -60,21 +60,21 @@ using ::tan;
 using ::tanh;
 using ::trunc;
 // isnan/isinf/isfinite/isnormal/signbit are macros in C — wrap them
-inline bool isnan(float x) { return __builtin_isnanf(x); }
+inline bool isnan(float x) { return __builtin_isnan(x); }
 inline bool isnan(double x) { return __builtin_isnan(x); }
-inline bool isnan(long double x) { return __builtin_isnanl(x); }
-inline bool isinf(float x) { return __builtin_isinff(x); }
+inline bool isnan(long double x) { return __builtin_isnan(x); }
+inline bool isinf(float x) { return __builtin_isinf(x); }
 inline bool isinf(double x) { return __builtin_isinf(x); }
-inline bool isinf(long double x) { return __builtin_isinfl(x); }
+inline bool isinf(long double x) { return __builtin_isinf(x); }
 inline bool isfinite(float x) { return __builtin_isfinite(x); }
 inline bool isfinite(double x) { return __builtin_isfinite(x); }
 inline bool isfinite(long double x) { return __builtin_isfinite(x); }
 inline bool isnormal(float x) { return __builtin_isnormal(x); }
 inline bool isnormal(double x) { return __builtin_isnormal(x); }
 inline bool isnormal(long double x) { return __builtin_isnormal(x); }
-inline bool signbit(float x) { return __builtin_signbitf(x); }
+inline bool signbit(float x) { return __builtin_signbit(x); }
 inline bool signbit(double x) { return __builtin_signbit(x); }
-inline bool signbit(long double x) { return __builtin_signbitl(x); }
+inline bool signbit(long double x) { return __builtin_signbit(x); }
 using ::copysign;
 using ::frexp;
 using ::hypot;

@@ -39,8 +39,14 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
             "GCC ${CMAKE_CXX_COMPILER_VERSION} is not yet supported; only GCC 12-15 are tested"
         )
     endif()
+elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    # Clang supports -nostdlib++ which strips libc++/libstdc++ from the default
+    # link set but keeps libc, libm, libgcc_s, libgcc. Add libsupc++ back for
+    # the C++ ABI runtime (operator new/delete, __gxx_personality_v0, RTTI).
+    target_link_options(psychicstd INTERFACE -nostdlib++)
+    target_link_libraries(psychicstd INTERFACE -lsupc++)
 else()
-    message(FATAL_ERROR "Only gcc is supported, ${CMAKE_CXX_COMPILER_ID} has not been tested yet")
+    message(FATAL_ERROR "Unsupported compiler: ${CMAKE_CXX_COMPILER_ID}")
 endif()
 target_include_directories(
     psychicstd

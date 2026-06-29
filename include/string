@@ -88,15 +88,32 @@ template <> struct char_traits<char> {
   static constexpr size_t length(const char* s) noexcept {
     return __builtin_strlen(s);
   }
+  // GCC false positive: it tracks size_ + 1 overflowing to 0, then memcpy with
+  // "SIZE_MAX" bytes. The actual call sites never pass such values.
+#ifndef __clang__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstringop-overflow"
+#pragma GCC diagnostic ignored "-Wrestrict"
+#endif
   static constexpr char* copy(char* d, const char* s, size_t n) noexcept {
     if (n) {
       return (char*)__builtin_memcpy(d, s, n);
     }
     return d;
   }
+#ifndef __clang__
+#pragma GCC diagnostic pop
+#endif
+#ifndef __clang__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wrestrict"
+#endif
   static constexpr char* move(char* d, const char* s, size_t n) noexcept {
     return (char*)__builtin_memmove(d, s, n);
   }
+#ifndef __clang__
+#pragma GCC diagnostic pop
+#endif
   static constexpr const char* find(const char* s, size_t n, char c) noexcept {
     return (const char*)__builtin_memchr(s, c, n);
   }
@@ -220,8 +237,17 @@ public:
     if (data_) {
       Traits::copy(p, data_, size_ + 1);
       dealloc(data_);
-    } else
+    } else {
+      // GCC false positive: alloc(n+1) with n>=0 always returns >=1 byte.
+#ifndef __clang__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstringop-overflow"
+#endif
       p[0] = 0;
+#ifndef __clang__
+#pragma GCC diagnostic pop
+#endif
+    }
     data_ = p;
     cap_ = n;
   }
@@ -273,7 +299,15 @@ public:
     grow(size_ + n);
     Traits::copy(data_ + size_, s, n);
     size_ += n;
+    // GCC false positive: grow(size_ + n) with n > 0 ensures data_ has room.
+#ifndef __clang__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstringop-overflow"
+#endif
     data_[size_] = 0;
+#ifndef __clang__
+#pragma GCC diagnostic pop
+#endif
     return *this;
   }
   basic_string& append(const basic_string& o) {
@@ -638,12 +672,12 @@ template <typename C, typename T, typename A>
 basic_string<C, T, A> operator+(basic_string<C, T, A>&& a,
                                 const basic_string<C, T, A>& b) {
   a.append(b);
-  return move(a);
+  return std::move(a);
 }
 template <typename C, typename T, typename A>
 basic_string<C, T, A> operator+(basic_string<C, T, A>&& a, const C* b) {
   a.append(b);
-  return move(a);
+  return std::move(a);
 }
 template <typename C, typename T, typename A>
 basic_string<C, T, A> operator+(const basic_string<C, T, A>& a, C c) {
@@ -656,7 +690,7 @@ basic_string<C, T, A> operator+(const basic_string<C, T, A>& a, C c) {
 template <typename C, typename T, typename A>
 basic_string<C, T, A> operator+(basic_string<C, T, A>&& a, C c) {
   a.push_back(c);
-  return move(a);
+  return std::move(a);
 }
 template <typename C, typename T, typename A>
 basic_string<C, T, A> operator+(C c, const basic_string<C, T, A>& b) {
@@ -863,6 +897,10 @@ inline long double stold(const string& s, size_t* pos = nullptr) {
 inline namespace literals {
 inline namespace string_literals {
 #pragma GCC diagnostic push
+#ifdef __clang__
+#pragma clang diagnostic ignored "-Wunknown-warning-option"
+#pragma clang diagnostic ignored "-Wuser-defined-literals"
+#endif
 #pragma GCC diagnostic ignored "-Wliteral-suffix"
 inline string operator""s(const char* s, size_t n) { return {s, n}; }
 #pragma GCC diagnostic pop
