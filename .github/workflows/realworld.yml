@@ -26,3 +26,9 @@ jobs:
         with:
           name: rdfind-speed-report
           path: use_on_realworld_projects/rdfind_speed_report.md
+  nlohmann:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build nlohmann JSON examples with psychicstd
+        run: bash use_on_realworld_projects/test_nlohmann.sh
