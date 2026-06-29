@@ -3,7 +3,7 @@
 #   <name>_psychicstd — built with -nostdinc++ pointing at our include/, uses psychicstd headers
 # Both must pass. That's how we verify our implementation behaves like the real one.
 
-set(TESTS test_numeric test_cstdint test_cstddef)
+set(TESTS test_numeric test_cstdint test_cstddef test_memory)
 
 foreach(t ${TESTS})
     add_executable(${t}_system ${t}.cpp)
