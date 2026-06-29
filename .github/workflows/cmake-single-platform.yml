@@ -45,3 +45,20 @@ jobs:
       - name: Test (ASan)
         working-directory: ${{github.workspace}}/build_asan
         run: ctest -C ${{env.BUILD_TYPE}} --output-on-failure
+  gcc12:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install GCC 12
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq g++-12
+      - name: Configure CMake (GCC 12)
+        run: >
+          cmake -B ${{github.workspace}}/build_gcc12
+          -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
+          -DCMAKE_C_COMPILER=gcc-12
+          -DCMAKE_CXX_COMPILER=g++-12
+      - name: Build (GCC 12)
+        run: cmake --build ${{github.workspace}}/build_gcc12 --config ${{env.BUILD_TYPE}}
+      - name: Test (GCC 12)
+        working-directory: ${{github.workspace}}/build_gcc12
+        run: ctest -C ${{env.BUILD_TYPE}} --output-on-failure
