@@ -1,0 +1,370 @@
+#pragma once
+#include <cstdlib>
+#include <ios>
+#include <streambuf>
+#include <string>
+
+namespace std {
+
+template <typename Char, typename Traits>
+class basic_istream : public virtual basic_ios<Char, Traits> {
+public:
+  using char_type = Char;
+  using traits_type = Traits;
+  using int_type = typename Traits::int_type;
+  using pos_type = typename Traits::pos_type;
+  using off_type = typename Traits::off_type;
+
+  explicit basic_istream(basic_streambuf<Char, Traits>* sb) { this->init(sb); }
+
+  virtual ~basic_istream() = default;
+  basic_istream(const basic_istream&) = delete;
+  basic_istream& operator=(const basic_istream&) = delete;
+
+  class sentry {
+  public:
+    explicit sentry(basic_istream& is, bool noskipws = false) : ok_(false) {
+      if (!is.good())
+        return;
+      if (!noskipws && (is.flags() & ios_base::skipws)) {
+        auto* sb = is.rdbuf();
+        if (sb) {
+          int_type c;
+          while (!Traits::eq_int_type(c = sb->sgetc(), Traits::eof()) &&
+                 Traits::to_char_type(c) == ' ')
+            sb->sbumpc();
+        }
+      }
+      ok_ = is.good();
+    }
+    explicit operator bool() const noexcept { return ok_; }
+
+  private:
+    bool ok_;
+  };
+
+  streamsize gcount() const noexcept { return gcount_; }
+
+  // Unformatted input
+  int_type get() {
+    sentry s(*this, true);
+    if (!s) {
+      this->setstate(ios_base::failbit);
+      return Traits::eof();
+    }
+    auto* sb = this->rdbuf();
+    int_type c = sb ? sb->sbumpc() : Traits::eof();
+    if (Traits::eq_int_type(c, Traits::eof())) {
+      this->setstate(ios_base::eofbit | ios_base::failbit);
+      gcount_ = 0;
+    } else {
+      gcount_ = 1;
+    }
+    return c;
+  }
+
+  basic_istream& get(Char& c) {
+    int_type v = get();
+    if (!Traits::eq_int_type(v, Traits::eof()))
+      c = Traits::to_char_type(v);
+    return *this;
+  }
+
+  basic_istream& getline(Char* s, streamsize n, Char delim = '\n') {
+    gcount_ = 0;
+    sentry sen(*this, true);
+    if (!sen) {
+      this->setstate(ios_base::failbit);
+      return *this;
+    }
+    auto* sb = this->rdbuf();
+    while (gcount_ < n - 1) {
+      int_type c = sb ? sb->sbumpc() : Traits::eof();
+      if (Traits::eq_int_type(c, Traits::eof())) {
+        this->setstate(ios_base::eofbit);
+        break;
+      }
+      if (Traits::eq_int_type(c, Traits::to_int_type(delim)))
+        break;
+      if (s)
+        s[gcount_] = Traits::to_char_type(c);
+      ++gcount_;
+    }
+    if (s)
+      s[gcount_] = Char();
+    return *this;
+  }
+
+  basic_istream& read(Char* s, streamsize n) {
+    gcount_ = 0;
+    sentry sen(*this, true);
+    if (!sen) {
+      this->setstate(ios_base::failbit);
+      return *this;
+    }
+    auto* sb = this->rdbuf();
+    if (sb)
+      gcount_ = sb->sgetn(s, n);
+    if (gcount_ < n)
+      this->setstate(ios_base::eofbit | ios_base::failbit);
+    return *this;
+  }
+
+  int_type peek() {
+    sentry s(*this, true);
+    if (!s)
+      return Traits::eof();
+    auto* sb = this->rdbuf();
+    return sb ? sb->sgetc() : Traits::eof();
+  }
+
+  basic_istream& ignore(streamsize n = 1, int_type delim = Traits::eof()) {
+    sentry s(*this, true);
+    if (!s)
+      return *this;
+    auto* sb = this->rdbuf();
+    for (streamsize i = 0; i < n; ++i) {
+      int_type c = sb ? sb->sbumpc() : Traits::eof();
+      if (Traits::eq_int_type(c, Traits::eof())) {
+        this->setstate(ios_base::eofbit);
+        break;
+      }
+      if (Traits::eq_int_type(c, delim))
+        break;
+    }
+    return *this;
+  }
+
+  // Formatted input operators (minimal)
+  basic_istream& operator>>(basic_istream& (*pf)(basic_istream&)) {
+    return pf(*this);
+  }
+  basic_istream& operator>>(ios_base& (*pf)(ios_base&)) {
+    pf(*this);
+    return *this;
+  }
+
+  basic_istream& operator>>(bool& v) { return extract_int(v); }
+  basic_istream& operator>>(short& v) { return extract_int(v); }
+  basic_istream& operator>>(int& v) { return extract_int(v); }
+  basic_istream& operator>>(long& v) { return extract_int(v); }
+  basic_istream& operator>>(long long& v) { return extract_int(v); }
+  basic_istream& operator>>(unsigned short& v) { return extract_int(v); }
+  basic_istream& operator>>(unsigned int& v) { return extract_int(v); }
+  basic_istream& operator>>(unsigned long& v) { return extract_int(v); }
+  basic_istream& operator>>(unsigned long long& v) { return extract_int(v); }
+  basic_istream& operator>>(float& v) { return extract_float(v); }
+  basic_istream& operator>>(double& v) { return extract_float(v); }
+  basic_istream& operator>>(signed char& c) {
+    Char ch{};
+    if (operator>>(ch))
+      c = (signed char)ch;
+    return *this;
+  }
+  basic_istream& operator>>(unsigned char& c) {
+    Char ch{};
+    if (operator>>(ch))
+      c = (unsigned char)ch;
+    return *this;
+  }
+  basic_istream& operator>>(Char& c) {
+    sentry s(*this);
+    if (!s) {
+      this->setstate(ios_base::failbit);
+      return *this;
+    }
+    int_type ic = this->rdbuf()->sbumpc();
+    if (Traits::eq_int_type(ic, Traits::eof()))
+      this->setstate(ios_base::eofbit | ios_base::failbit);
+    else
+      c = Traits::to_char_type(ic);
+    return *this;
+  }
+  basic_istream& operator>>(basic_string<Char, Traits>& s) {
+    sentry sen(*this);
+    if (!sen) {
+      this->setstate(ios_base::failbit);
+      return *this;
+    }
+    s.clear();
+    auto* sb = this->rdbuf();
+    int_type c;
+    while (!Traits::eq_int_type(c = sb->sgetc(), Traits::eof())) {
+      Char ch = Traits::to_char_type(c);
+      if (ch == ' ' || ch == '\n' || ch == '\t' || ch == '\r')
+        break;
+      s += ch;
+      sb->sbumpc();
+    }
+    if (s.empty())
+      this->setstate(ios_base::failbit);
+    return *this;
+  }
+  basic_istream& operator>>(basic_streambuf<Char, Traits>* sb) {
+    if (!sb) {
+      this->setstate(ios_base::failbit);
+      return *this;
+    }
+    sentry s(*this, true);
+    if (!s)
+      return *this;
+    auto* src = this->rdbuf();
+    int_type c;
+    while (!Traits::eq_int_type(c = src->sgetc(), Traits::eof())) {
+      src->sbumpc();
+      sb->sputc(Traits::to_char_type(c));
+    }
+    return *this;
+  }
+
+  // Seek and tell
+  basic_istream& seekg(pos_type pos) {
+    if (this->good())
+      this->rdbuf()->pubseekpos(pos, ios_base::in);
+    return *this;
+  }
+  basic_istream& seekg(off_type off, ios_base::seekdir dir) {
+    if (this->good())
+      this->rdbuf()->pubseekoff(off, dir, ios_base::in);
+    return *this;
+  }
+  pos_type tellg() {
+    if (!this->good())
+      return pos_type(-1);
+    return this->rdbuf()->pubseekoff(0, ios_base::cur, ios_base::in);
+  }
+
+protected:
+  basic_istream() { this->init(nullptr); }
+
+private:
+  streamsize gcount_ = 0;
+
+  template <typename V> basic_istream& extract_int(V& v) {
+    sentry s(*this);
+    if (!s) {
+      this->setstate(ios_base::failbit);
+      return *this;
+    }
+    // Read digits from rdbuf and parse
+    char buf[64];
+    int n = 0;
+    auto* sb = this->rdbuf();
+    int_type c = sb->sgetc();
+    if (Traits::eq_int_type(c, Traits::eof())) {
+      this->setstate(ios_base::eofbit | ios_base::failbit);
+      return *this;
+    }
+    Char ch = Traits::to_char_type(c);
+    if (ch == '+' || ch == '-') {
+      buf[n++] = (char)ch;
+      sb->sbumpc();
+    }
+    bool got_digit = false;
+    while (n < 63) {
+      c = sb->sgetc();
+      if (Traits::eq_int_type(c, Traits::eof())) {
+        this->setstate(ios_base::eofbit);
+        break;
+      }
+      ch = Traits::to_char_type(c);
+      if (ch < '0' || ch > '9')
+        break;
+      buf[n++] = (char)ch;
+      got_digit = true;
+      sb->sbumpc();
+    }
+    buf[n] = '\0';
+    if (!got_digit) {
+      this->setstate(ios_base::failbit);
+      return *this;
+    }
+    if constexpr (__is_same(V, unsigned long long) ||
+                  __is_same(V, unsigned long) || __is_same(V, unsigned int) ||
+                  __is_same(V, unsigned short)) {
+      v = (V)::strtoull(buf, nullptr, 10);
+    } else {
+      v = (V)::strtoll(buf, nullptr, 10);
+    }
+    return *this;
+  }
+
+  template <typename V> basic_istream& extract_float(V& v) {
+    sentry s(*this);
+    if (!s) {
+      this->setstate(ios_base::failbit);
+      return *this;
+    }
+    char buf[64];
+    int n = 0;
+    auto* sb = this->rdbuf();
+    int_type c = sb->sgetc();
+    if (Traits::eq_int_type(c, Traits::eof())) {
+      this->setstate(ios_base::eofbit | ios_base::failbit);
+      return *this;
+    }
+    while (n < 63) {
+      c = sb->sgetc();
+      if (Traits::eq_int_type(c, Traits::eof())) {
+        this->setstate(ios_base::eofbit);
+        break;
+      }
+      Char ch = Traits::to_char_type(c);
+      if (ch == ' ' || ch == '\n' || ch == '\t')
+        break;
+      buf[n++] = (char)ch;
+      sb->sbumpc();
+    }
+    buf[n] = '\0';
+    if (n == 0) {
+      this->setstate(ios_base::failbit);
+      return *this;
+    }
+    v = (V)::strtod(buf, nullptr);
+    return *this;
+  }
+};
+
+template <typename Char, typename Traits>
+basic_istream<Char, Traits>& ws(basic_istream<Char, Traits>& is) {
+  auto* sb = is.rdbuf();
+  if (sb) {
+    typename Traits::int_type c;
+    while (!Traits::eq_int_type(c = sb->sgetc(), Traits::eof())) {
+      Char ch = Traits::to_char_type(c);
+      if (ch != ' ' && ch != '\t' && ch != '\n' && ch != '\r')
+        break;
+      sb->sbumpc();
+    }
+  }
+  return is;
+}
+
+template <typename Char, typename Traits>
+basic_istream<Char, Traits>& getline(basic_istream<Char, Traits>& is,
+                                     basic_string<Char, Traits>& s,
+                                     Char delim = '\n') {
+  s.clear();
+  typename basic_istream<Char, Traits>::sentry sen(is, true);
+  if (!sen) {
+    is.setstate(ios_base::failbit);
+    return is;
+  }
+  auto* sb = is.rdbuf();
+  typename Traits::int_type c;
+  while (!Traits::eq_int_type(c = sb ? sb->sbumpc() : Traits::eof(),
+                              Traits::eof())) {
+    Char ch = Traits::to_char_type(c);
+    if (Traits::eq(ch, delim))
+      break;
+    s += ch;
+  }
+  if (Traits::eq_int_type(c, Traits::eof()))
+    is.setstate(ios_base::eofbit);
+  return is;
+}
+
+using istream = basic_istream<char>;
+using wistream = basic_istream<wchar_t>;
+
+} // namespace std

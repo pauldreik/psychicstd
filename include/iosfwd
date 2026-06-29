@@ -68,5 +68,6 @@ using wfstream = basic_fstream<wchar_t>;
 
 using streamsize = long;
 using streamoff = long long;
+using streampos = long long;
 
 } // namespace std

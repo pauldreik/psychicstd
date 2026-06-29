@@ -1,0 +1,172 @@
+#pragma once
+#include <cstddef>
+#include <cstring>
+#include <new>
+#include <type_traits>
+#include <typeinfo>
+
+namespace std {
+
+// psychicstd: minimal std::any — type-erased value container
+class any {
+  static constexpr size_t SMALL = 2 * sizeof(void*);
+
+  struct VTable {
+    void (*destroy)(any&) noexcept;
+    void (*copy)(const any&, any&);
+    void (*move)(any&, any&) noexcept;
+    const type_info* ti;
+  };
+
+  template <typename T>
+  static constexpr bool is_small =
+      sizeof(T) <= SMALL && alignof(T) <= alignof(void*) &&
+      is_nothrow_move_constructible_v<T>;
+
+  template <typename T, bool Small = is_small<T>> struct Ops;
+
+  template <typename T> struct Ops<T, true> {
+    static T* ptr(any& a) noexcept { return reinterpret_cast<T*>(&a.buf_); }
+    static const T* ptr(const any& a) noexcept {
+      return reinterpret_cast<const T*>(&a.buf_);
+    }
+    static void destroy(any& a) noexcept { ptr(a)->~T(); }
+    static void copy(const any& src, any& dst) {
+      new (&dst.buf_) T(*ptr(src));
+      dst.vt_ = src.vt_;
+    }
+    static void move(any& src, any& dst) noexcept {
+      new (&dst.buf_) T(std::move(*ptr(src)));
+      dst.vt_ = src.vt_;
+      src.vt_ = nullptr;
+    }
+    static constexpr VTable make() { return {destroy, copy, move, &typeid(T)}; }
+  };
+
+  template <typename T> struct Ops<T, false> {
+    static T* ptr(any& a) noexcept { return static_cast<T*>(a.heap_); }
+    static const T* ptr(const any& a) noexcept {
+      return static_cast<const T*>(a.heap_);
+    }
+    static void destroy(any& a) noexcept { delete static_cast<T*>(a.heap_); }
+    static void copy(const any& src, any& dst) {
+      dst.heap_ = new T(*static_cast<const T*>(src.heap_));
+      dst.vt_ = src.vt_;
+    }
+    static void move(any& src, any& dst) noexcept {
+      dst.heap_ = src.heap_;
+      dst.vt_ = src.vt_;
+      src.heap_ = nullptr;
+      src.vt_ = nullptr;
+    }
+    static constexpr VTable make() { return {destroy, copy, move, &typeid(T)}; }
+  };
+
+  const VTable* vt_ = nullptr;
+  union {
+    alignas(alignof(void*)) char buf_[SMALL];
+    void* heap_;
+  };
+
+  template <typename T> friend T* any_cast(any*) noexcept;
+  template <typename T> friend const T* any_cast(const any*) noexcept;
+
+public:
+  any() noexcept = default;
+  any(const any& o) {
+    if (o.vt_)
+      o.vt_->copy(o, *this);
+  }
+  any(any&& o) noexcept {
+    if (o.vt_)
+      o.vt_->move(o, *this);
+  }
+  template <typename T, typename = enable_if_t<!is_same_v<decay_t<T>, any>>>
+  any(T&& v) {
+    using U = decay_t<T>;
+    static constexpr VTable vt = Ops<U>::make();
+    if constexpr (is_small<U>) {
+      new (&buf_) U(static_cast<T&&>(v));
+    } else {
+      heap_ = new U(static_cast<T&&>(v));
+    }
+    vt_ = &vt;
+  }
+  ~any() { reset(); }
+
+  any& operator=(const any& o) {
+    if (this != &o) {
+      reset();
+      if (o.vt_)
+        o.vt_->copy(o, *this);
+    }
+    return *this;
+  }
+  any& operator=(any&& o) noexcept {
+    if (this != &o) {
+      reset();
+      if (o.vt_)
+        o.vt_->move(o, *this);
+    }
+    return *this;
+  }
+  template <typename T, typename = enable_if_t<!is_same_v<decay_t<T>, any>>>
+  any& operator=(T&& v) {
+    *this = any(static_cast<T&&>(v));
+    return *this;
+  }
+
+  bool has_value() const noexcept { return vt_ != nullptr; }
+  void reset() noexcept {
+    if (vt_) {
+      vt_->destroy(*this);
+      vt_ = nullptr;
+    }
+  }
+
+  const type_info& type() const noexcept {
+    return vt_ ? *vt_->ti : typeid(void);
+  }
+};
+
+inline void swap(any& a, any& b) noexcept {
+  any tmp = std::move(a);
+  a = std::move(b);
+  b = std::move(tmp);
+}
+
+template <typename T> T* any_cast(any* a) noexcept {
+  if (!a || !a->vt_ || a->vt_->ti != &typeid(T))
+    return nullptr;
+  if constexpr (any::is_small<T>)
+    return reinterpret_cast<T*>(&a->buf_);
+  else
+    return static_cast<T*>(a->heap_);
+}
+template <typename T> const T* any_cast(const any* a) noexcept {
+  return any_cast<T>(const_cast<any*>(a));
+}
+template <typename T> T any_cast(const any& a) {
+  auto* p = any_cast<remove_cvref_t<T>>(&a);
+  if (!p)
+    throw bad_cast{};
+  return *p;
+}
+template <typename T> T any_cast(any& a) {
+  auto* p = any_cast<remove_cvref_t<T>>(&a);
+  if (!p)
+    throw bad_cast{};
+  return *p;
+}
+template <typename T> T any_cast(any&& a) {
+  auto* p = any_cast<remove_cvref_t<T>>(&a);
+  if (!p)
+    throw bad_cast{};
+  return static_cast<T>(std::move(*p));
+}
+
+template <typename T, typename... Args> any make_any(Args&&... args) {
+  return any(T(static_cast<Args&&>(args)...));
+}
+
+} // namespace std

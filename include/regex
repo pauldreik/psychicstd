@@ -1,6 +1,8 @@
 #pragma once
 #include <regex.h>
+#include <stdexcept>
 #include <string>
+#include <vector>
 
 namespace std {
 
@@ -10,7 +12,6 @@ public:
   static constexpr flag_type ECMAScript = 0;
   static constexpr flag_type icase = REG_ICASE;
   static constexpr flag_type extended = REG_EXTENDED;
-  static constexpr flag_type basic_ = 0;
 
   regex() : valid_(false) {}
 
@@ -18,13 +19,17 @@ public:
     int rf = REG_EXTENDED;
     if (flags & icase)
       rf |= REG_ICASE;
-    valid_ = (::regcomp(&re_, pattern.c_str(), rf) == 0);
+    if (::regcomp(&re_, pattern.c_str(), rf) != 0)
+      throw runtime_error("regex: bad pattern");
+    valid_ = true;
   }
   explicit regex(const char* pattern, flag_type flags = ECMAScript) {
     int rf = REG_EXTENDED;
     if (flags & icase)
       rf |= REG_ICASE;
-    valid_ = (::regcomp(&re_, pattern, rf) == 0);
+    if (::regcomp(&re_, pattern, rf) != 0)
+      throw runtime_error("regex: bad pattern");
+    valid_ = true;
   }
 
   ~regex() {
@@ -37,36 +42,91 @@ public:
   regex(regex&& o) noexcept : re_(o.re_), valid_(o.valid_) { o.valid_ = false; }
 
   bool valid() const noexcept { return valid_; }
-
-  const regex_t& native() const noexcept { return re_; }
+  const ::regex_t& native() const noexcept { return re_; }
 
 private:
-  regex_t re_;
+  ::regex_t re_{};
   bool valid_;
 };
 
-// regex_match — full match (anchored to start and end)
-inline bool regex_match(const string& s, const regex& re) {
+class smatch {
+public:
+  smatch() = default;
+
+  string str(size_t i = 0) const {
+    return i < matches_.size() ? matches_[i] : string{};
+  }
+  size_t size() const noexcept { return matches_.size(); }
+  bool empty() const noexcept { return matches_.empty(); }
+  bool ready() const noexcept { return ready_; }
+
+  void set(const string& subject, const ::regmatch_t* pm, size_t n) {
+    matches_.clear();
+    ready_ = true;
+    for (size_t i = 0; i < n; ++i) {
+      if (pm[i].rm_so >= 0)
+        matches_.push_back(subject.substr((size_t)pm[i].rm_so,
+                                          (size_t)(pm[i].rm_eo - pm[i].rm_so)));
+      else
+        matches_.push_back(string{});
+    }
+    // Trim trailing empty matches from unmatched groups
+    while (!matches_.empty() && matches_.back().empty() &&
+           matches_.size() > 1) {
+      // Keep empty groups that were explicitly captured, drop POSIX sentinels
+      // with rm_so==-1 (we already set those to ""); trim only if size > 1
+      break;
+    }
+  }
+
+private:
+  vector<string> matches_;
+  bool ready_ = false;
+};
+
+using cmatch = smatch;
+using wsmatch = smatch;
+
+inline bool regex_search(const string& s, smatch& m, const regex& re) {
   if (!re.valid())
     return false;
-  regmatch_t m[1];
-  int r = ::regexec(&re.native(), s.c_str(), 1, m, 0);
-  if (r != 0)
+  static constexpr size_t NMATCH = 16;
+  ::regmatch_t pm[NMATCH];
+  if (::regexec(&re.native(), s.c_str(), NMATCH, pm, 0) == 0) {
+    m.set(s, pm, NMATCH);
+    return true;
+  }
+  return false;
+}
+
+inline bool regex_search(const char* s, smatch& m, const regex& re) {
+  return regex_search(string(s), m, re);
+}
+
+inline bool regex_search(const string& s, const regex& re) {
+  smatch m;
+  return regex_search(s, m, re);
+}
+
+inline bool regex_search(const char* s, const regex& re) {
+  smatch m;
+  return regex_search(string(s), m, re);
+}
+
+inline bool regex_match(const string& s, smatch& m, const regex& re) {
+  if (!regex_search(s, m, re))
     return false;
-  // Must match the entire string
-  return m[0].rm_so == 0 && (size_t)m[0].rm_eo == s.size();
+  // Must cover the whole string
+  return !m.empty() && m.str(0) == s;
+}
+
+inline bool regex_match(const string& s, const regex& re) {
+  smatch m;
+  return regex_match(s, m, re);
 }
 
 inline bool regex_match(const char* s, const regex& re) {
   return regex_match(string(s), re);
-}
-
-// regex_search — partial match
-inline bool regex_search(const string& s, const regex& re) {
-  if (!re.valid())
-    return false;
-  regmatch_t m[1];
-  return ::regexec(&re.native(), s.c_str(), 1, m, 0) == 0;
 }
 
 } // namespace std

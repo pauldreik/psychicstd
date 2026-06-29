@@ -72,6 +72,11 @@ public:
                       static_cast<Key&&>(k));
     return {it, true};
   }
+  // Hint versions (hint ignored for sorted-vector implementation)
+  iterator insert(const_iterator, const Key& k) { return insert(k).first; }
+  iterator insert(const_iterator, Key&& k) {
+    return insert(static_cast<Key&&>(k)).first;
+  }
   template <typename It> void insert(It first, It last) {
     for (; first != last; ++first)
       insert(*first);
@@ -147,6 +152,10 @@ public:
   using const_iterator = typename vector<Key>::const_iterator;
 
   multiset() = default;
+  multiset(initializer_list<Key> il) {
+    for (const auto& v : il)
+      insert(v);
+  }
   template <typename It> multiset(It first, It last) {
     for (; first != last; ++first)
       insert(*first);

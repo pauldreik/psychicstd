@@ -2,6 +2,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <ios>
+#include <istream>
 #include <ostream>
 #include <streambuf>
 #include <string>
@@ -15,6 +16,7 @@ class basic_stringbuf : public basic_streambuf<Char, Traits> {
 public:
   using char_type = Char;
   using traits_type = Traits;
+  using int_type = typename Traits::int_type;
   using string_type = basic_string<Char, Traits, Alloc>;
 
   basic_stringbuf() = default;
@@ -32,18 +34,62 @@ public:
     rpos_ = 0;
   }
 
-  // for istream extraction
-  int sgetc() {
-    if (rpos_ >= buf_.size())
-      return -1;
-    return (unsigned char)buf_[rpos_++];
-  }
-  bool at_end() const { return rpos_ >= buf_.size(); }
-
 protected:
+  // Write support
   streamsize xsputn(const Char* s, streamsize n) override {
     buf_.append(s, (size_t)n);
     return n;
+  }
+  int_type overflow(int_type c) override {
+    if (Traits::eq_int_type(c, Traits::eof()))
+      return Traits::eof();
+    buf_.push_back(Traits::to_char_type(c));
+    return c;
+  }
+
+  // Read support
+  int_type underflow() override {
+    if (rpos_ >= buf_.size())
+      return Traits::eof();
+    return Traits::to_int_type(buf_[rpos_]);
+  }
+  int_type uflow() override {
+    if (rpos_ >= buf_.size())
+      return Traits::eof();
+    return Traits::to_int_type(buf_[rpos_++]);
+  }
+  streamsize xsgetn(Char* s, streamsize n) override {
+    size_t avail = buf_.size() > rpos_ ? buf_.size() - rpos_ : 0;
+    size_t got = (size_t)n < avail ? (size_t)n : avail;
+    Traits::copy(s, buf_.data() + rpos_, got);
+    rpos_ += got;
+    return (streamsize)got;
+  }
+
+  // Seek support
+  streampos seekpos(streampos pos, ios_base::openmode which) override {
+    size_t p = (size_t)(long long)pos;
+    if (p > buf_.size())
+      return streampos(-1);
+    if (which & ios_base::in)
+      rpos_ = p;
+    return streampos(rpos_);
+  }
+  streampos seekoff(streamoff off, ios_base::seekdir dir,
+                    ios_base::openmode which) override {
+    size_t base;
+    if (dir == ios_base::beg)
+      base = 0;
+    else if (dir == ios_base::end)
+      base = buf_.size();
+    else
+      base = rpos_;
+    size_t pos = (size_t)((long long)base + off);
+    if (pos > buf_.size())
+      return streampos(-1);
+    if (which & ios_base::in)
+      rpos_ = pos;
+    return streampos(rpos_);
   }
 
 private:
@@ -75,123 +121,86 @@ private:
   basic_stringbuf<Char, Traits, Alloc> buf_;
 };
 
-// basic_stringstream — bidirectional (default args are in <iosfwd>)
+// basic_istringstream (default args are in <iosfwd>)
 template <typename Char, typename Traits, typename Alloc>
-class basic_stringstream : public basic_ostream<Char, Traits> {
+class basic_istringstream : public basic_istream<Char, Traits> {
+public:
+  using char_type = Char;
+  using traits_type = Traits;
+  using string_type = basic_string<Char, Traits, Alloc>;
+
+  basic_istringstream() : basic_istream<Char, Traits>(&buf_) {}
+  explicit basic_istringstream(const string_type& s)
+      : basic_istream<Char, Traits>(&buf_), buf_(s) {}
+
+  string_type str() const { return buf_.str(); }
+  void str(const string_type& s) { buf_.str(s); }
+
+  basic_stringbuf<Char, Traits, Alloc>* rdbuf() const {
+    return const_cast<basic_stringbuf<Char, Traits, Alloc>*>(&buf_);
+  }
+
+private:
+  basic_stringbuf<Char, Traits, Alloc> buf_;
+};
+
+// basic_stringstream — inherits from both basic_istream and basic_ostream so it
+// can be passed as either istream& or ostream*. State ambiguity is resolved by
+// routing all ios methods through the istream base.
+template <typename Char, typename Traits, typename Alloc>
+class basic_stringstream : public basic_istream<Char, Traits>,
+                           public basic_ostream<Char, Traits> {
 public:
   using char_type = Char;
   using traits_type = Traits;
   using string_type = basic_string<Char, Traits, Alloc>;
   using int_type = typename Traits::int_type;
 
-  basic_stringstream() : basic_ostream<Char, Traits>(&buf_) {}
+  // Disambiguate ios methods — route through istream's basic_ios subobject
+  using basic_istream<Char, Traits>::setstate;
+  using basic_istream<Char, Traits>::clear;
+  using basic_istream<Char, Traits>::good;
+  using basic_istream<Char, Traits>::fail;
+  using basic_istream<Char, Traits>::bad;
+  using basic_istream<Char, Traits>::eof;
+  using basic_istream<Char, Traits>::rdstate;
+  using basic_istream<Char, Traits>::flags;
+  using basic_istream<Char, Traits>::setf;
+  using basic_istream<Char, Traits>::unsetf;
+  using basic_istream<Char, Traits>::precision;
+  using basic_istream<Char, Traits>::width;
+  using basic_istream<Char, Traits>::fill;
+  using basic_istream<Char, Traits>::exceptions;
+
+  basic_stringstream()
+      : basic_istream<Char, Traits>(&buf_), basic_ostream<Char, Traits>(&buf_) {
+  }
   explicit basic_stringstream(const string_type& s)
-      : basic_ostream<Char, Traits>(&buf_), buf_(s) {}
+      : basic_istream<Char, Traits>(&buf_), basic_ostream<Char, Traits>(&buf_),
+        buf_(s) {}
 
   string_type str() const { return buf_.str(); }
   void str(const string_type& s) { buf_.str(s); }
   void str(string_type&& s) { buf_.str(static_cast<string_type&&>(s)); }
 
+  // Return our specific stringbuf (hides base class rdbuf())
   basic_stringbuf<Char, Traits, Alloc>* rdbuf() const {
     return const_cast<basic_stringbuf<Char, Traits, Alloc>*>(&buf_);
   }
 
-  // Input extraction operators
-  basic_stringstream& operator>>(Char& c) {
-    int v = buf_.sgetc();
-    if (v < 0) {
-      this->setstate(ios_base::eofbit | ios_base::failbit);
-    } else
-      c = Traits::to_char_type(v);
-    return *this;
-  }
-  basic_stringstream& operator>>(string_type& s) {
-    s.clear();
-    // skip whitespace
-    int c;
-    while ((c = buf_.sgetc()) >= 0 && (unsigned char)c <= 32) {
-    }
-    if (c < 0) {
-      this->setstate(ios_base::eofbit | ios_base::failbit);
-      return *this;
-    }
-    s.push_back(Traits::to_char_type(c));
-    while ((c = buf_.sgetc()) >= 0 && (unsigned char)c > 32)
-      s.push_back(Traits::to_char_type(c));
-    return *this;
-  }
-  basic_stringstream& operator>>(int& v) { return extract_int(v); }
-  basic_stringstream& operator>>(long& v) { return extract_int(v); }
-  basic_stringstream& operator>>(long long& v) { return extract_int(v); }
-  basic_stringstream& operator>>(unsigned int& v) { return extract_uint(v); }
-  basic_stringstream& operator>>(unsigned long& v) { return extract_uint(v); }
-  basic_stringstream& operator>>(unsigned long long& v) {
-    return extract_uint(v);
-  }
-  basic_stringstream& operator>>(float& v) { return extract_float(v); }
-  basic_stringstream& operator>>(double& v) { return extract_float(v); }
-  basic_stringstream& operator>>(bool& v) {
-    int i;
-    extract_int(i);
-    v = (i != 0);
-    return *this;
-  }
+  // Write position = length of accumulated string
+  streampos tellp() { return streampos(buf_.str().size()); }
+  streampos tellg() { return buf_.pubseekoff(0, ios_base::cur, ios_base::in); }
 
 private:
   basic_stringbuf<Char, Traits, Alloc> buf_;
-
-  // collect non-whitespace chars into a temp buffer, then parse
-  string_type collect_token() {
-    string_type tok;
-    // skip leading whitespace
-    int c;
-    while ((c = buf_.sgetc()) >= 0 && (unsigned char)c <= 32) {
-    }
-    if (c < 0) {
-      this->setstate(ios_base::eofbit | ios_base::failbit);
-      return tok;
-    }
-    tok.push_back(Traits::to_char_type(c));
-    while ((c = buf_.sgetc()) >= 0 && (unsigned char)c > 32)
-      tok.push_back(Traits::to_char_type(c));
-    return tok;
-  }
-
-  template <typename V> basic_stringstream& extract_int(V& v) {
-    auto tok = collect_token();
-    if (!tok.empty()) {
-      char* end;
-      v = (V)::strtoll(tok.c_str(), &end, 10);
-      if (end == tok.c_str())
-        this->setstate(ios_base::failbit);
-    }
-    return *this;
-  }
-  template <typename V> basic_stringstream& extract_uint(V& v) {
-    auto tok = collect_token();
-    if (!tok.empty()) {
-      char* end;
-      v = (V)::strtoull(tok.c_str(), &end, 10);
-      if (end == tok.c_str())
-        this->setstate(ios_base::failbit);
-    }
-    return *this;
-  }
-  template <typename V> basic_stringstream& extract_float(V& v) {
-    auto tok = collect_token();
-    if (!tok.empty()) {
-      char* end;
-      v = (V)::strtod(tok.c_str(), &end);
-      if (end == tok.c_str())
-        this->setstate(ios_base::failbit);
-    }
-    return *this;
-  }
 };
 
 using stringbuf = basic_stringbuf<char, char_traits<char>, allocator<char>>;
 using ostringstream =
     basic_ostringstream<char, char_traits<char>, allocator<char>>;
+using istringstream =
+    basic_istringstream<char, char_traits<char>, allocator<char>>;
 using stringstream =
     basic_stringstream<char, char_traits<char>, allocator<char>>;
 using wstringbuf =

@@ -222,17 +222,23 @@ public:
   using element_type = T;
   using deleter_type = D;
 
-  constexpr unique_ptr() noexcept : ptr_(nullptr) {}
-  constexpr unique_ptr(nullptr_t) noexcept : ptr_(nullptr) {}
-  explicit unique_ptr(pointer p) noexcept : ptr_(p) {}
-  unique_ptr(unique_ptr&& o) noexcept : ptr_(o.release()) {}
+  constexpr unique_ptr() noexcept : ptr_(nullptr), del_() {}
+  constexpr unique_ptr(nullptr_t) noexcept : ptr_(nullptr), del_() {}
+  explicit unique_ptr(pointer p) noexcept : ptr_(p), del_() {}
+  unique_ptr(pointer p, const D& d) noexcept : ptr_(p), del_(d) {}
+  unique_ptr(pointer p, D&& d) noexcept : ptr_(p), del_(static_cast<D&&>(d)) {}
+  unique_ptr(unique_ptr&& o) noexcept
+      : ptr_(o.release()), del_(static_cast<D&&>(o.del_)) {}
   ~unique_ptr() {
     if (ptr_)
-      D{}(ptr_);
+      del_(ptr_);
   }
 
   unique_ptr& operator=(unique_ptr&& o) noexcept {
-    reset(o.release());
+    if (this != &o) {
+      reset(o.release());
+      del_ = static_cast<D&&>(o.del_);
+    }
     return *this;
   }
   unique_ptr& operator=(nullptr_t) noexcept {
@@ -246,6 +252,8 @@ public:
   T& operator*() const noexcept { return *ptr_; }
   T* operator->() const noexcept { return ptr_; }
   T* get() const noexcept { return ptr_; }
+  D& get_deleter() noexcept { return del_; }
+  const D& get_deleter() const noexcept { return del_; }
   explicit operator bool() const noexcept { return ptr_ != nullptr; }
 
   T* release() noexcept {
@@ -257,7 +265,7 @@ public:
     T* old = ptr_;
     ptr_ = p;
     if (old)
-      D{}(old);
+      del_(old);
   }
   void swap(unique_ptr& o) noexcept {
     T* tmp = ptr_;
@@ -265,8 +273,22 @@ public:
     o.ptr_ = tmp;
   }
 
+  friend bool operator==(const unique_ptr& a, nullptr_t) noexcept {
+    return a.ptr_ == nullptr;
+  }
+  friend bool operator==(nullptr_t, const unique_ptr& a) noexcept {
+    return a.ptr_ == nullptr;
+  }
+  friend bool operator!=(const unique_ptr& a, nullptr_t) noexcept {
+    return a.ptr_ != nullptr;
+  }
+  friend bool operator!=(nullptr_t, const unique_ptr& a) noexcept {
+    return a.ptr_ != nullptr;
+  }
+
 private:
   T* ptr_;
+  D del_;
 };
 
 // Array specialisation of unique_ptr
@@ -276,16 +298,22 @@ public:
   using element_type = T;
   using deleter_type = D;
 
-  constexpr unique_ptr() noexcept : ptr_(nullptr) {}
-  constexpr unique_ptr(nullptr_t) noexcept : ptr_(nullptr) {}
-  explicit unique_ptr(T* p) noexcept : ptr_(p) {}
-  unique_ptr(unique_ptr&& o) noexcept : ptr_(o.release()) {}
+  constexpr unique_ptr() noexcept : ptr_(nullptr), del_() {}
+  constexpr unique_ptr(nullptr_t) noexcept : ptr_(nullptr), del_() {}
+  explicit unique_ptr(T* p) noexcept : ptr_(p), del_() {}
+  unique_ptr(T* p, const D& d) noexcept : ptr_(p), del_(d) {}
+  unique_ptr(T* p, D&& d) noexcept : ptr_(p), del_(static_cast<D&&>(d)) {}
+  unique_ptr(unique_ptr&& o) noexcept
+      : ptr_(o.release()), del_(static_cast<D&&>(o.del_)) {}
   ~unique_ptr() {
     if (ptr_)
-      D{}(ptr_);
+      del_(ptr_);
   }
   unique_ptr& operator=(unique_ptr&& o) noexcept {
-    reset(o.release());
+    if (this != &o) {
+      reset(o.release());
+      del_ = static_cast<D&&>(o.del_);
+    }
     return *this;
   }
   unique_ptr& operator=(nullptr_t) noexcept {
@@ -297,6 +325,8 @@ public:
 
   T& operator[](size_t i) const noexcept { return ptr_[i]; }
   T* get() const noexcept { return ptr_; }
+  D& get_deleter() noexcept { return del_; }
+  const D& get_deleter() const noexcept { return del_; }
   explicit operator bool() const noexcept { return ptr_ != nullptr; }
   T* release() noexcept {
     T* p = ptr_;
@@ -307,7 +337,7 @@ public:
     T* old = ptr_;
     ptr_ = p;
     if (old)
-      D{}(old);
+      del_(old);
   }
   void swap(unique_ptr& o) noexcept {
     T* tmp = ptr_;
@@ -315,8 +345,22 @@ public:
     o.ptr_ = tmp;
   }
 
+  friend bool operator==(const unique_ptr& a, nullptr_t) noexcept {
+    return a.ptr_ == nullptr;
+  }
+  friend bool operator==(nullptr_t, const unique_ptr& a) noexcept {
+    return a.ptr_ == nullptr;
+  }
+  friend bool operator!=(const unique_ptr& a, nullptr_t) noexcept {
+    return a.ptr_ != nullptr;
+  }
+  friend bool operator!=(nullptr_t, const unique_ptr& a) noexcept {
+    return a.ptr_ != nullptr;
+  }
+
 private:
   T* ptr_;
+  D del_;
 };
 
 template <typename T, typename... Args>

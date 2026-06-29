@@ -155,6 +155,14 @@ private:
   template <typename... Args> constexpr void _construct(T* p, Args&&... args) {
     allocator_traits<Alloc>::construct(alloc_, p, std::forward<Args>(args)...);
   }
+  // Transfer: move if movable, copy otherwise.
+  static constexpr decltype(auto)
+  _xfer(T& x) noexcept(is_nothrow_move_constructible_v<T>) {
+    if constexpr (is_move_constructible_v<T>)
+      return std::move(x);
+    else
+      return static_cast<const T&>(x);
+  }
   constexpr void _destroy(T* p) noexcept {
     allocator_traits<Alloc>::destroy(alloc_, p);
   }
@@ -171,20 +179,31 @@ private:
 
   // Shift elements [idx, size_) right by n positions.
   // Slots [size_, cap_) are raw; slots [0, size_) are live objects.
+  // Uses move when available, falls back to copy for non-movable types.
   constexpr void _shift_right(size_type idx, size_type n) {
     for (size_type i = size_; i-- > idx;) {
-      if (i + n >= size_)
-        _construct(data_ + i + n,
-                   std::move(data_[i])); // raw slot: construct_at
-      else
-        data_[i + n] = std::move(data_[i]); // live slot: move-assign
+      if (i + n >= size_) {
+        if constexpr (is_move_constructible_v<T>)
+          _construct(data_ + i + n, std::move(data_[i]));
+        else
+          _construct(data_ + i + n, data_[i]);
+      } else {
+        if constexpr (is_move_assignable_v<T>)
+          data_[i + n] = std::move(data_[i]);
+        else
+          data_[i + n] = data_[i];
+      }
     }
   }
 
   // Shift elements [from, size_) left by n positions.
   constexpr void _shift_left(size_type from, size_type n) {
-    for (size_type i = from; i < size_; ++i)
-      data_[i - n] = std::move(data_[i]);
+    for (size_type i = from; i < size_; ++i) {
+      if constexpr (is_move_assignable_v<T>)
+        data_[i - n] = std::move(data_[i]);
+      else
+        data_[i - n] = data_[i];
+    }
   }
 
   constexpr void _grow_and_shift(size_type idx, size_type n) {
@@ -370,7 +389,7 @@ public:
       if (o.size_) {
         data_ = _alloc_mem(o.size_);
         for (size_type i = 0; i < o.size_; ++i)
-          _construct(data_ + i, std::move(o.data_[i]));
+          _construct(data_ + i, _xfer(o.data_[i]));
         size_ = o.size_;
         cap_ = o.size_;
       }
@@ -567,7 +586,7 @@ public:
       return;
     T* np = _alloc_mem(n);
     for (size_type i = 0; i < size_; ++i) {
-      _construct(np + i, std::move(data_[i]));
+      _construct(np + i, _xfer(data_[i]));
       _destroy(data_ + i);
     }
     _free_mem(data_, cap_);
@@ -586,7 +605,7 @@ public:
   constexpr void push_back(const T& v) {
     T tmp(v);
     _grow();
-    _construct(data_ + size_, std::move(tmp));
+    _construct(data_ + size_, _xfer(tmp));
     ++size_;
   }
   constexpr void push_back(T&& v) {
@@ -607,7 +626,7 @@ public:
     size_type nc = cap_ ? cap_ * 2 : 4;
     T* np = _alloc_mem(nc);
     for (size_type i = 0; i < size_; ++i)
-      _construct(np + i, std::move(data_[i]));
+      _construct(np + i, _xfer(data_[i]));
     _construct(np + size_, std::forward<Args>(args)...);
     _destroy_all();
     _free_mem(data_, cap_);
@@ -625,7 +644,7 @@ public:
     size_type idx = pos.ptr_ - data_;
     T tmp(v);
     _grow_and_shift(idx, 1);
-    _construct(data_ + idx, std::move(tmp));
+    _construct(data_ + idx, _xfer(tmp));
     ++size_;
     return iterator{data_ + idx};
   }
@@ -633,7 +652,7 @@ public:
     size_type idx = pos.ptr_ - data_;
     T tmp(std::move(v));
     _grow_and_shift(idx, 1);
-    _construct(data_ + idx, std::move(tmp));
+    _construct(data_ + idx, _xfer(tmp));
     ++size_;
     return iterator{data_ + idx};
   }
