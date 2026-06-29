@@ -1,9 +1,55 @@
 #pragma once
-// Minimal feature-test macro header for psychicstd.
-// Define the macros for features we actually provide so that third-party code
-// does not define conflicting polyfills.
+// Feature-test macro header for psychicstd.
+//
+// Policy: a macro is defined only when the feature is solid enough for
+// real-world use — it doesn't need 100 % libc++ test-suite compliance, but
+// it must work correctly for the common patterns seen in projects such as
+// Catch2 and rapidjson.  If a feature compiles but has known gaps (e.g. a
+// container is missing `extract` / `merge`), do NOT advertise it — let
+// third-party code fall back to its own polyfills.
+//
+// This prevents third-party code from activating polyfills or fallback
+// paths for functionality that psychicstd already supplies, while avoiding
+// over-promising features that are too incomplete to be relied on.
+//
+// Macros are guarded with #ifndef so that a user-provided override takes
+// precedence.
 
-// std::size, std::empty, std::data (C++17, <iterator>/<array>/<string_view>)
+// ---------------------------------------------------------------------------
+// C++17 library features
+// ---------------------------------------------------------------------------
+
+// std::size, std::empty, std::data (<iterator>/<array>/<string_view>)
 #ifndef __cpp_lib_nonmember_container_access
 #define __cpp_lib_nonmember_container_access 201411L
+#endif
+
+// std::uncaught_exceptions() (<exception>, impl in libsupc++)
+#ifndef __cpp_lib_uncaught_exceptions
+#define __cpp_lib_uncaught_exceptions 201411L
+#endif
+
+// std::conjunction, std::disjunction, std::negation (<type_traits>)
+#ifndef __cpp_lib_logical_traits
+#define __cpp_lib_logical_traits 201510L
+#endif
+
+// std::byte (<cstddef>)
+#ifndef __cpp_lib_byte
+#define __cpp_lib_byte 201603L
+#endif
+
+// std::is_invocable, std::invoke_result (<type_traits>)
+#ifndef __cpp_lib_is_invocable
+#define __cpp_lib_is_invocable 201703L
+#endif
+
+// ---------------------------------------------------------------------------
+// C++20 library features
+// ---------------------------------------------------------------------------
+
+// std::partial_ordering, std::weak_ordering, std::strong_ordering,
+// std::compare_three_way, synth-three-way (<compare>)
+#ifndef __cpp_lib_three_way_comparison
+#define __cpp_lib_three_way_comparison 201907L
 #endif
