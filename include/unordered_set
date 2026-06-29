@@ -1,7 +1,11 @@
 #pragma once
 #include <cstddef>
 #include <functional>
+#include <initializer_list>
+#include <iterator>
 #include <memory>
+#include <utility>
+#include <vector>
 
 namespace std {
 
@@ -9,29 +13,276 @@ template <typename Key, typename Hash = hash<Key>,
           typename KeyEqual = equal_to<Key>,
           typename Allocator = allocator<Key>>
 class unordered_set {
+  static constexpr size_t N_BUCKETS = 64;
+
+  struct Node {
+    Key key;
+    Node* next = nullptr;
+    explicit Node(const Key& k) : key(k) {}
+    explicit Node(Key&& k) : key(static_cast<Key&&>(k)) {}
+  };
+
+  Node* buckets_[N_BUCKETS] = {};
+  size_t size_ = 0;
+  Hash hasher_;
+  KeyEqual equal_;
+
+  size_t bucket(const Key& k) const { return hasher_(k) % N_BUCKETS; }
+
+  void destroy() {
+    for (size_t i = 0; i < N_BUCKETS; ++i) {
+      Node* n = buckets_[i];
+      while (n) {
+        Node* next = n->next;
+        delete n;
+        n = next;
+      }
+      buckets_[i] = nullptr;
+    }
+    size_ = 0;
+  }
+
 public:
   using key_type = Key;
   using value_type = Key;
-  using allocator_type = Allocator;
   using size_type = size_t;
+  using difference_type = ptrdiff_t;
+  using hasher = Hash;
+  using key_equal = KeyEqual;
+  using allocator_type = Allocator;
+  using reference = value_type&;
+  using const_reference = const value_type&;
+
+  struct iterator {
+    using value_type = Key;
+    using difference_type = ptrdiff_t;
+    using pointer = const Key*;
+    using reference = const Key&;
+    using iterator_category = forward_iterator_tag;
+
+    const unordered_set* set_ = nullptr;
+    size_t bucket_ = N_BUCKETS;
+    Node* node_ = nullptr;
+
+    iterator() = default;
+    iterator(const unordered_set* s, size_t b, Node* n)
+        : set_(s), bucket_(b), node_(n) {}
+
+    const Key& operator*() const { return node_->key; }
+    const Key* operator->() const { return &node_->key; }
+
+    iterator& operator++() {
+      node_ = node_->next;
+      while (!node_ && ++bucket_ < N_BUCKETS)
+        node_ = set_->buckets_[bucket_];
+      return *this;
+    }
+    iterator operator++(int) {
+      auto t = *this;
+      ++*this;
+      return t;
+    }
+    bool operator==(const iterator& o) const {
+      return node_ == o.node_ && bucket_ == o.bucket_;
+    }
+    bool operator!=(const iterator& o) const { return !(*this == o); }
+  };
+  using const_iterator = iterator;
 
   unordered_set() = default;
-  explicit unordered_set(const Allocator& a) {}
-  size_type size() const noexcept { return 0; }
-  bool empty() const noexcept { return true; }
+  explicit unordered_set(size_t, const Hash& h = Hash(),
+                         const KeyEqual& eq = KeyEqual(),
+                         const Allocator& = Allocator())
+      : hasher_(h), equal_(eq) {}
+  explicit unordered_set(const Allocator&) {}
+  unordered_set(initializer_list<Key> il) {
+    for (const auto& k : il)
+      insert(k);
+  }
+  template <typename It> unordered_set(It first, It last) {
+    for (; first != last; ++first)
+      insert(*first);
+  }
+  unordered_set(const unordered_set& o) { *this = o; }
+  unordered_set(unordered_set&& o) noexcept {
+    for (size_t i = 0; i < N_BUCKETS; ++i) {
+      buckets_[i] = o.buckets_[i];
+      o.buckets_[i] = nullptr;
+    }
+    size_ = o.size_;
+    o.size_ = 0;
+  }
+  ~unordered_set() { destroy(); }
+
+  unordered_set& operator=(const unordered_set& o) {
+    if (this != &o) {
+      destroy();
+      for (size_t i = 0; i < N_BUCKETS; ++i) {
+        for (Node* n = o.buckets_[i]; n; n = n->next)
+          insert(n->key);
+      }
+    }
+    return *this;
+  }
+  unordered_set& operator=(unordered_set&& o) noexcept {
+    destroy();
+    for (size_t i = 0; i < N_BUCKETS; ++i) {
+      buckets_[i] = o.buckets_[i];
+      o.buckets_[i] = nullptr;
+    }
+    size_ = o.size_;
+    o.size_ = 0;
+    return *this;
+  }
+
+  iterator begin() const {
+    for (size_t i = 0; i < N_BUCKETS; ++i)
+      if (buckets_[i])
+        return {this, i, buckets_[i]};
+    return end();
+  }
+  iterator end() const { return {this, N_BUCKETS, nullptr}; }
+  const_iterator cbegin() const { return begin(); }
+  const_iterator cend() const { return end(); }
+
+  bool empty() const noexcept { return size_ == 0; }
+  size_type size() const noexcept { return size_; }
+
+  void clear() { destroy(); }
+
+  pair<iterator, bool> insert(const Key& k) {
+    size_t b = bucket(k);
+    for (Node* n = buckets_[b]; n; n = n->next) {
+      if (equal_(n->key, k))
+        return {{this, b, n}, false};
+    }
+    Node* n = new Node(k);
+    n->next = buckets_[b];
+    buckets_[b] = n;
+    ++size_;
+    return {{this, b, n}, true};
+  }
+  pair<iterator, bool> insert(Key&& k) {
+    size_t b = bucket(k);
+    for (Node* n = buckets_[b]; n; n = n->next) {
+      if (equal_(n->key, k))
+        return {{this, b, n}, false};
+    }
+    Node* n = new Node(static_cast<Key&&>(k));
+    n->next = buckets_[b];
+    buckets_[b] = n;
+    ++size_;
+    return {{this, b, n}, true};
+  }
+  // Hint versions (hint ignored)
+  iterator insert(const_iterator, const Key& k) { return insert(k).first; }
+  iterator insert(const_iterator, Key&& k) {
+    return insert(static_cast<Key&&>(k)).first;
+  }
+
+  iterator find(const Key& k) const {
+    size_t b = bucket(k);
+    for (Node* n = buckets_[b]; n; n = n->next)
+      if (equal_(n->key, k))
+        return {this, b, n};
+    return end();
+  }
+
+  size_type count(const Key& k) const { return find(k) != end() ? 1 : 0; }
+
+  size_type erase(const Key& k) {
+    size_t b = bucket(k);
+    Node** pp = &buckets_[b];
+    while (*pp) {
+      if (equal_((*pp)->key, k)) {
+        Node* del = *pp;
+        *pp = del->next;
+        delete del;
+        --size_;
+        return 1;
+      }
+      pp = &(*pp)->next;
+    }
+    return 0;
+  }
 };
 
+// unordered_multiset — backed by a vector (allows duplicates)
 template <typename Key, typename Hash = hash<Key>,
           typename KeyEqual = equal_to<Key>,
           typename Allocator = allocator<Key>>
 class unordered_multiset {
+  vector<Key> data_;
+  Hash hasher_;
+  KeyEqual equal_;
+
 public:
   using key_type = Key;
   using value_type = Key;
   using allocator_type = Allocator;
   using size_type = size_t;
+  using difference_type = ptrdiff_t;
+
+  struct iterator {
+    using value_type = Key;
+    using difference_type = ptrdiff_t;
+    using pointer = const Key*;
+    using reference = const Key&;
+    using iterator_category = forward_iterator_tag;
+    const Key* p_ = nullptr;
+    iterator() = default;
+    explicit iterator(const Key* p) : p_(p) {}
+    const Key& operator*() const { return *p_; }
+    const Key* operator->() const { return p_; }
+    iterator& operator++() {
+      ++p_;
+      return *this;
+    }
+    iterator operator++(int) {
+      auto t = *this;
+      ++p_;
+      return t;
+    }
+    bool operator==(const iterator& o) const { return p_ == o.p_; }
+    bool operator!=(const iterator& o) const { return p_ != o.p_; }
+  };
+  using const_iterator = iterator;
 
   unordered_multiset() = default;
+  unordered_multiset(initializer_list<Key> il) {
+    for (const auto& k : il)
+      insert(k);
+  }
+  template <typename It> unordered_multiset(It first, It last) {
+    for (; first != last; ++first)
+      insert(*first);
+  }
+
+  iterator begin() const { return iterator(data_.data()); }
+  iterator end() const { return iterator(data_.data() + data_.size()); }
+  const_iterator cbegin() const { return begin(); }
+  const_iterator cend() const { return end(); }
+
+  bool empty() const noexcept { return data_.empty(); }
+  size_type size() const noexcept { return data_.size(); }
+
+  iterator insert(const Key& k) {
+    data_.push_back(k);
+    return iterator(data_.data() + data_.size() - 1);
+  }
+  iterator insert(Key&& k) {
+    data_.push_back(static_cast<Key&&>(k));
+    return iterator(data_.data() + data_.size() - 1);
+  }
+
+  size_type count(const Key& k) const {
+    size_type n = 0;
+    for (const auto& v : data_)
+      if (equal_(v, k))
+        ++n;
+    return n;
+  }
+  void clear() { data_.clear(); }
 };
 
 } // namespace std

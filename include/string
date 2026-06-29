@@ -1,5 +1,6 @@
 #pragma once
 #include <algorithm>
+#include <compare>
 #include <cstddef>
 #include <cstdlib>
 #include <cstring>
@@ -11,6 +12,9 @@
 #include <version>
 
 namespace std {
+
+// Forward declaration of hash<> so we can specialize it below
+template <typename T> struct hash;
 
 // char_traits<char>
 template <typename Char> struct char_traits {
@@ -183,6 +187,9 @@ public:
   basic_string(basic_string_view<Char> sv)
       : basic_string(sv.data(), sv.size()) {}
 
+  basic_string(initializer_list<Char> il)
+      : basic_string(il.begin(), il.size()) {}
+
   template <typename It> basic_string(It first, It last) {
     size_ = cap_ = 0;
     data_ = nullptr;
@@ -326,6 +333,11 @@ public:
   }
   basic_string& append(basic_string_view<Char> sv) {
     return append(sv.data(), sv.size());
+  }
+  template <typename It> basic_string& append(It first, It last) {
+    for (; first != last; ++first)
+      push_back(static_cast<Char>(*first));
+    return *this;
   }
 
   basic_string& operator+=(const basic_string& o) { return append(o); }
@@ -714,6 +726,28 @@ template <typename C, typename T, typename A>
 bool operator==(const C* a, const basic_string<C, T, A>& b) noexcept {
   return b == a;
 }
+template <typename C, typename T, typename A>
+bool operator==(const basic_string<C, T, A>& a,
+                basic_string_view<C> b) noexcept {
+  return a.size() == b.size() && T::compare(a.data(), b.data(), a.size()) == 0;
+}
+template <typename C, typename T, typename A>
+bool operator==(basic_string_view<C> a,
+                const basic_string<C, T, A>& b) noexcept {
+  return b == a;
+}
+template <typename C, typename T, typename A>
+bool operator<(const basic_string<C, T, A>& a,
+               basic_string_view<C> b) noexcept {
+  return T::compare(a.data(), b.data(),
+                    a.size() < b.size() ? a.size() : b.size()) < 0 ||
+         (a.size() < b.size() && T::compare(a.data(), b.data(), a.size()) == 0);
+}
+template <typename C, typename T, typename A>
+bool operator<(basic_string_view<C> a,
+               const basic_string<C, T, A>& b) noexcept {
+  return b > basic_string<C, T, A>(a.data(), a.size());
+}
 
 template <typename C, typename T, typename A>
 bool operator!=(const basic_string<C, T, A>& a,
@@ -780,6 +814,22 @@ bool operator>=(const basic_string<C, T, A>& a, const C* b) noexcept {
 template <typename C, typename T, typename A>
 bool operator>=(const C* a, const basic_string<C, T, A>& b) noexcept {
   return b.compare(a) <= 0;
+}
+
+template <typename C, typename T, typename A>
+auto operator<=>(const basic_string<C, T, A>& a,
+                 const basic_string<C, T, A>& b) noexcept {
+  int r = a.compare(b);
+  return r < 0   ? strong_ordering::less
+         : r > 0 ? strong_ordering::greater
+                 : strong_ordering::equal;
+}
+template <typename C, typename T, typename A>
+auto operator<=>(const basic_string<C, T, A>& a, const C* b) noexcept {
+  int r = a.compare(b);
+  return r < 0   ? strong_ordering::less
+         : r > 0 ? strong_ordering::greater
+                 : strong_ordering::equal;
 }
 
 template <typename C, typename T, typename A>
@@ -893,6 +943,31 @@ inline long double stold(const string& s, size_t* pos = nullptr) {
     *pos = end - s.c_str();
   return v;
 }
+
+// hash<basic_string> specializations
+template <typename Char, typename Traits, typename Alloc>
+struct hash<basic_string<Char, Traits, Alloc>> {
+  size_t operator()(const basic_string<Char, Traits, Alloc>& s) const noexcept {
+    // FNV-1a hash
+    size_t h = 14695981039346656037ULL;
+    for (size_t i = 0; i < s.size(); ++i) {
+      h ^= (size_t)(unsigned char)s[i];
+      h *= 1099511628211ULL;
+    }
+    return h;
+  }
+};
+
+template <typename Char> struct hash<basic_string_view<Char>> {
+  size_t operator()(basic_string_view<Char> s) const noexcept {
+    size_t h = 14695981039346656037ULL;
+    for (size_t i = 0; i < s.size(); ++i) {
+      h ^= (size_t)(unsigned char)s[i];
+      h *= 1099511628211ULL;
+    }
+    return h;
+  }
+};
 
 inline namespace literals {
 inline namespace string_literals {

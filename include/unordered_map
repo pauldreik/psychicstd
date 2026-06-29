@@ -163,6 +163,26 @@ public:
     ++size_;
     return {{this, b, buckets_[b].size() - 1}, true};
   }
+  pair<iterator, bool> insert(value_type&& kv) {
+    size_t b = bucket(kv.first);
+    for (size_t i = 0; i < buckets_[b].size(); ++i)
+      if (eq_(buckets_[b][i].first, kv.first))
+        return {{this, b, i}, false};
+    buckets_[b].push_back(static_cast<value_type&&>(kv));
+    ++size_;
+    return {{this, b, buckets_[b].size() - 1}, true};
+  }
+  // Hint versions (hint ignored)
+  iterator insert(const_iterator, const value_type& kv) {
+    return insert(kv).first;
+  }
+  iterator insert(const_iterator, value_type&& kv) {
+    return insert(static_cast<value_type&&>(kv)).first;
+  }
+  template <typename It> void insert(It first, It last) {
+    for (; first != last; ++first)
+      insert(*first);
+  }
   template <typename... Args> pair<iterator, bool> emplace(Args&&... args) {
     return insert(value_type(static_cast<Args&&>(args)...));
   }
@@ -198,18 +218,138 @@ public:
   }
 };
 
+// unordered_multimap — multiple values per key, bucket-based
 template <typename Key, typename T, typename Hash = hash<Key>,
           typename KeyEqual = equal_to<Key>,
           typename Allocator = allocator<pair<const Key, T>>>
 class unordered_multimap {
+  static constexpr size_t NBUCKETS = 16;
+  using bucket_t = vector<pair<const Key, T>>;
+  vector<bucket_t> buckets_{NBUCKETS};
+  size_t size_ = 0;
+  Hash hasher_{};
+  KeyEqual eq_{};
+
+  size_t bucket(const Key& k) const { return hasher_(k) % buckets_.size(); }
+
 public:
   using key_type = Key;
   using mapped_type = T;
   using value_type = pair<const Key, T>;
   using allocator_type = Allocator;
   using size_type = size_t;
+  using difference_type = ptrdiff_t;
+  using hasher = Hash;
+  using key_equal = KeyEqual;
+
+  struct const_iterator;
+  struct iterator {
+    unordered_multimap* m;
+    size_t b, i;
+    value_type& operator*() const { return m->buckets_[b][i]; }
+    value_type* operator->() const { return &m->buckets_[b][i]; }
+    iterator& operator++() {
+      ++i;
+      while (b < m->buckets_.size() &&
+             (b >= m->buckets_.size() || i >= m->buckets_[b].size())) {
+        i = 0;
+        ++b;
+      }
+      return *this;
+    }
+    bool operator==(const iterator& o) const {
+      return m == o.m && b == o.b && i == o.i;
+    }
+    bool operator!=(const iterator& o) const { return !(*this == o); }
+    operator const_iterator() const { return {m, b, i}; }
+  };
+  struct const_iterator {
+    const unordered_multimap* m;
+    size_t b, i;
+    const value_type& operator*() const { return m->buckets_[b][i]; }
+    const value_type* operator->() const { return &m->buckets_[b][i]; }
+    const_iterator& operator++() {
+      ++i;
+      while (b < m->buckets_.size() &&
+             (b >= m->buckets_.size() || i >= m->buckets_[b].size())) {
+        i = 0;
+        ++b;
+      }
+      return *this;
+    }
+    bool operator==(const const_iterator& o) const {
+      return m == o.m && b == o.b && i == o.i;
+    }
+    bool operator!=(const const_iterator& o) const { return !(*this == o); }
+  };
+
+  iterator begin() {
+    for (size_t b = 0; b < buckets_.size(); ++b)
+      if (!buckets_[b].empty())
+        return {this, b, 0};
+    return end();
+  }
+  iterator end() { return {this, buckets_.size(), 0}; }
+  const_iterator begin() const {
+    for (size_t b = 0; b < buckets_.size(); ++b)
+      if (!buckets_[b].empty())
+        return {this, b, 0};
+    return end();
+  }
+  const_iterator end() const { return {this, buckets_.size(), 0}; }
+  const_iterator cbegin() const { return begin(); }
+  const_iterator cend() const { return end(); }
 
   unordered_multimap() = default;
+  unordered_multimap(initializer_list<value_type> il) {
+    for (const auto& kv : il)
+      insert(kv);
+  }
+  template <typename It> unordered_multimap(It first, It last) {
+    for (; first != last; ++first)
+      insert(*first);
+  }
+
+  size_type size() const noexcept { return size_; }
+  bool empty() const noexcept { return size_ == 0; }
+
+  iterator insert(const value_type& kv) {
+    size_t b = bucket(kv.first);
+    buckets_[b].push_back(kv);
+    ++size_;
+    return {this, b, buckets_[b].size() - 1};
+  }
+  iterator insert(value_type&& kv) {
+    size_t b = bucket(kv.first);
+    buckets_[b].push_back(static_cast<value_type&&>(kv));
+    ++size_;
+    return {this, b, buckets_[b].size() - 1};
+  }
+  iterator insert(const_iterator, const value_type& kv) { return insert(kv); }
+  iterator insert(const_iterator, value_type&& kv) {
+    return insert(static_cast<value_type&&>(kv));
+  }
+  template <typename It> void insert(It first, It last) {
+    for (; first != last; ++first)
+      insert(*first);
+  }
+  template <typename... Args> iterator emplace(Args&&... args) {
+    return insert(value_type(static_cast<Args&&>(args)...));
+  }
+
+  size_type count(const Key& k) const {
+    size_t b = bucket(k), n = 0;
+    for (auto& kv : buckets_[b])
+      if (eq_(kv.first, k))
+        ++n;
+    return n;
+  }
+
+  void clear() {
+    for (auto& b : buckets_)
+      b.clear();
+    size_ = 0;
+  }
 };
 
 } // namespace std

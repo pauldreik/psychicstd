@@ -1,4 +1,5 @@
 #pragma once
+#include <cerrno>
 #include <cstddef>
 #include <iosfwd>
 
@@ -90,6 +91,8 @@ public:
   bool operator!() const noexcept { return fail(); }
   void clear(iostate s = goodbit) { state_ = s; }
   void setstate(iostate s) { state_ |= s; }
+  iostate exceptions() const noexcept { return except_; }
+  void exceptions(iostate mask) { except_ = mask; }
 
 protected:
   ios_base()
@@ -103,6 +106,7 @@ protected:
   streamsize width_;
   streamsize prec_;
   iostate state_;
+  iostate except_ = goodbit;
   char fill_;
 };
 
@@ -113,6 +117,32 @@ public:
   using int_type = typename Traits::int_type;
   using off_type = typename Traits::off_type;
   using pos_type = typename Traits::pos_type;
+
+  // Re-define ios_base methods explicitly so that 'using basic_ios::foo' in
+  // derived multiple-inheritance classes (e.g. basic_stringstream) resolves
+  // unambiguously to this class rather than requiring a D*→ios_base* cast.
+  fmtflags flags() const noexcept { return ios_base::flags(); }
+  fmtflags flags(fmtflags f) { return ios_base::flags(f); }
+  fmtflags setf(fmtflags f) { return ios_base::setf(f); }
+  fmtflags setf(fmtflags f, fmtflags mask) { return ios_base::setf(f, mask); }
+  void unsetf(fmtflags f) { ios_base::unsetf(f); }
+  streamsize width() const noexcept { return ios_base::width(); }
+  streamsize width(streamsize w) { return ios_base::width(w); }
+  streamsize precision() const noexcept { return ios_base::precision(); }
+  streamsize precision(streamsize p) { return ios_base::precision(p); }
+  char fill() const noexcept { return ios_base::fill(); }
+  char fill(char c) { return ios_base::fill(c); }
+  iostate rdstate() const noexcept { return ios_base::rdstate(); }
+  bool good() const noexcept { return ios_base::good(); }
+  bool eof() const noexcept { return ios_base::eof(); }
+  bool fail() const noexcept { return ios_base::fail(); }
+  bool bad() const noexcept { return ios_base::bad(); }
+  explicit operator bool() const noexcept { return ios_base::operator bool(); }
+  bool operator!() const noexcept { return ios_base::operator!(); }
+  void clear(iostate s = goodbit) { ios_base::clear(s); }
+  void setstate(iostate s) { ios_base::setstate(s); }
+  iostate exceptions() const noexcept { return ios_base::exceptions(); }
+  void exceptions(iostate mask) { ios_base::exceptions(mask); }
 
   basic_streambuf<Char, Traits>* rdbuf() const noexcept { return buf_; }
   basic_streambuf<Char, Traits>* rdbuf(basic_streambuf<Char, Traits>* sb) {

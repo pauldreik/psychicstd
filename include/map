@@ -181,6 +181,13 @@ public:
                                  static_cast<T&&>(v.second)}),
             true};
   }
+  // Hint versions (hint ignored for our sorted-vector implementation)
+  iterator insert(const_iterator, const value_type& v) {
+    return insert(v).first;
+  }
+  iterator insert(const_iterator, value_type&& v) {
+    return insert(static_cast<value_type&&>(v)).first;
+  }
   template <typename It> void insert(It first, It last) {
     for (; first != last; ++first)
       insert(*first);
@@ -480,6 +487,19 @@ public:
   iterator insert(const value_type& v) {
     auto it = std::lower_bound(data_.begin(), data_.end(), v.first, comp_);
     return data_.insert(it, {v.first, v.second});
+  }
+  iterator insert(value_type&& v) {
+    auto it = std::lower_bound(data_.begin(), data_.end(), v.first, comp_);
+    return data_.insert(it, static_cast<value_type&&>(v));
+  }
+  // Hint versions (hint ignored)
+  iterator insert(const_iterator, const value_type& v) { return insert(v); }
+  iterator insert(const_iterator, value_type&& v) {
+    return insert(static_cast<value_type&&>(v));
+  }
+  template <typename It> void insert(It first, It last) {
+    for (; first != last; ++first)
+      insert(*first);
   }
   template <typename... Args> iterator emplace(Args&&... args) {
     return insert(value_type(static_cast<Args&&>(args)...));

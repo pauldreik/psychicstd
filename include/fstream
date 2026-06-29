@@ -1,6 +1,7 @@
 #pragma once
 #include <cstdio>
 #include <ios>
+#include <istream>
 #include <ostream>
 #include <streambuf>
 #include <string>
@@ -12,6 +13,8 @@ namespace std {
 template <typename Char, typename Traits>
 class basic_filebuf : public basic_streambuf<Char, Traits> {
 public:
+  using int_type = typename Traits::int_type;
+
   basic_filebuf() = default;
   ~basic_filebuf() { close(); }
   basic_filebuf(const basic_filebuf&) = delete;
@@ -21,7 +24,7 @@ public:
 
   basic_filebuf* open(const char* path, ios_base::openmode mode) {
     const char* m;
-    if ((mode & ios_base::out) && (mode & ios_base::in))
+    if ((mode & ios_base::in) && (mode & ios_base::out))
       m = "r+";
     else if (mode & ios_base::app)
       m = "a";
@@ -44,21 +47,65 @@ public:
     return this;
   }
 
-  // for ifstream: read a char
-  int sgetc() {
-    if (!fp_)
-      return -1;
-    return ::fgetc(fp_);
-  }
-
   FILE* fp_ = nullptr;
 
 protected:
+  // Write support
   streamsize xsputn(const Char* s, streamsize n) override {
     if (!fp_)
       return 0;
     return (streamsize)::fwrite(s, sizeof(Char), (size_t)n, fp_);
   }
+  int_type overflow(int_type c) override {
+    if (!fp_ || Traits::eq_int_type(c, Traits::eof()))
+      return Traits::eof();
+    char ch = Traits::to_char_type(c);
+    return ::fwrite(&ch, 1, 1, fp_) == 1 ? c : Traits::eof();
+  }
+
+  // Read support
+  int_type underflow() override {
+    if (!fp_)
+      return Traits::eof();
+    int c = ::fgetc(fp_);
+    if (c == EOF)
+      return Traits::eof();
+    ::ungetc(c, fp_);
+    return Traits::to_int_type((Char)c);
+  }
+  int_type uflow() override {
+    if (!fp_)
+      return Traits::eof();
+    int c = ::fgetc(fp_);
+    return c == EOF ? Traits::eof() : Traits::to_int_type((Char)c);
+  }
+  streamsize xsgetn(Char* s, streamsize n) override {
+    if (!fp_)
+      return 0;
+    return (streamsize)::fread(s, sizeof(Char), (size_t)n, fp_);
+  }
+
+  // Seek support
+  streampos seekpos(streampos pos, ios_base::openmode) override {
+    if (!fp_)
+      return streampos(-1);
+    if (::fseeko(fp_, (off_t)pos, SEEK_SET) != 0)
+      return streampos(-1);
+    return pos;
+  }
+  streampos seekoff(streamoff off, ios_base::seekdir dir,
+                    ios_base::openmode) override {
+    if (!fp_)
+      return streampos(-1);
+    int whence = (dir == ios_base::beg)   ? SEEK_SET
+                 : (dir == ios_base::cur) ? SEEK_CUR
+                                          : SEEK_END;
+    if (::fseeko(fp_, (off_t)off, whence) != 0)
+      return streampos(-1);
+    return (streampos)::ftello(fp_);
+  }
+
+  int sync() override { return fp_ && ::fflush(fp_) == 0 ? 0 : -1; }
 };
 
 // basic_ofstream (default args are in <iosfwd>)
@@ -100,50 +147,6 @@ private:
   basic_filebuf<Char, Traits> buf_;
 };
 
-// Minimal basic_istream for ifstream/getline
-// (default args are in <iosfwd>)
-template <typename Char, typename Traits>
-class basic_istream : public basic_ios<Char, Traits> {
-public:
-  using char_type = Char;
-  using traits_type = Traits;
-  using int_type = typename Traits::int_type;
-
-  explicit basic_istream(basic_filebuf<Char, Traits>* sb) : filebuf_(sb) {
-    this->init(nullptr);
-    if (sb)
-      this->clear();
-    else
-      this->setstate(ios_base::failbit);
-  }
-  basic_istream(const basic_istream&) = delete;
-  basic_istream& operator=(const basic_istream&) = delete;
-
-  int_type get() {
-    if (!filebuf_) {
-      this->setstate(ios_base::failbit);
-      return Traits::eof();
-    }
-    int c = filebuf_->sgetc();
-    if (c == EOF) {
-      this->setstate(ios_base::eofbit | ios_base::failbit);
-      return Traits::eof();
-    }
-    return (int_type)c;
-  }
-
-  basic_istream& operator>>(Char& c) {
-    int_type v = get();
-    if (!Traits::eq_int_type(v, Traits::eof()))
-      c = Traits::to_char_type(v);
-    return *this;
-  }
-
-protected:
-  basic_istream() : filebuf_(nullptr) { this->init(nullptr); }
-  basic_filebuf<Char, Traits>* filebuf_ = nullptr;
-};
-
 // basic_ifstream (default args are in <iosfwd>)
 template <typename Char, typename Traits>
 class basic_ifstream : public basic_istream<Char, Traits> {
@@ -163,21 +166,15 @@ public:
   }
 
   void open(const char* path, ios_base::openmode mode = ios_base::in) {
-    if (!buf_.open(path, mode | ios_base::in)) {
+    if (!buf_.open(path, mode | ios_base::in))
       this->setstate(ios_base::failbit);
-      this->filebuf_ = nullptr;
-    } else {
+    else
       this->clear();
-      this->filebuf_ = &buf_;
-    }
   }
   void open(const string_type& path, ios_base::openmode mode = ios_base::in) {
     open(path.c_str(), mode);
   }
-  void close() {
-    buf_.close();
-    this->filebuf_ = nullptr;
-  }
+  void close() { buf_.close(); }
   bool is_open() const { return buf_.is_open(); }
 
   basic_filebuf<Char, Traits>* rdbuf() const {
@@ -188,7 +185,8 @@ private:
   basic_filebuf<Char, Traits> buf_;
 };
 
-// basic_fstream (default args are in <iosfwd>)
+// basic_fstream — simplified: inherits only from basic_ostream,
+// read ops go through the filebuf directly.
 template <typename Char, typename Traits>
 class basic_fstream : public basic_ostream<Char, Traits> {
 public:
@@ -222,29 +220,16 @@ public:
   bool is_open() const { return buf_.is_open(); }
 
   basic_fstream& read(Char* buf, streamsize n) {
-    if (!buf_.fp_) {
-      gcount_ = 0;
-      this->setstate(ios_base::failbit);
-      return *this;
-    }
-    gcount_ = (streamsize)::fread(buf, sizeof(Char), (size_t)n, buf_.fp_);
-    if (gcount_ < n) {
-      if (::feof(buf_.fp_))
-        this->setstate(ios_base::eofbit);
-      this->setstate(ios_base::failbit);
-    }
+    streamsize got = buf_.sgetn(buf, n);
+    gcount_ = got;
+    if (got < n)
+      this->setstate(ios_base::eofbit | ios_base::failbit);
     return *this;
   }
-
   basic_fstream& seekg(off_type off, ios_base::seekdir dir) {
-    int whence = (dir == ios_base::beg)   ? SEEK_SET
-                 : (dir == ios_base::cur) ? SEEK_CUR
-                                          : SEEK_END;
-    if (buf_.fp_)
-      ::fseeko(buf_.fp_, (off_t)off, whence);
+    buf_.pubseekoff(off, dir, ios_base::in);
     return *this;
   }
-
   streamsize gcount() const { return gcount_; }
 
   basic_filebuf<Char, Traits>* rdbuf() const {
@@ -255,25 +240,6 @@ private:
   basic_filebuf<Char, Traits> buf_;
   streamsize gcount_ = 0;
 };
-
-// getline
-template <typename Char, typename Traits, typename Alloc>
-basic_istream<Char, Traits>& getline(basic_istream<Char, Traits>& is,
-                                     basic_string<Char, Traits, Alloc>& str,
-                                     Char delim = '\n') {
-  str.clear();
-  bool got_any = false;
-  typename Traits::int_type c;
-  while (!Traits::eq_int_type(c = is.get(), Traits::eof())) {
-    got_any = true;
-    if (Traits::eq_int_type(c, Traits::to_int_type(delim)))
-      break;
-    str.push_back(Traits::to_char_type(c));
-  }
-  if (!got_any)
-    is.setstate(ios_base::eofbit | ios_base::failbit);
-  return is;
-}
 
 // unitbuf / nounitbuf (no-op — we flush immediately)
 inline ios_base& unitbuf(ios_base& s) { return s; }

@@ -768,6 +768,15 @@ template <typename It> constexpr It adjacent_find(It first, It last) {
       return first;
   return last;
 }
+template <typename It, typename BinaryPredicate>
+constexpr It adjacent_find(It first, It last, BinaryPredicate pred) {
+  if (first == last)
+    return last;
+  for (It next = first; ++next != last; first = next)
+    if (pred(*first, *next))
+      return first;
+  return last;
+}
 
 // iota (in <numeric> but often needed here)
 // Intentionally left in <numeric>
@@ -892,6 +901,215 @@ bool is_permutation(It1 first1, It1 last1, It2 first2, BinaryPredicate pred) {
       return false;
   }
   return true;
+}
+
+// set_union / set_intersection / set_difference / set_symmetric_difference
+template <typename It1, typename It2, typename OutIt>
+OutIt set_union(It1 f1, It1 l1, It2 f2, It2 l2, OutIt out) {
+  while (f1 != l1 && f2 != l2) {
+    if (*f1 < *f2)
+      *out++ = *f1++;
+    else if (*f2 < *f1)
+      *out++ = *f2++;
+    else {
+      *out++ = *f1++;
+      ++f2;
+    }
+  }
+  out = copy(f1, l1, out);
+  return copy(f2, l2, out);
+}
+template <typename It1, typename It2, typename OutIt, typename Compare>
+OutIt set_union(It1 f1, It1 l1, It2 f2, It2 l2, OutIt out, Compare cmp) {
+  while (f1 != l1 && f2 != l2) {
+    if (cmp(*f1, *f2))
+      *out++ = *f1++;
+    else if (cmp(*f2, *f1))
+      *out++ = *f2++;
+    else {
+      *out++ = *f1++;
+      ++f2;
+    }
+  }
+  out = copy(f1, l1, out);
+  return copy(f2, l2, out);
+}
+
+template <typename It1, typename It2, typename OutIt>
+OutIt set_intersection(It1 f1, It1 l1, It2 f2, It2 l2, OutIt out) {
+  while (f1 != l1 && f2 != l2) {
+    if (*f1 < *f2)
+      ++f1;
+    else if (*f2 < *f1)
+      ++f2;
+    else {
+      *out++ = *f1++;
+      ++f2;
+    }
+  }
+  return out;
+}
+template <typename It1, typename It2, typename OutIt, typename Compare>
+OutIt set_intersection(It1 f1, It1 l1, It2 f2, It2 l2, OutIt out, Compare cmp) {
+  while (f1 != l1 && f2 != l2) {
+    if (cmp(*f1, *f2))
+      ++f1;
+    else if (cmp(*f2, *f1))
+      ++f2;
+    else {
+      *out++ = *f1++;
+      ++f2;
+    }
+  }
+  return out;
+}
+
+template <typename It1, typename It2, typename OutIt>
+OutIt set_difference(It1 f1, It1 l1, It2 f2, It2 l2, OutIt out) {
+  while (f1 != l1 && f2 != l2) {
+    if (*f1 < *f2)
+      *out++ = *f1++;
+    else if (*f2 < *f1)
+      ++f2;
+    else {
+      ++f1;
+      ++f2;
+    }
+  }
+  return copy(f1, l1, out);
+}
+template <typename It1, typename It2, typename OutIt, typename Compare>
+OutIt set_difference(It1 f1, It1 l1, It2 f2, It2 l2, OutIt out, Compare cmp) {
+  while (f1 != l1 && f2 != l2) {
+    if (cmp(*f1, *f2))
+      *out++ = *f1++;
+    else if (cmp(*f2, *f1))
+      ++f2;
+    else {
+      ++f1;
+      ++f2;
+    }
+  }
+  return copy(f1, l1, out);
+}
+
+template <typename It1, typename It2, typename OutIt>
+OutIt set_symmetric_difference(It1 f1, It1 l1, It2 f2, It2 l2, OutIt out) {
+  while (f1 != l1 && f2 != l2) {
+    if (*f1 < *f2)
+      *out++ = *f1++;
+    else if (*f2 < *f1)
+      *out++ = *f2++;
+    else {
+      ++f1;
+      ++f2;
+    }
+  }
+  out = copy(f1, l1, out);
+  return copy(f2, l2, out);
+}
+
+// Heap operations
+template <typename It, typename Compare>
+void __push_heap(It first, ptrdiff_t hole, ptrdiff_t top, Compare cmp,
+                 typename iterator_traits<It>::value_type val) {
+  ptrdiff_t parent = (hole - 1) / 2;
+  while (hole > top && cmp(*(first + parent), val)) {
+    *(first + hole) = static_cast<decltype(val)&&>(*(first + parent));
+    hole = parent;
+    parent = (hole - 1) / 2;
+  }
+  *(first + hole) = static_cast<decltype(val)&&>(val);
+}
+
+template <typename It, typename Compare>
+void push_heap(It first, It last, Compare cmp) {
+  if (last - first > 1) {
+    auto val = std::move(*(last - 1));
+    __push_heap(first, last - first - 1, ptrdiff_t(0), cmp, std::move(val));
+  }
+}
+template <typename It> void push_heap(It first, It last) {
+  push_heap(first, last, [](const auto& a, const auto& b) { return a < b; });
+}
+
+template <typename It, typename Compare>
+void __adjust_heap(It first, ptrdiff_t hole, ptrdiff_t len, Compare cmp,
+                   typename iterator_traits<It>::value_type val) {
+  ptrdiff_t top = hole;
+  ptrdiff_t rchild = 2 * hole + 2;
+  while (rchild < len) {
+    if (cmp(*(first + rchild), *(first + (rchild - 1))))
+      --rchild;
+    *(first + hole) = static_cast<decltype(val)&&>(*(first + rchild));
+    hole = rchild;
+    rchild = 2 * hole + 2;
+  }
+  if (rchild == len) {
+    *(first + hole) = static_cast<decltype(val)&&>(*(first + (rchild - 1)));
+    hole = rchild - 1;
+  }
+  __push_heap(first, hole, top, cmp, std::move(val));
+}
+
+template <typename It, typename Compare>
+void pop_heap(It first, It last, Compare cmp) {
+  if (last - first > 1) {
+    --last;
+    auto val = std::move(*last);
+    *last = std::move(*first);
+    __adjust_heap(first, ptrdiff_t(0), last - first, cmp, std::move(val));
+  }
+}
+template <typename It> void pop_heap(It first, It last) {
+  pop_heap(first, last, [](const auto& a, const auto& b) { return a < b; });
+}
+
+template <typename It, typename Compare>
+void make_heap(It first, It last, Compare cmp) {
+  ptrdiff_t n = last - first;
+  for (ptrdiff_t i = n / 2 - 1; i >= 0; --i) {
+    auto val = std::move(*(first + i));
+    __adjust_heap(first, i, n, cmp, std::move(val));
+  }
+}
+template <typename It> void make_heap(It first, It last) {
+  make_heap(first, last, [](const auto& a, const auto& b) { return a < b; });
+}
+
+template <typename It, typename Compare>
+void sort_heap(It first, It last, Compare cmp) {
+  while (last - first > 1)
+    pop_heap(first, last--, cmp);
+}
+template <typename It> void sort_heap(It first, It last) {
+  sort_heap(first, last, [](const auto& a, const auto& b) { return a < b; });
+}
+
+template <typename It, typename Compare>
+bool is_heap(It first, It last, Compare cmp) {
+  ptrdiff_t n = last - first;
+  for (ptrdiff_t i = 1; i < n; ++i)
+    if (cmp(*(first + (i - 1) / 2), *(first + i)))
+      return false;
+  return true;
+}
+template <typename It> bool is_heap(It first, It last) {
+  return is_heap(first, last,
+                 [](const auto& a, const auto& b) { return a < b; });
+}
+
+template <typename It, typename Compare>
+It is_heap_until(It first, It last, Compare cmp) {
+  ptrdiff_t n = last - first;
+  for (ptrdiff_t i = 1; i < n; ++i)
+    if (cmp(*(first + (i - 1) / 2), *(first + i)))
+      return first + i;
+  return last;
+}
+template <typename It> It is_heap_until(It first, It last) {
+  return is_heap_until(first, last,
+                       [](const auto& a, const auto& b) { return a < b; });
 }
 
 } // namespace std

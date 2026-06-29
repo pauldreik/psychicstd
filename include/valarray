@@ -1,0 +1,91 @@
+#pragma once
+#include <cstddef>
+#include <initializer_list>
+
+namespace std {
+
+// psychicstd: minimal valarray — a flat array with resize() and iterators
+template <typename T> class valarray {
+  T* data_ = nullptr;
+  size_t size_ = 0;
+
+  void destroy() noexcept {
+    for (size_t i = 0; i < size_; ++i)
+      data_[i].~T();
+    ::operator delete(data_);
+  }
+
+public:
+  using value_type = T;
+
+  valarray() = default;
+  explicit valarray(size_t n)
+      : data_(n ? static_cast<T*>(::operator new(n * sizeof(T))) : nullptr),
+        size_(n) {
+    for (size_t i = 0; i < size_; ++i)
+      new (data_ + i) T{};
+  }
+  valarray(const T& val, size_t n)
+      : data_(n ? static_cast<T*>(::operator new(n * sizeof(T))) : nullptr),
+        size_(n) {
+    for (size_t i = 0; i < size_; ++i)
+      new (data_ + i) T(val);
+  }
+  valarray(initializer_list<T> il) : valarray(il.size()) {
+    size_t i = 0;
+    for (const auto& v : il)
+      data_[i++] = v;
+  }
+  valarray(const valarray& o) : valarray(o.size_) {
+    for (size_t i = 0; i < size_; ++i)
+      data_[i] = o.data_[i];
+  }
+  valarray(valarray&& o) noexcept : data_(o.data_), size_(o.size_) {
+    o.data_ = nullptr;
+    o.size_ = 0;
+  }
+  ~valarray() { destroy(); }
+
+  valarray& operator=(const valarray& o) {
+    if (this != &o) {
+      resize(o.size_);
+      for (size_t i = 0; i < size_; ++i)
+        data_[i] = o.data_[i];
+    }
+    return *this;
+  }
+  valarray& operator=(valarray&& o) noexcept {
+    destroy();
+    data_ = o.data_;
+    size_ = o.size_;
+    o.data_ = nullptr;
+    o.size_ = 0;
+    return *this;
+  }
+
+  size_t size() const noexcept { return size_; }
+
+  void resize(size_t n, const T& val = T{}) {
+    if (n == size_)
+      return;
+    T* p = n ? static_cast<T*>(::operator new(n * sizeof(T))) : nullptr;
+    size_t copy_n = n < size_ ? n : size_;
+    for (size_t i = 0; i < copy_n; ++i)
+      new (p + i) T(static_cast<T&&>(data_[i]));
+    for (size_t i = copy_n; i < n; ++i)
+      new (p + i) T(val);
+    destroy();
+    data_ = p;
+    size_ = n;
+  }
+
+  T& operator[](size_t i) { return data_[i]; }
+  const T& operator[](size_t i) const { return data_[i]; }
+
+  T* begin() noexcept { return data_; }
+  T* end() noexcept { return data_ + size_; }
+  const T* begin() const noexcept { return data_; }
+  const T* end() const noexcept { return data_ + size_; }
+};
+
+} // namespace std

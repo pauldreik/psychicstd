@@ -1,6 +1,8 @@
 #pragma once
 #include <type_traits>
 
+#define __cpp_lib_three_way_comparison 201907L
+
 namespace std {
 
 // Comparison category types (C++20)

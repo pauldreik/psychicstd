@@ -1,6 +1,7 @@
 #pragma once
 #include <cstddef>
 #include <initializer_list>
+#include <iosfwd>
 #include <type_traits>
 
 namespace std {
@@ -319,5 +320,186 @@ template <typename C> constexpr auto data(const C& c) -> decltype(c.data()) {
 template <typename T, size_t N> constexpr T* data(T (&a)[N]) noexcept {
   return a;
 }
+
+// back_insert_iterator / back_inserter
+template <typename Container> class back_insert_iterator {
+public:
+  using iterator_category = output_iterator_tag;
+  using value_type = void;
+  using difference_type = ptrdiff_t;
+  using pointer = void;
+  using reference = void;
+  using container_type = Container;
+
+  explicit back_insert_iterator(Container& c) : c_(&c) {}
+  back_insert_iterator& operator=(const typename Container::value_type& v) {
+    c_->push_back(v);
+    return *this;
+  }
+  back_insert_iterator& operator=(typename Container::value_type&& v) {
+    c_->push_back(static_cast<typename Container::value_type&&>(v));
+    return *this;
+  }
+  back_insert_iterator& operator*() { return *this; }
+  back_insert_iterator& operator++() { return *this; }
+  back_insert_iterator operator++(int) { return *this; }
+
+private:
+  Container* c_;
+};
+
+template <typename Container>
+back_insert_iterator<Container> back_inserter(Container& c) {
+  return back_insert_iterator<Container>(c);
+}
+
+// insert_iterator / inserter
+template <typename Container> class insert_iterator {
+public:
+  using iterator_category = output_iterator_tag;
+  using value_type = void;
+  using difference_type = ptrdiff_t;
+  using pointer = void;
+  using reference = void;
+  using container_type = Container;
+
+  insert_iterator(Container& c, typename Container::iterator it)
+      : c_(&c), it_(it) {}
+  insert_iterator& operator=(const typename Container::value_type& v) {
+    it_ = c_->insert(it_, v);
+    ++it_;
+    return *this;
+  }
+  insert_iterator& operator=(typename Container::value_type&& v) {
+    it_ = c_->insert(it_, static_cast<typename Container::value_type&&>(v));
+    ++it_;
+    return *this;
+  }
+  insert_iterator& operator*() { return *this; }
+  insert_iterator& operator++() { return *this; }
+  insert_iterator operator++(int) { return *this; }
+
+private:
+  Container* c_;
+  typename Container::iterator it_;
+};
+
+template <typename Container>
+insert_iterator<Container> inserter(Container& c,
+                                    typename Container::iterator it) {
+  return insert_iterator<Container>(c, it);
+}
+
+// front_insert_iterator / front_inserter
+template <typename Container> class front_insert_iterator {
+public:
+  using iterator_category = output_iterator_tag;
+  using value_type = void;
+  using difference_type = ptrdiff_t;
+  using pointer = void;
+  using reference = void;
+  using container_type = Container;
+
+  explicit front_insert_iterator(Container& c) : c_(&c) {}
+  front_insert_iterator& operator=(const typename Container::value_type& v) {
+    c_->push_front(v);
+    return *this;
+  }
+  front_insert_iterator& operator=(typename Container::value_type&& v) {
+    c_->push_front(static_cast<typename Container::value_type&&>(v));
+    return *this;
+  }
+  front_insert_iterator& operator*() { return *this; }
+  front_insert_iterator& operator++() { return *this; }
+  front_insert_iterator operator++(int) { return *this; }
+
+private:
+  Container* c_;
+};
+
+template <typename Container>
+front_insert_iterator<Container> front_inserter(Container& c) {
+  return front_insert_iterator<Container>(c);
+}
+
+// istream_iterator
+template <typename T, typename Char = char, typename Traits = char_traits<char>,
+          typename Dist = ptrdiff_t>
+class istream_iterator {
+public:
+  using iterator_category = input_iterator_tag;
+  using value_type = T;
+  using difference_type = Dist;
+  using pointer = const T*;
+  using reference = const T&;
+  using char_type = Char;
+  using traits_type = Traits;
+  using istream_type = basic_istream<Char, Traits>;
+
+  istream_iterator() noexcept : is_(nullptr) {}
+  explicit istream_iterator(istream_type& is) : is_(&is) { advance(); }
+
+  const T& operator*() const noexcept { return val_; }
+  const T* operator->() const noexcept { return &val_; }
+
+  istream_iterator& operator++() {
+    advance();
+    return *this;
+  }
+  istream_iterator operator++(int) {
+    auto tmp = *this;
+    advance();
+    return tmp;
+  }
+
+  friend bool operator==(const istream_iterator& a,
+                         const istream_iterator& b) noexcept {
+    return a.is_ == b.is_;
+  }
+  friend bool operator!=(const istream_iterator& a,
+                         const istream_iterator& b) noexcept {
+    return !(a == b);
+  }
+
+private:
+  istream_type* is_;
+  T val_{};
+
+  void advance() {
+    if (is_ && !(*is_ >> val_))
+      is_ = nullptr;
+  }
+};
+
+// ostream_iterator
+template <typename T, typename Char = char, typename Traits = char_traits<char>>
+class ostream_iterator {
+public:
+  using iterator_category = output_iterator_tag;
+  using value_type = void;
+  using difference_type = ptrdiff_t;
+  using pointer = void;
+  using reference = void;
+  using char_type = Char;
+  using traits_type = Traits;
+  using ostream_type = basic_ostream<Char, Traits>;
+
+  ostream_iterator(ostream_type& os, const Char* delim = nullptr)
+      : os_(&os), delim_(delim) {}
+
+  ostream_iterator& operator=(const T& v) {
+    *os_ << v;
+    if (delim_)
+      *os_ << delim_;
+    return *this;
+  }
+  ostream_iterator& operator*() { return *this; }
+  ostream_iterator& operator++() { return *this; }
+  ostream_iterator operator++(int) { return *this; }
+
+private:
+  ostream_type* os_;
+  const Char* delim_;
+};
 
 } // namespace std

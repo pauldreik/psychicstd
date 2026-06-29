@@ -1,5 +1,6 @@
 #pragma once
 #include <cstddef>
+#include <ios>
 #include <iosfwd>
 
 namespace std {
@@ -37,10 +38,35 @@ public:
 
   void gbump(int n) noexcept { gptr_ += n; }
 
+  // peek at next char without consuming
   int_type sgetc() {
     if (gptr_ < egptr_)
-      return traits_type::to_int_type(*gptr_++);
+      return traits_type::to_int_type(*gptr_);
     return underflow();
+  }
+
+  // read and consume next char
+  int_type sbumpc() {
+    if (gptr_ < egptr_)
+      return traits_type::to_int_type(*gptr_++);
+    return uflow();
+  }
+
+  // read up to n chars into s, return number read
+  streamsize sgetn(char_type* s, streamsize n) { return xsgetn(s, n); }
+
+  // seek to absolute position
+  streampos pubseekpos(streampos pos,
+                       ios_base::openmode which = ios_base::in |
+                                                  ios_base::out) {
+    return seekpos(pos, which);
+  }
+
+  // seek relative to current
+  streampos pubseekoff(streamoff off, ios_base::seekdir dir,
+                       ios_base::openmode which = ios_base::in |
+                                                  ios_base::out) {
+    return seekoff(off, dir, which);
   }
 
   // --- Sync ---
@@ -71,6 +97,25 @@ protected:
 
   virtual int_type underflow() { return traits_type::eof(); }
 
+  // Read and consume next char (default: underflow then bump)
+  virtual int_type uflow() {
+    int_type c = underflow();
+    if (!traits_type::eq_int_type(c, traits_type::eof()) && gptr_ < egptr_)
+      ++gptr_;
+    return c;
+  }
+
+  virtual streamsize xsgetn(char_type* s, streamsize n) {
+    streamsize got = 0;
+    while (got < n) {
+      int_type c = sbumpc();
+      if (traits_type::eq_int_type(c, traits_type::eof()))
+        break;
+      s[got++] = traits_type::to_char_type(c);
+    }
+    return got;
+  }
+
   virtual streamsize xsputn(const char_type* s, streamsize n) {
     streamsize written = 0;
     while (n-- > 0) {
@@ -82,6 +127,13 @@ protected:
   }
 
   virtual int sync() { return 0; }
+
+  virtual streampos seekpos(streampos, ios_base::openmode) {
+    return streampos(-1);
+  }
+  virtual streampos seekoff(streamoff, ios_base::seekdir, ios_base::openmode) {
+    return streampos(-1);
+  }
 
 private:
   char_type* pbase_;
