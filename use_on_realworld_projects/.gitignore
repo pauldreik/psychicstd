@@ -1,3 +1,4 @@
 rdfind-1.8.0/*
 *.tar.gz
 Catch2-*/
+json-3.12.0/
