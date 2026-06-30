@@ -22,7 +22,8 @@ template <typename T = void> struct greater {
 };
 template <> struct greater<void> {
   template <typename T, typename U>
-  constexpr auto operator()(T&& a, U&& b) const {
+  constexpr auto operator()(T&& a, U&& b) const
+      -> decltype(static_cast<T&&>(a) > static_cast<U&&>(b)) {
     return static_cast<T&&>(a) > static_cast<U&&>(b);
   }
   using is_transparent = void;
@@ -39,7 +40,8 @@ template <typename T = void> struct equal_to {
 };
 template <> struct equal_to<void> {
   template <typename T, typename U>
-  constexpr auto operator()(T&& a, U&& b) const {
+  constexpr auto operator()(T&& a, U&& b) const
+      -> decltype(static_cast<T&&>(a) == static_cast<U&&>(b)) {
     return static_cast<T&&>(a) == static_cast<U&&>(b);
   }
   using is_transparent = void;

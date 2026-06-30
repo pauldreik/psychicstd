@@ -374,12 +374,11 @@ public:
     return find(k) != data_.end();
   }
 
-  bool operator==(const map& other) const { return data_ == other.data_; }
-  bool operator!=(const map& other) const { return !(*this == other); }
-  bool operator<(const map& other) const { return data_ < other.data_; }
-  bool operator<=(const map& other) const { return !(other < *this); }
-  bool operator>(const map& other) const { return other < *this; }
-  bool operator>=(const map& other) const { return !(*this < other); }
+  template <typename K2, typename T2, typename C2, typename A2>
+  friend bool operator==(const map<K2, T2, C2, A2>&,
+                         const map<K2, T2, C2, A2>&);
+  template <typename K2, typename T2, typename C2, typename A2>
+  friend bool operator<(const map<K2, T2, C2, A2>&, const map<K2, T2, C2, A2>&);
 
   auto operator<=>(const map& other) const
     requires requires(const Key& k, const T& t) {
@@ -419,6 +418,37 @@ private:
     return std::lower_bound(data_.begin(), data_.end(), k, comp_);
   }
 };
+
+template <typename Key, typename T, typename Compare, typename Alloc>
+bool operator==(const map<Key, T, Compare, Alloc>& a,
+                const map<Key, T, Compare, Alloc>& b) {
+  return a.data_ == b.data_;
+}
+template <typename Key, typename T, typename Compare, typename Alloc>
+bool operator!=(const map<Key, T, Compare, Alloc>& a,
+                const map<Key, T, Compare, Alloc>& b) {
+  return !(a == b);
+}
+template <typename Key, typename T, typename Compare, typename Alloc>
+bool operator<(const map<Key, T, Compare, Alloc>& a,
+               const map<Key, T, Compare, Alloc>& b) {
+  return a.data_ < b.data_;
+}
+template <typename Key, typename T, typename Compare, typename Alloc>
+bool operator<=(const map<Key, T, Compare, Alloc>& a,
+                const map<Key, T, Compare, Alloc>& b) {
+  return !(b < a);
+}
+template <typename Key, typename T, typename Compare, typename Alloc>
+bool operator>(const map<Key, T, Compare, Alloc>& a,
+               const map<Key, T, Compare, Alloc>& b) {
+  return b < a;
+}
+template <typename Key, typename T, typename Compare, typename Alloc>
+bool operator>=(const map<Key, T, Compare, Alloc>& a,
+                const map<Key, T, Compare, Alloc>& b) {
+  return !(a < b);
+}
 
 // multimap (simplified — allows duplicate keys)
 template <typename Key, typename T, typename Compare = less<Key>,
