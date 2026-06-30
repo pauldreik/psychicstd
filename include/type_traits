@@ -168,6 +168,11 @@ template <typename T>
 struct is_polymorphic : bool_constant<__is_polymorphic(T)> {};
 template <typename T> struct is_abstract : bool_constant<__is_abstract(T)> {};
 template <typename T> struct is_final : bool_constant<__is_final(T)> {};
+// is_pod was deprecated in C++17 and removed in C++23; keep for compatibility
+template <typename T>
+struct is_pod
+    : bool_constant<is_trivial<T>::value && is_standard_layout<T>::value> {};
+template <typename T> inline constexpr bool is_pod_v = is_pod<T>::value;
 
 template <typename T>
 inline constexpr bool is_trivially_copyable_v = is_trivially_copyable<T>::value;

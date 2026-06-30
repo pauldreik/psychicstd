@@ -180,6 +180,13 @@ private:
   }
 };
 
+template <typename It>
+constexpr reverse_iterator<It>
+operator+(typename reverse_iterator<It>::difference_type n,
+          const reverse_iterator<It>& it) {
+  return it + n;
+}
+
 template <typename It1, typename It2>
 constexpr bool operator==(const reverse_iterator<It1>& a,
                           const reverse_iterator<It2>& b) {
@@ -189,6 +196,26 @@ template <typename It1, typename It2>
 constexpr bool operator!=(const reverse_iterator<It1>& a,
                           const reverse_iterator<It2>& b) {
   return a.base() != b.base();
+}
+template <typename It1, typename It2>
+constexpr bool operator<(const reverse_iterator<It1>& a,
+                         const reverse_iterator<It2>& b) {
+  return b.base() < a.base();
+}
+template <typename It1, typename It2>
+constexpr bool operator<=(const reverse_iterator<It1>& a,
+                          const reverse_iterator<It2>& b) {
+  return !(b < a);
+}
+template <typename It1, typename It2>
+constexpr bool operator>(const reverse_iterator<It1>& a,
+                         const reverse_iterator<It2>& b) {
+  return b < a;
+}
+template <typename It1, typename It2>
+constexpr bool operator>=(const reverse_iterator<It1>& a,
+                          const reverse_iterator<It2>& b) {
+  return !(a < b);
 }
 template <typename It1, typename It2>
 constexpr auto operator-(const reverse_iterator<It1>& a,
@@ -500,6 +527,68 @@ public:
 private:
   ostream_type* os_;
   const Char* delim_;
+};
+
+// istreambuf_iterator
+template <typename Char, typename Traits = char_traits<Char>>
+class istreambuf_iterator {
+public:
+  using iterator_category = input_iterator_tag;
+  using value_type = Char;
+  using difference_type = ptrdiff_t;
+  using pointer = Char*;
+  using reference = Char;
+  using char_type = Char;
+  using traits_type = Traits;
+  using int_type = typename Traits::int_type;
+  using streambuf_type = basic_streambuf<Char, Traits>;
+  using istream_type = basic_istream<Char, Traits>;
+
+  istreambuf_iterator() noexcept : sb_(nullptr), eof_(true) {}
+  explicit istreambuf_iterator(streambuf_type* sb) : sb_(sb), eof_(false) {
+    fetch();
+  }
+  explicit istreambuf_iterator(istream_type& is)
+      : sb_(is.rdbuf()), eof_(false) {
+    fetch();
+  }
+
+  Char operator*() const { return val_; }
+  istreambuf_iterator& operator++() {
+    fetch();
+    return *this;
+  }
+  istreambuf_iterator operator++(int) {
+    auto tmp = *this;
+    fetch();
+    return tmp;
+  }
+
+  bool equal(const istreambuf_iterator& o) const { return eof_ == o.eof_; }
+
+  friend bool operator==(const istreambuf_iterator& a,
+                         const istreambuf_iterator& b) {
+    return a.equal(b);
+  }
+  friend bool operator!=(const istreambuf_iterator& a,
+                         const istreambuf_iterator& b) {
+    return !a.equal(b);
+  }
+
+private:
+  streambuf_type* sb_;
+  Char val_{};
+  bool eof_;
+
+  void fetch() {
+    auto c = sb_ ? sb_->sbumpc() : Traits::eof();
+    if (Traits::eq_int_type(c, Traits::eof())) {
+      eof_ = true;
+      sb_ = nullptr;
+    } else {
+      val_ = Traits::to_char_type(c);
+    }
+  }
 };
 
 } // namespace std
