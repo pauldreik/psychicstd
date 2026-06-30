@@ -145,6 +145,11 @@ def main() -> None:
         key = name if name in extra_includes else ""
         bench_files.append((bench, name, key))
 
+    tests_dir = REPO_ROOT / "tests"
+    for test in sorted(tests_dir.glob("test_*.cpp")):
+        name = test.stem.removeprefix("test_")
+        bench_files.append((test, name, ""))
+
     for spec in args.bench_file:
         parts = spec.split(":", 2)
         if len(parts) == 3:
