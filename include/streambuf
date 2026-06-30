@@ -52,6 +52,15 @@ public:
     return uflow();
   }
 
+  // put back one character (decrement get pointer)
+  int_type sungetc() {
+    if (gptr_ > eback_) {
+      --gptr_;
+      return traits_type::to_int_type(*gptr_);
+    }
+    return traits_type::eof();
+  }
+
   // read up to n chars into s, return number read
   streamsize sgetn(char_type* s, streamsize n) { return xsgetn(s, n); }
 

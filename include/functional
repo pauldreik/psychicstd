@@ -1,4 +1,5 @@
 #pragma once
+#include <tuple>
 #include <type_traits>
 #include <utility>
 
@@ -243,5 +244,95 @@ public:
     return ptr_->call(static_cast<Args&&>(args)...);
   }
 };
+
+// --- std::bind / placeholders (minimal) ---
+
+namespace placeholders {
+  struct __ph1 {};
+  inline constexpr __ph1 _1{};
+} // namespace placeholders
+
+namespace detail {
+  template <typename F, typename... Bound> struct __bind_wrapper;
+
+  // Wrap a value — if it's a placeholder, substitute; otherwise pass through.
+  template <typename T, typename... Rest>
+  constexpr decltype(auto) __bind_arg(T&& v, Rest&&...) { return static_cast<T&&>(v); }
+  // Nested bind: invoke the nested bind expression with the call args
+  template <typename F, typename... Bound, typename... Args>
+  constexpr decltype(auto) __bind_arg(__bind_wrapper<F, Bound...>& bw, Args&&... args) {
+    return bw(static_cast<Args&&>(args)...);
+  }
+  template <typename F, typename... Bound, typename... Args>
+  constexpr decltype(auto) __bind_arg(const __bind_wrapper<F, Bound...>& bw, Args&&... args) {
+    return bw(static_cast<Args&&>(args)...);
+  }
+  template <typename T, typename... Rest>
+  constexpr T& __bind_arg(reference_wrapper<T> ref, Rest&&...) { return ref.get(); }
+  template <typename Arg, typename... Rest>
+  constexpr Arg&& __bind_arg(placeholders::__ph1, Arg&& a, Rest&&...) { return static_cast<Arg&&>(a); }
+
+  // invoke: call f(args...) or (obj.*f)(args...) for member pointers
+  template <typename F, typename... Args>
+  constexpr decltype(auto) __invoke(F&& f, Args&&... args) {
+    return static_cast<F&&>(f)(static_cast<Args&&>(args)...);
+  }
+  template <typename R, typename T, typename Obj, typename... Args>
+  constexpr decltype(auto) __invoke(R T::*pm, Obj&& obj, Args&&... args) {
+    if constexpr (is_pointer_v<decay_t<Obj>>)
+      return ((*static_cast<Obj&&>(obj)).*pm)(static_cast<Args&&>(args)...);
+    else
+      return (static_cast<Obj&&>(obj).*pm)(static_cast<Args&&>(args)...);
+  }
+
+  template <typename F, typename... Bound>
+  struct __bind_wrapper {
+    F f_;
+    tuple<Bound...> bound_;
+    template <typename F2, typename... B2>
+    constexpr __bind_wrapper(F2&& f, B2&&... b)
+        : f_(static_cast<F2&&>(f)), bound_(static_cast<B2&&>(b)...) {}
+    template <typename... Args>
+    constexpr decltype(auto) operator()(Args&&... args) {
+      return __call(index_sequence_for<Bound...>{}, static_cast<Args&&>(args)...);
+    }
+  private:
+    template <size_t... Is, typename... Args>
+    constexpr decltype(auto) __call(index_sequence<Is...>, Args&&... args) {
+      auto resolved = tuple<decltype(detail::__bind_arg(get<Is>(bound_), static_cast<Args&&>(args)...))...>(
+          detail::__bind_arg(get<Is>(bound_), static_cast<Args&&>(args)...)...);
+      return apply([this](auto&&... resolved_args) -> decltype(auto) {
+        return detail::__invoke(f_, static_cast<decltype(resolved_args)>(resolved_args)...);
+      }, static_cast<decltype(resolved)&&>(resolved));
+    }
+  };
+} // namespace detail
+
+template <typename F, typename... Args>
+constexpr auto bind(F&& f, Args&&... args) {
+  return detail::__bind_wrapper<decay_t<F>, decay_t<Args>...>(
+      static_cast<F&&>(f), static_cast<Args&&>(args)...);
+}
+
+// std::mem_fn — creates a call wrapper for a member function pointer
+template <typename R, typename T>
+constexpr auto mem_fn(R T::*pm) {
+  return [pm](auto&& obj, auto&&... args) -> decltype(auto) {
+    if constexpr (is_pointer_v<decay_t<decltype(obj)>>)
+      return ((*static_cast<decltype(obj)>(obj)).*pm)(static_cast<decltype(args)>(args)...);
+    else
+      return (static_cast<decltype(obj)>(obj).*pm)(static_cast<decltype(args)>(args)...);
+  };
+}
+// const version
+template <typename R, typename T>
+constexpr auto mem_fn(R (T::*pm)() const) {
+  return [pm](auto&& obj) -> decltype(auto) {
+    if constexpr (is_pointer_v<decay_t<decltype(obj)>>)
+      return ((*static_cast<decltype(obj)>(obj)).*pm)();
+    else
+      return (static_cast<decltype(obj)>(obj).*pm)();
+  };
+}
 
 } // namespace std

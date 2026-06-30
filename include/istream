@@ -118,6 +118,18 @@ public:
     return sb ? sb->sgetc() : Traits::eof();
   }
 
+  basic_istream& unget() {
+    sentry s(*this, true);
+    if (!s)
+      return *this;
+    auto* sb = this->rdbuf();
+    if (sb && !Traits::eq_int_type(sb->sungetc(), Traits::eof()))
+      this->clear(this->rdstate() & ~ios_base::failbit);
+    else
+      this->setstate(ios_base::badbit);
+    return *this;
+  }
+
   basic_istream& ignore(streamsize n = 1, int_type delim = Traits::eof()) {
     sentry s(*this, true);
     if (!s)

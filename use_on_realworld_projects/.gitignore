@@ -4,3 +4,6 @@ Catch2-*/
 json-3.12.0/
 fmt-11.1.4/
 eigen-3.4.0/
+cppcheck-2.21.0/
+cppcheck_build/
+cppcheck_test_build/

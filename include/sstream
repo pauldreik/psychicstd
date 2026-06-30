@@ -3,6 +3,7 @@
 #include <cstring>
 #include <ios>
 #include <istream>
+#include <locale>
 #include <ostream>
 #include <streambuf>
 #include <string>
@@ -139,6 +140,8 @@ public:
 
   string_type str() const { return buf_.str(); }
   void str(const string_type& s) { buf_.str(s); }
+
+  void imbue(const locale&) {} // stub
 
   basic_stringbuf<Char, Traits, Alloc>* rdbuf() const {
     return const_cast<basic_stringbuf<Char, Traits, Alloc>*>(&buf_);
