@@ -226,7 +226,8 @@ def main() -> None:
                 icon = "⬜"
             f.write(f"| {icon} | {name} | {sys_cell} | {psy_cell} | {spd_cell} |\n")
 
-    subprocess.run(["mdformat", speed_md], check=True)
+    if subprocess.run(["which", "mdformat"], capture_output=True).returncode == 0:
+        subprocess.run(["mdformat", speed_md], check=True)
     print(f"\nUpdated {speed_md}")
 
 
