@@ -85,6 +85,20 @@ FetchContent_MakeAvailable(Catch2)
 target_link_libraries(Catch2 PRIVATE psychicstd::psychicstd)
 target_link_libraries(Catch2WithMain PRIVATE psychicstd::psychicstd)
 
+FetchContent_Declare(
+    fmt
+    GIT_REPOSITORY https://github.com/fmtlib/fmt.git
+    GIT_TAG 11.1.4
+    GIT_SHALLOW TRUE
+)
+set(FMT_INSTALL OFF CACHE BOOL "" FORCE)
+set(FMT_DOC OFF CACHE BOOL "" FORCE)
+set(FMT_TEST OFF CACHE BOOL "" FORCE)
+FetchContent_MakeAvailable(fmt)
+# Compile fmt with psychicstd so types match
+target_compile_definitions(fmt PRIVATE FMT_USE_LOCALE=0)
+target_link_libraries(fmt PRIVATE psychicstd::psychicstd)
+
 if(PSYCHICSTD_BUILD_TESTS)
     enable_testing()
     add_subdirectory(tests)

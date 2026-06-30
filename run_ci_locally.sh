@@ -152,8 +152,8 @@ else
 fi
 
 if have docker; then
-  run_docker "docker gcc-12 debug" "psychicstd-ci:gcc-14" -DCMAKE_CXX_COMPILER=g++ -DCMAKE_BUILD_TYPE=Debug
-  run_docker "docker gcc-12 release" "psychicstd-ci:gcc-14" -DCMAKE_CXX_COMPILER=g++ -DCMAKE_BUILD_TYPE=Release
+  run_docker "docker gcc-12 debug" "psychicstd-ci:gcc-12" -DCMAKE_CXX_COMPILER=g++ -DCMAKE_BUILD_TYPE=Debug
+  run_docker "docker gcc-12 release" "psychicstd-ci:gcc-12" -DCMAKE_CXX_COMPILER=g++ -DCMAKE_BUILD_TYPE=Release
 
   run_docker "docker gcc-14 debug" "psychicstd-ci:gcc-14" -DCMAKE_CXX_COMPILER=g++ -DCMAKE_BUILD_TYPE=Debug
   run_docker "docker gcc-14 release" "psychicstd-ci:gcc-14" -DCMAKE_CXX_COMPILER=g++ -DCMAKE_BUILD_TYPE=Release

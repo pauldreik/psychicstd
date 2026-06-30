@@ -1,0 +1,4 @@
+add_executable(validation_fmt_test_format test_format.cpp)
+target_compile_definitions(validation_fmt_test_format PRIVATE FMT_USE_LOCALE=0)
+target_link_libraries(validation_fmt_test_format PRIVATE psychicstd::psychicstd fmt::fmt)
+add_test(NAME validation_fmt_test_format COMMAND validation_fmt_test_format)
