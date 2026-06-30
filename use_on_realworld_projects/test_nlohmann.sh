@@ -32,7 +32,7 @@ PSYCHICHSTD="$(
     -DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY \
     -DBUILD_SHARED_LIBS=OFF \
     -DJSON_TestStandards=20 \
-    -DJSON_BuildTests=OFF
+    -DJSON_BuildTests=OFF # does not work yet!
   cmake --build build -j"$(nproc)"
   rm -rf build
 
