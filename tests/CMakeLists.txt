@@ -4,11 +4,54 @@
 # Both must pass. That's how we verify our implementation behaves like the real one.
 
 set(TESTS
-    test_numeric
-    test_cstdint
-    test_cstddef
-    test_memory
+    test_algorithm
+    test_any
+    test_array
+    test_atomic
     test_chrono
+    test_compare
+    test_complex
+    test_concepts
+    test_cstddef
+    test_cstdint
+    test_deque
+    test_exception
+    test_forward_list
+    test_fstream
+    test_functional
+    test_initializer_list
+    test_iomanip
+    test_ios
+    test_iostream
+    test_istream
+    test_iterator
+    test_limits
+    test_list
+    test_map
+    test_memory
+    test_mutex
+    test_new
+    test_numeric
+    test_optional
+    test_random
+    test_ranges
+    test_ratio
+    test_regex
+    test_set
+    test_sstream
+    test_stack
+    test_stdexcept
+    test_string
+    test_string_view
+    test_thread
+    test_tuple
+    test_type_traits
+    test_typeinfo
+    test_unordered_map
+    test_unordered_set
+    test_utility
+    test_valarray
+    test_vector
 )
 
 foreach(t ${TESTS})

@@ -1,0 +1,7 @@
+#include <array>
+#include <cassert>
+
+int main() {
+  std::array<int, 3> a = {1, 2, 3};
+  assert(a.size() == 3);
+}
