@@ -18,8 +18,4 @@ private:
   T re_, im_;
 };
 
-template <> class complex<float>;
-template <> class complex<double>;
-template <> class complex<long double>;
-
 } // namespace std
