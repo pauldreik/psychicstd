@@ -2,12 +2,16 @@
 
 This is a **higly experimental** C++ standard library optimized for compilation speed. It is intended to be used during general C++ development to speed up the edit-compile-debug cycle. It is not at all intended to be used for shipping binaries.
 
-It is not complete. It is not fully compliant. But it is good enough to quickly iterate on code. As an example, it took about five hours to go from nothing to **good enough to use for compiling rapidjson and Catch2**.
+It is not complete. It is not fully compliant. But it is good enough to quickly iterate on code. Here are some real world projects that compile with psychicstd. The number indicate the speedup relative libstdc++:
 
-Here are some examples of compilation speed for real programs compared to gcc 12 in debug mode on amd64:
+- catch2 [1.6x](use_on_realworld_projects/catch2_speed_report.md)
+- cppcheck [2.3x](use_on_realworld_projects/cppcheck_speed_report.md)
+- eigen [1.7x](use_on_realworld_projects/eigen_speed_report.md)
+- fmt
+- nlohmann json
+- rdfind
 
-- rapidjson: 1.8x-2.4x speedup
-- a unit test using catch2: 2.9x - 3.9x speedup
+Find the scripts validating the build and generating the above number in the use_on_realworld_projects/ directory.
 
 Once you have coded for a while, switch to a real quality standard library (typically libstdc++ or libc++) and test and build real releases - psychicstd is just intended for speedy develop.
 
