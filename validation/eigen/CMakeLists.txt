@@ -1,0 +1,4 @@
+add_executable(validation_eigen_test_basic test_basic.cpp)
+target_link_libraries(validation_eigen_test_basic PRIVATE psychicstd::psychicstd)
+target_include_directories(validation_eigen_test_basic PRIVATE ${eigen_SOURCE_DIR})
+add_test(NAME validation_eigen_test_basic COMMAND validation_eigen_test_basic)

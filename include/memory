@@ -12,6 +12,24 @@ template <typename T> constexpr T* addressof(T& r) noexcept {
 }
 template <typename T> const T* addressof(const T&&) = delete;
 
+// pointer_traits
+template <typename Ptr> struct pointer_traits {
+  using pointer = Ptr;
+  using element_type = typename Ptr::element_type;
+  using difference_type = typename Ptr::difference_type;
+  template <typename U> using rebind = typename Ptr::template rebind<U>;
+  static pointer pointer_to(element_type& r) { return Ptr::pointer_to(r); }
+};
+template <typename T> struct pointer_traits<T*> {
+  using pointer = T*;
+  using element_type = T;
+  using difference_type = ptrdiff_t;
+  template <typename U> using rebind = U*;
+  static constexpr pointer pointer_to(element_type& r) noexcept {
+    return addressof(r);
+  }
+};
+
 // allocator
 template <typename T> struct allocator {
   using value_type = T;

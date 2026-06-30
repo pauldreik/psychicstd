@@ -205,6 +205,26 @@ constexpr bool operator<(const time_point<C, D>& a, const time_point<C, D>& b) {
   return a.time_since_epoch() < b.time_since_epoch();
 }
 
+template <typename C, typename D>
+constexpr bool operator!=(const time_point<C, D>& a,
+                          const time_point<C, D>& b) {
+  return !(a == b);
+}
+template <typename C, typename D>
+constexpr bool operator>(const time_point<C, D>& a, const time_point<C, D>& b) {
+  return b < a;
+}
+template <typename C, typename D>
+constexpr bool operator<=(const time_point<C, D>& a,
+                          const time_point<C, D>& b) {
+  return !(b < a);
+}
+template <typename C, typename D>
+constexpr bool operator>=(const time_point<C, D>& a,
+                          const time_point<C, D>& b) {
+  return !(a < b);
+}
+
 // Clocks
 struct system_clock {
   using duration = nanoseconds;
@@ -241,4 +261,8 @@ struct steady_clock {
 
 using high_resolution_clock = steady_clock;
 
+template <typename Rep> struct treat_as_floating_point : false_type {};
+template <> struct treat_as_floating_point<float> : true_type {};
+template <> struct treat_as_floating_point<double> : true_type {};
+template <> struct treat_as_floating_point<long double> : true_type {};
 } // namespace std::chrono

@@ -1,10 +1,60 @@
 #pragma once
 #include <chrono>
+#include <compare>
+#include <ctime>
 #include <ratio>
+#include <sched.h>
 #include <time.h>
 
+extern "C" long sysconf(int) noexcept;
+
 namespace std {
+
+class thread {
+  bool joined_ = false;
+
+public:
+  class id {
+    unsigned long val_ = 0;
+    friend class thread;
+
+  public:
+    id(unsigned long v) noexcept : val_(v) {}
+    id() noexcept = default;
+    bool operator!=(id o) const noexcept { return val_ != o.val_; }
+    bool operator<(id o) const noexcept { return val_ < o.val_; }
+  };
+
+  thread() = default;
+  template <typename F, typename... Args>
+  explicit thread(F&&, Args&&...) { /* no-op stub */ }
+  thread(thread&&) = default;
+  thread& operator=(thread&&) = default;
+  thread(const thread&) = delete;
+  thread& operator=(const thread&) = delete;
+  ~thread() = default;
+  bool joinable() const noexcept { return false; }
+  void join() { joined_ = true; }
+  void detach() {}
+  id get_id() const noexcept { return id(); }
+  static unsigned hardware_concurrency() noexcept {
+    long n = sysconf(84); /* _SC_NPROCESSORS_ONLN */
+    return n > 0 ? (unsigned)n : 1;
+  }
+};
+
+inline bool operator==(thread::id a, thread::id b) noexcept {
+  return !(a != b);
+}
+inline auto operator<=>(thread::id a, thread::id b) noexcept {
+  return a.operator<(b)   ? strong_ordering::less
+         : b.operator<(a) ? strong_ordering::greater
+                          : strong_ordering::equal;
+}
+
 namespace this_thread {
+
+inline thread::id get_id() noexcept { return thread::id(1); }
 
 template <typename Rep, typename Period>
 void sleep_for(const chrono::duration<Rep, Period>& d) {
@@ -16,6 +66,15 @@ void sleep_for(const chrono::duration<Rep, Period>& d) {
   ts.tv_nsec = ns % 1'000'000'000LL;
   ::nanosleep(&ts, nullptr);
 }
+
+template <typename Clock, typename Duration>
+void sleep_until(const chrono::time_point<Clock, Duration>& abs_time) {
+  auto now = Clock::now();
+  if (abs_time > now)
+    sleep_for(abs_time - now);
+}
+
+inline void yield() noexcept { ::sched_yield(); }
 
 } // namespace this_thread
 } // namespace std

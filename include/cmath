@@ -110,10 +110,18 @@ using ::tanf;
 inline float abs(float x) { return ::fabsf(x); }
 inline double abs(double x) { return ::fabs(x); }
 inline long double abs(long double x) { return ::fabsl(x); }
+inline long abs(long x) { return ::labs(x); }
+inline long long abs(long long x) { return ::llabs(x); }
 using ::nextafter;
 using ::nextafterf;
 using ::nextafterl;
 using ::nexttoward;
 using ::nexttowardf;
 using ::nexttowardl;
+inline long double log1p(long double x) { return ::log1pl(x); }
+inline double log1p(double x) { return ::log1p(x); }
+inline float log1p(float x) { return ::log1pf(x); }
+inline long double expm1(long double x) { return ::expm1l(x); }
+inline double expm1(double x) { return ::expm1(x); }
+inline float expm1(float x) { return ::expm1f(x); }
 } // namespace std

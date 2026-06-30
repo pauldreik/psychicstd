@@ -8,6 +8,13 @@
 
 namespace std {
 
+template <typename It1, typename It2>
+constexpr It2 swap_ranges(It1 first1, It1 last1, It2 first2) {
+  for (; first1 != last1; ++first1, ++first2)
+    swap(*first1, *first2);
+  return first2;
+}
+
 // min / max / clamp
 template <typename T> constexpr const T& min(const T& a, const T& b) {
   return b < a ? b : a;
