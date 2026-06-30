@@ -4,20 +4,20 @@ psychicstd vs system libstdc++ (GCC 15)
 
 | Test | psychicstd (ms) | libstdc++ (ms) | Speedup |
 |------|-----------------|----------------|---------|
-| basicstuff | 5869 | 6840 | 1.2x |
-| meta | 412 | 1012 | 2.5x |
-| numext | 539 | 1113 | 2.1x |
-| block | 342 | 929 | 2.7x |
-| corners | 336 | 932 | 2.8x |
-| determinant | 335 | 917 | 2.7x |
-| diagonal | 325 | 908 | 2.8x |
-| array_cwise | 363 | 935 | 2.6x |
-| array_for_matrix | 349 | 932 | 2.7x |
-| constructor | 480 | 1084 | 2.3x |
-| adjoint | 421 | 1006 | 2.4x |
-| triangular | 367 | 950 | 2.6x |
-| **Average (12 tests)** | **844** | **1463** | **1.7x** |
+| basicstuff | 5922 | 6940 | 1.2x |
+| meta | 415 | 996 | 2.4x |
+| numext | 538 | 1118 | 2.1x |
+| block | 342 | 919 | 2.7x |
+| corners | 333 | 917 | 2.8x |
+| determinant | 342 | 917 | 2.7x |
+| diagonal | 332 | 930 | 2.8x |
+| array_cwise | 354 | 940 | 2.7x |
+| array_for_matrix | 367 | 940 | 2.6x |
+| constructor | 495 | 1074 | 2.2x |
+| adjoint | 426 | 1009 | 2.4x |
+| triangular | 378 | 955 | 2.5x |
+| **Average (12 tests)** | **853** | **1471** | **1.7x** |
 
 ⚠ = compiled but test run failed (not included in average)
 
-Generated 2026-06-30T16:35:55+02:00
+Generated 2026-07-01T00:36:53+02:00
