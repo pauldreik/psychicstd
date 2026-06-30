@@ -91,4 +91,6 @@ template <typename T> bool atomic_is_lock_free(const atomic<T>*) noexcept {
   return false;
 }
 
+inline void atomic_signal_fence(memory_order) noexcept {}
+inline void atomic_thread_fence(memory_order) noexcept {}
 } // namespace std

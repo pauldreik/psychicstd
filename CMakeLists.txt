@@ -98,6 +98,25 @@ FetchContent_MakeAvailable(fmt)
 # Compile fmt with psychicstd so types match
 target_compile_definitions(fmt PRIVATE FMT_USE_LOCALE=0)
 target_link_libraries(fmt PRIVATE psychicstd::psychicstd)
+FetchContent_Declare(
+    eigen
+    GIT_REPOSITORY https://gitlab.com/libeigen/eigen.git
+    GIT_TAG 3.4.0
+    GIT_SHALLOW TRUE
+)
+set(EIGEN_BUILD_DOC OFF CACHE BOOL "" FORCE)
+set(BUILD_TESTING OFF CACHE BOOL "" FORCE)
+FetchContent_MakeAvailable(eigen)
+
+FetchContent_Declare(
+    eigen
+    GIT_REPOSITORY https://gitlab.com/libeigen/eigen.git
+    GIT_TAG 3.4.0
+    GIT_SHALLOW TRUE
+)
+set(EIGEN_BUILD_DOC OFF CACHE BOOL "" FORCE)
+set(BUILD_TESTING OFF CACHE BOOL "" FORCE)
+FetchContent_MakeAvailable(eigen)
 
 if(PSYCHICSTD_BUILD_TESTS)
     enable_testing()

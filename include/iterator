@@ -358,21 +358,21 @@ public:
   using reference = void;
   using container_type = Container;
 
-  explicit back_insert_iterator(Container& c) : c_(&c) {}
+  explicit back_insert_iterator(Container& c) : container(&c) {}
   back_insert_iterator& operator=(const typename Container::value_type& v) {
-    c_->push_back(v);
+    container->push_back(v);
     return *this;
   }
   back_insert_iterator& operator=(typename Container::value_type&& v) {
-    c_->push_back(static_cast<typename Container::value_type&&>(v));
+    container->push_back(static_cast<typename Container::value_type&&>(v));
     return *this;
   }
   back_insert_iterator& operator*() { return *this; }
   back_insert_iterator& operator++() { return *this; }
   back_insert_iterator operator++(int) { return *this; }
 
-private:
-  Container* c_;
+protected:
+  Container* container;
 };
 
 template <typename Container>

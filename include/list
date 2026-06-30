@@ -256,6 +256,32 @@ public:
       }
     }
   }
+  void splice(const_iterator pos, list& other) {
+    if (other.size_ == 0)
+      return;
+    Node* at = const_cast<Node*>(pos.n);
+    for (Node* n = other.head_; n;) {
+      Node* next = n->next;
+      n->prev = at ? at->prev : tail_;
+      n->next = at;
+      if (at) {
+        if (at->prev)
+          at->prev->next = n;
+        else
+          head_ = n;
+        at->prev = n;
+      } else {
+        if (tail_)
+          tail_->next = n;
+        else
+          head_ = n;
+        tail_ = n;
+      }
+    }
+    size_ += other.size_;
+    other.head_ = other.tail_ = nullptr;
+    other.size_ = 0;
+  }
 };
 
 } // namespace std

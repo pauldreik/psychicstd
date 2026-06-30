@@ -1,7 +1,7 @@
 #pragma once
-// Minimal <complex> stub — only the class template definition is provided.
-// Full arithmetic operations are not implemented.
 #include <cmath>
+#include <iosfwd>
+#include <limits>
 
 namespace std {
 
@@ -9,6 +9,9 @@ template <typename T> class complex {
 public:
   using value_type = T;
   constexpr complex(T r = T(), T i = T()) : re_(r), im_(i) {}
+  template <typename U>
+  constexpr explicit complex(const complex<U>& other)
+      : re_(static_cast<T>(other.real())), im_(static_cast<T>(other.imag())) {}
   constexpr T real() const noexcept { return re_; }
   constexpr T imag() const noexcept { return im_; }
   constexpr void real(T r) noexcept { re_ = r; }
@@ -17,5 +20,140 @@ public:
 private:
   T re_, im_;
 };
+
+template <typename T> constexpr T real(const complex<T>& c) { return c.real(); }
+template <typename T> constexpr T imag(const complex<T>& c) { return c.imag(); }
+template <typename T> constexpr complex<T> conj(const complex<T>& c) {
+  return complex<T>(c.real(), -c.imag());
+}
+inline double real(double x) { return x; }
+inline double imag(double) { return 0; }
+inline double conj(double x) { return x; }
+
+// --- arithmetic operators ---
+
+template <typename T>
+constexpr complex<T> operator+(const complex<T>& a, const complex<T>& b) {
+  return complex<T>(a.real() + b.real(), a.imag() + b.imag());
+}
+template <typename T> constexpr complex<T> operator+(const complex<T>& a, T b) {
+  return complex<T>(a.real() + b, a.imag());
+}
+template <typename T> constexpr complex<T> operator+(T a, const complex<T>& b) {
+  return complex<T>(a + b.real(), b.imag());
+}
+
+template <typename T>
+constexpr complex<T> operator-(const complex<T>& a, const complex<T>& b) {
+  return complex<T>(a.real() - b.real(), a.imag() - b.imag());
+}
+template <typename T> constexpr complex<T> operator-(const complex<T>& a, T b) {
+  return complex<T>(a.real() - b, a.imag());
+}
+template <typename T> constexpr complex<T> operator-(T a, const complex<T>& b) {
+  return complex<T>(a - b.real(), -b.imag());
+}
+template <typename T> constexpr complex<T> operator-(const complex<T>& a) {
+  return complex<T>(-a.real(), -a.imag());
+}
+
+template <typename T>
+constexpr complex<T> operator*(const complex<T>& a, const complex<T>& b) {
+  return complex<T>(a.real() * b.real() - a.imag() * b.imag(),
+                    a.real() * b.imag() + a.imag() * b.real());
+}
+template <typename T> constexpr complex<T> operator*(const complex<T>& a, T b) {
+  return complex<T>(a.real() * b, a.imag() * b);
+}
+template <typename T> constexpr complex<T> operator*(T a, const complex<T>& b) {
+  return complex<T>(a * b.real(), a * b.imag());
+}
+
+// complex/complex division — robust against overflow and denom == 0.
+template <typename T>
+constexpr complex<T> operator/(const complex<T>& a, const complex<T>& b) {
+  T cr = b.real(), ci = b.imag();
+  T ar = a.real(), ai = a.imag();
+  if (cr == T(0) && ci == T(0)) {
+    return complex<T>(ar / cr, ai / cr);
+  }
+  // Division by infinity → 0; propagate NaN from denominator.
+  if (std::isinf(cr) || std::isinf(ci)) {
+    return complex<T>(std::copysign(T(0), ar * cr),
+                      std::copysign(T(0), ai * ci));
+  }
+  if (std::isnan(cr) || std::isnan(ci)) {
+    return complex<T>(std::numeric_limits<T>::quiet_NaN(),
+                      std::numeric_limits<T>::quiet_NaN());
+  }
+  if (std::fabs(cr) >= std::fabs(ci)) {
+    T r = ci / cr;
+    T denom = cr + r * ci;
+    return complex<T>((ar + r * ai) / denom, (ai - r * ar) / denom);
+  }
+  T r = cr / ci;
+  T denom = cr * r + ci;
+  return complex<T>((ar * r + ai) / denom, (ai * r - ar) / denom);
+}
+template <typename T> constexpr complex<T> operator/(const complex<T>& a, T b) {
+  return complex<T>(a.real() / b, a.imag() / b);
+}
+template <typename T> constexpr complex<T> operator/(T a, const complex<T>& b) {
+  T cr = b.real(), ci = b.imag();
+  if (cr == T(0) && ci == T(0)) {
+    return complex<T>(a / cr, -a / cr);
+  }
+  if (std::isinf(cr) || std::isinf(ci)) {
+    return complex<T>(std::copysign(T(0), a * cr), T(0));
+  }
+  if (std::isnan(cr) || std::isnan(ci)) {
+    return complex<T>(std::numeric_limits<T>::quiet_NaN(),
+                      std::numeric_limits<T>::quiet_NaN());
+  }
+  if (std::fabs(cr) >= std::fabs(ci)) {
+    T r = ci / cr;
+    T denom = cr + r * ci;
+    return complex<T>(a / denom, -a * r / denom);
+  }
+  T r = cr / ci;
+  T denom = cr * r + ci;
+  return complex<T>(a * r / denom, -a / denom);
+}
+
+template <typename T>
+constexpr bool operator==(const complex<T>& a, const complex<T>& b) {
+  return a.real() == b.real() && a.imag() == b.imag();
+}
+template <typename T> constexpr bool operator==(const complex<T>& a, T b) {
+  return a.real() == b && a.imag() == T();
+}
+template <typename T> constexpr bool operator==(T a, const complex<T>& b) {
+  return a == b.real() && T() == b.imag();
+}
+template <typename T>
+constexpr bool operator!=(const complex<T>& a, const complex<T>& b) {
+  return !(a == b);
+}
+template <typename T> constexpr bool operator!=(const complex<T>& a, T b) {
+  return !(a == b);
+}
+template <typename T> constexpr bool operator!=(T a, const complex<T>& b) {
+  return !(a == b);
+}
+
+template <typename T> T arg(const complex<T>& c) {
+  return ::atan2(c.imag(), c.real());
+}
+template <typename T> T norm(const complex<T>& c) {
+  return c.real() * c.real() + c.imag() * c.imag();
+}
+template <typename T> T abs(const complex<T>& c) { return ::sqrt(norm(c)); }
+
+// I/O
+template <typename CharT, typename Traits, typename T>
+basic_ostream<CharT, Traits>& operator<<(basic_ostream<CharT, Traits>& os,
+                                         const complex<T>& c) {
+  return os << '(' << c.real() << ',' << c.imag() << ')';
+}
 
 } // namespace std

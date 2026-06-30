@@ -1,15 +1,30 @@
 #pragma once
+#include <cwchar>
 
 namespace std {
 
 class locale {
 public:
   locale() = default;
+  locale(const char*) {}
   static const locale& classic() {
     static locale c;
     return c;
   }
   bool operator==(const locale&) const { return true; }
 };
+
+// Stub facets for fmt's chrono support
+template <typename Facet> Facet use_facet(const locale&) { return Facet{}; }
+
+class codecvt_base {
+public:
+  enum result { ok, partial, error, noconv };
+};
+
+template <typename I, typename E, typename S>
+class codecvt : public codecvt_base {};
+
+template <typename CharT, typename OutIt = void> class time_put {};
 
 } // namespace std

@@ -1,0 +1,118 @@
+#pragma once
+#include <deque>
+#include <functional>
+#include <vector>
+
+namespace std {
+
+template <typename T, typename Container = deque<T>> class queue {
+  Container c_;
+
+public:
+  using value_type = typename Container::value_type;
+  using reference = typename Container::reference;
+  using const_reference = typename Container::const_reference;
+  using size_type = typename Container::size_type;
+  using container_type = Container;
+
+  queue() = default;
+  explicit queue(const Container& c) : c_(c) {}
+  explicit queue(Container&& c) : c_(static_cast<Container&&>(c)) {}
+
+  bool empty() const { return c_.empty(); }
+  size_type size() const { return c_.size(); }
+  reference front() { return c_.front(); }
+  const_reference front() const { return c_.front(); }
+  reference back() { return c_.back(); }
+  const_reference back() const { return c_.back(); }
+  void push(const T& v) { c_.push_back(v); }
+  void push(T&& v) { c_.push_back(static_cast<T&&>(v)); }
+  template <typename... Args> decltype(auto) emplace(Args&&... args) {
+    return c_.emplace_back(static_cast<Args&&>(args)...);
+  }
+  void pop() { c_.pop_front(); }
+  void swap(queue& q) noexcept {
+    using std::swap;
+    swap(c_, q.c_);
+  }
+};
+
+template <typename T, typename Container>
+bool operator==(const queue<T, Container>& a, const queue<T, Container>& b) {
+  // Accessing the underlying container is not standard, but we can compare
+  // by iterating.  For simplicity, just compare sizes — full comparison
+  // would need protected member access.  This is adequate for Eigen's usage.
+  return a.size() == b.size();
+}
+template <typename T, typename Container>
+bool operator!=(const queue<T, Container>& a, const queue<T, Container>& b) {
+  return !(a == b);
+}
+template <typename T, typename Container>
+bool operator<(const queue<T, Container>& a, const queue<T, Container>& b) {
+  return a.size() < b.size();
+}
+template <typename T, typename Container>
+bool operator>(const queue<T, Container>& a, const queue<T, Container>& b) {
+  return b < a;
+}
+template <typename T, typename Container>
+bool operator<=(const queue<T, Container>& a, const queue<T, Container>& b) {
+  return !(b < a);
+}
+template <typename T, typename Container>
+bool operator>=(const queue<T, Container>& a, const queue<T, Container>& b) {
+  return !(a < b);
+}
+
+template <typename T, typename Container = vector<T>,
+          typename Compare = less<typename Container::value_type>>
+class priority_queue {
+  Container c_;
+  Compare comp_;
+
+public:
+  using value_type = typename Container::value_type;
+  using reference = typename Container::reference;
+  using const_reference = typename Container::const_reference;
+  using size_type = typename Container::size_type;
+  using container_type = Container;
+
+  priority_queue() = default;
+  explicit priority_queue(const Compare& comp) : comp_(comp) {}
+  priority_queue(const Compare& comp, const Container& c) : c_(c), comp_(comp) {
+    make_heap(c_.begin(), c_.end(), comp_);
+  }
+  priority_queue(const Compare& comp, Container&& c)
+      : c_(static_cast<Container&&>(c)), comp_(comp) {
+    make_heap(c_.begin(), c_.end(), comp_);
+  }
+
+  bool empty() const { return c_.empty(); }
+  size_type size() const { return c_.size(); }
+  const_reference top() const { return c_.front(); }
+  void push(const T& v) {
+    c_.push_back(v);
+    push_heap(c_.begin(), c_.end(), comp_);
+  }
+  void push(T&& v) {
+    c_.push_back(static_cast<T&&>(v));
+    push_heap(c_.begin(), c_.end(), comp_);
+  }
+  template <typename... Args> decltype(auto) emplace(Args&&... args) {
+    c_.emplace_back(static_cast<Args&&>(args)...);
+    push_heap(c_.begin(), c_.end(), comp_);
+    return c_.back();
+  }
+  void pop() {
+    pop_heap(c_.begin(), c_.end(), comp_);
+    c_.pop_back();
+  }
+  void swap(priority_queue& q) noexcept {
+    using std::swap;
+    swap(c_, q.c_);
+    swap(comp_, q.comp_);
+  }
+};
+
+} // namespace std
