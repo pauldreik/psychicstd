@@ -215,6 +215,14 @@ public:
   basic_string& operator=(basic_string_view<Char> sv) {
     return *this = basic_string(sv);
   }
+  basic_string& assign(const basic_string& o) { return *this = o; }
+  basic_string& assign(const Char* s) { return *this = s; }
+  basic_string& assign(const Char* s, size_type n) {
+    return *this = basic_string(s, n);
+  }
+  basic_string& assign(size_type n, Char c) {
+    return *this = basic_string(n, c);
+  }
 
   // Element access
   Char& operator[](size_type i) noexcept { return data_[i]; }

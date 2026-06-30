@@ -218,6 +218,7 @@ public:
   }
 
   iterator erase(const_iterator pos) { return data_.erase(pos); }
+  iterator erase(iterator pos) { return erase(const_iterator(pos)); }
   iterator erase(const_iterator first, const_iterator last) {
     return data_.erase(first, last);
   }

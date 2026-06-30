@@ -201,7 +201,11 @@ private:
     for (size_type i = from; i < size_; ++i) {
       if constexpr (is_move_assignable_v<T>)
         data_[i - n] = std::move(data_[i]);
-      else
+      else if constexpr (is_move_constructible_v<T>) {
+        _destroy(data_ + i - n);
+        _construct(data_ + i - n, std::move(data_[i]));
+        _destroy(data_ + i);
+      } else
         data_[i - n] = data_[i];
     }
   }

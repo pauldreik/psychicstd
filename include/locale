@@ -1,0 +1,15 @@
+#pragma once
+
+namespace std {
+
+class locale {
+public:
+  locale() = default;
+  static const locale& classic() {
+    static locale c;
+    return c;
+  }
+  bool operator==(const locale&) const { return true; }
+};
+
+} // namespace std

@@ -1,0 +1,68 @@
+#pragma once
+#include <cstdio>
+#include <exception>
+#include <string>
+
+namespace std {
+
+class error_category {
+public:
+  virtual ~error_category() = default;
+  virtual const char* name() const noexcept = 0;
+  virtual string message(int ev) const = 0;
+  bool operator==(const error_category& o) const noexcept { return this == &o; }
+  bool operator!=(const error_category& o) const noexcept {
+    return !(*this == o);
+  }
+};
+
+namespace __detail {
+struct __generic_category : error_category {
+  const char* name() const noexcept override { return "generic"; }
+  string message(int) const override { return "generic error"; }
+};
+} // namespace __detail
+
+inline const error_category& system_category() noexcept {
+  static __detail::__generic_category c;
+  return c;
+}
+
+inline const error_category& generic_category() noexcept {
+  static __detail::__generic_category c;
+  return c;
+}
+
+class error_code {
+  int val_ = 0;
+  const error_category* cat_ = nullptr;
+
+public:
+  error_code() = default;
+  error_code(int v, const error_category& c) : val_(v), cat_(&c) {}
+  int value() const noexcept { return val_; }
+  const error_category& category() const noexcept { return *cat_; }
+  string message() const { return cat_ ? cat_->message(val_) : string(); }
+  explicit operator bool() const noexcept { return val_ != 0; }
+};
+
+class system_error : public runtime_error {
+  error_code ec_;
+
+public:
+  system_error(error_code ec, const string& what_arg)
+      : runtime_error(what_arg), ec_(ec) {}
+  system_error(error_code ec, const char* what_arg)
+      : runtime_error(what_arg), ec_(ec) {}
+  system_error(int ev, const error_category& ecat, const string& what_arg)
+      : runtime_error(what_arg), ec_(ev, ecat) {}
+  system_error(int ev, const error_category& ecat, const char* what_arg)
+      : runtime_error(what_arg), ec_(ev, ecat) {}
+  const error_code& code() const noexcept { return ec_; }
+};
+
+inline error_code make_error_code(int e) noexcept {
+  return error_code(e, generic_category());
+}
+
+} // namespace std

@@ -1,0 +1,22 @@
+#pragma once
+#include <typeinfo>
+
+namespace std {
+
+class type_index {
+  const type_info* ptr_;
+
+public:
+  type_index(const type_info& ti) noexcept : ptr_(&ti) {}
+  bool operator==(const type_index& o) const noexcept {
+    return *ptr_ == *o.ptr_;
+  }
+  bool operator!=(const type_index& o) const noexcept { return !(*this == *o); }
+  bool operator<(const type_index& o) const noexcept {
+    return ptr_->before(*o.ptr_);
+  }
+  size_t hash_code() const noexcept { return ptr_->hash_code(); }
+  const char* name() const noexcept { return ptr_->name(); }
+};
+
+} // namespace std
