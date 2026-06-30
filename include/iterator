@@ -594,6 +594,7 @@ private:
 // move_iterator
 template <typename It> class move_iterator {
   It it_;
+
 public:
   using iterator_type = It;
   using iterator_category = typename iterator_traits<It>::iterator_category;
@@ -605,13 +606,27 @@ public:
   constexpr explicit move_iterator(It it) : it_(it) {}
   constexpr It base() const { return it_; }
   constexpr reference operator*() const { return static_cast<reference>(*it_); }
-  constexpr move_iterator& operator++() { ++it_; return *this; }
-  constexpr move_iterator operator++(int) { auto t = *this; ++it_; return t; }
-  friend constexpr bool operator==(const move_iterator& a, const move_iterator& b) { return a.it_ == b.it_; }
-  friend constexpr bool operator!=(const move_iterator& a, const move_iterator& b) { return a.it_ != b.it_; }
+  constexpr move_iterator& operator++() {
+    ++it_;
+    return *this;
+  }
+  constexpr move_iterator operator++(int) {
+    auto t = *this;
+    ++it_;
+    return t;
+  }
+  friend constexpr bool operator==(const move_iterator& a,
+                                   const move_iterator& b) {
+    return a.it_ == b.it_;
+  }
+  friend constexpr bool operator!=(const move_iterator& a,
+                                   const move_iterator& b) {
+    return a.it_ != b.it_;
+  }
 };
 
-template <typename It>
-constexpr move_iterator<It> make_move_iterator(It it) { return move_iterator<It>(it); }
+template <typename It> constexpr move_iterator<It> make_move_iterator(It it) {
+  return move_iterator<It>(it);
+}
 
 } // namespace std

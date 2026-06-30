@@ -164,8 +164,12 @@ public:
 
   reverse_iterator rbegin() { return reverse_iterator(end()); }
   reverse_iterator rend() { return reverse_iterator(begin()); }
-  const_reverse_iterator rbegin() const { return const_reverse_iterator(end()); }
-  const_reverse_iterator rend() const { return const_reverse_iterator(begin()); }
+  const_reverse_iterator rbegin() const {
+    return const_reverse_iterator(end());
+  }
+  const_reverse_iterator rend() const {
+    return const_reverse_iterator(begin());
+  }
   const_reverse_iterator crbegin() const { return rbegin(); }
   const_reverse_iterator crend() const { return rend(); }
 
@@ -209,8 +213,10 @@ public:
     Node* n = new Node(static_cast<Args&&>(args)...);
     n->next = head_;
     n->prev = nullptr;
-    if (head_) head_->prev = n;
-    else tail_ = n;
+    if (head_)
+      head_->prev = n;
+    else
+      tail_ = n;
     head_ = n;
     ++size_;
     return {n};
@@ -272,12 +278,16 @@ public:
       n->next = cur;
       n->prev = cur ? cur->prev : tail_;
       if (cur) {
-        if (cur->prev) cur->prev->next = n;
-        else head_ = n;
+        if (cur->prev)
+          cur->prev->next = n;
+        else
+          head_ = n;
         cur->prev = n;
       } else {
-        if (tail_) tail_->next = n;
-        else head_ = n;
+        if (tail_)
+          tail_->next = n;
+        else
+          head_ = n;
         tail_ = n;
       }
       ++size_;
@@ -375,34 +385,48 @@ public:
   }
   void splice(const_iterator pos, list& other, const_iterator first,
               const_iterator last) {
-    if (first == last) return;
+    if (first == last)
+      return;
     Node* f = const_cast<Node*>(first.n);
     Node* l = const_cast<Node*>(last.n);
     // Detach range [f, l) from other
     Node* prev = f->prev;
     Node* before_last = l ? l->prev : other.tail_;
-    if (prev) prev->next = l;
-    else other.head_ = l;
-    if (l) l->prev = prev;
-    else other.tail_ = prev;
+    if (prev)
+      prev->next = l;
+    else
+      other.head_ = l;
+    if (l)
+      l->prev = prev;
+    else
+      other.tail_ = prev;
     // Count and adjust other size
     size_t n = 0;
-    for (Node* cur = f; cur != l; cur = cur->next) ++n;
-    if (n > other.size_) n = other.size_;
+    for (Node* cur = f; cur != l; cur = cur->next)
+      ++n;
+    if (n > other.size_)
+      n = other.size_;
     other.size_ -= n;
     // Insert into this list before pos
     Node* at = const_cast<Node*>(pos.n);
     if (at) {
-      if (at->prev) at->prev->next = f;
-      else head_ = f;
+      if (at->prev)
+        at->prev->next = f;
+      else
+        head_ = f;
       f->prev = at->prev;
-      if (before_last) before_last->next = at;
+      if (before_last)
+        before_last->next = at;
       at->prev = before_last;
     } else {
-      if (tail_) { tail_->next = f; f->prev = tail_; }
-      else head_ = f;
+      if (tail_) {
+        tail_->next = f;
+        f->prev = tail_;
+      } else
+        head_ = f;
       tail_ = before_last ? before_last : f;
-      if (tail_) tail_->next = nullptr;
+      if (tail_)
+        tail_->next = nullptr;
     }
     size_ += n;
   }
@@ -410,14 +434,18 @@ public:
 
 template <typename T, typename A>
 bool operator==(const list<T, A>& a, const list<T, A>& b) {
-  if (a.size() != b.size()) return false;
+  if (a.size() != b.size())
+    return false;
   auto ai = a.begin(), bi = b.begin();
   for (; ai != a.end(); ++ai, ++bi)
-    if (!(*ai == *bi)) return false;
+    if (!(*ai == *bi))
+      return false;
   return true;
 }
 template <typename T, typename A>
-bool operator!=(const list<T, A>& a, const list<T, A>& b) { return !(a == b); }
+bool operator!=(const list<T, A>& a, const list<T, A>& b) {
+  return !(a == b);
+}
 template <typename T, typename A>
 bool operator<(const list<T, A>& a, const list<T, A>& b) {
   return lexicographical_compare(a.begin(), a.end(), b.begin(), b.end());

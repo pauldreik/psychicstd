@@ -50,7 +50,11 @@ public:
       }
       return *this;
     }
-    iterator operator++(int) { auto t = *this; ++*this; return t; }
+    iterator operator++(int) {
+      auto t = *this;
+      ++*this;
+      return t;
+    }
   };
   struct const_iterator {
     const unordered_map* m;
@@ -75,7 +79,11 @@ public:
       }
       return *this;
     }
-    const_iterator operator++(int) { auto t = *this; ++*this; return t; }
+    const_iterator operator++(int) {
+      auto t = *this;
+      ++*this;
+      return t;
+    }
   };
 
   unordered_map() = default;
@@ -259,7 +267,11 @@ public:
       }
       return *this;
     }
-    iterator operator++(int) { auto t = *this; ++*this; return t; }
+    iterator operator++(int) {
+      auto t = *this;
+      ++*this;
+      return t;
+    }
     bool operator==(const iterator& o) const {
       return m == o.m && b == o.b && i == o.i;
     }
@@ -280,7 +292,11 @@ public:
       }
       return *this;
     }
-    const_iterator operator++(int) { auto t = *this; ++*this; return t; }
+    const_iterator operator++(int) {
+      auto t = *this;
+      ++*this;
+      return t;
+    }
     bool operator==(const const_iterator& o) const {
       return m == o.m && b == o.b && i == o.i;
     }

@@ -82,9 +82,9 @@ using ::hypot;
 using ::ilogb;
 using ::ldexp;
 using ::lgamma;
-using ::logb;
 using ::llrint;
 using ::llround;
+using ::logb;
 using ::lrint;
 using ::lround;
 using ::modf;
@@ -104,13 +104,13 @@ using ::fabsf;
 using ::floorf;
 using ::fmodf;
 using ::hypotf;
+using ::lgammaf;
 using ::logf;
 using ::powf;
 using ::roundf;
 using ::sinf;
 using ::sqrtf;
 using ::tanf;
-using ::lgammaf;
 using ::tgammaf;
 
 inline float abs(float x) { return ::fabsf(x); }

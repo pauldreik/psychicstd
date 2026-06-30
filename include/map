@@ -45,12 +45,32 @@ public:
       return reinterpret_cast<value_type&>(*it_);
     }
     value_type* operator->() const { return &operator*(); }
-    iterator& operator++() { ++it_; return *this; }
-    iterator operator++(int) { auto t = *this; ++it_; return t; }
-    iterator& operator--() { --it_; return *this; }
-    iterator operator--(int) { auto t = *this; --it_; return t; }
-    iterator& operator+=(difference_type n) { it_ += n; return *this; }
-    iterator& operator-=(difference_type n) { it_ -= n; return *this; }
+    iterator& operator++() {
+      ++it_;
+      return *this;
+    }
+    iterator operator++(int) {
+      auto t = *this;
+      ++it_;
+      return t;
+    }
+    iterator& operator--() {
+      --it_;
+      return *this;
+    }
+    iterator operator--(int) {
+      auto t = *this;
+      --it_;
+      return t;
+    }
+    iterator& operator+=(difference_type n) {
+      it_ += n;
+      return *this;
+    }
+    iterator& operator-=(difference_type n) {
+      it_ -= n;
+      return *this;
+    }
     iterator operator+(difference_type n) const { return {it_ + n}; }
     iterator operator-(difference_type n) const { return {it_ - n}; }
     difference_type operator-(iterator o) const { return it_ - o.it_; }
@@ -72,23 +92,48 @@ public:
     using reference = value_type&;
     typename vector<storage_type>::const_iterator it_;
     const_iterator() = default;
-    const_iterator(typename vector<storage_type>::const_iterator it) : it_(it) {}
+    const_iterator(typename vector<storage_type>::const_iterator it)
+        : it_(it) {}
     const_iterator(iterator it) : it_(it.it_) {}
-    operator typename vector<storage_type>::const_iterator() const { return it_; }
+    operator typename vector<storage_type>::const_iterator() const {
+      return it_;
+    }
     const value_type& operator*() const {
       return reinterpret_cast<const value_type&>(*it_);
     }
     const value_type* operator->() const { return &operator*(); }
-    const_iterator& operator++() { ++it_; return *this; }
-    const_iterator operator++(int) { auto t = *this; ++it_; return t; }
-    const_iterator& operator--() { --it_; return *this; }
-    const_iterator operator--(int) { auto t = *this; --it_; return t; }
-    const_iterator& operator+=(difference_type n) { it_ += n; return *this; }
-    const_iterator& operator-=(difference_type n) { it_ -= n; return *this; }
+    const_iterator& operator++() {
+      ++it_;
+      return *this;
+    }
+    const_iterator operator++(int) {
+      auto t = *this;
+      ++it_;
+      return t;
+    }
+    const_iterator& operator--() {
+      --it_;
+      return *this;
+    }
+    const_iterator operator--(int) {
+      auto t = *this;
+      --it_;
+      return t;
+    }
+    const_iterator& operator+=(difference_type n) {
+      it_ += n;
+      return *this;
+    }
+    const_iterator& operator-=(difference_type n) {
+      it_ -= n;
+      return *this;
+    }
     const_iterator operator+(difference_type n) const { return {it_ + n}; }
     const_iterator operator-(difference_type n) const { return {it_ - n}; }
     difference_type operator-(const_iterator o) const { return it_ - o.it_; }
-    const value_type& operator[](difference_type n) const { return *(*this + n); }
+    const value_type& operator[](difference_type n) const {
+      return *(*this + n);
+    }
     bool operator==(const_iterator o) const { return it_ == o.it_; }
     bool operator!=(const_iterator o) const { return it_ != o.it_; }
     bool operator==(iterator o) const { return it_ == o.it_; }
@@ -243,9 +288,9 @@ public:
     if (it != data_.end() && !comp_.comp(v.first, it->first))
       return {it, false};
     // v is rvalue-owned; cast away const on key so we can move it
-    return {data_.insert(
-                it.it_, storage_type{static_cast<Key&&>(const_cast<Key&>(v.first)),
-                                 static_cast<T&&>(v.second)}),
+    return {data_.insert(it.it_, storage_type{static_cast<Key&&>(
+                                                  const_cast<Key&>(v.first)),
+                                              static_cast<T&&>(v.second)}),
             true};
   }
   // Hint versions (hint ignored for our sorted-vector implementation)
@@ -322,8 +367,9 @@ public:
       it->second = static_cast<M&&>(obj);
       return {it, false};
     }
-    return {data_.insert(it.it_, {static_cast<Key&&>(k), static_cast<M&&>(obj)}),
-            true};
+    return {
+        data_.insert(it.it_, {static_cast<Key&&>(k), static_cast<M&&>(obj)}),
+        true};
   }
   template <class M>
   iterator insert_or_assign(const_iterator, const Key& k, M&& obj) {
