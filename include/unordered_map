@@ -36,8 +36,8 @@ public:
     size_t b;
     size_t i;
     iterator(unordered_map* m, size_t b, size_t i) : m(m), b(b), i(i) {}
-    value_type& operator*() { return m->buckets_[b][i]; }
-    value_type* operator->() { return &m->buckets_[b][i]; }
+    value_type& operator*() const { return m->buckets_[b][i]; }
+    value_type* operator->() const { return &m->buckets_[b][i]; }
     bool operator==(const iterator& o) const { return b == o.b && i == o.i; }
     bool operator!=(const iterator& o) const { return !(*this == o); }
     iterator& operator++() {
@@ -49,6 +49,11 @@ public:
         i = 0;
       }
       return *this;
+    }
+    iterator operator++(int) {
+      auto t = *this;
+      ++*this;
+      return t;
     }
   };
   struct const_iterator {
@@ -73,6 +78,11 @@ public:
         i = 0;
       }
       return *this;
+    }
+    const_iterator operator++(int) {
+      auto t = *this;
+      ++*this;
+      return t;
     }
   };
 
@@ -257,6 +267,11 @@ public:
       }
       return *this;
     }
+    iterator operator++(int) {
+      auto t = *this;
+      ++*this;
+      return t;
+    }
     bool operator==(const iterator& o) const {
       return m == o.m && b == o.b && i == o.i;
     }
@@ -276,6 +291,11 @@ public:
         ++b;
       }
       return *this;
+    }
+    const_iterator operator++(int) {
+      auto t = *this;
+      ++*this;
+      return t;
     }
     bool operator==(const const_iterator& o) const {
       return m == o.m && b == o.b && i == o.i;

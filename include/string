@@ -628,6 +628,18 @@ public:
       return 1;
     return 0;
   }
+  int compare(size_type pos1, size_type n1, const basic_string& o,
+              size_type pos2, size_type n2) const {
+    size_type clen = n1 < n2 ? n1 : n2;
+    int r = Traits::compare(data_ + pos1, o.data_ + pos2, clen);
+    if (r)
+      return r;
+    if (n1 < n2)
+      return -1;
+    if (n1 > n2)
+      return 1;
+    return 0;
+  }
 
   void swap(basic_string& o) noexcept {
     Char* td = data_;

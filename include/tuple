@@ -58,6 +58,15 @@ public:
   tuple& operator=(const tuple&) = default;
   tuple& operator=(tuple&&) = default;
 
+  // Assign from pair (for tuple<T&, U&> = pair<T, U> pattern used by tie)
+  template <typename U1, typename U2>
+    requires(sizeof...(Ts) == 2)
+  tuple& operator=(const pair<U1, U2>& p) {
+    get<0>(*this) = p.first;
+    get<1>(*this) = p.second;
+    return *this;
+  }
+
   // Non-template constructor: allows {} to initialise individual element types.
   explicit tuple(Ts&&... args)
     requires(sizeof...(Ts) != 0)

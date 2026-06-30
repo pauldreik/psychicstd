@@ -1,6 +1,7 @@
 #pragma once
 #include <cstdio>
 #include <fstream>
+#include <istream>
 #include <ostream>
 
 namespace std {
@@ -41,6 +42,12 @@ inline ostream& make_clog() {
   return s;
 }
 
+inline istream& make_cin() {
+  static detail::stdio_streambuf buf(stdin);
+  static istream s(&buf);
+  return s;
+}
+
 } // namespace detail
 
 namespace {
@@ -48,6 +55,7 @@ namespace {
 ostream& cout = detail::make_cout();
 ostream& cerr = detail::make_cerr();
 ostream& clog = detail::make_clog();
+istream& cin = detail::make_cin();
 } // namespace
 
 } // namespace std

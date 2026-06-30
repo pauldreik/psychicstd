@@ -180,6 +180,14 @@ public:
     return insert(static_cast<Key&&>(k)).first;
   }
 
+  template <typename... Args> pair<iterator, bool> emplace(Args&&... args) {
+    return insert(Key(static_cast<Args&&>(args)...));
+  }
+  template <typename It> void insert(It first, It last) {
+    for (; first != last; ++first)
+      insert(*first);
+  }
+
   iterator find(const Key& k) const {
     size_t b = bucket(k);
     for (Node* n = buckets_[b]; n; n = n->next)
@@ -189,6 +197,20 @@ public:
   }
 
   size_type count(const Key& k) const { return find(k) != end() ? 1 : 0; }
+
+  iterator erase(const_iterator pos) {
+    size_t b = bucket(*pos);
+    Node** pp = &buckets_[b];
+    while (*pp && (*pp)->key != *pos)
+      pp = &(*pp)->next;
+    if (*pp) {
+      Node* n = *pp;
+      *pp = n->next;
+      delete n;
+      --size_;
+    }
+    return end();
+  }
 
   size_type erase(const Key& k) {
     size_t b = bucket(k);

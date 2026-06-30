@@ -58,6 +58,7 @@ using ::sinh;
 using ::sqrt;
 using ::tan;
 using ::tanh;
+using ::tgamma;
 using ::trunc;
 // isnan/isinf/isfinite/isnormal/signbit are macros in C — wrap them
 inline bool isnan(float x) { return __builtin_isnan(x); }
@@ -78,9 +79,12 @@ inline bool signbit(long double x) { return __builtin_signbit(x); }
 using ::copysign;
 using ::frexp;
 using ::hypot;
+using ::ilogb;
 using ::ldexp;
+using ::lgamma;
 using ::llrint;
 using ::llround;
+using ::logb;
 using ::lrint;
 using ::lround;
 using ::modf;
@@ -100,12 +104,14 @@ using ::fabsf;
 using ::floorf;
 using ::fmodf;
 using ::hypotf;
+using ::lgammaf;
 using ::logf;
 using ::powf;
 using ::roundf;
 using ::sinf;
 using ::sqrtf;
 using ::tanf;
+using ::tgammaf;
 
 inline float abs(float x) { return ::fabsf(x); }
 inline double abs(double x) { return ::fabs(x); }
