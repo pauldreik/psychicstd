@@ -64,6 +64,32 @@ foreach(t ${TESTS})
     add_test(NAME ${t}_psychicstd COMMAND ${t}_psychicstd)
 endforeach()
 
+# Self-containment tests: every header must be usable on its own. Including
+# just that one header (and nothing else) must compile. This catches headers
+# that rely on another header having been included first. The source is
+# generated per header, so new headers are picked up automatically. Runs at
+# whatever compatibility level the build is configured with.
+file(GLOB _psychic_headers CONFIGURE_DEPENDS ${CMAKE_SOURCE_DIR}/include/*)
+foreach(_hdr ${_psychic_headers})
+    get_filename_component(_h ${_hdr} NAME)
+    # Skip internal implementation headers (reserved __ names) -- not meant to
+    # be included directly.
+    if(_h MATCHES "^__")
+        continue()
+    endif()
+    set(_src ${CMAKE_CURRENT_BINARY_DIR}/self_contained/sc_${_h}.cpp)
+    file(
+        WRITE ${_src}
+        "// Auto-generated. Verifies <${_h}> is self-contained.\n"
+        "#include <${_h}>\n"
+        "#include <${_h}> // second include verifies the include guard\n"
+        "int main() {}\n"
+    )
+    add_executable(self_contained_${_h} ${_src})
+    target_link_libraries(self_contained_${_h} PRIVATE psychicstd::psychicstd)
+    add_test(NAME self_contained_${_h} COMMAND self_contained_${_h})
+endforeach()
+
 # Simulates a completely independent project consuming psychicstd via a bash
 # script
 add_test(
