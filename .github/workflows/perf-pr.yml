@@ -35,7 +35,8 @@ jobs:
           --extra-include rapidjson:build/_deps/rapidjson-src/include
       - name: Benchmark main's headers (same files, same runner)
         run: >
-          python3 benchmarks/compile_time/run_bench.py g++ main-base/include --json base.json
+          python3 benchmarks/compile_time/run_bench.py g++ main-base/include --json
+          base.json
           --extra-include rapidjson:build/_deps/rapidjson-src/include
       - name: Generate performance diff
         run: |
