@@ -105,6 +105,13 @@ def main() -> None:
     cxx = args.compiler
     psychicstd_flags = ["-nostdinc++", f"-I{args.psychicstd_inc}"]
 
+    try:
+        cxx_version = subprocess.run(
+            [cxx, "--version"], capture_output=True, text=True
+        ).stdout.splitlines()[0]
+    except (OSError, IndexError):
+        cxx_version = cxx
+
     # Auto-discover third_party/<name>/include dirs; CLI --extra-include takes precedence.
     third_party = BENCH_DIR / "third_party"
     if third_party.is_dir():
@@ -134,7 +141,7 @@ def main() -> None:
             if paths:
                 extra_includes[name] = paths
 
-    print(f"{DIM}compiler: {cxx}{RESET}")
+    print(f"{DIM}compiler: {cxx_version}{RESET}")
 
     # Collect files to benchmark: local bench_*.cpp + any --bench-file additions
     # Each entry: (Path, display_name, include_key_or_empty)
@@ -223,7 +230,9 @@ def main() -> None:
     if args.json:
         # Machine-readable output for CI diffing (bench_diff.py). Keyed by the
         # benchmark name; medians are null when a config failed to compile, and
-        # the raw per-rep samples let bench_diff put a CI on the change.
+        # the raw per-rep samples let bench_diff put a CI on the change. The
+        # reserved "__meta__" key records which compiler produced the numbers.
+        raw["__meta__"] = {"compiler": cxx, "compiler_version": cxx_version}
         Path(args.json).write_text(json.dumps(raw, indent=2))
         print(f"\nWrote {args.json}")
         return

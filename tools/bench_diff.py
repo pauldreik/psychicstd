@@ -30,6 +30,12 @@ def load(path: str) -> dict:
     return json.loads(Path(path).read_text())
 
 
+def bench_names(cache: dict) -> set:
+    """Benchmark names in a result file, excluding reserved metadata keys
+    (e.g. __meta__)."""
+    return {k for k in cache if not k.startswith("__")}
+
+
 def samples(cache: dict, name: str, key: str) -> list[float] | None:
     """Per-rep samples for a metric; fall back to a single-point list if an
     older result file only stored the median."""
@@ -93,7 +99,7 @@ def main() -> None:
     def ci_str(ci):
         return "" if ci is None else f" [{ci[0]:+.1f}, {ci[1]:+.1f}]"
 
-    common = sorted(set(base) & set(head))
+    common = sorted(bench_names(base) & bench_names(head))
     # (name, base_ms, head_ms, delta_pct, ci, color)
     rows: list[tuple] = []
     for name in common:
@@ -128,7 +134,14 @@ def main() -> None:
     faster = sorted([r for r in rows if r[5] == GREEN], key=lambda r: r[3])
     noisy = sorted([r for r in rows if r[5] == YELLOW], key=lambda r: r[0])
 
+    head_ver = head.get("__meta__", {}).get("compiler_version")
+    base_ver = base.get("__meta__", {}).get("compiler_version")
+    compiler = head_ver or base_ver or "unknown"
+    if base_ver and head_ver and base_ver != head_ver:
+        compiler = f"PR: {head_ver} / main: {base_ver}"
+
     lines: list[str] = ["## Compile-time performance diff\n"]
+    lines.append(f"Compiler: `{compiler}`.\n")
     lines.append(
         f"psychicstd compile time, main vs this PR (same runner). "
         f"{GREEN} faster · {RED} slower · {YELLOW} within noise. A change is colored only "
@@ -167,8 +180,8 @@ def main() -> None:
         lines.extend(table(noisy))
         lines.append("\n</details>")
 
-    only_head = sorted(set(head) - set(base))
-    only_base = sorted(set(base) - set(head))
+    only_head = sorted(bench_names(head) - bench_names(base))
+    only_base = sorted(bench_names(base) - bench_names(head))
     if only_head or only_base:
         notes = []
         if only_head:
