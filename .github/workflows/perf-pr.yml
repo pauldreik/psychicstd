@@ -1,0 +1,28 @@
+---
+name: performance diff
+on:
+  pull_request:
+    branches: [main]
+permissions:
+  pull-requests: write
+jobs:
+  perf:
+    # Compile-time benchmark, PR vs main, in ONE job on ONE runner. CI runners
+    # vary a lot in absolute speed, so a stored baseline from a previous run on
+    # a different host is meaningless. compare_performance.py benchmarks both
+    # sides here (swapping only the include dir) and prints the diff -- the same
+    # command developers run locally to reproduce it.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0  # need origin/main for the comparison worktree
+      - name: Compare compile-time performance (PR vs main)
+        # --reps 5 keeps CI time sane; raise locally for tighter intervals.
+        run: python3 scripts/compare_performance.py --reps 5 g++ origin/main | tee
+          diff.md
+      - name: Post performance diff as PR comment
+        uses: marocchino/sticky-pull-request-comment@v3
+        with:
+          header: performance
+          path: diff.md
