@@ -1,8 +1,32 @@
-#!/bin/sh
+#!/bin/bash
 
 set -eux
 
 cd "$(dirname "$0")"
+
+usage() {
+  echo "$0: builds rdfind."
+  echo "-a use address sanitizer"
+  echo "-u use undefined sanitizer"
+}
+
+# if using sanitizers
+USE_ASAN=false
+USE_UBSAN=false
+while getopts "ahu" opt; do
+  case $opt in
+    a) USE_ASAN=true ;;
+    h)
+      usage
+      exit
+      ;;
+    p) USE_UBSAN=true ;;
+    \?)
+      echo "Invalid option"
+      exit 1
+      ;;
+  esac
+done
 
 tarball=rdfind-1.8.0.tar.gz
 if [ ! -e $tarball ]; then
@@ -26,7 +50,20 @@ PSYCHICHSTD="$(
   cd ../include
   pwd -P
 )"
-export CXXFLAGS="-std=c++20 -nostdinc++ -isystem $PSYCHICHSTD"
+export CXXFLAGS="-std=c++20 -nostdinc++ -fvisibility=hidden -isystem $PSYCHICHSTD"
+LDFLAGSPREFIX=
+LDFLAGSSUFFIX=
+if $USE_ASAN; then
+  CXXFLAGS+=" -fsanitize=address"
+  LDFLAGSPREFIX+="-lasan "
+  LDFLAGSSUFFIX+=" -fsanitize=address"
+fi
+if $USE_UBSAN; then
+  CXXFLAGS+=" -fsanitize=undefined"
+  LDFLAGSPREFIX+="-ubsan "
+  LDFLAGSSUFFIX+=" -fsanitize=undefined"
+fi
+
 # LDFLAGS and LIBS are passed as configure arguments so they are baked into
 # the Makefile - plain "make" then works without extra flags.
 # Configure's own linker tests also use them; providing a complete runtime
@@ -35,7 +72,7 @@ export CXXFLAGS="-std=c++20 -nostdinc++ -isystem $PSYCHICHSTD"
 (
   tar xf $tarball
   cd rdfind-1.8.0
-  ./configure LDFLAGS="-nodefaultlibs" LIBS="-lsupc++ -lm -lc -lgcc_s -lgcc"
+  ./configure LDFLAGS="$LDFLAGSPREFIX -nodefaultlibs $LDFLAGSSUFFIX" LIBS="-lsupc++ -lm -lc -lgcc_s -lgcc"
   make
   make check
   make distclean
