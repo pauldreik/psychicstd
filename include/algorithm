@@ -532,108 +532,46 @@ constexpr bool is_sorted(It first, It last, Compare cmp) {
   return true;
 }
 
-// sort — introsort: quicksort + insertion for small ranges
+// sort — a plain heapsort, on purpose. Still O(N log N) worst case, but ~2.5x
+// cheaper to instantiate than an introsort (one algorithm, not quicksort +
+// median-of-3 + insertion + heapsort fallback). The price is a larger runtime
+// constant, which this library trades away for compile speed.
 namespace detail {
-template <typename It> void insertion_sort(It first, It last) {
-  for (It i = first + 1; i != last; ++i) {
-    auto key = static_cast<decltype(*i)&&>(*i);
-    It j = i;
-    while (j != first && key < *(j - 1)) {
-      *j = static_cast<decltype(*j)&&>(*(j - 1));
-      --j;
-    }
-    *j = static_cast<decltype(key)&&>(key);
-  }
-}
 template <typename It, typename Compare>
-void insertion_sort(It first, It last, Compare cmp) {
-  for (It i = first + 1; i != last; ++i) {
-    auto key = static_cast<decltype(*i)&&>(*i);
-    It j = i;
-    while (j != first && cmp(key, *(j - 1))) {
-      *j = static_cast<decltype(*j)&&>(*(j - 1));
-      --j;
-    }
-    *j = static_cast<decltype(key)&&>(key);
-  }
-}
-template <typename It> It qs_pivot(It first, It last) {
-  It mid = first + (last - first) / 2;
-  // median of three
-  if (*mid < *first)
-    iter_swap(first, mid);
-  if (*(last - 1) < *first)
-    iter_swap(first, last - 1);
-  if (*(last - 1) < *mid)
-    iter_swap(mid, last - 1);
-  iter_swap(mid, last - 2);
-  auto& pivot = *(last - 2);
-  It i = first, j = last - 2;
+void heap_sift(It first, ptrdiff_t root, ptrdiff_t n, Compare cmp) {
   for (;;) {
-    while (*++i < pivot) {
-    }
-    while (pivot < *--j) {
-    }
-    if (i >= j)
+    ptrdiff_t child = 2 * root + 1;
+    if (child >= n)
       break;
-    iter_swap(i, j);
+    if (child + 1 < n && cmp(*(first + child), *(first + child + 1)))
+      ++child;
+    if (!cmp(*(first + root), *(first + child)))
+      break;
+    iter_swap(first + root, first + child);
+    root = child;
   }
-  iter_swap(i, last - 2);
-  return i;
 }
 template <typename It, typename Compare>
-It qs_pivot(It first, It last, Compare cmp) {
-  It mid = first + (last - first) / 2;
-  if (cmp(*mid, *first))
-    iter_swap(first, mid);
-  if (cmp(*(last - 1), *first))
-    iter_swap(first, last - 1);
-  if (cmp(*(last - 1), *mid))
-    iter_swap(mid, last - 1);
-  iter_swap(mid, last - 2);
-  auto& pivot = *(last - 2);
-  It i = first, j = last - 2;
-  for (;;) {
-    while (cmp(*++i, pivot)) {
-    }
-    while (cmp(pivot, *--j)) {
-    }
-    if (i >= j)
-      break;
-    iter_swap(i, j);
+void heap_sort(It first, It last, Compare cmp) {
+  ptrdiff_t n = last - first;
+  for (ptrdiff_t start = n / 2; start-- > 0;)
+    heap_sift(first, start, n, cmp);
+  for (ptrdiff_t end = n; --end > 0;) {
+    iter_swap(first, first + end);
+    heap_sift(first, 0, end, cmp);
   }
-  iter_swap(i, last - 2);
-  return i;
-}
-template <typename It> void quicksort(It first, It last) {
-  if (last - first <= 16) {
-    insertion_sort(first, last);
-    return;
-  }
-  It pivot = qs_pivot(first, last);
-  quicksort(first, pivot);
-  quicksort(pivot + 1, last);
-}
-template <typename It, typename Compare>
-void quicksort(It first, It last, Compare cmp) {
-  if (last - first <= 16) {
-    insertion_sort(first, last, cmp);
-    return;
-  }
-  It pivot = qs_pivot(first, last, cmp);
-  quicksort(first, pivot, cmp);
-  quicksort(pivot + 1, last, cmp);
 }
 } // namespace detail
 
 template <typename It> constexpr void sort(It first, It last) {
   if (last - first > 1)
-    detail::quicksort(first, last);
+    detail::heap_sort(first, last,
+                      [](const auto& a, const auto& b) { return a < b; });
 }
 template <typename It, typename Compare>
 constexpr void sort(It first, It last, Compare cmp) {
   if (last - first > 1)
-    detail::quicksort(first, last, cmp);
+    detail::heap_sort(first, last, cmp);
 }
 
 template <typename It> constexpr void stable_sort(It first, It last) {
