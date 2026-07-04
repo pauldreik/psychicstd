@@ -40,7 +40,11 @@ public:
     write(&c, 1);
     return *this;
   }
-  basic_ostream& flush() { return *this; }
+  basic_ostream& flush() {
+    if (this->rdbuf() && this->rdbuf()->pubsync() == -1)
+      this->setstate(ios_base::badbit);
+    return *this;
+  }
 
   // Manipulators
   basic_ostream& operator<<(basic_ostream& (*pf)(basic_ostream&)) {
