@@ -127,16 +127,16 @@ def main() -> None:
     # Each entry: (Path, display_name, include_key_or_empty)
     bench_files: list[tuple[Path, str, str]] = []
 
-    # Auto-discover validation/<name>/*.cpp files that match a known extra_include key.
-    validation_dir = REPO_ROOT / "validation"
-    if validation_dir.is_dir():
-        for group in sorted(validation_dir.iterdir()):
-            if not group.is_dir():
-                continue
-            key = group.name  # e.g. "catch2"
-            for cpp in sorted(group.glob("*.cpp")):
-                label = f"{key}/{cpp.stem.removeprefix('test_')}"
-                bench_files.append((cpp, label, key))
+    # Auto-discover real-code fixture dirs (benchmarks/compile_time/<name>/*.cpp)
+    # whose name matches a known extra_include key (e.g. rapidjson). These are
+    # snippets of real third-party code used purely as compile-speed inputs.
+    for group in sorted(BENCH_DIR.iterdir()):
+        if not group.is_dir() or group.name == "third_party":
+            continue
+        key = group.name
+        for cpp in sorted(group.glob("*.cpp")):
+            label = f"{key}/{cpp.stem.removeprefix('test_')}"
+            bench_files.append((cpp, label, key))
 
     for bench in sorted(BENCH_DIR.glob("bench_*.cpp")):
         name = bench.stem.removeprefix("bench_")

@@ -170,15 +170,15 @@ cmake --build build
 ctest --test-dir build --output-on-failure
 ```
 
-Tests cover three things:
+The default build covers the library itself — no third-party code, no network access:
 
-- each implemented header compiled against both the system STL and psychicstd
+- each implemented header compiled against both the system STL and psychicstd, to check behavioral equivalence
+- a self-containment test per header: including just that one header (and nothing else) must compile
 - a simulated external project that uses psychicstd via `-DCMAKE_CXX_FLAGS`
-- a `validation/` directory where real third-party libraries are compiled against psychicstd and exercised
 
-### Validation by testing to compile third party programs
+### Testing on real-world projects
 
-`validation/` contains programs that compile third-party libraries against psychicstd and run them as ctest tests. The intent is to catch regressions and verify that psychicstd is correct enough to be useful in practice. Currently: rapidjson (parse, write, DOM manipulation) and Catch2 v3.8.0 (basic tests, algorithms, string operations).
+Correctness in practice is verified by compiling — and running the test suites of — actual third-party projects against psychicstd. The scripts in [`use_on_realworld_projects/`](use_on_realworld_projects/) clone, build, and run Catch2, cppcheck, eigen, fmt, nlohmann json and rdfind, and produce the speedup reports linked at the top of this README.
 
 ### Benchmarks
 
