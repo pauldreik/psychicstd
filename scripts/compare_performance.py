@@ -22,6 +22,7 @@ left behind (the temporary worktree and result files are cleaned up).
 """
 
 import argparse
+import os
 import shutil
 import subprocess
 import sys
@@ -52,7 +53,20 @@ def main() -> int:
         default="origin/main",
         help="git ref to compare against (default: origin/main)",
     )
+    ap.add_argument(
+        "-n",
+        "--reps",
+        type=int,
+        default=None,
+        help="reps per file (median): more = tighter confidence intervals but "
+        "slower. Default: run_bench's default (10), or $BENCH_N if set.",
+    )
     args = ap.parse_args()
+
+    # run_bench.py reads the rep count from $BENCH_N; --reps sets it for both runs.
+    child_env = os.environ.copy()
+    if args.reps is not None:
+        child_env["BENCH_N"] = str(args.reps)
 
     repo = Path(
         sh(
@@ -99,6 +113,7 @@ def main() -> int:
                 ],
                 cwd=repo,
                 stdout=sys.stderr,
+                env=child_env,
             )
 
         bench(worktree / "include", base_json, f"{args.ref} (reference)")
@@ -113,7 +128,9 @@ def main() -> int:
                 "--head",
                 str(head_json),
                 "--reproduce",
-                f"scripts/compare_performance.py {args.compiler} {args.ref}",
+                "scripts/compare_performance.py "
+                + (f"--reps {args.reps} " if args.reps is not None else "")
+                + f"{args.compiler} {args.ref}",
             ],
             cwd=repo,
         )

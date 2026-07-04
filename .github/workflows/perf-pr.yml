@@ -13,14 +13,14 @@ jobs:
     # sides here (swapping only the include dir) and prints the diff -- the same
     # command developers run locally to reproduce it.
     runs-on: ubuntu-latest
-    env:
-      BENCH_N: 5  # reps per file (median); lower than local to keep CI time sane
     steps:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0  # need origin/main for the comparison worktree
       - name: Compare compile-time performance (PR vs main)
-        run: python3 scripts/compare_performance.py g++ origin/main | tee diff.md
+        # --reps 5 keeps CI time sane; raise locally for tighter intervals.
+        run: python3 scripts/compare_performance.py --reps 5 g++ origin/main | tee
+          diff.md
       - name: Post performance diff as PR comment
         uses: marocchino/sticky-pull-request-comment@v3
         with:
