@@ -8,6 +8,7 @@ Usage: run_bench.py [cxx_compiler] [psychicstd_include_dir]
 """
 
 import argparse
+import json
 import os
 import statistics
 import subprocess
@@ -19,7 +20,7 @@ os.environ["CCACHE_DISABLE"] = "1"
 
 BENCH_DIR = Path(__file__).parent.resolve()
 REPO_ROOT = BENCH_DIR.parent.parent
-N = 10
+N = int(os.environ.get("BENCH_N", "10"))  # reps per file; lower for quick runs
 
 THRESHOLD_GREEN = 1.2  # above this: psychicstd is meaningfully faster
 THRESHOLD_RED = 0.8  # below this: psychicstd is meaningfully slower
@@ -38,12 +39,19 @@ def compile_ms(cxx: str, flags: list[str], file: Path) -> float:
     return (time.perf_counter() - start) * 1000
 
 
-def median_ms(cxx: str, flags: list[str], file: Path) -> float | None:
-    """Returns median ms, or None if the file fails to compile with these flags."""
+def samples_ms(cxx: str, flags: list[str], file: Path) -> list[float] | None:
+    """Returns the list of per-rep compile times in ms, or None if the file
+    fails to compile with these flags. Keeping the raw samples (not just the
+    median) lets the diff tool put a confidence interval on the change."""
     try:
-        return statistics.median(compile_ms(cxx, flags, file) for _ in range(N))
+        return [round(compile_ms(cxx, flags, file), 3) for _ in range(N)]
     except subprocess.CalledProcessError:
         return None
+
+
+def median_ms(cxx: str, flags: list[str], file: Path) -> float | None:
+    s = samples_ms(cxx, flags, file)
+    return statistics.median(s) if s else None
 
 
 def color(ratio: float) -> str:
@@ -79,6 +87,11 @@ def main() -> None:
         default=[],
         metavar="path:name:include_key",
         help="Additional file to benchmark; include_key references an --extra-include name",
+    )
+    parser.add_argument(
+        "--json",
+        metavar="PATH",
+        help="Write per-file results as JSON to PATH (for CI diffing) and skip speed.md",
     )
     args = parser.parse_args()
 
@@ -161,6 +174,7 @@ def main() -> None:
         bench_files.append((Path(path), name, key))
 
     results = []
+    raw: dict[str, dict] = {}  # name -> samples, for --json
     for bench, name, include_key in bench_files:
         if include_key:
             inc_paths = extra_includes.get(include_key, [])
@@ -173,9 +187,17 @@ def main() -> None:
             xflags = []
 
         print(f"  measuring {name:<24} ...", end="", flush=True)
-        sys_ms = median_ms(cxx, xflags, bench)
-        psy_ms = median_ms(cxx, psychicstd_flags + xflags, bench)
+        sys_s = samples_ms(cxx, xflags, bench)
+        psy_s = samples_ms(cxx, psychicstd_flags + xflags, bench)
+        sys_ms = statistics.median(sys_s) if sys_s else None
+        psy_ms = statistics.median(psy_s) if psy_s else None
         results.append((sys_ms, psy_ms, name))
+        raw[name] = {
+            "system_ms": sys_ms,
+            "psychicstd_ms": psy_ms,
+            "system_samples": sys_s,
+            "psychicstd_samples": psy_s,
+        }
         note = "" if psy_ms is not None else f"  {YELLOW}(psychicstd: n/a){RESET}"
         print(f" done{note}")
 
@@ -197,6 +219,14 @@ def main() -> None:
             f"{sys_ms:>7.1f}ms" if sys_ms is not None else f"{YELLOW}{'n/a':>8}{RESET}"
         )
         print(f"{name:<28}  {sys_col}  {psy_col}  {spd_col}")
+
+    if args.json:
+        # Machine-readable output for CI diffing (bench_diff.py). Keyed by the
+        # benchmark name; medians are null when a config failed to compile, and
+        # the raw per-rep samples let bench_diff put a CI on the change.
+        Path(args.json).write_text(json.dumps(raw, indent=2))
+        print(f"\nWrote {args.json}")
+        return
 
     speed_md = REPO_ROOT / "speed.md"
     with open(speed_md, "w") as f:
