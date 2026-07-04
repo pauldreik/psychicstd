@@ -26,6 +26,10 @@ jobs:
         with:
           name: rdfind-speed-report
           path: use_on_realworld_projects/rdfind_speed_report.md
+      - name: run rdfind with sanitizers
+        run: |
+          export UBSAN_OPTIONS="print_stacktrace=1:halt_on_error=1"
+          bash use_on_realworld_projects/benchmark_rdfind.sh -a -u
   nlohmann:
     runs-on: ubuntu-latest
     steps:
