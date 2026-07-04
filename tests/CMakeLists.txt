@@ -51,6 +51,7 @@ set(TESTS
     test_unordered_set
     test_utility
     test_valarray
+    test_variant
     test_vector
 )
 
