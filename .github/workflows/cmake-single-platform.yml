@@ -26,7 +26,7 @@ jobs:
       - uses: actions/checkout@v7
       - name: Configure CMake (UBSan)
         run: cmake -B ${{github.workspace}}/build_ubsan -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
-          -DPSYCHICSTD_BUILD_BENCHMARKS=OFF -DCMAKE_CXX_FLAGS="-fsanitize=undefined
+          -DPSYCHICSTD_BUILD_BENCHMARKS=ON -DCMAKE_CXX_FLAGS="-fsanitize=undefined
           -fsanitize-trap=undefined" -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=undefined"
           -DCMAKE_SHARED_LINKER_FLAGS="-fsanitize=undefined"
       - name: Build (UBSan)
@@ -34,19 +34,27 @@ jobs:
       - name: Test (UBSan)
         working-directory: ${{github.workspace}}/build_ubsan
         run: ctest -C ${{env.BUILD_TYPE}} --output-on-failure
+      - name: Run wordlist (UBSan)
+        working-directory: ${{github.workspace}}/build_ubsan
+        run: |
+          export UBSAN_OPTIONS="print_stacktrace=1:halt_on_error=1"
+          benchmarks/compile_time/bench_wordcounter ${{github.workspace}}/*.*
   asan:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
       - name: Configure CMake (ASan)
         run: cmake -B ${{github.workspace}}/build_asan -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
-          -DPSYCHICSTD_BUILD_BENCHMARKS=OFF -DCMAKE_CXX_FLAGS="-fsanitize=address"
+          -DPSYCHICSTD_BUILD_BENCHMARKS=ON -DCMAKE_CXX_FLAGS="-fsanitize=address"
           -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=address" -DCMAKE_SHARED_LINKER_FLAGS="-fsanitize=address"
       - name: Build (ASan)
         run: cmake --build ${{github.workspace}}/build_asan --config ${{env.BUILD_TYPE}}
       - name: Test (ASan)
         working-directory: ${{github.workspace}}/build_asan
         run: ctest -C ${{env.BUILD_TYPE}} --output-on-failure
+      - name: Run wordlist (ASan)
+        working-directory: ${{github.workspace}}/build_asan
+        run: benchmarks/compile_time/bench_wordcounter ${{github.workspace}}/*.*
   strict:
     # Build our own headers and tests at the strict compatibility level, where
     # each header must be self-contained (include only what it uses). Benchmarks
