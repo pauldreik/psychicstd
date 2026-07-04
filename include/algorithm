@@ -605,35 +605,82 @@ It qs_pivot(It first, It last, Compare cmp) {
   iter_swap(i, last - 2);
   return i;
 }
-template <typename It> void quicksort(It first, It last) {
-  if (last - first <= 16) {
-    insertion_sort(first, last);
-    return;
+template <typename It, typename Compare>
+void heap_sift(It first, ptrdiff_t root, ptrdiff_t n, Compare cmp) {
+  for (;;) {
+    ptrdiff_t child = 2 * root + 1;
+    if (child >= n)
+      break;
+    if (child + 1 < n && cmp(*(first + child), *(first + child + 1)))
+      ++child;
+    if (!cmp(*(first + root), *(first + child)))
+      break;
+    iter_swap(first + root, first + child);
+    root = child;
   }
-  It pivot = qs_pivot(first, last);
-  quicksort(first, pivot);
-  quicksort(pivot + 1, last);
 }
 template <typename It, typename Compare>
-void quicksort(It first, It last, Compare cmp) {
-  if (last - first <= 16) {
-    insertion_sort(first, last, cmp);
-    return;
+void heap_sort(It first, It last, Compare cmp) {
+  ptrdiff_t n = last - first;
+  for (ptrdiff_t start = n / 2; start-- > 0;)
+    heap_sift(first, start, n, cmp);
+  for (ptrdiff_t end = n; --end > 0;) {
+    iter_swap(first, first + end);
+    heap_sift(first, 0, end, cmp);
   }
-  It pivot = qs_pivot(first, last, cmp);
-  quicksort(first, pivot, cmp);
-  quicksort(pivot + 1, last, cmp);
+}
+template <typename It> int sort_depth(It first, It last) {
+  int lg = 0;
+  for (ptrdiff_t n = last - first; n > 1; n >>= 1)
+    ++lg;
+  return 2 * lg;
+}
+template <typename It> void introsort(It first, It last, int depth) {
+  while (last - first > 16) {
+    if (depth-- == 0) {
+      heap_sort(first, last,
+                [](const auto& a, const auto& b) { return a < b; });
+      return;
+    }
+    It pivot = qs_pivot(first, last);
+    if (pivot - first < last - (pivot + 1)) {
+      introsort(first, pivot, depth);
+      first = pivot + 1;
+    } else {
+      introsort(pivot + 1, last, depth);
+      last = pivot;
+    }
+  }
+  insertion_sort(first, last);
+}
+template <typename It, typename Compare>
+void introsort(It first, It last, int depth, Compare cmp) {
+  while (last - first > 16) {
+    if (depth-- == 0) {
+      heap_sort(first, last, cmp);
+      return;
+    }
+    It pivot = qs_pivot(first, last, cmp);
+    if (pivot - first < last - (pivot + 1)) {
+      introsort(first, pivot, depth, cmp);
+      first = pivot + 1;
+    } else {
+      introsort(pivot + 1, last, depth, cmp);
+      last = pivot;
+    }
+  }
+  insertion_sort(first, last, cmp);
 }
 } // namespace detail
 
 template <typename It> constexpr void sort(It first, It last) {
   if (last - first > 1)
-    detail::quicksort(first, last);
+    detail::introsort(first, last, detail::sort_depth(first, last));
 }
 template <typename It, typename Compare>
 constexpr void sort(It first, It last, Compare cmp) {
   if (last - first > 1)
-    detail::quicksort(first, last, cmp);
+    detail::introsort(first, last, detail::sort_depth(first, last), cmp);
 }
 
 template <typename It> constexpr void stable_sort(It first, It last) {
