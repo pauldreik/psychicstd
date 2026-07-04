@@ -5,7 +5,6 @@
 #include <iterator>
 #include <memory>
 #include <utility>
-#include <vector>
 
 namespace std {
 
@@ -13,8 +12,6 @@ template <typename Key, typename Hash = hash<Key>,
           typename KeyEqual = equal_to<Key>,
           typename Allocator = allocator<Key>>
 class unordered_set {
-  static constexpr size_t N_BUCKETS = 64;
-
   struct Node {
     Key key;
     Node* next = nullptr;
@@ -22,15 +19,23 @@ class unordered_set {
     explicit Node(Key&& k) : key(static_cast<Key&&>(k)) {}
   };
 
-  Node* buckets_[N_BUCKETS] = {};
+  static Node** _alloc(size_t n) {
+    Node** b = new Node*[n];
+    for (size_t i = 0; i < n; ++i)
+      b[i] = nullptr;
+    return b;
+  }
+
+  size_t nbuckets_ = 16;
+  Node** buckets_ = _alloc(16);
   size_t size_ = 0;
   Hash hasher_;
   KeyEqual equal_;
 
-  size_t bucket(const Key& k) const { return hasher_(k) % N_BUCKETS; }
+  size_t bucket(const Key& k) const { return hasher_(k) % nbuckets_; }
 
   void destroy() {
-    for (size_t i = 0; i < N_BUCKETS; ++i) {
+    for (size_t i = 0; i < nbuckets_; ++i) {
       Node* n = buckets_[i];
       while (n) {
         Node* next = n->next;
@@ -40,6 +45,27 @@ class unordered_set {
       buckets_[i] = nullptr;
     }
     size_ = 0;
+  }
+
+  void _rehash(size_t nb) {
+    Node** nbuckets = _alloc(nb);
+    for (size_t i = 0; i < nbuckets_; ++i) {
+      Node* n = buckets_[i];
+      while (n) {
+        Node* next = n->next;
+        size_t b = hasher_(n->key) % nb;
+        n->next = nbuckets[b];
+        nbuckets[b] = n;
+        n = next;
+      }
+    }
+    delete[] buckets_;
+    buckets_ = nbuckets;
+    nbuckets_ = nb;
+  }
+  void _maybe_rehash() {
+    if (size_ + 1 > nbuckets_)
+      _rehash(nbuckets_ * 2);
   }
 
 public:
@@ -61,7 +87,7 @@ public:
     using iterator_category = forward_iterator_tag;
 
     const unordered_set* set_ = nullptr;
-    size_t bucket_ = N_BUCKETS;
+    size_t bucket_ = 0;
     Node* node_ = nullptr;
 
     iterator() = default;
@@ -73,7 +99,7 @@ public:
 
     iterator& operator++() {
       node_ = node_->next;
-      while (!node_ && ++bucket_ < N_BUCKETS)
+      while (!node_ && ++bucket_ < set_->nbuckets_)
         node_ = set_->buckets_[bucket_];
       return *this;
     }
@@ -104,20 +130,28 @@ public:
       insert(*first);
   }
   unordered_set(const unordered_set& o) { *this = o; }
-  unordered_set(unordered_set&& o) noexcept {
-    for (size_t i = 0; i < N_BUCKETS; ++i) {
-      buckets_[i] = o.buckets_[i];
-      o.buckets_[i] = nullptr;
-    }
-    size_ = o.size_;
-    o.size_ = 0;
+  unordered_set(unordered_set&& o) noexcept { swap_(o); }
+  ~unordered_set() {
+    destroy();
+    delete[] buckets_;
   }
-  ~unordered_set() { destroy(); }
+
+  void swap_(unordered_set& o) noexcept {
+    Node** tb = buckets_;
+    buckets_ = o.buckets_;
+    o.buckets_ = tb;
+    size_t tn = nbuckets_;
+    nbuckets_ = o.nbuckets_;
+    o.nbuckets_ = tn;
+    size_t ts = size_;
+    size_ = o.size_;
+    o.size_ = ts;
+  }
 
   unordered_set& operator=(const unordered_set& o) {
     if (this != &o) {
       destroy();
-      for (size_t i = 0; i < N_BUCKETS; ++i) {
+      for (size_t i = 0; i < o.nbuckets_; ++i) {
         for (Node* n = o.buckets_[i]; n; n = n->next)
           insert(n->key);
       }
@@ -125,23 +159,17 @@ public:
     return *this;
   }
   unordered_set& operator=(unordered_set&& o) noexcept {
-    destroy();
-    for (size_t i = 0; i < N_BUCKETS; ++i) {
-      buckets_[i] = o.buckets_[i];
-      o.buckets_[i] = nullptr;
-    }
-    size_ = o.size_;
-    o.size_ = 0;
+    swap_(o);
     return *this;
   }
 
   iterator begin() const {
-    for (size_t i = 0; i < N_BUCKETS; ++i)
+    for (size_t i = 0; i < nbuckets_; ++i)
       if (buckets_[i])
         return {this, i, buckets_[i]};
     return end();
   }
-  iterator end() const { return {this, N_BUCKETS, nullptr}; }
+  iterator end() const { return {this, nbuckets_, nullptr}; }
   const_iterator cbegin() const { return begin(); }
   const_iterator cend() const { return end(); }
 
@@ -156,6 +184,8 @@ public:
       if (equal_(n->key, k))
         return {{this, b, n}, false};
     }
+    _maybe_rehash();
+    b = bucket(k);
     Node* n = new Node(k);
     n->next = buckets_[b];
     buckets_[b] = n;
@@ -168,6 +198,8 @@ public:
       if (equal_(n->key, k))
         return {{this, b, n}, false};
     }
+    _maybe_rehash();
+    b = bucket(k);
     Node* n = new Node(static_cast<Key&&>(k));
     n->next = buckets_[b];
     buckets_[b] = n;
@@ -229,14 +261,78 @@ public:
   }
 };
 
-// unordered_multiset — backed by a vector (allows duplicates)
+// unordered_multiset — node-based chaining (allows duplicates)
 template <typename Key, typename Hash = hash<Key>,
           typename KeyEqual = equal_to<Key>,
           typename Allocator = allocator<Key>>
 class unordered_multiset {
-  vector<Key> data_;
+  struct Node {
+    Key key;
+    Node* next = nullptr;
+    explicit Node(const Key& k) : key(k) {}
+    explicit Node(Key&& k) : key(static_cast<Key&&>(k)) {}
+  };
+
+  static Node** _alloc(size_t n) {
+    Node** b = new Node*[n];
+    for (size_t i = 0; i < n; ++i)
+      b[i] = nullptr;
+    return b;
+  }
+
+  size_t nbuckets_ = 16;
+  Node** buckets_ = _alloc(16);
+  size_t size_ = 0;
   Hash hasher_;
   KeyEqual equal_;
+
+  size_t bucket(const Key& k) const { return hasher_(k) % nbuckets_; }
+
+  void destroy() {
+    for (size_t i = 0; i < nbuckets_; ++i) {
+      Node* n = buckets_[i];
+      while (n) {
+        Node* next = n->next;
+        delete n;
+        n = next;
+      }
+      buckets_[i] = nullptr;
+    }
+    size_ = 0;
+  }
+
+  void _rehash(size_t nb) {
+    Node** nbuckets = _alloc(nb);
+    for (size_t i = 0; i < nbuckets_; ++i) {
+      Node* n = buckets_[i];
+      while (n) {
+        Node* next = n->next;
+        size_t b = hasher_(n->key) % nb;
+        n->next = nbuckets[b];
+        nbuckets[b] = n;
+        n = next;
+      }
+    }
+    delete[] buckets_;
+    buckets_ = nbuckets;
+    nbuckets_ = nb;
+  }
+  void _maybe_rehash() {
+    if (size_ + 1 > nbuckets_)
+      _rehash(nbuckets_ * 2);
+  }
+
+  void swap_(unordered_multiset& o) noexcept {
+    Node** tb = buckets_;
+    buckets_ = o.buckets_;
+    o.buckets_ = tb;
+    size_t tn = nbuckets_;
+    nbuckets_ = o.nbuckets_;
+    o.nbuckets_ = tn;
+    size_t ts = size_;
+    size_ = o.size_;
+    o.size_ = ts;
+  }
 
 public:
   using key_type = Key;
@@ -251,22 +347,30 @@ public:
     using pointer = const Key*;
     using reference = const Key&;
     using iterator_category = forward_iterator_tag;
-    const Key* p_ = nullptr;
+
+    const unordered_multiset* set_ = nullptr;
+    size_t bucket_ = 0;
+    Node* node_ = nullptr;
+
     iterator() = default;
-    explicit iterator(const Key* p) : p_(p) {}
-    const Key& operator*() const { return *p_; }
-    const Key* operator->() const { return p_; }
+    iterator(const unordered_multiset* s, size_t b, Node* n)
+        : set_(s), bucket_(b), node_(n) {}
+
+    const Key& operator*() const { return node_->key; }
+    const Key* operator->() const { return &node_->key; }
     iterator& operator++() {
-      ++p_;
+      node_ = node_->next;
+      while (!node_ && ++bucket_ < set_->nbuckets_)
+        node_ = set_->buckets_[bucket_];
       return *this;
     }
     iterator operator++(int) {
       auto t = *this;
-      ++p_;
+      ++*this;
       return t;
     }
-    bool operator==(const iterator& o) const { return p_ == o.p_; }
-    bool operator!=(const iterator& o) const { return p_ != o.p_; }
+    bool operator==(const iterator& o) const { return node_ == o.node_; }
+    bool operator!=(const iterator& o) const { return node_ != o.node_; }
   };
   using const_iterator = iterator;
 
@@ -279,32 +383,68 @@ public:
     for (; first != last; ++first)
       insert(*first);
   }
+  unordered_multiset(const unordered_multiset& o) { *this = o; }
+  unordered_multiset(unordered_multiset&& o) noexcept { swap_(o); }
+  ~unordered_multiset() {
+    destroy();
+    delete[] buckets_;
+  }
 
-  iterator begin() const { return iterator(data_.data()); }
-  iterator end() const { return iterator(data_.data() + data_.size()); }
+  unordered_multiset& operator=(const unordered_multiset& o) {
+    if (this != &o) {
+      destroy();
+      for (size_t i = 0; i < o.nbuckets_; ++i)
+        for (Node* n = o.buckets_[i]; n; n = n->next)
+          insert(n->key);
+    }
+    return *this;
+  }
+  unordered_multiset& operator=(unordered_multiset&& o) noexcept {
+    swap_(o);
+    return *this;
+  }
+
+  iterator begin() const {
+    for (size_t i = 0; i < nbuckets_; ++i)
+      if (buckets_[i])
+        return {this, i, buckets_[i]};
+    return end();
+  }
+  iterator end() const { return {this, nbuckets_, nullptr}; }
   const_iterator cbegin() const { return begin(); }
   const_iterator cend() const { return end(); }
 
-  bool empty() const noexcept { return data_.empty(); }
-  size_type size() const noexcept { return data_.size(); }
+  bool empty() const noexcept { return size_ == 0; }
+  size_type size() const noexcept { return size_; }
 
   iterator insert(const Key& k) {
-    data_.push_back(k);
-    return iterator(data_.data() + data_.size() - 1);
+    _maybe_rehash();
+    size_t b = bucket(k);
+    Node* n = new Node(k);
+    n->next = buckets_[b];
+    buckets_[b] = n;
+    ++size_;
+    return {this, b, n};
   }
   iterator insert(Key&& k) {
-    data_.push_back(static_cast<Key&&>(k));
-    return iterator(data_.data() + data_.size() - 1);
+    _maybe_rehash();
+    size_t b = bucket(k);
+    Node* n = new Node(static_cast<Key&&>(k));
+    n->next = buckets_[b];
+    buckets_[b] = n;
+    ++size_;
+    return {this, b, n};
   }
 
   size_type count(const Key& k) const {
+    size_t b = bucket(k);
     size_type n = 0;
-    for (const auto& v : data_)
-      if (equal_(v, k))
+    for (Node* p = buckets_[b]; p; p = p->next)
+      if (equal_(p->key, k))
         ++n;
     return n;
   }
-  void clear() { data_.clear(); }
+  void clear() { destroy(); }
 };
 
 } // namespace std
