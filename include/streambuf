@@ -54,11 +54,14 @@ public:
 
   // put back one character (decrement get pointer)
   int_type sungetc() {
-    if (gptr_ > eback_) {
-      --gptr_;
-      return traits_type::to_int_type(*gptr_);
-    }
-    return traits_type::eof();
+    if (eback_ < gptr_)
+      return traits_type::to_int_type(*--gptr_);
+    return pbackfail();
+  }
+  int_type sputbackc(char_type c) {
+    if (eback_ < gptr_ && traits_type::eq(c, gptr_[-1]))
+      return traits_type::to_int_type(*--gptr_);
+    return pbackfail(traits_type::to_int_type(c));
   }
 
   // read up to n chars into s, return number read
@@ -105,6 +108,11 @@ protected:
   }
 
   virtual int_type underflow() { return traits_type::eof(); }
+
+  virtual int_type pbackfail(int_type c = traits_type::eof()) {
+    (void)c;
+    return traits_type::eof();
+  }
 
   // Read and consume next char (default: underflow then bump)
   virtual int_type uflow() {
