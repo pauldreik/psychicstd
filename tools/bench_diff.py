@@ -113,6 +113,12 @@ def main() -> None:
         help="Also require this absolute ms change to flag, so fast headers near "
         "the fixed compiler-startup floor don't trip on noise (default: 3)",
     )
+    ap.add_argument(
+        "--reproduce",
+        metavar="CMD",
+        help="Append a line telling the reader how to regenerate this diff "
+        "locally (e.g. the compare_performance.sh invocation)",
+    )
     args = ap.parse_args()
 
     base = load(args.base)
@@ -217,6 +223,9 @@ def main() -> None:
         if only_base:
             notes.append(f"only on main: {', '.join(f'`{n}`' for n in only_base)}")
         lines.append("\n" + " · ".join(notes))
+
+    if args.reproduce:
+        lines.append(f"\n---\nReproduce this on your machine: `{args.reproduce}`")
 
     print("\n".join(lines))
 

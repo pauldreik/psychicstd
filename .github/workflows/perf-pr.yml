@@ -9,39 +9,18 @@ jobs:
   perf:
     # Compile-time benchmark, PR vs main, in ONE job on ONE runner. CI runners
     # vary a lot in absolute speed, so a stored baseline from a previous run on
-    # a different host is meaningless. Instead we benchmark the same files twice
-    # here -- once with this PR's headers, once with main's -- swapping only the
-    # include dir, and compare the two.
+    # a different host is meaningless. compare_performance.py benchmarks both
+    # sides here (swapping only the include dir) and prints the diff -- the same
+    # command developers run locally to reproduce it.
     runs-on: ubuntu-latest
     env:
       BENCH_N: 5  # reps per file (median); lower than local to keep CI time sane
     steps:
       - uses: actions/checkout@v7
         with:
-          fetch-depth: 0  # need main's history for the worktree below
-      - name: Install Markdown formatter
-        run: pipx install mdformat
-      - name: Fetch rapidjson (benchmark input)
-        # Configure only, to populate build/_deps/rapidjson-src via FetchContent;
-        # run_bench.py picks it up from there.
-        run: cmake -B build >/dev/null
-      - name: Add a worktree at main
-        run: |
-          git fetch --no-tags --depth=1 origin main
-          git worktree add main-base origin/main
-      - name: Benchmark this PR's headers
-        run: >
-          python3 benchmarks/compile_time/run_bench.py g++ include --json head.json
-          --extra-include rapidjson:build/_deps/rapidjson-src/include
-      - name: Benchmark main's headers (same files, same runner)
-        run: >
-          python3 benchmarks/compile_time/run_bench.py g++ main-base/include --json
-          base.json
-          --extra-include rapidjson:build/_deps/rapidjson-src/include
-      - name: Generate performance diff
-        run: |
-          python3 tools/bench_diff.py --base base.json --head head.json > diff.md
-          cat diff.md
+          fetch-depth: 0  # need origin/main for the comparison worktree
+      - name: Compare compile-time performance (PR vs main)
+        run: python3 scripts/compare_performance.py g++ origin/main | tee diff.md
       - name: Post performance diff as PR comment
         uses: marocchino/sticky-pull-request-comment@v3
         with:
