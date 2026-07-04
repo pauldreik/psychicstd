@@ -238,3 +238,8 @@ It samples up to 15 libcxx test files per header, runs them against both the sys
 - **Speed** — median compile time of the libcxx test files, psychicstd vs system: 🟢 >1.2×, 🟡 similar, 🔴 slower.
 
 See the results in [compliance.md](compliance.md).
+
+The same suite can be run under AddressSanitizer and UndefinedBehaviorSanitizer
+(`python3 tools/compliance.py --sanitize`) to catch memory bugs, UB, and
+behavioral divergence, gated against a baseline of known failures. See
+[docs/sanitizer-testing.md](docs/sanitizer-testing.md).
