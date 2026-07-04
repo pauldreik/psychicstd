@@ -1,12 +1,12 @@
 #pragma once
 #include <__psychicstd_config>
+#include <__psychicstd_except>
 #include <compare>
 #include <cstddef>
 #include <initializer_list>
 #include <iterator>
 #include <memory>
 #include <new>
-#include <stdexcept>
 #include <type_traits>
 #include <utility>
 

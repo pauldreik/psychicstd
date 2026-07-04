@@ -1,8 +1,8 @@
 #pragma once
 #include <__psychicstd_config>
+#include <__psychicstd_except>
 #include <cstddef>
 #include <iterator>
-#include <stdexcept>
 #include <utility>
 
 namespace std {
