@@ -6,7 +6,6 @@ std/atomics/atomics.types.generic/throw.pass.cpp
 std/containers/unord/unord.set/erase_const_iter.pass.cpp
 std/input.output/iostream.format/output.streams/ostream.manip/flush.pass.cpp
 std/input.output/stream.buffers/streambuf/streambuf.members/streambuf.pub.pback/sungetc.pass.cpp
-std/iterators/stream.iterators/ostream.iterator/ostream.iterator.cons.des/copy.pass.cpp
 std/language.support/support.exception/propagation/current_exception.pass.cpp
 std/language.support/support.exception/propagation/exception_ptr_move_ctr.pass.cpp
 std/language.support/support.exception/propagation/exception_ptr_swap.pass.cpp
