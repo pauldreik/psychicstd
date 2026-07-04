@@ -362,7 +362,10 @@ def check_header(
 
     san = SAN_CFLAGS if SANITIZE else []
     sys_flags: list[str] = [*san]
-    psy_flags = ["-nostdinc++", f"-I{PSYCHICSTD}", *san]
+    # -fvisibility=hidden keeps psychicstd's inline symbols from interposing
+    # libstdc++'s at runtime (which sanitizers/default libs pull in) -- the
+    # documented way to use psychicstd; without it iostream init can crash.
+    psy_flags = ["-nostdinc++", "-fvisibility=hidden", f"-I{PSYCHICSTD}", *san]
 
     if recheck:
         # Re-run previously cached tests; reset results so they run fresh
