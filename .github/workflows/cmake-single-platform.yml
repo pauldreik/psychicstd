@@ -33,7 +33,9 @@ jobs:
         run: cmake --build ${{github.workspace}}/build_ubsan --config ${{env.BUILD_TYPE}}
       - name: Test (UBSan)
         working-directory: ${{github.workspace}}/build_ubsan
-        run: ctest -C ${{env.BUILD_TYPE}} --output-on-failure
+        run: |
+          export UBSAN_OPTIONS="print_stacktrace=1:halt_on_error=1"
+          ctest -C ${{env.BUILD_TYPE}} --output-on-failure
       - name: Run wordlist (UBSan)
         working-directory: ${{github.workspace}}/build_ubsan
         run: |
