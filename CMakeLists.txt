@@ -56,67 +56,24 @@ target_include_directories(
 set(CMAKE_EXPORT_COMPILE_COMMANDS On)
 option(PSYCHICSTD_BUILD_TESTS "Build tests" ON)
 option(PSYCHICSTD_BUILD_BENCHMARKS "Build compile-time benchmarks" ON)
-option(PSYCHICSTD_BUILD_VALIDATION "Build third-party validation" ON)
 
-# Third-party deps shared by benchmarks and validation
-include(FetchContent)
-FetchContent_Declare(
-    rapidjson
-    GIT_REPOSITORY https://github.com/Tencent/rapidjson.git
-    GIT_TAG master
-    GIT_SHALLOW TRUE
-)
-set(RAPIDJSON_BUILD_DOC OFF CACHE BOOL "" FORCE)
-set(RAPIDJSON_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
-set(RAPIDJSON_BUILD_TESTS OFF CACHE BOOL "" FORCE)
-FetchContent_MakeAvailable(rapidjson)
-
-FetchContent_Declare(
-    Catch2
-    GIT_REPOSITORY https://github.com/catchorg/Catch2.git
-    GIT_TAG v3.8.0
-    GIT_SHALLOW TRUE
-)
-set(CATCH_BUILD_TESTING OFF CACHE BOOL "" FORCE)
-set(CATCH_INSTALL_DOCS OFF CACHE BOOL "" FORCE)
-set(CATCH_INSTALL_EXTRAS OFF CACHE BOOL "" FORCE)
-FetchContent_MakeAvailable(Catch2)
-# Compile Catch2 with psychicstd so its std::string ABI matches our test files
-target_link_libraries(Catch2 PRIVATE psychicstd::psychicstd)
-target_link_libraries(Catch2WithMain PRIVATE psychicstd::psychicstd)
-
-FetchContent_Declare(
-    fmt
-    GIT_REPOSITORY https://github.com/fmtlib/fmt.git
-    GIT_TAG 11.1.4
-    GIT_SHALLOW TRUE
-)
-set(FMT_INSTALL OFF CACHE BOOL "" FORCE)
-set(FMT_DOC OFF CACHE BOOL "" FORCE)
-set(FMT_TEST OFF CACHE BOOL "" FORCE)
-FetchContent_MakeAvailable(fmt)
-# Compile fmt with psychicstd so types match
-target_compile_definitions(fmt PRIVATE FMT_USE_LOCALE=0)
-target_link_libraries(fmt PRIVATE psychicstd::psychicstd)
-FetchContent_Declare(
-    eigen
-    GIT_REPOSITORY https://gitlab.com/libeigen/eigen.git
-    GIT_TAG 3.4.0
-    GIT_SHALLOW TRUE
-)
-set(EIGEN_BUILD_DOC OFF CACHE BOOL "" FORCE)
-set(BUILD_TESTING OFF CACHE BOOL "" FORCE)
-FetchContent_MakeAvailable(eigen)
-
-FetchContent_Declare(
-    eigen
-    GIT_REPOSITORY https://gitlab.com/libeigen/eigen.git
-    GIT_TAG 3.4.0
-    GIT_SHALLOW TRUE
-)
-set(EIGEN_BUILD_DOC OFF CACHE BOOL "" FORCE)
-set(BUILD_TESTING OFF CACHE BOOL "" FORCE)
-FetchContent_MakeAvailable(eigen)
+# rapidjson is used only as a real-code input for the compile-time benchmarks,
+# so fetch it only when benchmarks are enabled. Real-world third-party coverage
+# (Catch2, fmt, eigen, ...) lives in use_on_realworld_projects/, which clones and
+# builds the actual projects rather than vendoring them into this build.
+if(PSYCHICSTD_BUILD_BENCHMARKS)
+    include(FetchContent)
+    FetchContent_Declare(
+        rapidjson
+        GIT_REPOSITORY https://github.com/Tencent/rapidjson.git
+        GIT_TAG master
+        GIT_SHALLOW TRUE
+    )
+    set(RAPIDJSON_BUILD_DOC OFF CACHE BOOL "" FORCE)
+    set(RAPIDJSON_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+    set(RAPIDJSON_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+    FetchContent_MakeAvailable(rapidjson)
+endif()
 
 if(PSYCHICSTD_BUILD_TESTS)
     enable_testing()
@@ -124,10 +81,4 @@ if(PSYCHICSTD_BUILD_TESTS)
 endif()
 if(PSYCHICSTD_BUILD_BENCHMARKS)
     add_subdirectory(benchmarks/compile_time)
-endif()
-if(PSYCHICSTD_BUILD_VALIDATION)
-    if(NOT PSYCHICSTD_BUILD_TESTS)
-        enable_testing()
-    endif()
-    add_subdirectory(validation)
 endif()

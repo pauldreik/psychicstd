@@ -53,11 +53,12 @@ Run these before committing. Each script uses the config files in the repo root:
 
 **How it works:** Sets `-nostdinc++` and adds `include/` to the include path, so the 56 headers in `include/` shadow system libstdc++ headers. GCC 12–15 requires explicit linking of `libsupc++`, `libm`, `libc`, `libgcc_s`/`libgcc` (handled in `CMakeLists.txt`).
 
-**Three-level test structure:**
+**Testing is organized into four independent categories:**
 
-1. `tests/` — unit tests. Each header is compiled twice: once with system headers (`test_*_system`) and once with psychicstd (`test_*_psychicstd`). Both must pass to verify behavioral equivalence.
-1. `tests/external_project/` — simulates an independent CMake project consuming psychicstd via injected flags.
-1. `validation/` — compiles real third-party code (rapidjson, Catch2 v3.8.0) with psychicstd headers.
+1. **The library itself** — `tests/`: unit tests (each header compiled twice, `test_*_system` and `test_*_psychicstd`, both must pass to verify behavioral equivalence), a `self_contained_*` test per header (each header must compile on its own), and `tests/external_project/` (simulates an independent CMake project consuming psychicstd via injected flags). No third-party code, no network — this is the fast default build.
+1. **Standards compliance** — `tools/compliance.py`: runs the libc++ test suite against psychicstd.
+1. **Compilation speed** — `benchmarks/compile_time/` (uses rapidjson snippets as real-code input) and the `casestudies/`.
+1. **Real-world** — `use_on_realworld_projects/`: shell scripts that clone, build, and run actual third-party projects (Catch2, cppcheck, eigen, fmt, nlohmann json, rdfind) with psychicstd.
 
 **Key implementation notes:**
 
@@ -90,6 +91,5 @@ make
 
 | Option | Default | Effect |
 |---|---|---|
-| `PSYCHICSTD_BUILD_TESTS` | ON | Unit tests |
-| `PSYCHICSTD_BUILD_BENCHMARKS` | ON | Compile-time benchmarks |
-| `PSYCHICSTD_BUILD_VALIDATION` | ON | rapidjson + Catch2 validation |
+| `PSYCHICSTD_BUILD_TESTS` | ON | Unit tests + self-containment tests |
+| `PSYCHICSTD_BUILD_BENCHMARKS` | ON | Compile-time benchmarks (fetches rapidjson) |
