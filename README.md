@@ -15,6 +15,13 @@ Find the scripts validating the build and generating the above number in the use
 
 Once you have coded for a while, switch to a real quality standard library (typically libstdc++ or libc++) and test and build real releases - psychicstd is just intended for speedy develop.
 
+## How complete is it?
+
+Completeness varies by header, development has been guided what is needed to get realworld
+projects to compile. The `std::string` header is perhaps the most used header and to
+investigate the complementess I counted the number of public member functios to see what
+is missing. It implements **44 of libstdc++'s 45 public `basic_string` method names (98%)**, missing only `copy` and `get_allocator`. See the [`std::string` completeness case study](casestudies/string_completeness/stringcompletenesscasestudy.md) for details. Note that a present method name is not full compliance — see [compliance.md](compliance.md) for behavioral coverage.
+
 ## Why?
 
 Slow compilation is one of the pain points of C++. Modules are supposed to help, but it is not yet ready. Also, even if modules solve the slow parsing of include files problem, standard libraries are typically optimized for runtime performance. Psychichstd does not care about runtime performance - it is all about compilation speed.
@@ -34,6 +41,10 @@ An AI can mostly guide itself trying to get the library through all the tests. A
 Psychicstd is so far only used with gcc. It passes `-nostdinc++ -I/path/to/psychicstd/include` to the compiler. That causes the compiler to pick up vector, string and other headers from psychicstd instead of the standard library that comes with gcc (libstdc++).
 
 The standard library uses `std::` namespace just like the real standard. You should not have to do any changes to your program.
+
+## Why is it faster?
+
+Compile time for these headers is dominated by the compiler *frontend*, in two parts: **parsing declarations** and **instantiating templates**. psychicstd wins by having far less of both. Raw byte count, number of include files, and backend code generation are all second-order. Precompiled headers help by caching that same frontend work — but they attack the same bottleneck, so psychicstd without a PCH is roughly as fast as libstdc++ with one, and still wins when both use PCH. The [case studies](casestudies/) measure each of these effects.
 
 ## The name
 
@@ -180,6 +191,15 @@ python3 benchmarks/compile_time/run_bench.py
 ```
 
 View the results by inspecting [speed.md](speed.md).
+
+For a deeper look at *why* psychicstd compiles faster, see the per-header case studies, which use clang's `-ftime-trace` to break down where the time goes:
+
+- [`<string>` compilation speed case study](casestudies/std_string/stdstringcasestudy.md)
+- [`<vector>` compilation speed case study](casestudies/std_vector/stdvectorcasestudy.md)
+- [does the *number* of include files matter?](casestudies/include_overhead/includeoverheadcasestudy.md) — testing whether fewer, larger headers compile faster
+- [template instantiation vs. raw byte count](casestudies/template_depth/templatedepthcasestudy.md) — showing instantiation work, not bytes, drives compile time
+- [precompiled headers vs. psychicstd](casestudies/precompiled_headers/precompiledheaderscasestudy.md) — how PCH stacks with psychicstd, and whether psychicstd still wins
+- [C++20 modules vs. psychicstd](casestudies/modules/modulescasestudy.md) — header units vs. PCH, and why modules close the gap the most
 
 ## Standards compliance
 
