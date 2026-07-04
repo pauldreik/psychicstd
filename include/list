@@ -1,5 +1,5 @@
 #pragma once
-#include <algorithm>
+#include <__psychicstd_algo>
 #include <cstddef>
 #include <initializer_list>
 #include <iterator>
@@ -448,7 +448,7 @@ bool operator!=(const list<T, A>& a, const list<T, A>& b) {
 }
 template <typename T, typename A>
 bool operator<(const list<T, A>& a, const list<T, A>& b) {
-  return lexicographical_compare(a.begin(), a.end(), b.begin(), b.end());
+  return __lexicographical_compare(a.begin(), a.end(), b.begin(), b.end());
 }
 
 } // namespace std

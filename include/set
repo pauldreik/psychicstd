@@ -1,5 +1,5 @@
 #pragma once
-#include <algorithm>
+#include <__psychicstd_algo>
 #include <functional>
 #include <initializer_list>
 #include <utility>
@@ -136,7 +136,7 @@ private:
   Compare comp_ = {};
 
   const_iterator lower_bound_(const Key& k) const {
-    return std::lower_bound(data_.begin(), data_.end(), k, comp_);
+    return std::__lower_bound(data_.begin(), data_.end(), k, comp_);
   }
 };
 
@@ -168,7 +168,7 @@ public:
   void clear() noexcept { data_.clear(); }
 
   iterator insert(const Key& k) {
-    auto it = std::lower_bound(data_.begin(), data_.end(), k, comp_);
+    auto it = std::__lower_bound(data_.begin(), data_.end(), k, comp_);
     return data_.insert(data_.begin() + (it - data_.begin()), k);
   }
   template <typename... Args> iterator emplace(Args&&... args) {
@@ -178,19 +178,19 @@ public:
     return data_.erase(data_.begin() + (pos - data_.begin()));
   }
   size_type erase(const Key& k) {
-    auto lo = std::lower_bound(data_.begin(), data_.end(), k, comp_);
-    auto hi = std::upper_bound(data_.begin(), data_.end(), k, comp_);
+    auto lo = std::__lower_bound(data_.begin(), data_.end(), k, comp_);
+    auto hi = std::__upper_bound(data_.begin(), data_.end(), k, comp_);
     auto n = hi - lo;
     data_.erase(lo, hi);
     return n;
   }
   size_type count(const Key& k) const {
-    auto lo = std::lower_bound(data_.begin(), data_.end(), k, comp_);
-    auto hi = std::upper_bound(data_.begin(), data_.end(), k, comp_);
+    auto lo = std::__lower_bound(data_.begin(), data_.end(), k, comp_);
+    auto hi = std::__upper_bound(data_.begin(), data_.end(), k, comp_);
     return hi - lo;
   }
   iterator find(const Key& k) const {
-    auto it = std::lower_bound(data_.begin(), data_.end(), k, comp_);
+    auto it = std::__lower_bound(data_.begin(), data_.end(), k, comp_);
     if (it != data_.end() && !comp_(k, *it))
       return it;
     return data_.end();
