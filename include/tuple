@@ -241,16 +241,16 @@ template <typename T1, typename T2> struct tuple_element<1, pair<T1, T2>> {
 template <size_t I, typename T1, typename T2>
 constexpr decltype(auto) get(pair<T1, T2>& p) noexcept {
   if constexpr (I == 0)
-    return p.first;
+    return (p.first);
   else
-    return p.second;
+    return (p.second);
 }
 template <size_t I, typename T1, typename T2>
 constexpr decltype(auto) get(const pair<T1, T2>& p) noexcept {
   if constexpr (I == 0)
-    return p.first;
+    return (p.first);
   else
-    return p.second;
+    return (p.second);
 }
 template <size_t I, typename T1, typename T2>
 constexpr decltype(auto) get(pair<T1, T2>&& p) noexcept {
