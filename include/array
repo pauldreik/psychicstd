@@ -1,9 +1,9 @@
 #pragma once
 #include <__psychicstd_config>
-#include <algorithm>
 #include <cstddef>
 #include <iterator>
 #include <stdexcept>
+#include <utility>
 
 namespace std {
 
