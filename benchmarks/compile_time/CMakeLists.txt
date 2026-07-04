@@ -7,6 +7,10 @@ set_target_properties(bench_rapidjson PROPERTIES EXCLUDE_FROM_ALL TRUE)
 target_link_libraries(bench_rapidjson PRIVATE psychicstd::psychicstd)
 target_include_directories(bench_rapidjson PRIVATE ${rapidjson_SOURCE_DIR}/include)
 
+add_executable(bench_wordcounter bench_wordcounter.cpp)
+target_link_libraries(bench_wordcounter PRIVATE psychicstd::psychicstd)
+target_include_directories(bench_wordcounter PRIVATE ${rapidjson_SOURCE_DIR}/include)
+
 set(RJ_DIR ${CMAKE_CURRENT_SOURCE_DIR}/rapidjson)
 
 # fmt: off
