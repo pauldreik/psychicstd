@@ -109,7 +109,9 @@ README_TEXT
 TIMESTAMP=$(date +%Y%m%d-%H%M%S)
 TARBALL="patches-${BRANCH}-${TIMESTAMP}.tar.gz"
 
-tar -czf "$TARBALL" -C "$TMPDIR" patches/
+# Maximum gzip compression (level 9) -- these bundles get sneakernetted, so
+# smaller is worth the extra CPU.
+tar --use-compress-program='gzip -9' -cf "$TARBALL" -C "$TMPDIR" patches/
 
 # Cleanup
 rm -rf "$TMPDIR"
