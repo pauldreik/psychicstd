@@ -1,0 +1,91 @@
+#pragma once
+#include <exception>
+
+namespace std {
+
+namespace __stdexcept {
+class __msg {
+  char* p_ = nullptr;
+  static char* __dup(const char* s) {
+    if (!s)
+      return nullptr;
+    auto n = __builtin_strlen(s) + 1;
+    char* r = new char[n];
+    __builtin_memcpy(r, s, n);
+    return r;
+  }
+
+public:
+  __msg() = default;
+  explicit __msg(const char* s) : p_(__dup(s)) {}
+  __msg(const __msg& o) : p_(__dup(o.p_)) {}
+  __msg(__msg&& o) noexcept : p_(o.p_) { o.p_ = nullptr; }
+  __msg& operator=(const __msg& o) {
+    if (this != &o) {
+      char* n = __dup(o.p_);
+      delete[] p_;
+      p_ = n;
+    }
+    return *this;
+  }
+  __msg& operator=(__msg&& o) noexcept {
+    if (this != &o) {
+      delete[] p_;
+      p_ = o.p_;
+      o.p_ = nullptr;
+    }
+    return *this;
+  }
+  ~__msg() { delete[] p_; }
+  const char* c_str() const noexcept { return p_ ? p_ : ""; }
+};
+} // namespace __stdexcept
+
+class logic_error : public exception {
+public:
+  explicit logic_error(const char* msg) : msg_(msg) {}
+  template <typename S>
+    requires requires(const S& s) { s.c_str(); }
+  explicit logic_error(const S& msg) : msg_(msg.c_str()) {}
+  const char* what() const noexcept override { return msg_.c_str(); }
+
+private:
+  __stdexcept::__msg msg_;
+};
+
+class domain_error : public logic_error {
+  using logic_error::logic_error;
+};
+class invalid_argument : public logic_error {
+  using logic_error::logic_error;
+};
+class length_error : public logic_error {
+  using logic_error::logic_error;
+};
+class out_of_range : public logic_error {
+  using logic_error::logic_error;
+};
+
+class runtime_error : public exception {
+public:
+  explicit runtime_error(const char* msg) : msg_(msg) {}
+  template <typename S>
+    requires requires(const S& s) { s.c_str(); }
+  explicit runtime_error(const S& msg) : msg_(msg.c_str()) {}
+  const char* what() const noexcept override { return msg_.c_str(); }
+
+private:
+  __stdexcept::__msg msg_;
+};
+
+class range_error : public runtime_error {
+  using runtime_error::runtime_error;
+};
+class overflow_error : public runtime_error {
+  using runtime_error::runtime_error;
+};
+class underflow_error : public runtime_error {
+  using runtime_error::runtime_error;
+};
+
+} // namespace std
