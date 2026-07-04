@@ -69,9 +69,37 @@ def bootstrap_delta_ci(base_s, head_s, iters=2000, seed=12345):
 
 
 def main() -> None:
-    ap = argparse.ArgumentParser(description="Diff two compile-time benchmark runs")
-    ap.add_argument("--base", required=True, metavar="JSON", help="Base (main) results")
-    ap.add_argument("--head", required=True, metavar="JSON", help="Head (PR) results")
+    ap = argparse.ArgumentParser(
+        description=(
+            "Compare two compile-time benchmark runs and print a markdown summary "
+            "to stdout (suitable for a PR comment).\n\n"
+            "Each input is a JSON file you generate with `run_bench.py --json`: run "
+            "it once per side (typically main vs your branch), choosing the output "
+            "filenames yourself. This tool writes nothing to disk -- it prints the "
+            "diff to stdout; redirect it (`> diff.md`) if you want to keep it."
+        ),
+        epilog=(
+            "example:\n"
+            "  # 1. produce the two inputs (same machine; swap only the include dir)\n"
+            "  python3 benchmarks/compile_time/run_bench.py g++ /path/to/main/include --json base.json\n"
+            "  python3 benchmarks/compile_time/run_bench.py g++ include                --json head.json\n"
+            "  # 2. compare them; markdown goes to stdout\n"
+            "  python3 tools/bench_diff.py --base base.json --head head.json > diff.md\n"
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    ap.add_argument(
+        "--base",
+        required=True,
+        metavar="JSON",
+        help="baseline results file from `run_bench.py --json` (e.g. main)",
+    )
+    ap.add_argument(
+        "--head",
+        required=True,
+        metavar="JSON",
+        help="new results file from `run_bench.py --json` (e.g. your branch)",
+    )
     ap.add_argument(
         "--threshold",
         type=float,
