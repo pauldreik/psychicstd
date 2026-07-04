@@ -1,6 +1,5 @@
 #pragma once
 #include <cstdio>
-#include <fstream>
 #include <istream>
 #include <ostream>
 

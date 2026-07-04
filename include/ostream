@@ -3,7 +3,7 @@
 #include <exception>
 #include <ios>
 #include <streambuf>
-#include <string>
+#include <type_traits>
 
 namespace std {
 
@@ -96,12 +96,8 @@ public:
     }
     return *this;
   }
-  basic_ostream& operator<<(const basic_string<Char, Traits>& s) {
-    pad_and_write(s.data(), (streamsize)s.size());
-    return *this;
-  }
-  basic_ostream& operator<<(basic_string_view<Char> sv) {
-    pad_and_write(sv.data(), (streamsize)sv.size());
+  basic_ostream& __put(const Char* s, streamsize n) {
+    pad_and_write(s, n);
     return *this;
   }
 
