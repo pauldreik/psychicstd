@@ -10,9 +10,10 @@ file (main vs PR).
 
 Each result carries the raw per-rep samples, so we put a 95% confidence
 interval on the percentage change by bootstrapping the difference of medians.
-A flagged change whose CI crosses 0 is marked low-confidence (likely noise --
-raise BENCH_N or ignore). The system (libstdc++) time is identical work on both
-runs, so its drift is reported as a global noise indicator.
+Colors: green = faster, red = slower, yellow = within noise -- a change is only
+colored green/red when its CI excludes 0 (distinguishable from noise) and it
+clears the practical floors; everything else is yellow. The system (libstdc++)
+time is identical work on both runs, so its drift is a global noise indicator.
 
 Usage:
   python3 tools/bench_diff.py --base base.json --head head.json [--threshold 5]
@@ -84,10 +85,17 @@ def main() -> None:
     head = load(args.head)
     thr, min_abs = args.threshold, args.min_abs_ms
 
+    GREEN, RED, YELLOW = "\U0001f7e2", "\U0001f534", "\U0001f7e1"
+
+    def crosses_zero(ci):
+        return ci is None or ci[0] < 0 < ci[1]
+
+    def ci_str(ci):
+        return "" if ci is None else f" [{ci[0]:+.1f}, {ci[1]:+.1f}]"
+
     common = sorted(set(base) & set(head))
-    # (name, base_ms, head_ms, delta_pct, ci_or_None)
-    changed: list[tuple] = []
-    unchanged: list[tuple] = []
+    # (name, base_ms, head_ms, delta_pct, ci, color)
+    rows: list[tuple] = []
     for name in common:
         b_s = samples(base, name, "psychicstd")
         h_s = samples(head, name, "psychicstd")
@@ -98,9 +106,11 @@ def main() -> None:
             continue
         delta = (h - b) / b * 100.0
         ci = bootstrap_delta_ci(b_s, h_s)
-        row = (name, b, h, delta, ci)
-        significant = abs(delta) >= thr and abs(h - b) >= min_abs
-        (changed if significant else unchanged).append(row)
+        # A change is real only if it stands out from the run-to-run noise (its
+        # CI excludes 0) and clears the practical floors. Otherwise it's noise.
+        real = not crosses_zero(ci) and abs(delta) >= thr and abs(h - b) >= min_abs
+        color = (RED if delta > 0 else GREEN) if real else YELLOW
+        rows.append((name, b, h, delta, ci, color))
 
     # System-time drift on the same files: a proxy for host/run noise, since the
     # system config compiles identical work on both runs.
@@ -114,56 +124,47 @@ def main() -> None:
                 sys_drift.append(abs(h - b) / b * 100.0)
     noise = statistics.median(sys_drift) if sys_drift else 0.0
 
-    changed.sort(key=lambda r: -r[3])  # worst regression first
-    regressions = [r for r in changed if r[3] > 0]
-    improvements = [r for r in changed if r[3] < 0]
-
-    def ci_str(ci):
-        if ci is None:
-            return ""
-        lo, hi = ci
-        return f" [{lo:+.1f}, {hi:+.1f}]"
-
-    def crosses_zero(ci):
-        return ci is not None and ci[0] < 0 < ci[1]
+    slower = sorted([r for r in rows if r[5] == RED], key=lambda r: -r[3])
+    faster = sorted([r for r in rows if r[5] == GREEN], key=lambda r: r[3])
+    noisy = sorted([r for r in rows if r[5] == YELLOW], key=lambda r: r[0])
 
     lines: list[str] = ["## Compile-time performance diff\n"]
     lines.append(
-        f"psychicstd compile time, main vs this PR (same runner; flagging changes "
-        f"≥{thr:g}% and ≥{min_abs:g}ms). Δ shows the median change with a bootstrap "
-        f"95% CI. Median system-time drift (noise proxy): **{noise:.1f}%**.\n"
+        f"psychicstd compile time, main vs this PR (same runner). "
+        f"{GREEN} faster · {RED} slower · {YELLOW} within noise. A change is colored only "
+        f"when its bootstrap 95% CI excludes 0 and it clears ±{thr:g}% / {min_abs:g}ms. "
+        f"Median system-time drift (noise proxy): **{noise:.1f}%**.\n"
     )
 
-    if not changed:
-        lines.append(f"No changes beyond ±{thr:g}% / {min_abs:g}ms.\n")
-    else:
-        parts = []
-        if regressions:
-            parts.append(f"\U0001f534 {len(regressions)} slower")
-        if improvements:
-            parts.append(f"\U0001f7e2 {len(improvements)} faster")
-        lines.append(", ".join(parts) + ".\n")
-        lines.append("| benchmark | main | PR | Δ (95% CI) |")
-        lines.append("|-----------|-----:|---:|:--|")
-        for name, b, h, delta, ci in changed:
-            emoji = "\U0001f534" if delta > 0 else "\U0001f7e2"
-            sign = f"+{delta:.1f}" if delta > 0 else f"{delta:.1f}"
-            warn = " ⚠️ low-confidence" if crosses_zero(ci) else ""
-            lines.append(
-                f"| `{name}` | {b:.1f}ms | {h:.1f}ms | {emoji} {sign}%{ci_str(ci)}{warn} |"
+    def table(rowset):
+        out = [
+            "| benchmark | main | PR | Δ (95% CI) |",
+            "|-----------|-----:|---:|:--|",
+        ]
+        for name, b, h, delta, ci, color in rowset:
+            out.append(
+                f"| `{name}` | {b:.1f}ms | {h:.1f}ms | {color} {delta:+.1f}%{ci_str(ci)} |"
             )
-        lines.append("")
+        return out
 
-    if unchanged:
+    if slower or faster:
+        parts = []
+        if slower:
+            parts.append(f"{RED} {len(slower)} slower")
+        if faster:
+            parts.append(f"{GREEN} {len(faster)} faster")
+        parts.append(f"{YELLOW} {len(noisy)} within noise")
+        lines.append(" · ".join(parts) + ".\n")
+        lines.extend(table(slower + faster))
+        lines.append("")
+    else:
+        lines.append(f"No significant changes ({YELLOW} {len(noisy)} within noise).\n")
+
+    if noisy:
         lines.append(
-            f"<details><summary>{len(unchanged)} benchmark(s) within noise</summary>\n"
+            f"<details><summary>{YELLOW} {len(noisy)} benchmark(s) within noise</summary>\n"
         )
-        lines.append("| benchmark | main | PR | Δ (95% CI) |")
-        lines.append("|-----------|-----:|---:|:--|")
-        for name, b, h, delta, ci in sorted(unchanged, key=lambda r: r[0]):
-            lines.append(
-                f"| `{name}` | {b:.1f}ms | {h:.1f}ms | {delta:+.1f}%{ci_str(ci)} |"
-            )
+        lines.extend(table(noisy))
         lines.append("\n</details>")
 
     only_head = sorted(set(head) - set(base))
