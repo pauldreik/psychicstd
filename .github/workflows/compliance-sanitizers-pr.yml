@@ -1,0 +1,59 @@
+---
+name: sanitizer diff
+on:
+  pull_request:
+    branches: [main]
+permissions:
+  pull-requests: write
+jobs:
+  diff:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install Markdown formatter
+        run: pipx install mdformat
+      - name: Download sanitizer baseline from latest main run
+        id: baseline
+        continue-on-error: true  # first PR before any main run has no artifact yet
+        uses: dawidd6/action-download-artifact@v21
+        with:
+          workflow: compliance-sanitizers.yml
+          branch: main
+          name: sanitize-baseline
+          path: .
+      - name: Sparse-clone llvm-project (libcxx/test only)
+        run: |
+          git clone --depth 1 --filter=blob:none --sparse \
+            https://github.com/llvm/llvm-project.git llvm-project
+          git -C llvm-project sparse-checkout set libcxx/test
+      - name: Re-run baseline tests with PR headers
+        if: steps.baseline.outcome == 'success'
+        continue-on-error: true  # a new failure must still post the comment
+        env:
+          LLVM_ROOT: ${{ github.workspace }}/llvm-project
+        run: |
+          # Seed with the main corpus so we test the same files, then recheck
+          # them all under sanitizers with the PR's psychicstd headers.
+          cp sanitize_base_cache.json .compliance_cache.sanitize.json
+          python3 tools/compliance.py --sanitize --recheck
+      - name: Run fresh sanitizer sweep (no baseline to compare against)
+        if: steps.baseline.outcome != 'success'
+        continue-on-error: true
+        env:
+          LLVM_ROOT: ${{ github.workspace }}/llvm-project
+        run: python3 tools/compliance.py --sanitize
+      - name: Generate diff table
+        if: steps.baseline.outcome == 'success'
+        run: |
+          python3 tools/compliance_diff.py \
+            --base sanitize_base_cache.json \
+            --head .compliance_cache.sanitize.json \
+            --title "Sanitizer diff (ASan/UBSan)" \
+            > diff.md
+          cat diff.md
+      - name: Post sanitizer diff as PR comment
+        if: steps.baseline.outcome == 'success'
+        uses: marocchino/sticky-pull-request-comment@v3
+        with:
+          header: sanitizer-diff
+          path: diff.md

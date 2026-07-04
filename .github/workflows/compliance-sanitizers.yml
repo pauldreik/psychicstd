@@ -22,3 +22,13 @@ jobs:
         env:
           LLVM_ROOT: ${{ github.workspace }}/llvm-project
         run: python3 tools/compliance.py --sanitize
+      - name: Rename cache
+        if: always()
+        run: mv .compliance_cache.sanitize.json sanitize_base_cache.json
+      - name: Upload sanitizer cache as baseline artifact
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: sanitize-baseline
+          path: sanitize_base_cache.json
+          retention-days: 90
