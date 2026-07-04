@@ -47,6 +47,25 @@ jobs:
       - name: Test (ASan)
         working-directory: ${{github.workspace}}/build_asan
         run: ctest -C ${{env.BUILD_TYPE}} --output-on-failure
+  strict:
+    # Build our own headers and tests at the strict compatibility level, where
+    # each header must be self-contained (include only what it uses). Benchmarks
+    # are off so no third-party code (rapidjson) is fetched -- this job is purely
+    # about the library itself.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Configure CMake (strict compatibility level)
+        run: >
+          cmake -B ${{github.workspace}}/build_strict
+          -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
+          -DPSYCHICSTD_BUILD_BENCHMARKS=OFF
+          -DCMAKE_CXX_FLAGS="-D_PSYCHICSTD_COMPATIBILITY_LEVEL=0"
+      - name: Build (strict)
+        run: cmake --build ${{github.workspace}}/build_strict --config ${{env.BUILD_TYPE}}
+      - name: Test (strict)
+        working-directory: ${{github.workspace}}/build_strict
+        run: ctest -C ${{env.BUILD_TYPE}} --output-on-failure
   gcc12:
     runs-on: ubuntu-latest
     steps:

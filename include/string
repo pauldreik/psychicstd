@@ -1,20 +1,34 @@
 #pragma once
-#include <algorithm>
+#include <__psychicstd_config>
 #include <compare>
 #include <cstddef>
 #include <cstdlib>
 #include <cstring>
 #include <iosfwd>
 #include <iterator>
-#include <memory>
 #include <string_view>
 #include <utility>
 #include <version>
+
+#if _PSYCHICSTD_COMPATIBILITY_LEVEL >= _PSYCHICSTD_COMPAT_DROPIN
+// <string> itself uses neither of these, but libstdc++ exposes them through
+// <string>, so real code relies on the transitive include (e.g. Catch2's
+// std::equal, fmt's std::allocator_traits). Keep them for drop-in compat.
+#include <algorithm>
+#include <memory>
+#endif
 
 namespace std {
 
 // Forward declaration of hash<> so we can specialize it below
 template <typename T> struct hash;
+
+#if _PSYCHICSTD_COMPATIBILITY_LEVEL < _PSYCHICSTD_COMPAT_DROPIN
+// In strict mode we don't pull in <memory>; basic_string only names
+// allocator<> as a default template argument, so a forward declaration is
+// enough (it is never allocated through).
+template <typename T> class allocator;
+#endif
 
 // char_traits<char>
 template <typename Char> struct char_traits {

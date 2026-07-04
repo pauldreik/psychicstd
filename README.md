@@ -46,6 +46,27 @@ The standard library uses `std::` namespace just like the real standard. You sho
 
 Compile time for these headers is dominated by the compiler *frontend*, in two parts: **parsing declarations** and **instantiating templates**. psychicstd wins by having far less of both. Raw byte count, number of include files, and backend code generation are all second-order. Precompiled headers help by caching that same frontend work — but they attack the same bottleneck, so psychicstd without a PCH is roughly as fast as libstdc++ with one, and still wins when both use PCH. The [case studies](casestudies/) measure each of these effects.
 
+## Compatibility levels
+
+Real standard library headers pull in a lot of other headers transitively. A lot of real code accidentally relies on that — e.g. using `std::equal` after only `#include <string>`, which happens to work because libstdc++'s `<string>` drags in `<algorithm>`. That is technically a bug (the code should `#include <algorithm>`), but it is extremely common.
+
+psychicstd lets you choose how to handle it, via the `_PSYCHICSTD_COMPATIBILITY_LEVEL` macro:
+
+| Level | Macro value | Behaviour |
+|---|---|---|
+| **Drop-in** (default) | `_PSYCHICSTD_COMPAT_DROPIN` (`2`) | Mirror libstdc++'s transitive include surface, so unmodified real-world code just compiles. No source changes needed. |
+| **Strict** | `_PSYCHICSTD_COMPAT_STRICT` (`0`) | Each header includes only what it itself needs. Fastest and smallest — and it doubles as an *include-what-you-use checker*: code that leaned on a transitive include fails to compile until you add the missing `#include` (a fix that is also correct under libstdc++/libc++). |
+
+Set it like any other define, alongside the other psychicstd flags:
+
+```bash
+cmake -S . -B build \
+    -DCMAKE_CXX_STANDARD=20 \
+    -DCMAKE_CXX_FLAGS="-nostdinc++ -isystem /path/to/psychicstd/include -D_PSYCHICSTD_COMPATIBILITY_LEVEL=0"
+```
+
+The default is drop-in, so you get the "just swap it in" experience out of the box; opt into strict when you want maximum speed and to keep your includes honest.
+
 ## The name
 
 The name is a word play on the edit-compile-debug cycle itself: psychic → cycle → cyclic. A psychic knows the answer before you've finished asking the question. psychicstd tries to do the same — by the time you've hit save, the compiler is already done. Well, that's the aspiration, anyway.

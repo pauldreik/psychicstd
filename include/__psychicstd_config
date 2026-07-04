@@ -1,0 +1,27 @@
+// Central configuration for psychicstd.
+//
+// psychicstd IS a standard library implementation, so it uses the reserved
+// identifier namespace for its own macros -- exactly like libstdc++ (_GLIBCXX_)
+// and libc++ (_LIBCPP_).
+#pragma once
+
+// Compatibility levels -------------------------------------------------------
+//
+// _PSYCHICSTD_COMPAT_STRICT: every header includes ONLY what it itself needs.
+//   Fastest to compile and smallest preprocessed output. Because psychicstd
+//   does not pull in the extra headers libstdc++ happens to include
+//   transitively, code that relied on those transitive includes will fail to
+//   compile until you add the missing #include -- a fix that is also correct
+//   under libstdc++/libc++. In effect psychicstd doubles as an
+//   include-what-you-use checker.
+//
+// _PSYCHICSTD_COMPAT_DROPIN: mirror the transitive include surface of
+//   libstdc++ so unmodified real-world code (which very commonly relies on
+//   those transitive includes) compiles as-is. This is the default: "just
+//   swap in psychicstd and go".
+#define _PSYCHICSTD_COMPAT_STRICT 0
+#define _PSYCHICSTD_COMPAT_DROPIN 2
+
+#ifndef _PSYCHICSTD_COMPATIBILITY_LEVEL
+#define _PSYCHICSTD_COMPATIBILITY_LEVEL _PSYCHICSTD_COMPAT_DROPIN
+#endif

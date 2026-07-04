@@ -151,6 +151,14 @@ else
   echo "skip clang: no clang++ found"
 fi
 
+# Strict compatibility level: our headers must be self-contained (include only
+# what they use). Benchmarks are off so no third-party code (rapidjson) is
+# fetched -- this job is purely about the library itself.
+run "strict compat" build_strict \
+  -DCMAKE_BUILD_TYPE=Debug \
+  -DPSYCHICSTD_BUILD_BENCHMARKS=OFF \
+  "-DCMAKE_CXX_FLAGS=-D_PSYCHICSTD_COMPATIBILITY_LEVEL=0"
+
 if have docker; then
   run_docker "docker gcc-12 debug" "psychicstd-ci:gcc-12" -DCMAKE_CXX_COMPILER=g++ -DCMAKE_BUILD_TYPE=Debug
   run_docker "docker gcc-12 release" "psychicstd-ci:gcc-12" -DCMAKE_CXX_COMPILER=g++ -DCMAKE_BUILD_TYPE=Release
