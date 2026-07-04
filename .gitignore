@@ -3,3 +3,6 @@ CMakeLists.txt.user
 .compliance_cache.json
 # sneakernet patch bundles produced by scripts/export-commits-sneakernet.sh
 patches-*.tar.gz
+.compliance_cache.sanitize.json
+compliance.sanitize.md
+libcxx.*

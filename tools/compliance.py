@@ -51,6 +51,19 @@ SPEED_RED = 0.8
 
 CXX = os.environ.get("CXX", "g++")
 
+# Sanitizer mode: compile both STLs with ASan+UBSan and run the .pass tests, so
+# runtime memory/UB bugs in psychicstd surface as failures the system STL does
+# not have. -fno-sanitize-recover makes UBSan abort (it otherwise continues and
+# the process exits 0). Uses a separate cache and output file.
+SANITIZE = False
+SAN_CFLAGS = ["-fsanitize=address,undefined", "-fno-sanitize-recover=all", "-g"]
+SAN_ENV = {
+    "ASAN_OPTIONS": "abort_on_error=1:detect_leaks=1",
+    "UBSAN_OPTIONS": "print_stacktrace=1:halt_on_error=1",
+}
+# Known sanitizer failures; the gate fails only on failures NOT listed here.
+BASELINE_FILE = REPO_ROOT / "tools" / "compliance_sanitize_baseline.txt"
+
 HEADER_TO_DIRS: dict[str, list[str]] = {
     "algorithm": ["algorithms"],
     "any": ["utilities/any"],
@@ -151,9 +164,13 @@ def extra_flags(text: str) -> list[str]:
     return flags
 
 
-def run_cmd(cmd: list[str], timeout: int = 20) -> tuple[bool, str]:
+def run_cmd(
+    cmd: list[str], timeout: int = 20, env: dict | None = None
+) -> tuple[bool, str]:
     try:
-        r = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+        r = subprocess.run(
+            cmd, capture_output=True, text=True, timeout=timeout, env=env
+        )
         return r.returncode == 0, (r.stdout + r.stderr).strip()
     except (subprocess.TimeoutExpired, FileNotFoundError) as e:
         return False, str(e)
@@ -186,7 +203,8 @@ def try_compile_run(
             return "cfail", None
         if not run_exe:
             return "pass", compile_ms
-        ok, _ = run_cmd([exe])
+        env = {**os.environ, **SAN_ENV} if SANITIZE else None
+        ok, _ = run_cmd([exe], env=env)
         return ("pass" if ok else "rfail"), compile_ms
     finally:
         try:
@@ -240,6 +258,31 @@ def load_cache() -> dict:
 
 def save_cache(cache: dict) -> None:
     CACHE_FILE.write_text(json.dumps(cache, indent=2))
+
+
+def test_id(path: str) -> str:
+    """Stable, machine-independent id: path relative to libcxx/test."""
+    return path.split("/libcxx/test/")[-1]
+
+
+def load_baseline() -> set:
+    if not BASELINE_FILE.exists():
+        return set()
+    return {
+        s
+        for line in BASELINE_FILE.read_text().splitlines()
+        if (s := line.strip()) and not s.startswith("#")
+    }
+
+
+def save_baseline(ids: set) -> None:
+    header = (
+        "# Known sanitizer failures: libcxx tests that pass on libstdc++ but fail\n"
+        "# under psychicstd+ASan/UBSan. The sanitizer CI fails only on failures NOT\n"
+        "# listed here. Regenerate: tools/compliance.py --sanitize --update-baseline\n"
+        "\n"
+    )
+    BASELINE_FILE.write_text(header + "\n".join(sorted(ids)) + "\n")
 
 
 def header_exists(name: str) -> bool:
@@ -317,8 +360,9 @@ def check_header(
 
     cached_tests: dict = dict(header_cache.get("tests", {}))
 
-    sys_flags: list[str] = []
-    psy_flags = ["-nostdinc++", f"-I{PSYCHICSTD}"]
+    san = SAN_CFLAGS if SANITIZE else []
+    sys_flags: list[str] = [*san]
+    psy_flags = ["-nostdinc++", f"-I{PSYCHICSTD}", *san]
 
     if recheck:
         # Re-run previously cached tests; reset results so they run fresh
@@ -422,7 +466,24 @@ def main() -> None:
         action="store_true",
         help="Print failing tests from cache (no compilation)",
     )
+    ap.add_argument(
+        "--sanitize",
+        action="store_true",
+        help="Compile+run tests under ASan/UBSan (both STLs) to catch runtime "
+        "bugs; uses a separate cache and writes compliance.sanitize.md",
+    )
+    ap.add_argument(
+        "--update-baseline",
+        action="store_true",
+        help="With --sanitize: write the current known failures to the baseline "
+        "instead of failing on them",
+    )
     args = ap.parse_args()
+
+    if args.sanitize:
+        global SANITIZE, CACHE_FILE
+        SANITIZE = True
+        CACHE_FILE = REPO_ROOT / ".compliance_cache.sanitize.json"
 
     all_headers = sorted(h for h in HEADER_TO_DIRS if header_exists(h))
     filter_set = set(args.headers)
@@ -495,7 +556,7 @@ def main() -> None:
         elif h in cache:
             rows.append(_summary_from_cache(h, cache[h]))
 
-    out = REPO_ROOT / "compliance.md"
+    out = REPO_ROOT / ("compliance.sanitize.md" if SANITIZE else "compliance.md")
     with open(out, "w") as f:
         f.write("# Compliance\n\n")
         f.write(f"Last updated: {datetime.now().strftime('%Y-%m-%d %H:%M')}\n\n")
@@ -562,6 +623,48 @@ def main() -> None:
 
     subprocess.run(["mdformat", out], check=True)
     print(f"\nWrote {out}")
+
+    # In sanitizer mode a runtime failure the system STL does not have is a
+    # psychicstd bug. Gate against a committed baseline: only failures NOT already
+    # known (regressions) turn CI red.
+    if SANITIZE:
+        failing = {
+            test_id(path)
+            for hc in cache.values()
+            for path, e in hc.get("tests", {}).items()
+            if e.get("sys") == "pass" and e.get("psy") == "rfail"
+        }
+        ran = {
+            test_id(path)
+            for hc in cache.values()
+            for path, e in hc.get("tests", {}).items()
+            if e.get("sys") == "pass" and e.get("psy") in ("pass", "rfail")
+        }
+        if args.update_baseline:
+            save_baseline(failing)
+            print(f"\nWrote {len(failing)} known failure(s) to {BASELINE_FILE.name}")
+            return
+        baseline = load_baseline()
+        known = sorted(failing & baseline)
+        fixed = sorted((baseline & ran) - failing)
+        new = sorted(failing - baseline)
+        if known:
+            print(f"\n{len(known)} known sanitizer failure(s) (baselined):")
+            for p in known:
+                print(f"  {p}")
+        if fixed:
+            print(
+                f"\n{len(fixed)} baselined failure(s) now PASS -- drop from baseline "
+                "(--update-baseline):"
+            )
+            for p in fixed:
+                print(f"  {p}")
+        if new:
+            print(f"\n{len(new)} NEW sanitizer failure(s) (regression):")
+            for p in new:
+                print(f"  {p}")
+            sys.exit(1)
+        print("\nNo new sanitizer failures.")
 
 
 if __name__ == "__main__":
