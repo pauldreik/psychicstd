@@ -2,7 +2,6 @@
 #include <cstdlib>
 #include <ios>
 #include <streambuf>
-#include <string>
 
 namespace std {
 
@@ -192,26 +191,6 @@ public:
       c = Traits::to_char_type(ic);
     return *this;
   }
-  basic_istream& operator>>(basic_string<Char, Traits>& s) {
-    sentry sen(*this);
-    if (!sen) {
-      this->setstate(ios_base::failbit);
-      return *this;
-    }
-    s.clear();
-    auto* sb = this->rdbuf();
-    int_type c;
-    while (!Traits::eq_int_type(c = sb->sgetc(), Traits::eof())) {
-      Char ch = Traits::to_char_type(c);
-      if (ch == ' ' || ch == '\n' || ch == '\t' || ch == '\r')
-        break;
-      s += ch;
-      sb->sbumpc();
-    }
-    if (s.empty())
-      this->setstate(ios_base::failbit);
-    return *this;
-  }
   basic_istream& operator>>(basic_streambuf<Char, Traits>* sb) {
     if (!sb) {
       this->setstate(ios_base::failbit);
@@ -349,30 +328,6 @@ basic_istream<Char, Traits>& ws(basic_istream<Char, Traits>& is) {
       sb->sbumpc();
     }
   }
-  return is;
-}
-
-template <typename Char, typename Traits>
-basic_istream<Char, Traits>& getline(basic_istream<Char, Traits>& is,
-                                     basic_string<Char, Traits>& s,
-                                     Char delim = '\n') {
-  s.clear();
-  typename basic_istream<Char, Traits>::sentry sen(is, true);
-  if (!sen) {
-    is.setstate(ios_base::failbit);
-    return is;
-  }
-  auto* sb = is.rdbuf();
-  typename Traits::int_type c;
-  while (!Traits::eq_int_type(c = sb ? sb->sbumpc() : Traits::eof(),
-                              Traits::eof())) {
-    Char ch = Traits::to_char_type(c);
-    if (Traits::eq(ch, delim))
-      break;
-    s += ch;
-  }
-  if (Traits::eq_int_type(c, Traits::eof()))
-    is.setstate(ios_base::eofbit);
   return is;
 }
 
