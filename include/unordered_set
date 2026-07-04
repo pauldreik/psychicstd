@@ -13,8 +13,6 @@ template <typename Key, typename Hash = hash<Key>,
           typename KeyEqual = equal_to<Key>,
           typename Allocator = allocator<Key>>
 class unordered_set {
-  static constexpr size_t N_BUCKETS = 64;
-
   struct Node {
     Key key;
     Node* next = nullptr;
@@ -22,15 +20,15 @@ class unordered_set {
     explicit Node(Key&& k) : key(static_cast<Key&&>(k)) {}
   };
 
-  Node* buckets_[N_BUCKETS] = {};
+  vector<Node*> buckets_ = vector<Node*>(16, nullptr);
   size_t size_ = 0;
   Hash hasher_;
   KeyEqual equal_;
 
-  size_t bucket(const Key& k) const { return hasher_(k) % N_BUCKETS; }
+  size_t bucket(const Key& k) const { return hasher_(k) % buckets_.size(); }
 
   void destroy() {
-    for (size_t i = 0; i < N_BUCKETS; ++i) {
+    for (size_t i = 0; i < buckets_.size(); ++i) {
       Node* n = buckets_[i];
       while (n) {
         Node* next = n->next;
@@ -40,6 +38,25 @@ class unordered_set {
       buckets_[i] = nullptr;
     }
     size_ = 0;
+  }
+
+  void _rehash(size_t nb) {
+    vector<Node*> nbuckets(nb, nullptr);
+    for (size_t i = 0; i < buckets_.size(); ++i) {
+      Node* n = buckets_[i];
+      while (n) {
+        Node* next = n->next;
+        size_t b = hasher_(n->key) % nb;
+        n->next = nbuckets[b];
+        nbuckets[b] = n;
+        n = next;
+      }
+    }
+    buckets_ = static_cast<vector<Node*>&&>(nbuckets);
+  }
+  void _maybe_rehash() {
+    if (size_ + 1 > buckets_.size())
+      _rehash(buckets_.size() * 2);
   }
 
 public:
@@ -61,7 +78,7 @@ public:
     using iterator_category = forward_iterator_tag;
 
     const unordered_set* set_ = nullptr;
-    size_t bucket_ = N_BUCKETS;
+    size_t bucket_ = 0;
     Node* node_ = nullptr;
 
     iterator() = default;
@@ -73,7 +90,7 @@ public:
 
     iterator& operator++() {
       node_ = node_->next;
-      while (!node_ && ++bucket_ < N_BUCKETS)
+      while (!node_ && ++bucket_ < set_->buckets_.size())
         node_ = set_->buckets_[bucket_];
       return *this;
     }
@@ -105,10 +122,7 @@ public:
   }
   unordered_set(const unordered_set& o) { *this = o; }
   unordered_set(unordered_set&& o) noexcept {
-    for (size_t i = 0; i < N_BUCKETS; ++i) {
-      buckets_[i] = o.buckets_[i];
-      o.buckets_[i] = nullptr;
-    }
+    buckets_.swap(o.buckets_);
     size_ = o.size_;
     o.size_ = 0;
   }
@@ -117,7 +131,7 @@ public:
   unordered_set& operator=(const unordered_set& o) {
     if (this != &o) {
       destroy();
-      for (size_t i = 0; i < N_BUCKETS; ++i) {
+      for (size_t i = 0; i < o.buckets_.size(); ++i) {
         for (Node* n = o.buckets_[i]; n; n = n->next)
           insert(n->key);
       }
@@ -126,22 +140,19 @@ public:
   }
   unordered_set& operator=(unordered_set&& o) noexcept {
     destroy();
-    for (size_t i = 0; i < N_BUCKETS; ++i) {
-      buckets_[i] = o.buckets_[i];
-      o.buckets_[i] = nullptr;
-    }
+    buckets_.swap(o.buckets_);
     size_ = o.size_;
     o.size_ = 0;
     return *this;
   }
 
   iterator begin() const {
-    for (size_t i = 0; i < N_BUCKETS; ++i)
+    for (size_t i = 0; i < buckets_.size(); ++i)
       if (buckets_[i])
         return {this, i, buckets_[i]};
     return end();
   }
-  iterator end() const { return {this, N_BUCKETS, nullptr}; }
+  iterator end() const { return {this, buckets_.size(), nullptr}; }
   const_iterator cbegin() const { return begin(); }
   const_iterator cend() const { return end(); }
 
@@ -156,6 +167,8 @@ public:
       if (equal_(n->key, k))
         return {{this, b, n}, false};
     }
+    _maybe_rehash();
+    b = bucket(k);
     Node* n = new Node(k);
     n->next = buckets_[b];
     buckets_[b] = n;
@@ -168,6 +181,8 @@ public:
       if (equal_(n->key, k))
         return {{this, b, n}, false};
     }
+    _maybe_rehash();
+    b = bucket(k);
     Node* n = new Node(static_cast<Key&&>(k));
     n->next = buckets_[b];
     buckets_[b] = n;

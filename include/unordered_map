@@ -21,6 +21,19 @@ class unordered_map {
 
   size_t bucket(const Key& k) const { return hasher_(k) % buckets_.size(); }
 
+  void _rehash(size_t nb) {
+    vector<bucket_t> nbuckets(nb);
+    for (auto& bk : buckets_)
+      for (auto& kv : bk)
+        nbuckets[hasher_(kv.first) % nb].push_back(
+            static_cast<pair<const Key, T>&&>(kv));
+    buckets_ = static_cast<vector<bucket_t>&&>(nbuckets);
+  }
+  void _maybe_rehash() {
+    if (size_ + 1 > buckets_.size())
+      _rehash(buckets_.size() * 2);
+  }
+
 public:
   using key_type = Key;
   using mapped_type = T;
@@ -137,6 +150,8 @@ public:
     for (auto& kv : buckets_[b])
       if (eq_(kv.first, k))
         return kv.second;
+    _maybe_rehash();
+    b = bucket(k);
     buckets_[b].push_back({k, T{}});
     ++size_;
     return buckets_[b].back().second;
@@ -146,6 +161,8 @@ public:
     for (auto& kv : buckets_[b])
       if (eq_(kv.first, k))
         return kv.second;
+    _maybe_rehash();
+    b = bucket(k);
     buckets_[b].push_back({static_cast<Key&&>(k), T{}});
     ++size_;
     return buckets_[b].back().second;
@@ -169,6 +186,8 @@ public:
     for (size_t i = 0; i < buckets_[b].size(); ++i)
       if (eq_(buckets_[b][i].first, kv.first))
         return {{this, b, i}, false};
+    _maybe_rehash();
+    b = bucket(kv.first);
     buckets_[b].push_back(kv);
     ++size_;
     return {{this, b, buckets_[b].size() - 1}, true};
@@ -178,6 +197,8 @@ public:
     for (size_t i = 0; i < buckets_[b].size(); ++i)
       if (eq_(buckets_[b][i].first, kv.first))
         return {{this, b, i}, false};
+    _maybe_rehash();
+    b = bucket(kv.first);
     buckets_[b].push_back(static_cast<value_type&&>(kv));
     ++size_;
     return {{this, b, buckets_[b].size() - 1}, true};
@@ -241,6 +262,19 @@ class unordered_multimap {
   KeyEqual eq_{};
 
   size_t bucket(const Key& k) const { return hasher_(k) % buckets_.size(); }
+
+  void _rehash(size_t nb) {
+    vector<bucket_t> nbuckets(nb);
+    for (auto& bk : buckets_)
+      for (auto& kv : bk)
+        nbuckets[hasher_(kv.first) % nb].push_back(
+            static_cast<pair<const Key, T>&&>(kv));
+    buckets_ = static_cast<vector<bucket_t>&&>(nbuckets);
+  }
+  void _maybe_rehash() {
+    if (size_ + 1 > buckets_.size())
+      _rehash(buckets_.size() * 2);
+  }
 
 public:
   using key_type = Key;
@@ -334,12 +368,14 @@ public:
   bool empty() const noexcept { return size_ == 0; }
 
   iterator insert(const value_type& kv) {
+    _maybe_rehash();
     size_t b = bucket(kv.first);
     buckets_[b].push_back(kv);
     ++size_;
     return {this, b, buckets_[b].size() - 1};
   }
   iterator insert(value_type&& kv) {
+    _maybe_rehash();
     size_t b = bucket(kv.first);
     buckets_[b].push_back(static_cast<value_type&&>(kv));
     ++size_;
