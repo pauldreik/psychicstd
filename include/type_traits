@@ -138,7 +138,7 @@ template <typename T> using result_of_t = typename result_of<T>::type;
 template <typename T> struct type_identity {
   using type = T;
 };
-template <typename T> using type_identity_t = T;
+template <typename T> using type_identity_t = typename type_identity<T>::type;
 
 // is_same
 template <typename T, typename U> struct is_same : false_type {};
