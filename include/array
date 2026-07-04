@@ -1,4 +1,5 @@
 #pragma once
+#include <__psychicstd_config>
 #include <algorithm>
 #include <cstddef>
 #include <iterator>
@@ -28,12 +29,12 @@ template <typename T, size_t N> struct array {
   }
   constexpr reference at(size_type i) {
     if (i >= N)
-      throw out_of_range("array::at");
+      _PSYCHICSTD_THROW(out_of_range("array::at"));
     return data_[i];
   }
   constexpr const_reference at(size_type i) const {
     if (i >= N)
-      throw out_of_range("array::at");
+      _PSYCHICSTD_THROW(out_of_range("array::at"));
     return data_[i];
   }
   constexpr reference front() noexcept { return data_[0]; }
@@ -112,9 +113,11 @@ template <typename T> struct array<T, 0> {
   constexpr const_reference operator[](size_type) const noexcept {
     __builtin_unreachable();
   }
-  constexpr reference at(size_type) { throw out_of_range("array::at"); }
+  constexpr reference at(size_type) {
+    _PSYCHICSTD_THROW(out_of_range("array::at"));
+  }
   constexpr const_reference at(size_type) const {
-    throw out_of_range("array::at");
+    _PSYCHICSTD_THROW(out_of_range("array::at"));
   }
   constexpr reference front() noexcept { __builtin_unreachable(); }
   constexpr const_reference front() const noexcept { __builtin_unreachable(); }

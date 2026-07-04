@@ -1,4 +1,5 @@
 #pragma once
+#include <__psychicstd_config>
 #include <algorithm>
 #include <compare>
 #include <functional>
@@ -266,13 +267,13 @@ public:
   T& at(const Key& k) {
     auto it = find(k);
     if (it == end())
-      throw out_of_range("map::at: key not found");
+      _PSYCHICSTD_THROW(out_of_range("map::at: key not found"));
     return it->second;
   }
   const T& at(const Key& k) const {
     auto it = find(k);
     if (it == end())
-      throw out_of_range("map::at: key not found");
+      _PSYCHICSTD_THROW(out_of_range("map::at: key not found"));
     return it->second;
   }
 

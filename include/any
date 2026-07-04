@@ -1,4 +1,5 @@
 #pragma once
+#include <__psychicstd_config>
 #include <cstddef>
 #include <cstring>
 #include <new>
@@ -150,19 +151,19 @@ template <typename T> const T* any_cast(const any* a) noexcept {
 template <typename T> T any_cast(const any& a) {
   auto* p = any_cast<remove_cvref_t<T>>(&a);
   if (!p)
-    throw bad_cast{};
+    _PSYCHICSTD_THROW(bad_cast{});
   return *p;
 }
 template <typename T> T any_cast(any& a) {
   auto* p = any_cast<remove_cvref_t<T>>(&a);
   if (!p)
-    throw bad_cast{};
+    _PSYCHICSTD_THROW(bad_cast{});
   return *p;
 }
 template <typename T> T any_cast(any&& a) {
   auto* p = any_cast<remove_cvref_t<T>>(&a);
   if (!p)
-    throw bad_cast{};
+    _PSYCHICSTD_THROW(bad_cast{});
   return static_cast<T>(std::move(*p));
 }
 

@@ -1,4 +1,5 @@
 #pragma once
+#include <__psychicstd_config>
 #include <compare>
 #include <cstddef>
 #include <exception>
@@ -244,7 +245,7 @@ constexpr bool holds_alternative(const variant<Ts...>& v) noexcept {
 template <size_t I, typename... Ts>
 constexpr variant_alternative_t<I, variant<Ts...>>& get(variant<Ts...>& v) {
   if (v.index() != I)
-    throw bad_variant_access{};
+    _PSYCHICSTD_THROW(bad_variant_access{});
   return *reinterpret_cast<variant_alternative_t<I, variant<Ts...>>*>(
       v.__raw());
 }
@@ -256,7 +257,7 @@ template <size_t I, typename... Ts>
 constexpr const variant_alternative_t<I, variant<Ts...>>&
 get(const variant<Ts...>& v) {
   if (v.index() != I)
-    throw bad_variant_access{};
+    _PSYCHICSTD_THROW(bad_variant_access{});
   return *reinterpret_cast<const variant_alternative_t<I, variant<Ts...>>*>(
       v.__raw());
 }
