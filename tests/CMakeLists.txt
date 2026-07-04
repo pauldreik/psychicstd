@@ -89,6 +89,13 @@ foreach(_hdr ${_psychic_headers})
     add_executable(self_contained_${_h} ${_src})
     target_link_libraries(self_contained_${_h} PRIVATE psychicstd::psychicstd)
     add_test(NAME self_contained_${_h} COMMAND self_contained_${_h})
+
+    # Same, but with -fno-exceptions: every header must also compile when
+    # exceptions are disabled (throws become abort, try/catch compiles away).
+    add_executable(self_contained_noexcept_${_h} ${_src})
+    target_link_libraries(self_contained_noexcept_${_h} PRIVATE psychicstd::psychicstd)
+    target_compile_options(self_contained_noexcept_${_h} PRIVATE -fno-exceptions)
+    add_test(NAME self_contained_noexcept_${_h} COMMAND self_contained_noexcept_${_h})
 endforeach()
 
 # Simulates a completely independent project consuming psychicstd via a bash

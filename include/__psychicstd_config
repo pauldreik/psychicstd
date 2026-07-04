@@ -25,3 +25,16 @@
 #ifndef _PSYCHICSTD_COMPATIBILITY_LEVEL
 #define _PSYCHICSTD_COMPATIBILITY_LEVEL _PSYCHICSTD_COMPAT_DROPIN
 #endif
+
+// Exception support (honors -fno-exceptions)
+#if defined(__cpp_exceptions)
+#define _PSYCHICSTD_THROW(x) throw x
+#define _PSYCHICSTD_TRY try
+#define _PSYCHICSTD_CATCH(decl) catch (decl)
+#define _PSYCHICSTD_RETHROW throw
+#else
+#define _PSYCHICSTD_THROW(x) __builtin_abort()
+#define _PSYCHICSTD_TRY if (true)
+#define _PSYCHICSTD_CATCH(decl) if (false)
+#define _PSYCHICSTD_RETHROW ((void)0)
+#endif

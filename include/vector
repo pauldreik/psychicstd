@@ -1,4 +1,5 @@
 #pragma once
+#include <__psychicstd_config>
 #include <compare>
 #include <cstddef>
 #include <initializer_list>
@@ -526,12 +527,12 @@ public:
   constexpr const T& operator[](size_type i) const noexcept { return data_[i]; }
   constexpr T& at(size_type i) {
     if (i >= size_)
-      throw out_of_range("vector::at");
+      _PSYCHICSTD_THROW(out_of_range("vector::at"));
     return data_[i];
   }
   constexpr const T& at(size_type i) const {
     if (i >= size_)
-      throw out_of_range("vector::at");
+      _PSYCHICSTD_THROW(out_of_range("vector::at"));
     return data_[i];
   }
   constexpr T& front() noexcept { return data_[0]; }
@@ -666,14 +667,15 @@ public:
       return iterator{data_ + idx};
     _reserve_and_shift(idx, n);
     size_type i = 0;
-    try {
+    _PSYCHICSTD_TRY {
       for (; i < n; ++i)
         _construct(data_ + idx + i, v);
-    } catch (...) {
+    }
+    _PSYCHICSTD_CATCH(...) {
       for (size_type j = 0; j < i; ++j)
         _destroy(data_ + idx + j);
       _undo_shift(idx, n, i);
-      throw;
+      _PSYCHICSTD_RETHROW;
     }
     size_ += n;
     return iterator{data_ + idx};
@@ -689,16 +691,17 @@ public:
       ++n;
     _reserve_and_shift(idx, n);
     size_type i = 0;
-    try {
+    _PSYCHICSTD_TRY {
       for (auto it = first; it != last; ++it) {
         _construct(data_ + idx + i, *it);
         ++i;
       }
-    } catch (...) {
+    }
+    _PSYCHICSTD_CATCH(...) {
       for (size_type j = 0; j < i; ++j)
         _destroy(data_ + idx + j);
       _undo_shift(idx, n, i);
-      throw;
+      _PSYCHICSTD_RETHROW;
     }
     size_ += n;
     return iterator{data_ + idx};
