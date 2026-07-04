@@ -1,6 +1,6 @@
 #pragma once
+#include <__psychicstd_algo>
 #include <__psychicstd_config>
-#include <algorithm>
 #include <compare>
 #include <functional>
 #include <initializer_list>
@@ -410,10 +410,10 @@ public:
   iterator lower_bound(const Key& k) { return lower_bound_(k); }
   const_iterator lower_bound(const Key& k) const { return lower_bound_(k); }
   iterator upper_bound(const Key& k) {
-    return std::upper_bound(data_.begin(), data_.end(), k, comp_);
+    return std::__upper_bound(data_.begin(), data_.end(), k, comp_);
   }
   const_iterator upper_bound(const Key& k) const {
-    return std::upper_bound(data_.begin(), data_.end(), k, comp_);
+    return std::__upper_bound(data_.begin(), data_.end(), k, comp_);
   }
   pair<iterator, iterator> equal_range(const Key& k) {
     return {lower_bound(k), upper_bound(k)};
@@ -438,13 +438,13 @@ public:
   template <typename K>
     requires requires { typename Compare::is_transparent; }
   iterator upper_bound(const K& k) {
-    return std::upper_bound(data_.begin(), data_.end(), k, comp_);
+    return std::__upper_bound(data_.begin(), data_.end(), k, comp_);
   }
 
   template <typename K>
     requires requires { typename Compare::is_transparent; }
   const_iterator upper_bound(const K& k) const {
-    return std::upper_bound(data_.begin(), data_.end(), k, comp_);
+    return std::__upper_bound(data_.begin(), data_.end(), k, comp_);
   }
 
   template <typename K>
@@ -527,10 +527,10 @@ private:
   [[no_unique_address]] Alloc alloc_ = {};
 
   template <typename K> iterator lower_bound_(const K& k) {
-    return std::lower_bound(data_.begin(), data_.end(), k, comp_);
+    return std::__lower_bound(data_.begin(), data_.end(), k, comp_);
   }
   template <typename K> const_iterator lower_bound_(const K& k) const {
-    return std::lower_bound(data_.begin(), data_.end(), k, comp_);
+    return std::__lower_bound(data_.begin(), data_.end(), k, comp_);
   }
 };
 
@@ -632,11 +632,11 @@ public:
   allocator_type get_allocator() const noexcept { return alloc_; }
 
   iterator insert(const value_type& v) {
-    auto it = std::lower_bound(data_.begin(), data_.end(), v.first, comp_);
+    auto it = std::__lower_bound(data_.begin(), data_.end(), v.first, comp_);
     return data_.insert(it, {v.first, v.second});
   }
   iterator insert(value_type&& v) {
-    auto it = std::lower_bound(data_.begin(), data_.end(), v.first, comp_);
+    auto it = std::__lower_bound(data_.begin(), data_.end(), v.first, comp_);
     return data_.insert(it, static_cast<value_type&&>(v));
   }
   // Hint versions (hint ignored)
@@ -653,33 +653,33 @@ public:
   }
   iterator erase(const_iterator pos) { return data_.erase(pos); }
   size_type erase(const Key& k) {
-    auto lo = std::lower_bound(data_.begin(), data_.end(), k, comp_);
-    auto hi = std::upper_bound(data_.begin(), data_.end(), k, comp_);
+    auto lo = std::__lower_bound(data_.begin(), data_.end(), k, comp_);
+    auto hi = std::__upper_bound(data_.begin(), data_.end(), k, comp_);
     auto n = hi - lo;
     data_.erase(lo, hi);
     return n;
   }
   size_type count(const Key& k) const {
-    auto lo = std::lower_bound(data_.begin(), data_.end(), k, comp_);
-    auto hi = std::upper_bound(data_.begin(), data_.end(), k, comp_);
+    auto lo = std::__lower_bound(data_.begin(), data_.end(), k, comp_);
+    auto hi = std::__upper_bound(data_.begin(), data_.end(), k, comp_);
     return hi - lo;
   }
   pair<iterator, iterator> equal_range(const Key& k) {
-    return {std::lower_bound(data_.begin(), data_.end(), k, comp_),
-            std::upper_bound(data_.begin(), data_.end(), k, comp_)};
+    return {std::__lower_bound(data_.begin(), data_.end(), k, comp_),
+            std::__upper_bound(data_.begin(), data_.end(), k, comp_)};
   }
   pair<const_iterator, const_iterator> equal_range(const Key& k) const {
-    return {std::lower_bound(data_.begin(), data_.end(), k, comp_),
-            std::upper_bound(data_.begin(), data_.end(), k, comp_)};
+    return {std::__lower_bound(data_.begin(), data_.end(), k, comp_),
+            std::__upper_bound(data_.begin(), data_.end(), k, comp_)};
   }
   iterator find(const Key& k) {
-    auto it = std::lower_bound(data_.begin(), data_.end(), k, comp_);
+    auto it = std::__lower_bound(data_.begin(), data_.end(), k, comp_);
     if (it != data_.end() && !comp_.comp(k, it->first))
       return it;
     return data_.end();
   }
   const_iterator find(const Key& k) const {
-    auto it = std::lower_bound(data_.begin(), data_.end(), k, comp_);
+    auto it = std::__lower_bound(data_.begin(), data_.end(), k, comp_);
     if (it != data_.end() && !comp_.comp(k, it->first))
       return it;
     return data_.end();
@@ -689,7 +689,7 @@ public:
   template <typename K>
     requires requires { typename Compare::is_transparent; }
   bool contains(const K& k) const {
-    auto it = std::lower_bound(data_.begin(), data_.end(), k, comp_);
+    auto it = std::__lower_bound(data_.begin(), data_.end(), k, comp_);
     return it != data_.end() && !comp_.comp(k, it->first);
   }
 

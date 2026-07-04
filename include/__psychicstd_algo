@@ -1,0 +1,52 @@
+#pragma once
+
+// Minimal algorithm helpers so containers (map, set, list) don't pull in all of
+// <algorithm> for one or two functions. Reserved __ names, so they never clash
+// with the real <algorithm> if it is also included.
+
+namespace std {
+
+template <typename It, typename T, typename Comp>
+constexpr It __lower_bound(It first, It last, const T& value, Comp comp) {
+  auto count = last - first;
+  while (count > 0) {
+    auto step = count / 2;
+    It mid = first + step;
+    if (comp(*mid, value)) {
+      first = mid + 1;
+      count -= step + 1;
+    } else {
+      count = step;
+    }
+  }
+  return first;
+}
+
+template <typename It, typename T, typename Comp>
+constexpr It __upper_bound(It first, It last, const T& value, Comp comp) {
+  auto count = last - first;
+  while (count > 0) {
+    auto step = count / 2;
+    It mid = first + step;
+    if (!comp(value, *mid)) {
+      first = mid + 1;
+      count -= step + 1;
+    } else {
+      count = step;
+    }
+  }
+  return first;
+}
+
+template <typename It1, typename It2>
+constexpr bool __lexicographical_compare(It1 f1, It1 l1, It2 f2, It2 l2) {
+  for (; f1 != l1 && f2 != l2; ++f1, ++f2) {
+    if (*f1 < *f2)
+      return true;
+    if (*f2 < *f1)
+      return false;
+  }
+  return f1 == l1 && f2 != l2;
+}
+
+} // namespace std
