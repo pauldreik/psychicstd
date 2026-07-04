@@ -9,7 +9,7 @@ It is not complete. It is not fully compliant. But it is good enough to quickly 
 - eigen [1.7x](use_on_realworld_projects/eigen_speed_report.md)
 - fmt
 - nlohmann json
-- rdfind
+- rdfind [3.45x](use_on_realworld_projects/rdfind_speed_report.md)
 
 Find the scripts validating the build and generating the above number in the use_on_realworld_projects/ directory.
 
