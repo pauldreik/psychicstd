@@ -235,13 +235,17 @@ public:
     Node** pp = &buckets_[b];
     while (*pp && (*pp)->key != *pos)
       pp = &(*pp)->next;
-    if (*pp) {
-      Node* n = *pp;
-      *pp = n->next;
-      delete n;
-      --size_;
-    }
-    return end();
+    if (!*pp)
+      return end();
+    Node* n = *pp;
+    Node* next = n->next;
+    *pp = next;
+    delete n;
+    --size_;
+    iterator it{this, b, next};
+    while (!it.node_ && ++it.bucket_ < nbuckets_)
+      it.node_ = buckets_[it.bucket_];
+    return it;
   }
 
   size_type erase(const Key& k) {
