@@ -27,28 +27,36 @@ cat >"$PATCH_DIR/apply-patches.sh" <<'HELPER_SCRIPT'
 #!/bin/bash
 set -e
 
-# Apply patches from sneakernet distribution
+# Apply patches from a sneakernet distribution.
+#
+# Run this from anywhere inside your git repository -- e.g. from the repo root
+# as `./patches/apply-patches.sh`. It locates its own patch files relative to
+# the script, so you do NOT have to cd into the patches/ directory first.
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 if ! git rev-parse --git-dir > /dev/null 2>&1; then
-    echo "Error: Not in a git repository"
+    echo "Error: not inside a git repository (run this from your repo)"
     exit 1
 fi
 
-PATCH_COUNT=$(ls -1 *.patch 2>/dev/null | wc -l)
+shopt -s nullglob
+PATCHES=("$SCRIPT_DIR"/*.patch)  # glob expands sorted, so 0001-, 0002-, ... in order
+shopt -u nullglob
 
-if [ "$PATCH_COUNT" -eq 0 ]; then
-    echo "Error: No .patch files found in current directory"
+if [ "${#PATCHES[@]}" -eq 0 ]; then
+    echo "Error: no .patch files found next to this script ($SCRIPT_DIR)"
     exit 1
 fi
 
-echo "Found $PATCH_COUNT patch(es) to apply"
+echo "Found ${#PATCHES[@]} patch(es) to apply"
 echo ""
 
 FAILED=0
-for patch in $(ls -1 *.patch | sort); do
-    echo "Applying $patch..."
+for patch in "${PATCHES[@]}"; do
+    echo "Applying $(basename "$patch")..."
     if ! git am "$patch"; then
-        echo "ERROR: Failed to apply $patch"
+        echo "ERROR: Failed to apply $(basename "$patch")"
         echo ""
         echo "To resolve:"
         echo "  1. Fix the conflicts in your working tree"
@@ -85,10 +93,10 @@ Contents:
 
 To apply these patches:
 
-1. Navigate to your git repository
-2. Copy all files from this directory (patches and apply-patches.sh)
-3. Run: ./apply-patches.sh
+1. Extract this tarball at the root of your git repository
+2. From the repo root, run: ./patches/apply-patches.sh
 
+The helper finds its own patch files, so you don't need to cd into patches/.
 The patches will be applied in order. If a conflict occurs, resolve it
 and run: git am --continue
 
@@ -124,10 +132,9 @@ echo "1. Transfer the tarball to your destination:"
 echo "   • Copy to USB/external drive: cp $TARBALL /path/to/usb/"
 echo "   • Share via email/cloud: upload $TARBALL"
 echo ""
-echo "2. On the receiving end:"
+echo "2. On the receiving end, from your git repository root:"
 echo "   tar -xzf $TARBALL"
-echo "   cd patches"
-echo "   ./apply-patches.sh"
+echo "   ./patches/apply-patches.sh"
 echo ""
 echo "The helper script will apply all $COMMIT_COUNT commits in order."
 echo "═══════════════════════════════════════════════════════════════"
