@@ -143,6 +143,60 @@ constexpr tuple_element_t<I, tuple<Ts...>>&& get(tuple<Ts...>&& t) noexcept {
       static_cast<Leaf&>(t).value);
 }
 
+// get<T>(tuple)
+template <typename T, typename... Ts>
+constexpr T& get(tuple<Ts...>& t) noexcept {
+  constexpr std::size_t I = []() -> std::size_t {
+    std::size_t i = 0;
+    std::size_t ret; // uninit on purpose
+    auto count = 0;
+    for (auto& d : {std::is_same_v<T, Ts>...}) {
+      if (d) {
+        ret = i;
+        ++count;
+      }
+      ++i;
+    };
+    if (count == 0) {
+      // not found
+      return -1;
+    }
+    if (count == 1) {
+      return ret;
+    }
+    return -2;
+  }();
+  static_assert(I != -1, "type not found in tuple");
+  static_assert(I != -2, "type must occur only once in tuple");
+  return get<I>(t);
+}
+template <typename T, typename... Ts>
+constexpr const T& get(const tuple<Ts...>& t) noexcept {
+  constexpr std::size_t I = []() -> std::size_t {
+    std::size_t i = 0;
+    std::size_t ret; // uninit on purpose
+    auto count = 0;
+    for (auto& d : {std::is_same_v<T, Ts>...}) {
+      if (d) {
+        ret = i;
+        ++count;
+      }
+      ++i;
+    };
+    if (count == 0) {
+      // not found
+      return -1;
+    }
+    if (count == 1) {
+      return ret;
+    }
+    return -2;
+  }();
+  static_assert(I != -1, "type not found in tuple");
+  static_assert(I != -2, "type must occur only once in tuple");
+  return get<I>(t);
+}
+
 // Comparison operators
 namespace detail {
 template <size_t I, typename Tup>
