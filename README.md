@@ -67,6 +67,8 @@ cmake -S . -B build \
 
 The default is drop-in, so you get the "just swap it in" experience out of the box; opt into strict when you want maximum speed and to keep your includes honest.
 
+The strict mode results in faster compilation since fewer headers are transitively included. For rdfind, strict mode shrank the compilation time with 5% compared to the drop-in level.
+
 ## The name
 
 The name is a word play on the edit-compile-debug cycle itself: psychic → cycle → cyclic. A psychic knows the answer before you've finished asking the question. psychicstd tries to do the same — by the time you've hit save, the compiler is already done. Well, that's the aspiration, anyway.

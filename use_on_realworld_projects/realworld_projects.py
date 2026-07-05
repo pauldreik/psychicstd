@@ -38,14 +38,18 @@ class Toolchain:
 
 def _timed(cmd, cwd, env):
     t0 = time.monotonic()
-    subprocess.run(
+    r = subprocess.run(
         cmd,
         cwd=cwd,
         env=env,
-        check=True,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
     )
+    if r.returncode != 0:
+        print(f"failed command {cmd[0]}!\noutput:")
+        print(r.stdout.decode("utf-8"))
+        r.check_returncode()
+
     return (time.monotonic() - t0) * 1000.0
 
 
@@ -61,23 +65,53 @@ def _fetch(url, dest, sha256):
 
 
 def _rdfind(tc):
-    tarball = RW_DIR / "rdfind-1.8.0.tar.gz"
-    _fetch(
-        "https://github.com/pauldreik/rdfind/releases/download/releases%2F1.8.0/rdfind-1.8.0.tar.gz",
-        tarball,
-        "0a2d0d32002cc2dc0134ee7b649bcc811ecfb2f8d9f672aa476a851152e7af35",
-    )
+
+    fromcommit = True
+
+    if fromcommit:
+        # from a certain commit hash
+        psychicstrictlevel = 0
+        commithash = "787b01ab378c70cb6bb3ef5166525f3ff8939a23"
+        tarball = RW_DIR / f"rdfind-{commithash}.tar.gz"
+        _fetch(
+            f"https://github.com/pauldreik/rdfind/archive/{commithash}.tar.gz",
+            tarball,
+            "057ae066b2f7349cb84e4b48ab3ab897d88afc3005bd6d8292c95fa012467659",
+        )
+    else:
+        # from a release
+        psychicstrictlevel = 2
+        version = "1.8.0"
+        tarball = RW_DIR / f"rdfind-{version}.tar.gz"
+        _fetch(
+            f"https://github.com/pauldreik/rdfind/releases/download/releases%2F{version}/rdfind-{version}.tar.gz",
+            tarball,
+            "0a2d0d32002cc2dc0134ee7b649bcc811ecfb2f8d9f672aa476a851152e7af35",
+        )
+
     work = Path(tempfile.mkdtemp(prefix="rw-rdfind-"))
     try:
         with tarfile.open(tarball) as t:
             t.extractall(work)
-        src = work / "rdfind-1.8.0"
+        if fromcommit:
+            src = work / f"rdfind-{commithash}"
+        else:
+            src = work / f"rdfind-{version}"
         env = {
             **os.environ,
             "CXX": tc.cxx,
-            "CXXFLAGS": tc.cxxflags,
+            "CXXFLAGS": tc.cxxflags
+            + f" -D_PSYCHICSTD_COMPATIBILITY_LEVEL={psychicstrictlevel}",
             "CCACHE_DISABLE": "1",
         }
+        if fromcommit:
+            _timed(
+                [
+                    "./bootstrap.sh",
+                ],
+                src,
+                env,
+            )
         configure = ["./configure"]
         if tc.ldflags:
             configure.append(f"LDFLAGS={tc.ldflags}")
