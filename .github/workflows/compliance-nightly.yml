@@ -1,0 +1,29 @@
+---
+name: compliance nightly (full)
+on:
+  schedule:
+    - cron: 0 2 * * *
+  workflow_dispatch:
+jobs:
+  full-sanitize:
+    # The full libcxx suite (every eligible test, not the per-MR sample) under
+    # ASan+UBSan, gated on the committed baseline. Fails on any failure not
+    # already known, so newly-building tests that expose bugs surface nightly.
+    # -O2 keeps the slow tests (unicode/binary formats) within the per-test
+    # timeout.
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install Markdown formatter
+        run: pipx install mdformat
+      - name: Sparse-clone llvm-project (libcxx/test only)
+        run: |
+          git clone --depth 1 --filter=blob:none --sparse \
+            https://github.com/llvm/llvm-project.git llvm-project
+          git -C llvm-project sparse-checkout set libcxx/test
+      - name: Full libcxx suite under ASan/UBSan
+        env:
+          LLVM_ROOT: ${{ github.workspace }}/llvm-project
+        run: python3 tools/compliance.py --sanitize --sample 100000 --cxxflags=-O2
+          --timeout 180
