@@ -934,8 +934,10 @@ basic_istream<Char, Traits>& getline(basic_istream<Char, Traits>& is,
   }
   auto* sb = is.rdbuf();
   typename Traits::int_type c;
+  size_t extracted = 0;
   while (!Traits::eq_int_type(c = sb ? sb->sbumpc() : Traits::eof(),
                               Traits::eof())) {
+    ++extracted;
     Char ch = Traits::to_char_type(c);
     if (Traits::eq(ch, delim))
       break;
@@ -943,6 +945,9 @@ basic_istream<Char, Traits>& getline(basic_istream<Char, Traits>& is,
   }
   if (Traits::eq_int_type(c, Traits::eof()))
     is.setstate(basic_ios<Char, Traits>::eofbit);
+  // Extracting nothing (immediate EOF) is a failure, not an empty line.
+  if (extracted == 0)
+    is.setstate(basic_ios<Char, Traits>::failbit);
   return is;
 }
 
