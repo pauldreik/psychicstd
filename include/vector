@@ -708,7 +708,18 @@ public:
   template <typename It>
     requires(!is_integral_v<It>)
   constexpr iterator insert(const_iterator pos, It first, It last) {
-    size_type idx = pos.ptr_ - data_, n = 0;
+    size_type idx = pos.ptr_ - data_;
+    if constexpr (!is_base_of_v<
+                      forward_iterator_tag,
+                      typename iterator_traits<It>::iterator_category>) {
+      // Single-pass (input) iterators can't be traversed twice; buffer them
+      // first, then insert the buffer (a multipass range).
+      vector<T> tmp;
+      for (; first != last; ++first)
+        tmp.push_back(*first);
+      return insert(const_iterator{data_ + idx}, tmp.begin(), tmp.end());
+    }
+    size_type n = 0;
     for (auto it = first; it != last; ++it)
       ++n;
     _grow_and_shift(idx, n);
