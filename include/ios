@@ -3,6 +3,7 @@
 #include <cerrno>
 #include <cstddef>
 #include <iosfwd>
+#include <locale>
 
 namespace std {
 
@@ -95,6 +96,13 @@ public:
   iostate exceptions() const noexcept { return except_; }
   void exceptions(iostate mask) { except_ = mask; }
 
+  locale getloc() const { return loc_; }
+  locale imbue(const locale& loc) {
+    locale old = loc_;
+    loc_ = loc;
+    return old;
+  }
+
 protected:
   ios_base()
       : flags_(dec | skipws), width_(0), prec_(6), state_(goodbit), fill_(' ') {
@@ -109,6 +117,7 @@ protected:
   iostate state_;
   iostate except_ = goodbit;
   char fill_;
+  locale loc_;
 };
 
 template <typename Char, typename Traits> class basic_ios : public ios_base {
@@ -144,6 +153,8 @@ public:
   void setstate(iostate s) { ios_base::setstate(s); }
   iostate exceptions() const noexcept { return ios_base::exceptions(); }
   void exceptions(iostate mask) { ios_base::exceptions(mask); }
+  locale getloc() const { return ios_base::getloc(); }
+  locale imbue(const locale& loc) { return ios_base::imbue(loc); }
 
   basic_streambuf<Char, Traits>* rdbuf() const noexcept { return buf_; }
   basic_streambuf<Char, Traits>* rdbuf(basic_streambuf<Char, Traits>* sb) {
