@@ -32,8 +32,18 @@ PSYCHICHSTD="$(
     -DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY \
     -DBUILD_SHARED_LIBS=OFF \
     -DJSON_TestStandards=20 \
-    -DJSON_BuildTests=OFF # does not work yet!
+    -DJSON_BuildTests=ON
   cmake --build build -j"$(nproc)"
+
+  # Run the unit tests. ctest's download_test_data fixture git-clones the test
+  # data (v3.1.0) on demand. Exclusions:
+  #   unicode|cbor|msgpack  - long-running (tens of seconds each); revisit later
+  #   algorithms            - one partial_sort assertion checks the tail order,
+  #                           which the standard leaves unspecified (psychicstd's
+  #                           partial_sort is a full sort)
+  #   cmake_fetch           - exercises FetchContent, not psychicstd
+  ctest --test-dir build -j"$(nproc)" --output-on-failure \
+    -E 'unicode|cbor|msgpack|algorithms|cmake_fetch'
   rm -rf build
 
   # Build all 217 API examples from the documentation
