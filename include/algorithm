@@ -182,7 +182,7 @@ constexpr Out copy_backward(In first, In last, Out d_last) {
 template <typename In, typename Out>
 constexpr Out move(In first, In last, Out d_first) {
   for (; first != last; ++first) {
-    *d_first = static_cast<decltype(*first)&&>(*first);
+    *d_first = static_cast<remove_reference_t<decltype(*first)>&&>(*first);
     ++d_first;
   }
   return d_first;
@@ -190,7 +190,7 @@ constexpr Out move(In first, In last, Out d_first) {
 template <typename In, typename Out>
 constexpr Out move_backward(In first, In last, Out d_last) {
   while (first != last)
-    *--d_last = static_cast<decltype(*first)&&>(*--last);
+    *--d_last = static_cast<remove_reference_t<decltype(*first)>&&>(*--last);
   return d_last;
 }
 
