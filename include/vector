@@ -244,10 +244,6 @@ private:
     }
     _shift_right(idx, n);
   }
-  constexpr void _reserve_and_shift(size_type idx, size_type n) {
-    reserve(size_ + n);
-    _shift_right(idx, n);
-  }
 
   // Copy-assign src[0..n) into *this, reusing existing capacity where possible.
   constexpr void _assign_copy(const T* src, size_type n) {
@@ -685,7 +681,7 @@ public:
     size_type idx = pos.ptr_ - data_;
     if (n == 0)
       return iterator{data_ + idx};
-    _reserve_and_shift(idx, n);
+    _grow_and_shift(idx, n);
     size_type i = 0;
     _PSYCHICSTD_TRY {
       for (; i < n; ++i)
@@ -709,7 +705,7 @@ public:
     size_type idx = pos.ptr_ - data_, n = 0;
     for (auto it = first; it != last; ++it)
       ++n;
-    _reserve_and_shift(idx, n);
+    _grow_and_shift(idx, n);
     size_type i = 0;
     _PSYCHICSTD_TRY {
       for (auto it = first; it != last; ++it) {
