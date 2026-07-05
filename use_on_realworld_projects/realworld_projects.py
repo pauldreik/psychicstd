@@ -61,6 +61,70 @@ def _fetch(url, dest, sha256):
         raise SystemExit(f"sha256 mismatch for {dest.name}: {got}")
 
 
+# --- simdutf -----
+
+
+def _simdutf(tc):
+
+    version = "9.0.0"
+    url = f"https://github.com/simdutf/simdutf/archive/refs/tags/v{version}.tar.gz"
+    checksum = "fd2ce975f29809a975a8da8843cfb3a7265af3f71be548f199d23cf65e101764"
+    psychicstrictlevel = 2
+    tarball = RW_DIR / f"simdutf-{version}.tar.gz"
+    _fetch(url, tarball, checksum)
+
+    work = Path(tempfile.mkdtemp(prefix="rw-simdutf-"))
+    try:
+        with tarfile.open(tarball) as t:
+            t.extractall(work)
+        src = work / f"simdutf-{version}"
+
+        env = {
+            **os.environ,
+            "CCACHE_DISABLE": "1",
+        }
+        configure = [
+            "cmake",
+            "-S",
+            ".",
+            "-B",
+            "build-with-psychic",
+            "-GNinja",
+            "-DCMAKE_BUILD_TYPE=Debug",
+            "-DSIMDUTF_FAST_TESTS=On",
+            "-DSIMDUTF_TOOLS=Off",  # sutf/fastbase64 need <filesystem>, unsupported
+            "-DCMAKE_CXX_COMPILER=" + tc.cxx,
+            "-DSIMDUTF_CXX_STANDARD=20",
+            "-DCMAKE_CXX_FLAGS="
+            + tc.cxxflags
+            + f" -D_PSYCHICSTD_COMPATIBILITY_LEVEL={psychicstrictlevel}",
+            "-DCMAKE_EXE_LINKER_FLAGS=" + tc.ldflags,
+            "-DCMAKE_CXX_STANDARD_LIBRARIES=" + tc.libs,
+            "-DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY",
+            "-DBUILD_SHARED_LIBS=OFF",
+        ]
+        jobs = f"-j{os.cpu_count() or 1}"
+        return {
+            "configure": _timed(configure, src, env),
+            "compile": _timed(
+                ["cmake", "--build", "build-with-psychic", jobs], src, env
+            ),
+            "tests": _timed(
+                [
+                    "ctest",
+                    "--test-dir",
+                    "build-with-psychic",
+                    "--output-on-failure",
+                    jobs,
+                ],
+                src,
+                env,
+            ),
+        }
+    finally:
+        shutil.rmtree(work, ignore_errors=True)
+
+
 # --- rdfind ---------------------------------------------------------------
 
 
@@ -129,4 +193,5 @@ def _rdfind(tc):
 
 PROJECTS = {
     "rdfind": _rdfind,
+    "simdutf": _simdutf,
 }
