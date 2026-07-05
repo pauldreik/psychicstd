@@ -57,6 +57,11 @@ public:
   bool operator==(const locale& o) const noexcept { return rep_ == o.rep_; }
   bool operator!=(const locale& o) const noexcept { return rep_ != o.rep_; }
 
+  // Internal: the installed facet if it is (dynamic-castable to) F, else null.
+  template <typename F> const F* _facet() const {
+    return rep_ ? dynamic_cast<const F*>(rep_->f) : nullptr;
+  }
+
 private:
   struct _rep {
     long refs = 1;
