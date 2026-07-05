@@ -215,7 +215,8 @@ public:
   function(const function& o) : ptr_(o.ptr_ ? o.ptr_->clone() : nullptr) {}
   function(function&& o) noexcept : ptr_(o.ptr_) { o.ptr_ = nullptr; }
   template <typename F>
-    requires(!is_same_v<decay_t<F>, function>)
+    requires(!is_same_v<decay_t<F>, function> &&
+             is_invocable_r_v<R, decay_t<F>&, Args...>)
   function(F&& f) : ptr_(new impl<decay_t<F>>(static_cast<F&&>(f))) {}
   ~function() { delete ptr_; }
 

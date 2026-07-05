@@ -91,7 +91,9 @@ public:
   basic_string(initializer_list<Char> il)
       : basic_string(il.begin(), il.size()) {}
 
-  template <typename It> basic_string(It first, It last) {
+  template <typename It>
+    requires(!is_integral_v<It>)
+  basic_string(It first, It last) {
     size_ = cap_ = 0;
     data_ = nullptr;
     for (auto it = first; it != last; ++it)

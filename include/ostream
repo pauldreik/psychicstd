@@ -139,6 +139,56 @@ private:
     return *this;
   }
 
+  // Write a C-locale numeric string, applying the imbued numpunct (decimal
+  // point + thousands grouping of the integer part) when one is installed.
+  // Default streams have no facet, so this is just pad_and_write (hot path).
+  void num_write(const char* buf, int n) {
+    const numpunct<Char>* np = this->loc_.template _facet<numpunct<Char>>();
+    if (!np) {
+      pad_and_write(buf, n);
+      return;
+    }
+    char dp = (char)np->decimal_point();
+    char ts = (char)np->thousands_sep();
+    basic_string<Char> grp = np->grouping();
+    char out[80];
+    int o = 0;
+    auto emit1 = [&](char c) {
+      if (o < (int)sizeof(out) - 1)
+        out[o++] = c;
+    };
+    int i = 0;
+    if (i < n && (buf[i] == '-' || buf[i] == '+'))
+      emit1(buf[i++]);
+    int digstart = i;
+    while (i < n && buf[i] >= '0' && buf[i] <= '9')
+      ++i;
+    if (grp.empty() || !ts) {
+      for (int k = digstart; k < i; ++k)
+        emit1(buf[k]);
+    } else {
+      char tmp[40];
+      int t = 0, c = 0, gi = 0, size = (unsigned char)grp[0];
+      for (int k = i - 1; k >= digstart; --k) {
+        if (size > 0 && c == size) {
+          if (t < (int)sizeof(tmp))
+            tmp[t++] = ts;
+          c = 0;
+          if (gi + 1 < (int)grp.size())
+            size = (unsigned char)grp[++gi];
+        }
+        if (t < (int)sizeof(tmp))
+          tmp[t++] = buf[k];
+        ++c;
+      }
+      for (int k = t - 1; k >= 0; --k)
+        emit1(tmp[k]);
+    }
+    for (; i < n; ++i)
+      emit1(buf[i] == '.' ? dp : buf[i]);
+    pad_and_write(out, o);
+  }
+
   template <typename V> basic_ostream& write_int(V v) {
     char buf[32];
     int n;
@@ -165,8 +215,12 @@ private:
     } else {
       n = __builtin_snprintf(buf, sizeof(buf), "%lld", (long long)v);
     }
-    if (n > 0)
-      pad_and_write(buf, n);
+    if (n > 0) {
+      if (this->flags_ & (ios_base::hex | ios_base::oct))
+        pad_and_write(buf, n);
+      else
+        num_write(buf, n);
+    }
     return *this;
   }
 
@@ -193,8 +247,12 @@ private:
     } else {
       n = __builtin_snprintf(buf, sizeof(buf), "%llu", (unsigned long long)v);
     }
-    if (n > 0)
-      pad_and_write(buf, n);
+    if (n > 0) {
+      if (this->flags_ & (ios_base::hex | ios_base::oct))
+        pad_and_write(buf, n);
+      else
+        num_write(buf, n);
+    }
     return *this;
   }
 
@@ -210,7 +268,7 @@ private:
                        spec);
     int n = __builtin_snprintf(buf, sizeof(buf), fmt, v);
     if (n > 0)
-      pad_and_write(buf, n);
+      num_write(buf, n);
     return *this;
   }
 
@@ -229,7 +287,7 @@ private:
                        spec);
     int n = __builtin_snprintf(buf, sizeof(buf), fmt, v);
     if (n > 0)
-      pad_and_write(buf, n);
+      num_write(buf, n);
     return *this;
   }
 };

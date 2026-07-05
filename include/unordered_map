@@ -1,7 +1,10 @@
 #pragma once
+#include <__psychicstd_config>
+#include <__psychicstd_except>
 #include <cstddef>
 #include <functional>
 #include <initializer_list>
+#include <iterator>
 #include <memory>
 #include <utility>
 
@@ -90,6 +93,11 @@ public:
   using const_reference = const value_type&;
 
   struct iterator {
+    using iterator_category = forward_iterator_tag;
+    using value_type = pair<const Key, T>;
+    using difference_type = ptrdiff_t;
+    using pointer = value_type*;
+    using reference = value_type&;
     unordered_map* m;
     size_t b;
     Node* n;
@@ -111,6 +119,11 @@ public:
     }
   };
   struct const_iterator {
+    using iterator_category = forward_iterator_tag;
+    using value_type = pair<const Key, T>;
+    using difference_type = ptrdiff_t;
+    using pointer = const value_type*;
+    using reference = const value_type&;
     const unordered_map* m;
     size_t b;
     const Node* n;
@@ -229,13 +242,13 @@ public:
   T& at(const Key& k) {
     auto it = find(k);
     if (it == end())
-      __builtin_trap();
+      _PSYCHICSTD_THROW(out_of_range("unordered_map::at"));
     return it->second;
   }
   const T& at(const Key& k) const {
     auto it = find(k);
     if (it == end())
-      __builtin_trap();
+      _PSYCHICSTD_THROW(out_of_range("unordered_map::at"));
     return it->second;
   }
   size_type count(const Key& k) const { return find(k) != end() ? 1 : 0; }

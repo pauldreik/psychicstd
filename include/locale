@@ -1,17 +1,99 @@
 #pragma once
 #include <cwchar>
+#include <string>
 
 namespace std {
 
+// Minimal locale: enough to declare facets (numpunct), install one via the
+// (locale, facet*) constructor, set the global, and imbue a stream. Facets are
+// reference-counted and owned, so code that does `new Facet` and hands it to a
+// locale does not leak. psychicstd's formatting is locale-independent, so the
+// installed facets do not affect output -- they just need to compile and run.
 class locale {
 public:
-  locale() = default;
-  locale(const char*) {}
+  class facet {
+  public:
+    virtual ~facet() = default;
+    facet(const facet&) = delete;
+    facet& operator=(const facet&) = delete;
+
+  protected:
+    facet() = default;
+  };
+  class id {};
+
+  locale() noexcept = default;
+  locale(const char*) noexcept {}
+  locale(const locale& o) noexcept : rep_(o.rep_) {
+    if (rep_)
+      ++rep_->refs;
+  }
+  locale& operator=(const locale& o) noexcept {
+    if (rep_ != o.rep_) {
+      if (o.rep_)
+        ++o.rep_->refs;
+      _release();
+      rep_ = o.rep_;
+    }
+    return *this;
+  }
+  ~locale() { _release(); }
+
+  // Install facet f into (a copy of) other. Minimal: owns only f.
+  template <typename Facet>
+  locale(const locale&, Facet* f) : rep_(new _rep(f)) {}
+
   static const locale& classic() {
     static locale c;
     return c;
   }
-  bool operator==(const locale&) const { return true; }
+  static locale global(const locale& loc) {
+    locale& g = _global();
+    locale prev = g;
+    g = loc;
+    return prev;
+  }
+
+  bool operator==(const locale& o) const noexcept { return rep_ == o.rep_; }
+  bool operator!=(const locale& o) const noexcept { return rep_ != o.rep_; }
+
+  // Internal: the installed facet if it is (dynamic-castable to) F, else null.
+  template <typename F> const F* _facet() const {
+    return rep_ ? dynamic_cast<const F*>(rep_->f) : nullptr;
+  }
+
+private:
+  struct _rep {
+    long refs = 1;
+    facet* f = nullptr;
+    explicit _rep(facet* fp) : f(fp) {}
+    ~_rep() { delete f; }
+  };
+  _rep* rep_ = nullptr;
+  void _release() noexcept {
+    if (rep_ && --rep_->refs == 0)
+      delete rep_;
+  }
+  static locale& _global() {
+    static locale g;
+    return g;
+  }
+};
+
+template <typename Char> class numpunct : public locale::facet {
+public:
+  using char_type = Char;
+  using string_type = basic_string<Char>;
+
+  Char decimal_point() const { return do_decimal_point(); }
+  Char thousands_sep() const { return do_thousands_sep(); }
+  string_type grouping() const { return do_grouping(); }
+
+protected:
+  ~numpunct() override = default;
+  virtual Char do_decimal_point() const { return Char('.'); }
+  virtual Char do_thousands_sep() const { return Char(','); }
+  virtual string_type do_grouping() const { return string_type(); }
 };
 
 // Stub facets for fmt's chrono support
