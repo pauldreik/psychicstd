@@ -1,4 +1,6 @@
 #pragma once
+#include <__psychicstd_config>
+#include <__psychicstd_except>
 #include <cstddef>
 #include <functional>
 #include <initializer_list>
@@ -229,13 +231,13 @@ public:
   T& at(const Key& k) {
     auto it = find(k);
     if (it == end())
-      __builtin_trap();
+      _PSYCHICSTD_THROW(out_of_range("unordered_map::at"));
     return it->second;
   }
   const T& at(const Key& k) const {
     auto it = find(k);
     if (it == end())
-      __builtin_trap();
+      _PSYCHICSTD_THROW(out_of_range("unordered_map::at"));
     return it->second;
   }
   size_type count(const Key& k) const { return find(k) != end() ? 1 : 0; }
