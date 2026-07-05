@@ -29,6 +29,8 @@ public:
       : buf_(static_cast<string_type&&>(s)), rpos_(0) {}
 
   string_type str() const { return buf_; }
+  // O(1) buffer length, so tellp need not copy the whole buffer via str().
+  size_t _size() const noexcept { return buf_.size(); }
   void str(const string_type& s) {
     buf_ = s;
     rpos_ = 0;
@@ -196,7 +198,7 @@ public:
   }
 
   // Write position = length of accumulated string
-  streampos tellp() { return streampos(buf_.str().size()); }
+  streampos tellp() { return streampos(buf_._size()); }
   streampos tellg() { return buf_.pubseekoff(0, ios_base::cur, ios_base::in); }
 
 private:
