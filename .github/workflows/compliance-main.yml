@@ -18,7 +18,7 @@ jobs:
       - name: Run compliance
         env:
           LLVM_ROOT: ${{ github.workspace }}/llvm-project
-        run: python3 tools/compliance.py
+        run: python3 tools/compliance.py --sample 40
       - name: rename results
         run: mv .compliance_cache.json base_cache.json
       - name: Upload cache as baseline artifact

@@ -61,6 +61,11 @@ SAN_ENV = {
     "ASAN_OPTIONS": "abort_on_error=1:detect_leaks=1",
     "UBSAN_OPTIONS": "print_stacktrace=1:halt_on_error=1",
 }
+# Extra compile flags (both STLs), e.g. -O2 for the nightly full run so slow
+# tests fit in the per-test timeout. Per-test compile+run timeout in seconds.
+EXTRA_CFLAGS: list[str] = []
+TEST_TIMEOUT = 20
+
 # Known sanitizer failures; the gate fails only on failures NOT listed here.
 BASELINE_FILE = REPO_ROOT / "tools" / "compliance_sanitize_baseline.txt"
 
@@ -195,7 +200,7 @@ def try_compile_run(
         ]
         t0 = time.perf_counter()
         try:
-            r = subprocess.run(cmd, capture_output=True, timeout=20)
+            r = subprocess.run(cmd, capture_output=True, timeout=TEST_TIMEOUT)
         except (subprocess.TimeoutExpired, FileNotFoundError):
             return "cfail", None
         compile_ms = (time.perf_counter() - t0) * 1000
@@ -204,7 +209,7 @@ def try_compile_run(
         if not run_exe:
             return "pass", compile_ms
         env = {**os.environ, **SAN_ENV} if SANITIZE else None
-        ok, _ = run_cmd([exe], env=env)
+        ok, _ = run_cmd([exe], timeout=TEST_TIMEOUT, env=env)
         return ("pass" if ok else "rfail"), compile_ms
     finally:
         try:
@@ -361,11 +366,17 @@ def check_header(
     cached_tests: dict = dict(header_cache.get("tests", {}))
 
     san = SAN_CFLAGS if SANITIZE else []
-    sys_flags: list[str] = [*san]
+    sys_flags: list[str] = [*san, *EXTRA_CFLAGS]
     # -fvisibility=hidden keeps psychicstd's inline symbols from interposing
     # libstdc++'s at runtime (which sanitizers/default libs pull in) -- the
     # documented way to use psychicstd; without it iostream init can crash.
-    psy_flags = ["-nostdinc++", "-fvisibility=hidden", f"-I{PSYCHICSTD}", *san]
+    psy_flags = [
+        "-nostdinc++",
+        "-fvisibility=hidden",
+        f"-I{PSYCHICSTD}",
+        *san,
+        *EXTRA_CFLAGS,
+    ]
 
     if recheck:
         # Re-run previously cached tests; reset results so they run fresh
@@ -450,6 +461,7 @@ def _print_failing(headers: list[str], cache: dict) -> None:
 
 
 def main() -> None:
+    global SANITIZE, CACHE_FILE, EXTRA_CFLAGS, TEST_TIMEOUT
     ap = argparse.ArgumentParser(description="Generate compliance.md")
     ap.add_argument("headers", nargs="*", help="Headers to filter; default: all")
     ap.add_argument(
@@ -481,10 +493,24 @@ def main() -> None:
         help="With --sanitize: write the current known failures to the baseline "
         "instead of failing on them",
     )
+    ap.add_argument(
+        "--cxxflags",
+        default="",
+        help="Extra compile flags for both STLs (e.g. '-O2' so slow tests fit "
+        "the timeout in a full run)",
+    )
+    ap.add_argument(
+        "--timeout",
+        type=int,
+        default=TEST_TIMEOUT,
+        help=f"Per-test compile+run timeout in seconds (default: {TEST_TIMEOUT})",
+    )
     args = ap.parse_args()
 
+    EXTRA_CFLAGS = args.cxxflags.split()
+    TEST_TIMEOUT = args.timeout
+
     if args.sanitize:
-        global SANITIZE, CACHE_FILE
         SANITIZE = True
         CACHE_FILE = REPO_ROOT / ".compliance_cache.sanitize.json"
 

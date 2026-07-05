@@ -80,6 +80,28 @@ public:
   }
   basic_ostream& operator<<(nullptr_t) { return write_padded("nullptr"); }
 
+  // Copy the source streambuf's characters to this stream.
+  basic_ostream& operator<<(basic_streambuf<Char, Traits>* sb) {
+    if (!sb) {
+      this->setstate(ios_base::badbit);
+      return *this;
+    }
+    auto* dst = this->rdbuf();
+    streamsize count = 0;
+    int_type c;
+    while (!Traits::eq_int_type(c = sb->sbumpc(), Traits::eof())) {
+      if (!dst || Traits::eq_int_type(dst->sputc(Traits::to_char_type(c)),
+                                      Traits::eof())) {
+        this->setstate(ios_base::badbit);
+        break;
+      }
+      ++count;
+    }
+    if (count == 0)
+      this->setstate(ios_base::failbit);
+    return *this;
+  }
+
   basic_ostream& operator<<(char c) {
     pad_and_write(&c, 1);
     return *this;
@@ -100,6 +122,12 @@ public:
     }
     return *this;
   }
+  basic_ostream& operator<<(const signed char* s) {
+    return *this << reinterpret_cast<const char*>(s);
+  }
+  basic_ostream& operator<<(const unsigned char* s) {
+    return *this << reinterpret_cast<const char*>(s);
+  }
   basic_ostream& __put(const Char* s, streamsize n) {
     pad_and_write(s, n);
     return *this;
@@ -110,8 +138,9 @@ protected:
 
 private:
   void emit(const char* s, streamsize n) {
-    if (this->rdbuf())
-      this->rdbuf()->sputn(s, n);
+    auto* sb = this->rdbuf();
+    if (!sb || sb->sputn(s, n) != n)
+      this->setstate(ios_base::badbit);
   }
 
   void pad_and_write(const char* s, streamsize n) {
