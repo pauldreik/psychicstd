@@ -219,6 +219,12 @@ private:
           data_[i + n] = data_[i];
       }
     }
+    // Move-assign above leaves the vacated gap [idx, idx+n) holding live
+    // (moved-from) objects; destroy them so callers construct into raw storage
+    // (otherwise a copy-only element's resource would leak).
+    size_type stop = idx + n < size_ ? idx + n : size_;
+    for (size_type j = idx; j < stop; ++j)
+      _destroy(data_ + j);
   }
 
   // Shift elements [from, size_) left by n positions.
