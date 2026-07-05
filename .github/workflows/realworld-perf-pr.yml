@@ -1,0 +1,31 @@
+---
+name: realworld performance diff
+on:
+  pull_request:
+    branches: [main]
+permissions:
+  pull-requests: write
+jobs:
+  rdfind:
+    # Build-time (configure/compile/tests) of a real project, PR vs main, in ONE
+    # job on ONE runner -- runners vary in absolute speed, so both sides are
+    # measured here (swapping only the psychicstd include dir). Same approach and
+    # comment format as the compile-time performance diff.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0  # need origin/main for the comparison worktree
+      - name: Enable deb-src
+        run: |
+          sudo sed -i 's/^Types: deb$/Types: deb deb-src/' /etc/apt/sources.list.d/ubuntu.sources
+          sudo apt-get update
+      - name: Install rdfind build dependencies
+        run: sudo apt-get build-dep -y rdfind
+      - name: Compare rdfind build time (PR vs main)
+        run: python3 scripts/compare_realworld.py rdfind --reps 3 | tee diff.md
+      - name: Post realworld perf diff as PR comment
+        uses: marocchino/sticky-pull-request-comment@v3
+        with:
+          header: realworld-rdfind
+          path: diff.md

@@ -119,6 +119,16 @@ def main() -> None:
         help="Append a line telling the reader how to regenerate this diff "
         "locally (e.g. the compare_performance.sh invocation)",
     )
+    ap.add_argument(
+        "--title",
+        default="Compile-time performance diff",
+        help="Markdown heading for the comment",
+    )
+    ap.add_argument(
+        "--what",
+        default="psychicstd compile time",
+        help="Noun phrase for what is measured (e.g. 'rdfind build time')",
+    )
     args = ap.parse_args()
 
     base = load(args.base)
@@ -174,10 +184,10 @@ def main() -> None:
     if base_ver and head_ver and base_ver != head_ver:
         compiler = f"PR: {head_ver} / main: {base_ver}"
 
-    lines: list[str] = ["## Compile-time performance diff\n"]
+    lines: list[str] = [f"## {args.title}\n"]
     lines.append(f"Compiler: `{compiler}`.\n")
     lines.append(
-        f"psychicstd compile time, main vs this PR (same runner). "
+        f"{args.what}, main vs this PR (same runner). "
         f"{GREEN} faster · {RED} slower · {YELLOW} within noise. A change is colored only "
         f"when its bootstrap 95% CI excludes 0 and it clears ±{thr:g}% / {min_abs:g}ms. "
         f"Median system-time drift (noise proxy): **{noise:.1f}%**.\n"
