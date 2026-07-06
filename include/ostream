@@ -32,8 +32,9 @@ public:
   };
 
   basic_ostream& write(const Char* s, streamsize n) {
-    if (this->rdbuf())
-      this->rdbuf()->sputn(s, n);
+    auto* sb = this->rdbuf();
+    if (!sb || sb->sputn(s, n) != n)
+      this->setstate(ios_base::badbit);
     return *this;
   }
   basic_ostream& put(Char c) {
