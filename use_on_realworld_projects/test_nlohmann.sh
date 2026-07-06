@@ -42,8 +42,12 @@ PSYCHICHSTD="$(
   #                           which the standard leaves unspecified (psychicstd's
   #                           partial_sort is a full sort)
   #   cmake_fetch           - exercises FetchContent, not psychicstd
+  #   cmake_import          - upstream bug: cmake_import(_minver)_configure/build
+  #                           add_test() without WORKING_DIRECTORY, so both pairs
+  #                           default to the same build/tests dir and race under
+  #                           -j; upstream already labels them "not_reproducible"
   ctest --test-dir build -j"$(nproc)" --output-on-failure \
-    -E 'unicode|cbor|msgpack|algorithms|cmake_fetch'
+    -E 'unicode|cbor|msgpack|algorithms|cmake_fetch|cmake_import'
   rm -rf build
 
   # Build all 217 API examples from the documentation
