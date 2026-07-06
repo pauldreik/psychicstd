@@ -5,6 +5,7 @@
 #include <initializer_list>
 #include <type_traits>
 #include <unistd.h>
+#include <vector>
 
 namespace std {
 
@@ -102,7 +103,9 @@ public:
       mt_[i] = 1812433253U * (mt_[i - 1] ^ (mt_[i - 1] >> 30)) + i;
     index_ = N;
   }
-  template <typename SSeq> void seed(SSeq& sq) {
+  template <typename SSeq,
+            typename = enable_if_t<!is_convertible_v<SSeq, result_type>>>
+  void seed(SSeq& sq) {
     sq.generate(mt_, mt_ + N);
     index_ = N;
   }
@@ -192,11 +195,12 @@ public:
   template <typename Engine>
   result_type operator()(Engine& g, const param_type& p) {
     using UInt = make_unsigned_t<Int>;
+    constexpr UInt uint_max = static_cast<UInt>(-1);
     UInt range = static_cast<UInt>(p.b) - static_cast<UInt>(p.a);
-    if (range == ~UInt(0))
+    if (range == uint_max)
       return static_cast<Int>(g());
     ++range;
-    UInt mod = (~UInt(0) - range + 1) % range;
+    UInt mod = static_cast<UInt>(uint_max - range + 1) % range;
     UInt val;
     do {
       val = static_cast<UInt>(g());
@@ -278,6 +282,94 @@ public:
 
   result_type mean() const { return p_.mean; }
   result_type stddev() const { return p_.stddev; }
+
+private:
+  param_type p_;
+};
+
+// discrete_distribution
+template <typename IntType = int> class discrete_distribution {
+public:
+  using result_type = IntType;
+  struct param_type {
+    vector<double> probabilities{1.0};
+
+    param_type() = default;
+    template <typename InputIt>
+    param_type(InputIt first, InputIt last) : probabilities(first, last) {
+      normalize();
+    }
+    param_type(initializer_list<double> il)
+        : probabilities(il.begin(), il.end()) {
+      normalize();
+    }
+    template <typename UnaryOp>
+    param_type(size_t count, double xmin, double xmax, UnaryOp fw) {
+      if (count == 0) {
+        probabilities.assign(1, 1.0);
+      } else {
+        double delta = (xmax - xmin) / static_cast<double>(count);
+        probabilities.reserve(count);
+        for (size_t i = 0; i < count; ++i)
+          probabilities.push_back(
+              fw(xmin + delta * (static_cast<double>(i) + 0.5)));
+      }
+      normalize();
+    }
+
+  private:
+    void normalize() {
+      if (probabilities.empty()) {
+        probabilities.assign(1, 1.0);
+        return;
+      }
+      double sum = 0;
+      for (double w : probabilities)
+        sum += w;
+      if (sum <= 0) {
+        for (auto& w : probabilities)
+          w = 1.0 / static_cast<double>(probabilities.size());
+        return;
+      }
+      for (auto& w : probabilities)
+        w /= sum;
+    }
+  };
+
+  discrete_distribution() = default;
+  template <typename InputIt>
+  discrete_distribution(InputIt first, InputIt last) : p_(first, last) {}
+  discrete_distribution(initializer_list<double> il) : p_(il) {}
+  template <typename UnaryOp>
+  discrete_distribution(size_t count, double xmin, double xmax, UnaryOp fw)
+      : p_(count, xmin, xmax, fw) {}
+  explicit discrete_distribution(const param_type& p) : p_(p) {}
+
+  template <typename Engine> result_type operator()(Engine& g) {
+    return operator()(g, p_);
+  }
+
+  template <typename Engine>
+  result_type operator()(Engine& g, const param_type& p) {
+    uniform_real_distribution<double> u(0.0, 1.0);
+    double target = u(g);
+    double cumulative = 0.0;
+    size_t n = p.probabilities.size();
+    for (size_t i = 0; i + 1 < n; ++i) {
+      cumulative += p.probabilities[i];
+      if (target < cumulative)
+        return static_cast<result_type>(i);
+    }
+    return static_cast<result_type>(n - 1);
+  }
+
+  vector<double> probabilities() const { return p_.probabilities; }
+  param_type param() const { return p_; }
+  void param(const param_type& p) { p_ = p; }
+  result_type min() const { return result_type(0); }
+  result_type max() const {
+    return static_cast<result_type>(p_.probabilities.size() - 1);
+  }
 
 private:
   param_type p_;
