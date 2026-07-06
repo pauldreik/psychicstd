@@ -38,6 +38,7 @@ set(TESTS
     test_ratio
     test_regex
     test_set
+    test_span
     test_sstream
     test_stack
     test_stdexcept
