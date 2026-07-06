@@ -26,7 +26,7 @@ PSYCHICHSTD="$(
     -DSIMDUTF_FAST_TESTS=On \
     -DSIMDUTF_TOOLS=Off \
     -DSIMDUTF_CXX_STANDARD=20 \
-    -DCMAKE_CXX_FLAGS="-std=c++20 -nostdinc++ -isystem $PSYCHICHSTD" \
+    -DCMAKE_CXX_FLAGS="-std=c++20 -nostdinc++ -isystem $PSYCHICHSTD -D_PSYCHICSTD_COMPATIBILITY_LEVEL=0" \
     -DCMAKE_EXE_LINKER_FLAGS="-nodefaultlibs" \
     -DCMAKE_CXX_STANDARD_LIBRARIES="-lsupc++ -lm -lc -lgcc_s -lgcc" \
     -DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY \
