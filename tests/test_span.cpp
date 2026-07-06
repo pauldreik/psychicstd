@@ -1,5 +1,6 @@
 #include <array>
 #include <cassert>
+#include <cstddef>
 #include <span>
 #include <vector>
 
@@ -23,4 +24,11 @@ int main() {
   auto sub = s2.subspan(1);
   assert(sub.size() == 2);
   assert(sub[0] == 'b');
+
+  int data[4] = {1, 2, 3, 4};
+  auto bytes = std::as_bytes(std::span(data));
+  assert(bytes.size() == sizeof(data));
+  auto wbytes = std::as_writable_bytes(std::span(data));
+  wbytes[0] = std::byte{42};
+  assert(reinterpret_cast<unsigned char&>(data[0]) == 42);
 }

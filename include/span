@@ -104,4 +104,18 @@ template <typename R>
 span(R&) -> span<
     remove_reference_t<remove_pointer_t<decltype(declval<R&>().data())>>>;
 
+template <typename T, size_t Extent>
+span<const byte, Extent == dynamic_extent ? dynamic_extent : Extent * sizeof(T)>
+as_bytes(span<T, Extent> s) noexcept {
+  return {reinterpret_cast<const byte*>(s.data()), s.size_bytes()};
+}
+
+template <typename T, size_t Extent>
+span<byte, Extent == dynamic_extent ? dynamic_extent : Extent * sizeof(T)>
+as_writable_bytes(span<T, Extent> s) noexcept {
+  static_assert(!is_const_v<T>,
+                "as_writable_bytes requires a non-const element type");
+  return {reinterpret_cast<byte*>(s.data()), s.size_bytes()};
+}
+
 } // namespace std
