@@ -38,6 +38,7 @@ set(TESTS
     test_ratio
     test_regex
     test_set
+    test_span
     test_sstream
     test_stack
     test_stdexcept
@@ -62,6 +63,7 @@ foreach(t ${TESTS})
 
     add_executable(${t}_psychicstd ${t}.cpp)
     target_link_libraries(${t}_psychicstd PRIVATE psychicstd::psychicstd)
+    target_compile_features(${t}_psychicstd PRIVATE cxx_std_23)
     add_test(NAME ${t}_psychicstd COMMAND ${t}_psychicstd)
 endforeach()
 

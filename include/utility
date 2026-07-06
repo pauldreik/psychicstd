@@ -18,6 +18,9 @@ constexpr T&& forward(remove_reference_t<T>&& t) noexcept {
   return static_cast<T&&>(t);
 }
 
+template <typename T> constexpr const T& as_const(T& t) noexcept { return t; }
+template <typename T> void as_const(const T&&) = delete;
+
 template <typename T>
   requires(is_move_constructible_v<T> && is_move_assignable_v<T>)
 constexpr void swap(T& a, T& b) noexcept(is_nothrow_move_constructible_v<T> &&

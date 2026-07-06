@@ -29,3 +29,20 @@ jobs:
         with:
           header: realworld-rdfind
           path: diff.md
+  simdutf:
+    # Build-time (configure/compile/tests) of a real project, PR vs main, in ONE
+    # job on ONE runner -- runners vary in absolute speed, so both sides are
+    # measured here (swapping only the psychicstd include dir). Same approach and
+    # comment format as the compile-time performance diff.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0  # need origin/main for the comparison worktree
+      - name: Compare simdutf build time (PR vs main)
+        run: python3 scripts/compare_realworld.py simdutf --reps 3 | tee diff.md
+      - name: Post realworld perf diff as PR comment
+        uses: marocchino/sticky-pull-request-comment@v3
+        with:
+          header: realworld-simdutf
+          path: diff.md

@@ -53,3 +53,8 @@
 #ifndef __cpp_lib_three_way_comparison
 #define __cpp_lib_three_way_comparison 201907L
 #endif
+
+// std::span (<span>)
+#ifndef __cpp_lib_span
+#define __cpp_lib_span 202002L
+#endif
