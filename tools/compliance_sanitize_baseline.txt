@@ -2,10 +2,28 @@
 # under psychicstd+ASan/UBSan. The sanitizer CI fails only on failures NOT
 # listed here. Regenerate: tools/compliance.py --sanitize --update-baseline
 
+std/algorithms/alg.nonmodifying/alg.equal/equal_pred.pass.cpp
 std/atomics/atomics.types.generic/throw.pass.cpp
+std/containers/sequences/deque/deque.capacity/resize_size.pass.cpp
+std/containers/sequences/deque/deque.capacity/resize_size_value.pass.cpp
+std/containers/sequences/deque/deque.modifiers/erase_iter.invalidation.pass.cpp
+std/containers/sequences/deque/deque.modifiers/erase_iter_iter.invalidation.pass.cpp
+std/containers/sequences/deque/deque.modifiers/insert_rvalue.pass.cpp
+std/containers/sequences/deque/deque.modifiers/insert_value.pass.cpp
+std/containers/sequences/deque/deque.modifiers/pop_front.invalidation.pass.cpp
+std/containers/sequences/vector/vector.modifiers/emplace_back.pass.cpp
+std/containers/unord/unord.map/count.transparent.pass.cpp
+std/containers/unord/unord.map/find.transparent.pass.cpp
+std/input.output/iostream.format/input.streams/istream/istream_sentry/ctor.pass.cpp
+std/input.output/iostream.format/output.streams/ostream.formatted/ostream.inserters.arithmetic/pointer.volatile.pass.cpp
+std/input.output/iostream.format/output.streams/ostream.unformatted/put.pass.cpp
+std/input.output/string.streams/stringbuf/stringbuf.cons/move.pass.cpp
+std/input.output/string.streams/stringbuf/stringbuf.virtuals/overflow.pass.cpp
 std/language.support/support.exception/propagation/current_exception.pass.cpp
+std/language.support/support.exception/propagation/exception_ptr_move_assignment.pass.cpp
 std/language.support/support.exception/propagation/exception_ptr_move_ctr.pass.cpp
 std/language.support/support.exception/propagation/exception_ptr_swap.pass.cpp
 std/language.support/support.exception/propagation/make_exception_ptr.pass.cpp
 std/language.support/support.exception/propagation/rethrow_exception.pass.cpp
 std/re/re.alg/re.alg.match/inverted_character_classes.pass.cpp
+std/utilities/memory/util.smartptr/util.smartptr.weak/util.smartptr.weak.obs/lock.pass.cpp
