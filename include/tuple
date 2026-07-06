@@ -68,13 +68,14 @@ public:
   }
 
   // Non-template constructor: allows {} to initialise individual element types.
-  explicit tuple(Ts&&... args)
+  explicit(!(is_convertible_v<Ts, Ts> && ...)) tuple(Ts&&... args)
     requires(sizeof...(Ts) != 0)
       : base(static_cast<Ts&&>(args)...) {}
 
   template <typename... Us>
     requires(sizeof...(Us) == sizeof...(Ts) && sizeof...(Ts) != 0)
-  explicit tuple(Us&&... args) : base(static_cast<Us&&>(args)...) {}
+  explicit(!(is_convertible_v<Us, Ts> && ...)) tuple(Us&&... args)
+      : base(static_cast<Us&&>(args)...) {}
 
   template <typename... Us, size_t... Is>
   tuple(const tuple<Us...>& other, index_sequence<Is...>)
