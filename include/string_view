@@ -6,7 +6,6 @@
 #include <iterator>
 #include <limits>
 #include <type_traits>
-
 namespace std {
 
 template <typename Char> struct basic_string_view {
@@ -58,6 +57,8 @@ template <typename Char> struct basic_string_view {
 
   constexpr size_type find(basic_string_view sv,
                            size_type pos = 0) const noexcept {
+    if (sv.size_ == 0)
+      return pos <= size_ ? pos : npos;
     if (sv.size_ > size_)
       return npos;
     for (size_type i = pos; i <= size_ - sv.size_; ++i)
@@ -68,7 +69,7 @@ template <typename Char> struct basic_string_view {
 
   constexpr int compare(basic_string_view o) const noexcept {
     size_type n = size_ < o.size_ ? size_ : o.size_;
-    int r = __builtin_memcmp(data_, o.data_, n);
+    int r = n ? __builtin_memcmp(data_, o.data_, n) : 0;
     if (r != 0)
       return r;
     if (size_ < o.size_)
@@ -80,11 +81,12 @@ template <typename Char> struct basic_string_view {
 
   constexpr bool starts_with(basic_string_view sv) const noexcept {
     return size_ >= sv.size_ &&
-           __builtin_memcmp(data_, sv.data_, sv.size_) == 0;
+           (sv.size_ == 0 || __builtin_memcmp(data_, sv.data_, sv.size_) == 0);
   }
   constexpr bool ends_with(basic_string_view sv) const noexcept {
     return size_ >= sv.size_ &&
-           __builtin_memcmp(data_ + size_ - sv.size_, sv.data_, sv.size_) == 0;
+           (sv.size_ == 0 || __builtin_memcmp(data_ + size_ - sv.size_,
+                                              sv.data_, sv.size_) == 0);
   }
   constexpr bool contains(basic_string_view sv) const noexcept {
     return find(sv) != npos;
@@ -105,7 +107,7 @@ template <typename C>
 constexpr bool operator==(basic_string_view<C> a,
                           type_identity_t<basic_string_view<C>> b) noexcept {
   return a.size() == b.size() &&
-         __builtin_memcmp(a.data(), b.data(), a.size()) == 0;
+         (a.size() == 0 || __builtin_memcmp(a.data(), b.data(), a.size()) == 0);
 }
 template <typename C>
 constexpr auto operator<=>(basic_string_view<C> a,
