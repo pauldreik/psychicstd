@@ -1,23 +1,23 @@
 # Eigen Test Compile-Time Comparison
 
-psychicstd vs system libstdc++ (GCC 15)
+psychicstd vs system libstdc++ (GCC 14)
 
 | Test | psychicstd (ms) | libstdc++ (ms) | Speedup |
 |------|-----------------|----------------|---------|
-| basicstuff | 5922 | 6940 | 1.2x |
-| meta | 415 | 996 | 2.4x |
-| numext | 538 | 1118 | 2.1x |
-| block | 342 | 919 | 2.7x |
-| corners | 333 | 917 | 2.8x |
-| determinant | 342 | 917 | 2.7x |
-| diagonal | 332 | 930 | 2.8x |
-| array_cwise | 354 | 940 | 2.7x |
-| array_for_matrix | 367 | 940 | 2.6x |
-| constructor | 495 | 1074 | 2.2x |
-| adjoint | 426 | 1009 | 2.4x |
-| triangular | 378 | 955 | 2.5x |
-| **Average (12 tests)** | **853** | **1471** | **1.7x** |
+| basicstuff | 6697 | 7892 | 1.2x |
+| meta | 494 | 1288 | 2.6x |
+| numext | 608 | 1416 | 2.3x |
+| block | 390 | 1232 | 3.2x |
+| corners | 389 | 1225 | 3.1x |
+| determinant | 390 | 1215 | 3.1x |
+| diagonal | 392 | 1242 | 3.2x |
+| array_cwise | 423 | 1281 | 3.0x |
+| array_for_matrix | 436 | 1258 | 2.9x |
+| constructor | 587 | 1426 | 2.4x |
+| adjoint | 502 | 1354 | 2.7x |
+| triangular | 431 | 1270 | 2.9x |
+| **Average (12 tests)** | **978** | **1841** | **1.9x** |
 
 ⚠ = compiled but test run failed (not included in average)
 
-Generated 2026-07-01T00:36:53+02:00
+Generated 2026-07-07T07:40:20+02:00

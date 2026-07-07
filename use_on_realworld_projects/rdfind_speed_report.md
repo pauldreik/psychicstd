@@ -8,14 +8,14 @@ make check measures runtime, not compile time.
 
 | step | system (s) | psychicstd (s) | speedup |
 | --- | ---: | ---: | ---: |
-| configure | 1.11 | 0.98 | 1.13x |
-| make | 2.61 | 0.92 | 2.85x |
-| make check | 2.27 | 6.18 | 0.37x |
+| configure | 1.27 | 1.12 | 1.14x |
+| make | 3.23 | 1.08 | 2.98x |
+| make check | 2.48 | 6.10 | 0.41x |
 
 ## Release (-O2)
 
 | step | system (s) | psychicstd (s) | speedup |
 | --- | ---: | ---: | ---: |
-| configure | 1.10 | 0.98 | 1.12x |
-| make | 3.36 | 1.62 | 2.07x |
-| make check | 2.17 | 1.26 | 1.72x |
+| configure | 1.29 | 1.16 | 1.11x |
+| make | 4.01 | 1.99 | 2.01x |
+| make check | 2.59 | 1.49 | 1.74x |
