@@ -4,16 +4,16 @@ This is a **higly experimental** C++ standard library optimized for compilation 
 
 It is not complete. It is not fully compliant. But it is good enough to quickly iterate on code. Here are some real world projects that compile with psychicstd. The number indicate the speedup relative libstdc++ for the compilation phase (1x means same speed, higher is better):
 
-| Project                                                     | Compile time speedup                                      | comment                                                                                                            |
+| Project | Compile time speedup | comment |
 |-------------------------------------------------------------|-----------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------|
-| [catch2](https://github.com/catchorg/Catch2)                | [1.8x](use_on_realworld_projects/catch2_speed_report.md)  |                                                                                                                    |
-| [cppcheck](https://github.com/cppcheck-opensource/cppcheck) | [2.5x](use_on_realworld_projects/cppcheck_speed_report.md)|                                                                                                                    |
-| [eigen](https://gitlab.com/libeigen/eigen)                  | [1.9x](use_on_realworld_projects/eigen_speed_report.md)   |                                                                                                                    |
-| [fmt](https://github.com/fmtlib/fmt)                        |                                                           | Just compilation, no unit tests. (gtest has not been tested yet)                                                   |
-| [nlohmann json](https://json.nlohmann.me/)                  |                                                           |                                                                                                                    |
-| [rdfind](https://rdfind.pauldreik.se/)                      | [2.98x](use_on_realworld_projects/rdfind_speed_report.md) | Runs in psychic strict mode, see "Compatibility levels" further down this document.                                |
-| [simdutf](https://github.com/simdutf/simdutf)               | 1.14x                                                     | Consists mostly of simd intrinsics, no speedup expected. Measured in release mode and without the tools component. |
-| [wordcounter](benchmarks/compile_time/bench_wordcounter.cpp)| [4.8x](speed.md)                                          | [demo program using STL](benchmarks/compile_time/bench_wordcounter.cpp). Counts word occurence in text files.      |
+| [catch2](https://github.com/catchorg/Catch2) | [1.8x](use_on_realworld_projects/catch2_speed_report.md) | |
+| [cppcheck](https://github.com/cppcheck-opensource/cppcheck) | [2.5x](use_on_realworld_projects/cppcheck_speed_report.md)| |
+| [eigen](https://gitlab.com/libeigen/eigen) | [1.9x](use_on_realworld_projects/eigen_speed_report.md) | |
+| [fmt](https://github.com/fmtlib/fmt) | | Just compilation, no unit tests. (gtest has not been tested yet) |
+| [nlohmann json](https://json.nlohmann.me/) | | |
+| [rdfind](https://rdfind.pauldreik.se/) | [2.98x](use_on_realworld_projects/rdfind_speed_report.md) | Runs in psychic strict mode, see "Compatibility levels" further down this document. |
+| [simdutf](https://github.com/simdutf/simdutf) | 1.14x | Consists mostly of simd intrinsics, no speedup expected. Measured in release mode and without the tools component. |
+| [wordcounter](benchmarks/compile_time/bench_wordcounter.cpp)| [4.8x](speed.md) | [demo program using STL](benchmarks/compile_time/bench_wordcounter.cpp). Counts word occurence in text files. |
 
 Find the scripts validating the build and generating the above number in the use_on_realworld_projects/ directory.
 
