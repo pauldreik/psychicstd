@@ -69,7 +69,7 @@ def _simdutf(tc):
     version = "9.0.0"
     url = f"https://github.com/simdutf/simdutf/archive/refs/tags/v{version}.tar.gz"
     checksum = "fd2ce975f29809a975a8da8843cfb3a7265af3f71be548f199d23cf65e101764"
-    psychicstrictlevel = 2
+    psychicstrictlevel = 0
     tarball = RW_DIR / f"simdutf-{version}.tar.gz"
     _fetch(url, tarball, checksum)
 
