@@ -1,31 +1,27 @@
 # Cppcheck Compile-Time Comparison
 
-psychicstd vs system libstdc++ (GCC 15)
+psychicstd vs system libstdc++ (GCC 14)
 
 | Source file | psychicstd (ms) | libstdc++ (ms) | Speedup |
 |-------------|-----------------|----------------|---------|
 | addoninfo | — | — | — |
-| analyzerinfo | 188 | 439 | 2.3x |
-| color | 80 | 168 | 2.1x |
-| timer | 163 | 764 | 4.7x |
-| errortypes | 58 | 242 | 4.2x |
-| astutils | 661 | 1354 | 2.0x |
-| checkassert | 166 | 558 | 3.4x |
-| checkbool | 196 | 556 | 2.8x |
-| checkcondition | 437 | 943 | 2.2x |
-| checkfunctions | 274 | 679 | 2.5x |
-| tokenize | 1494 | 3154 | 2.1x |
-| symboldatabase | 1339 | 2653 | 2.0x |
-| valueflow | 1844 | 3889 | 2.1x |
-| checkclass | 792 | 1560 | 2.0x |
-| checkbufferoverrun | 375 | 908 | 2.4x |
+| analyzerinfo | 218 | 546 | 2.5x |
+| color | 99 | 206 | 2.1x |
+| timer | 181 | 960 | 5.3x |
+| errortypes | 68 | 296 | 4.4x |
+| astutils | 729 | 1586 | 2.2x |
+| checkassert | 191 | 690 | 3.6x |
+| checkbool | 202 | 706 | 3.5x |
+| checkcondition | 487 | 1135 | 2.3x |
+| checkfunctions | 294 | 863 | 2.9x |
+| tokenize | 1582 | 3694 | 2.3x |
+| symboldatabase | 1424 | 3055 | 2.1x |
+| valueflow | 1861 | 4515 | 2.4x |
+| checkclass | 845 | 1813 | 2.1x |
+| checkbufferoverrun | 424 | 1126 | 2.7x |
 | cmdlineparser | — | — | — |
-| filelister | 119 | 403 | 3.4x |
-| cppcheckexecutor | 321 | 1114 | 3.5x |
-| **Total (16 files)** | **8507** | **19384** | **2.3x** |
+| filelister | 137 | 498 | 3.6x |
+| cppcheckexecutor | 365 | 1449 | 4.0x |
+| **Total (16 files)** | **9107** | **23138** | **2.5x** |
 
-— = excluded (requires CMake-generated config.h)
-
-16 of 18 selected source files compile standalone. Total time: 8.5s psychicstd vs 19.4s libstdc++ — a 2.3x speedup.
-
-Generated 2026-07-01T00:10:51+02:00
+Generated 2026-07-07T07:39:39+02:00

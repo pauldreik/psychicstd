@@ -2,18 +2,22 @@
 
 This is a **higly experimental** C++ standard library optimized for compilation speed. It is intended to be used during general C++ development to speed up the edit-compile-debug cycle. It is not at all intended to be used for shipping binaries.
 
-It is not complete. It is not fully compliant. But it is good enough to quickly iterate on code. Here are some real world projects that compile with psychicstd. The number indicate the speedup relative libstdc++:
+It is not complete. It is not fully compliant. But it is good enough to quickly iterate on code. Here are some real world projects that compile with psychicstd. The number indicate the speedup relative libstdc++ for the compilation phase (1x means same speed, higher is better):
 
-- catch2 [1.6x](use_on_realworld_projects/catch2_speed_report.md)
-- cppcheck [2.3x](use_on_realworld_projects/cppcheck_speed_report.md)
-- eigen [1.7x](use_on_realworld_projects/eigen_speed_report.md)
-- fmt
-- nlohmann json
-- rdfind [3.45x](use_on_realworld_projects/rdfind_speed_report.md)
+| Project | Compile time speedup | comment |
+|-------------------------------------------------------------|-----------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------|
+| [catch2](https://github.com/catchorg/Catch2) | [1.8x](use_on_realworld_projects/catch2_speed_report.md) | |
+| [cppcheck](https://github.com/cppcheck-opensource/cppcheck) | [2.5x](use_on_realworld_projects/cppcheck_speed_report.md)| |
+| [eigen](https://gitlab.com/libeigen/eigen) | [1.9x](use_on_realworld_projects/eigen_speed_report.md) | |
+| [fmt](https://github.com/fmtlib/fmt) | | Just compilation, no unit tests. (gtest has not been tested yet) |
+| [nlohmann json](https://json.nlohmann.me/) | | |
+| [rdfind](https://rdfind.pauldreik.se/) | [2.98x](use_on_realworld_projects/rdfind_speed_report.md) | Runs in psychic strict mode, see "Compatibility levels" further down this document. |
+| [simdutf](https://github.com/simdutf/simdutf) | 1.14x | Consists mostly of simd intrinsics, no speedup expected. Measured in release mode and without the tools component. |
+| [wordcounter](benchmarks/compile_time/bench_wordcounter.cpp)| [4.8x](speed.md) | [demo program using STL](benchmarks/compile_time/bench_wordcounter.cpp). Counts word occurence in text files. |
 
 Find the scripts validating the build and generating the above number in the use_on_realworld_projects/ directory.
 
-Once you have coded for a while, switch to a real quality standard library (typically libstdc++ or libc++) and test and build real releases - psychicstd is just intended for speedy develop.
+Once you have coded for a while, switch to a real quality standard library (typically libstdc++ or libc++) and test and build real releases - psychicstd is just intended for speeding up the development.
 
 ## How complete is it?
 
@@ -38,13 +42,16 @@ An AI can mostly guide itself trying to get the library through all the tests. A
 
 ## How does it work?
 
-Psychicstd is so far only used with gcc. It passes `-nostdinc++ -I/path/to/psychicstd/include` to the compiler. That causes the compiler to pick up vector, string and other headers from psychicstd instead of the standard library that comes with gcc (libstdc++).
+Psychicstd is used by passing `-nostdinc++ -I/path/to/psychicstd/include` to the compiler. That causes the compiler to pick up vector,
+string and other headers from psychicstd instead of the standard library that comes with gcc (libstdc++).
 
 The standard library uses `std::` namespace just like the real standard. You should not have to do any changes to your program.
 
 ## Why is it faster?
 
 Compile time for these headers is dominated by the compiler *frontend*, in two parts: **parsing declarations** and **instantiating templates**. psychicstd wins by having far less of both. Raw byte count, number of include files, and backend code generation are all second-order. Precompiled headers help by caching that same frontend work — but they attack the same bottleneck, so psychicstd without a PCH is roughly as fast as libstdc++ with one, and still wins when both use PCH. The [case studies](casestudies/) measure each of these effects.
+
+A concrete example is that `std::sort` has a very short and simple implementation to minimize compile time. It is still O(Nlog(N)) but not as fast as other standard libraries **in release mode**. In debug mode, it can however even be faster!
 
 ## Compatibility levels
 
@@ -77,16 +84,17 @@ The name is a word play on the edit-compile-debug cycle itself: psychic → cycl
 
 These are the goals, in order
 
-- **Sufficiently compliant to the C++ standard** — it should be correct enough to be useful. For example, `std::sort` just needs to sort — it doesn't need to be O(N log N). `std::string` does not need to use small string optimization, which simplifies the implementation.
-- **Faster compilation** — If it is not faster to compile than real implementations like libstdc++, this project has absolutely no value.
 - **Useful in practice** — code should compile, link, and run well enough to support a normal development workflow.
+- **Free of UB** — projects that are UB free, shall be UB free also when using psychic.
+- **Faster compilation** — If it is not faster to compile than real implementations like libstdc++, this project has very little value.
+- **Sufficiently compliant to the C++ standard** — it should be correct enough to be useful. For example, `std::string` does not need to use small string optimization, which simplifies the implementation.
 - **Support C++20**
 
 ## Non-goals
 
-- Runtime performance — we don't try to make your program run faster, only to compile faster.
+- Runtime performance — we don't try to make your program run faster, only to compile faster. With that said, typical unit tests are expected to run decently fast. On the example projects, psychicstd is sometimes **faster** on tests!
 - Compilation speed in release mode
-- Portability — Developed on and for gcc/Linux/x86-64. Might work with clang and arm as well, but that is untested. There is no windows or MSVC support.
+- Portability — Developed on and for gcc/Linux/x86-64. Tested with clang in ci. There is no windows or MSVC support.
 - ABI stability or any kind of guarantees
 - Support older C++ standards
 
@@ -226,9 +234,13 @@ For a deeper look at *why* psychicstd compiles faster, see the per-header case s
 
 ## Standards compliance
 
-Psychicstd uses the libc++ unit tests to ensure the library is standards compliant. You need to check out the source code separately from [https://github.com/llvm/llvm-project](https://github.com/llvm/llvm-project).
+Psychicstd uses the libc++ unit tests to partially ensure the library is standards compliant. You need to check out the source code separately from [https://github.com/llvm/llvm-project](https://github.com/llvm/llvm-project).
 
 Running these tests takes a very long time - they are extensive! For that reason, by default only a random subset is used for each header.
+
+Note that those tests are sometimes libc++ specific - there is not necessarily anything wrong just because a particular test does not pass.
+
+Psychicstd prioritizes getting real projects running (that is: compiling and passing their unit tests) rather than maximizing the score on the libc++ tests.
 
 ```bash
 python3 tools/compliance.py
