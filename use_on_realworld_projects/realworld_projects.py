@@ -125,6 +125,65 @@ def _simdutf(tc):
         shutil.rmtree(work, ignore_errors=True)
 
 
+# --- catch2 -----
+
+
+def _catch2(tc):
+
+    version = "3.8.0"
+    url = f"https://github.com/catchorg/Catch2/archive/refs/tags/v{version}.tar.gz"
+    checksum = "1ab2de20460d4641553addfdfe6acd4109d871d5531f8f519a52ea4926303087"
+    tarball = RW_DIR / f"Catch2-v{version}.tar.gz"
+    _fetch(url, tarball, checksum)
+
+    work = Path(tempfile.mkdtemp(prefix="rw-catch2-"))
+    try:
+        with tarfile.open(tarball) as t:
+            t.extractall(work)
+        src = work / f"Catch2-{version}"
+
+        env = {
+            **os.environ,
+            "CCACHE_DISABLE": "1",
+        }
+        configure = [
+            "cmake",
+            "-B",
+            "build",
+            "--preset",
+            "basic-tests",
+            "-GNinja",
+            "-DCMAKE_BUILD_TYPE=Debug",
+            "-DCMAKE_CXX_COMPILER=" + tc.cxx,
+            "-DCMAKE_CXX_FLAGS=" + tc.cxxflags,
+            "-DCMAKE_EXE_LINKER_FLAGS=" + tc.ldflags,
+            "-DCMAKE_CXX_STANDARD_LIBRARIES=" + tc.libs,
+            "-DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY",
+            "-DCATCH_ENABLE_WERROR=OFF",
+            "-DBUILD_SHARED_LIBS=OFF",
+        ]
+        jobs = f"-j{os.cpu_count() or 1}"
+        return {
+            "configure": _timed(configure, src, env),
+            "compile": _timed(["cmake", "--build", "build", jobs], src, env),
+            "tests": _timed(
+                [
+                    "ctest",
+                    "--test-dir",
+                    "build",
+                    "--output-on-failure",
+                    "-E",
+                    "ApprovalTests",
+                    jobs,
+                ],
+                src,
+                env,
+            ),
+        }
+    finally:
+        shutil.rmtree(work, ignore_errors=True)
+
+
 # --- rdfind ---------------------------------------------------------------
 
 
@@ -194,4 +253,5 @@ def _rdfind(tc):
 PROJECTS = {
     "rdfind": _rdfind,
     "simdutf": _simdutf,
+    "catch2": _catch2,
 }
