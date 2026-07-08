@@ -14,29 +14,58 @@ scripts).
 
 import hashlib
 import os
-import shutil
 import subprocess
 import tarfile
 import tempfile
 import time
 import urllib.request
+from collections.abc import Callable
+from dataclasses import dataclass, field
 from pathlib import Path
 
 RW_DIR = Path(__file__).resolve().parent
 PHASES = ("configure", "compile", "tests")
 
 
+@dataclass(frozen=True)
 class Toolchain:
-    """A compiler invocation: flags plus the link additions psychicstd needs."""
+    """A compiler invocation: flags plus the link additions psychicstd needs.
 
-    def __init__(self, cxx, cxxflags, ldflags="", libs=""):
-        self.cxx = cxx
-        self.cxxflags = cxxflags
-        self.ldflags = ldflags
-        self.libs = libs
+    build_type is "debug" or "release" -- an abstract choice each recipe
+    translates into its own build system's convention (CMAKE_BUILD_TYPE, an
+    -O flag, ...), since that mapping isn't the same across build systems.
+    """
+
+    cxx: str
+    cxxflags: str
+    ldflags: str = ""
+    libs: str = ""
+    build_type: str = "debug"
+    enable_ccache: bool = False
 
 
-def _timed(cmd, cwd, env):
+@dataclass(frozen=True)
+class Project:
+    """A real-world project recipe: the pinned version under test and its
+    `build(toolchain) -> {phase: milliseconds}` function.
+
+    phases: which of PHASES are meaningful to report for this project (the
+    recipe still runs and times all of them internally; this only controls
+    what a report shows). E.g. a CMake project's "configure" is often mostly
+    download/CMake overhead unrelated to psychicstd, while for an autoconf
+    project like rdfind it's a real, relevant measurement.
+
+    comments: optional per-phase caveat shown alongside the numbers (e.g. "some
+    tests are excluded"). Empty by default.
+    """
+
+    version: str
+    build: Callable[[Toolchain], dict[str, float]]
+    phases: tuple[str, ...] = PHASES
+    comments: dict[str, str] = field(default_factory=dict)
+
+
+def _timed(cmd: list[str], cwd: Path, env: dict[str, str]) -> float:
     t0 = time.monotonic()
     r = subprocess.run(
         cmd,
@@ -44,16 +73,17 @@ def _timed(cmd, cwd, env):
         env=env,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
+        text=True,
     )
     if r.returncode != 0:
         print(f"failed command {cmd[0]}!\noutput:")
-        print(r.stdout.decode("utf-8"))
+        print(r.stdout)
         r.check_returncode()
 
     return (time.monotonic() - t0) * 1000.0
 
 
-def _fetch(url, dest, sha256):
+def _fetch(url: str, dest: Path, sha256: str) -> None:
     if not dest.exists():
         urllib.request.urlretrieve(url, dest)
     got = hashlib.sha256(dest.read_bytes()).hexdigest()
@@ -61,10 +91,140 @@ def _fetch(url, dest, sha256):
         raise SystemExit(f"sha256 mismatch for {dest.name}: {got}")
 
 
+def _env(tc: Toolchain, **extra: str) -> dict[str, str]:
+    """Base subprocess env for a recipe: disables ccache unless the toolchain
+    opts in, since a warm cache would skew compile-time measurements."""
+    env = {**os.environ, **extra}
+    if not tc.enable_ccache:
+        env["CCACHE_DISABLE"] = "1"
+    return env
+
+
+# --- catch2 -----
+
+
+def _catch2(tc: Toolchain) -> dict[str, float]:
+
+    version = "3.8.0"
+    url = f"https://github.com/catchorg/Catch2/archive/refs/tags/v{version}.tar.gz"
+    checksum = "1ab2de20460d4641553addfdfe6acd4109d871d5531f8f519a52ea4926303087"
+    tarball = RW_DIR / f"Catch2-v{version}.tar.gz"
+    _fetch(url, tarball, checksum)
+
+    with tempfile.TemporaryDirectory(
+        prefix="rw-catch2-", ignore_cleanup_errors=True
+    ) as work_dir:
+        work = Path(work_dir)
+        with tarfile.open(tarball) as t:
+            t.extractall(work)
+        src = work / f"Catch2-{version}"
+
+        env = _env(tc)
+        configure = [
+            "cmake",
+            "-B",
+            "build",
+            "--preset",
+            "basic-tests",
+            "-GNinja",
+            "-DCMAKE_BUILD_TYPE=" + tc.build_type.capitalize(),
+            "-DCMAKE_CXX_COMPILER=" + tc.cxx,
+            "-DCMAKE_CXX_FLAGS=" + tc.cxxflags,
+            "-DCMAKE_EXE_LINKER_FLAGS=" + tc.ldflags,
+            "-DCMAKE_CXX_STANDARD_LIBRARIES=" + tc.libs,
+            "-DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY",
+            "-DCATCH_ENABLE_WERROR=OFF",
+            "-DBUILD_SHARED_LIBS=OFF",
+        ]
+        jobs = f"-j{os.cpu_count() or 1}"
+        return {
+            "configure": _timed(configure, src, env),
+            "compile": _timed(["cmake", "--build", "build", jobs], src, env),
+            "tests": _timed(
+                [
+                    "ctest",
+                    "--test-dir",
+                    "build",
+                    "--output-on-failure",
+                    "-E",
+                    "ApprovalTests",
+                    jobs,
+                ],
+                src,
+                env,
+            ),
+        }
+
+
+# --- rdfind ---------------------------------------------------------------
+
+
+_RDFIND_COMMIT = "787b01ab378c70cb6bb3ef5166525f3ff8939a23"
+# rdfind's autoconf build has no build-type concept -- an -O flag is its equivalent.
+_RDFIND_OPT_FLAG = {"debug": "-O0", "release": "-O2"}
+
+
+def _rdfind(tc: Toolchain) -> dict[str, float]:
+
+    fromcommit = True
+
+    if fromcommit:
+        # from a certain commit hash
+        psychicstrictlevel = 0
+        commithash = _RDFIND_COMMIT
+        tarball = RW_DIR / f"rdfind-{commithash}.tar.gz"
+        _fetch(
+            f"https://github.com/pauldreik/rdfind/archive/{commithash}.tar.gz",
+            tarball,
+            "057ae066b2f7349cb84e4b48ab3ab897d88afc3005bd6d8292c95fa012467659",
+        )
+    else:
+        # from a release
+        psychicstrictlevel = 2
+        version = "1.8.0"
+        tarball = RW_DIR / f"rdfind-{version}.tar.gz"
+        _fetch(
+            f"https://github.com/pauldreik/rdfind/releases/download/releases%2F{version}/rdfind-{version}.tar.gz",
+            tarball,
+            "0a2d0d32002cc2dc0134ee7b649bcc811ecfb2f8d9f672aa476a851152e7af35",
+        )
+
+    with tempfile.TemporaryDirectory(
+        prefix="rw-rdfind-", ignore_cleanup_errors=True
+    ) as work_dir:
+        work = Path(work_dir)
+        with tarfile.open(tarball) as t:
+            t.extractall(work)
+        if fromcommit:
+            src = work / f"rdfind-{commithash}"
+        else:
+            src = work / f"rdfind-{version}"
+        env = _env(
+            tc,
+            CXX=tc.cxx,
+            CXXFLAGS=tc.cxxflags
+            + f" {_RDFIND_OPT_FLAG[tc.build_type]}"
+            + f" -D_PSYCHICSTD_COMPATIBILITY_LEVEL={psychicstrictlevel}",
+        )
+        if fromcommit:
+            _timed(["./bootstrap.sh"], src, env)
+        configure = ["./configure"]
+        if tc.ldflags:
+            configure.append(f"LDFLAGS={tc.ldflags}")
+        if tc.libs:
+            configure.append(f"LIBS={tc.libs}")
+        jobs = f"-j{os.cpu_count() or 1}"
+        return {
+            "configure": _timed(configure, src, env),
+            "compile": _timed(["make", jobs], src, env),
+            "tests": _timed(["make", "check"], src, env),
+        }
+
+
 # --- simdutf -----
 
 
-def _simdutf(tc):
+def _simdutf(tc: Toolchain) -> dict[str, float]:
 
     version = "9.0.0"
     url = f"https://github.com/simdutf/simdutf/archive/refs/tags/v{version}.tar.gz"
@@ -73,16 +233,15 @@ def _simdutf(tc):
     tarball = RW_DIR / f"simdutf-{version}.tar.gz"
     _fetch(url, tarball, checksum)
 
-    work = Path(tempfile.mkdtemp(prefix="rw-simdutf-"))
-    try:
+    with tempfile.TemporaryDirectory(
+        prefix="rw-simdutf-", ignore_cleanup_errors=True
+    ) as work_dir:
+        work = Path(work_dir)
         with tarfile.open(tarball) as t:
             t.extractall(work)
         src = work / f"simdutf-{version}"
 
-        env = {
-            **os.environ,
-            "CCACHE_DISABLE": "1",
-        }
+        env = _env(tc)
         configure = [
             "cmake",
             "-S",
@@ -90,7 +249,7 @@ def _simdutf(tc):
             "-B",
             "build-with-psychic",
             "-GNinja",
-            "-DCMAKE_BUILD_TYPE=Debug",
+            "-DCMAKE_BUILD_TYPE=" + tc.build_type.capitalize(),
             "-DSIMDUTF_FAST_TESTS=On",
             "-DSIMDUTF_TOOLS=Off",  # sutf/fastbase64 need <filesystem>, unsupported
             "-DCMAKE_CXX_COMPILER=" + tc.cxx,
@@ -121,137 +280,17 @@ def _simdutf(tc):
                 env,
             ),
         }
-    finally:
-        shutil.rmtree(work, ignore_errors=True)
 
 
-# --- catch2 -----
-
-
-def _catch2(tc):
-
-    version = "3.8.0"
-    url = f"https://github.com/catchorg/Catch2/archive/refs/tags/v{version}.tar.gz"
-    checksum = "1ab2de20460d4641553addfdfe6acd4109d871d5531f8f519a52ea4926303087"
-    tarball = RW_DIR / f"Catch2-v{version}.tar.gz"
-    _fetch(url, tarball, checksum)
-
-    work = Path(tempfile.mkdtemp(prefix="rw-catch2-"))
-    try:
-        with tarfile.open(tarball) as t:
-            t.extractall(work)
-        src = work / f"Catch2-{version}"
-
-        env = {
-            **os.environ,
-            "CCACHE_DISABLE": "1",
-        }
-        configure = [
-            "cmake",
-            "-B",
-            "build",
-            "--preset",
-            "basic-tests",
-            "-GNinja",
-            "-DCMAKE_BUILD_TYPE=Debug",
-            "-DCMAKE_CXX_COMPILER=" + tc.cxx,
-            "-DCMAKE_CXX_FLAGS=" + tc.cxxflags,
-            "-DCMAKE_EXE_LINKER_FLAGS=" + tc.ldflags,
-            "-DCMAKE_CXX_STANDARD_LIBRARIES=" + tc.libs,
-            "-DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY",
-            "-DCATCH_ENABLE_WERROR=OFF",
-            "-DBUILD_SHARED_LIBS=OFF",
-        ]
-        jobs = f"-j{os.cpu_count() or 1}"
-        return {
-            "configure": _timed(configure, src, env),
-            "compile": _timed(["cmake", "--build", "build", jobs], src, env),
-            "tests": _timed(
-                [
-                    "ctest",
-                    "--test-dir",
-                    "build",
-                    "--output-on-failure",
-                    "-E",
-                    "ApprovalTests",
-                    jobs,
-                ],
-                src,
-                env,
-            ),
-        }
-    finally:
-        shutil.rmtree(work, ignore_errors=True)
-
-
-# --- rdfind ---------------------------------------------------------------
-
-
-def _rdfind(tc):
-
-    fromcommit = True
-
-    if fromcommit:
-        # from a certain commit hash
-        psychicstrictlevel = 0
-        commithash = "787b01ab378c70cb6bb3ef5166525f3ff8939a23"
-        tarball = RW_DIR / f"rdfind-{commithash}.tar.gz"
-        _fetch(
-            f"https://github.com/pauldreik/rdfind/archive/{commithash}.tar.gz",
-            tarball,
-            "057ae066b2f7349cb84e4b48ab3ab897d88afc3005bd6d8292c95fa012467659",
-        )
-    else:
-        # from a release
-        psychicstrictlevel = 2
-        version = "1.8.0"
-        tarball = RW_DIR / f"rdfind-{version}.tar.gz"
-        _fetch(
-            f"https://github.com/pauldreik/rdfind/releases/download/releases%2F{version}/rdfind-{version}.tar.gz",
-            tarball,
-            "0a2d0d32002cc2dc0134ee7b649bcc811ecfb2f8d9f672aa476a851152e7af35",
-        )
-
-    work = Path(tempfile.mkdtemp(prefix="rw-rdfind-"))
-    try:
-        with tarfile.open(tarball) as t:
-            t.extractall(work)
-        if fromcommit:
-            src = work / f"rdfind-{commithash}"
-        else:
-            src = work / f"rdfind-{version}"
-        env = {
-            **os.environ,
-            "CXX": tc.cxx,
-            "CXXFLAGS": tc.cxxflags
-            + f" -D_PSYCHICSTD_COMPATIBILITY_LEVEL={psychicstrictlevel}",
-            "CCACHE_DISABLE": "1",
-        }
-        if fromcommit:
-            _timed(
-                [
-                    "./bootstrap.sh",
-                ],
-                src,
-                env,
-            )
-        configure = ["./configure"]
-        if tc.ldflags:
-            configure.append(f"LDFLAGS={tc.ldflags}")
-        if tc.libs:
-            configure.append(f"LIBS={tc.libs}")
-        jobs = f"-j{os.cpu_count() or 1}"
-        return {
-            "configure": _timed(configure, src, env),
-            "compile": _timed(["make", jobs], src, env),
-            "tests": _timed(["make", "check"], src, env),
-        }
-    finally:
-        shutil.rmtree(work, ignore_errors=True)
-
-
-PROJECTS = {
-    "rdfind": _rdfind,
-    "simdutf": _simdutf,
-    "catch2": _catch2,
+PROJECTS: dict[str, Project] = {
+    "catch2": Project(
+        "3.8.0",
+        _catch2,
+        phases=("compile", "tests"),
+        comments={
+            "tests": "long-running tests and those requiring network are ignored"
+        },
+    ),
+    "rdfind": Project(f"commit {_RDFIND_COMMIT[:12]}", _rdfind),
+    "simdutf": Project("9.0.0", _simdutf, phases=("compile", "tests")),
 }

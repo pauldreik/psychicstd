@@ -11,22 +11,30 @@ is produced by tools/bench_diff.py, so it looks exactly like the compile-time
 perf diff, but per phase.
 
 Usage:
-  scripts/compare_realworld.py [project] [--ref REF] [--compiler CXX] [--reps N]
+  scripts/compare_realworld.py [project] [--ref REF] [--compiler CXX]
+      [--build-type {debug,release}] [--reps N]
 """
 
 import argparse
 import json
-import shutil
 import subprocess
 import sys
 import tempfile
+from collections.abc import Callable
 from pathlib import Path
 
-REPO = Path(
-    subprocess.run(
-        ["git", "rev-parse", "--show-toplevel"], capture_output=True, text=True
-    ).stdout.strip()
-)
+
+def _git_toplevel() -> Path:
+    out = subprocess.run(
+        ["git", "rev-parse", "--show-toplevel"],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    return Path(out.stdout.strip())
+
+
+REPO = _git_toplevel()
 sys.path.insert(0, str(REPO / "use_on_realworld_projects"))
 import realworld_projects as rw  # noqa: E402
 
@@ -34,15 +42,95 @@ import realworld_projects as rw  # noqa: E402
 PSY_LDFLAGS = "-nodefaultlibs"
 PSY_LIBS = "-lsupc++ -lm -lc -lgcc_s -lgcc"
 
+# Selectable from the outside; each project's recipe translates this into its own
+# build system's convention (CMAKE_BUILD_TYPE, an -O flag, ...) -- see Toolchain.
+BUILD_TYPES = ("debug", "release")
 
-def compiler_version(cxx):
+
+def compiler_version(cxx: str) -> str | None:
     try:
         out = subprocess.run(
             [cxx, "--version"], capture_output=True, text=True, check=True
         ).stdout
         return out.splitlines()[0].strip()
-    except Exception:
+    except (OSError, subprocess.CalledProcessError, IndexError):
         return None
+
+
+def sys_tc(compiler: str, build_type: str, enable_ccache: bool = False) -> rw.Toolchain:
+    return rw.Toolchain(
+        compiler, "-std=c++20", build_type=build_type, enable_ccache=enable_ccache
+    )
+
+
+def psy_tc(
+    compiler: str, include: Path, build_type: str, enable_ccache: bool = False
+) -> rw.Toolchain:
+    return rw.Toolchain(
+        compiler,
+        f"-std=c++20 -nostdinc++ -isystem {include}",
+        PSY_LDFLAGS,
+        PSY_LIBS,
+        build_type=build_type,
+        enable_ccache=enable_ccache,
+    )
+
+
+def _build_matrix(
+    variants: dict[str, rw.Toolchain],
+    build: Callable[[rw.Toolchain], dict[str, float]],
+    reps: int,
+    project: str,
+) -> dict[str, dict[str, list[float]]]:
+    samples: dict[str, dict[str, list[float]]] = {
+        name: {p: [] for p in rw.PHASES} for name in variants
+    }
+    for rep in range(reps):
+        for name, tc in variants.items():
+            print(f"[{rep + 1}/{reps}] building {project}: {name}", file=sys.stderr)
+            t = build(tc)
+            for p in rw.PHASES:
+                samples[name][p].append(t[p])
+    return samples
+
+
+def measure_project(
+    project: str,
+    compiler: str,
+    build_type: str,
+    reps: int,
+    include: Path,
+    enable_ccache: bool = False,
+) -> dict[str, dict[str, list[float]]]:
+    """Build `project` `reps` times under the system toolchain and psychicstd
+    (headers from `include`); return {"system"|"psychicstd": {phase: [ms, ...]}}.
+
+    Unlike main()'s 4-way matrix, this only measures one set of psychicstd
+    headers -- there's no git ref involved, so it's reusable for reporting the
+    working tree's absolute speedup rather than a main-vs-PR regression diff.
+    """
+    variants = {
+        "system": sys_tc(compiler, build_type, enable_ccache),
+        "psychicstd": psy_tc(compiler, include, build_type, enable_ccache),
+    }
+    return _build_matrix(variants, rw.PROJECTS[project].build, reps, project)
+
+
+def _side(
+    samples: dict[str, dict[str, list[float]]],
+    sys_key: str,
+    psy_key: str,
+    cxx_ver: str | None,
+) -> dict:
+    d = {
+        p: {
+            "system_samples": samples[sys_key][p],
+            "psychicstd_samples": samples[psy_key][p],
+        }
+        for p in rw.PHASES
+    }
+    d["__meta__"] = {"compiler_version": cxx_ver}
+    return d
 
 
 def main() -> int:
@@ -59,66 +147,67 @@ def main() -> int:
     ap.add_argument("--ref", default="origin/main", help="git ref to compare against")
     ap.add_argument("--compiler", default="c++", help="C++ compiler (default: c++)")
     ap.add_argument(
+        "--build-type",
+        choices=BUILD_TYPES,
+        default="debug",
+        help="build type, translated per-project (default: debug)",
+    )
+    ap.add_argument(
         "--reps", type=int, default=3, help="build repetitions (default: 3)"
+    )
+    ap.add_argument(
+        "--enable-ccache",
+        action="store_true",
+        help="leave ccache enabled (faster iteration, but skews timings -- use "
+        "for debugging the script/recipes, not for real measurements)",
     )
     args = ap.parse_args()
 
-    build = rw.PROJECTS[args.project]
+    build = rw.PROJECTS[args.project].build
 
-    def sys_tc():
-        return rw.Toolchain(args.compiler, "-std=c++20")
-
-    def psy_tc(include):
-        return rw.Toolchain(
-            args.compiler,
-            f"-std=c++20 -nostdinc++ -isystem {include}",
-            PSY_LDFLAGS,
-            PSY_LIBS,
-        )
-
-    tmp = Path(tempfile.mkdtemp(prefix="psychicstd-rw-"))
-    worktree = tmp / "ref"
-    try:
+    with tempfile.TemporaryDirectory(
+        prefix="psychicstd-rw-", ignore_cleanup_errors=True
+    ) as tmp_dir:
+        tmp = Path(tmp_dir)
+        worktree = tmp / "ref"
         print(f"Checking out {args.ref} into a temporary worktree ...", file=sys.stderr)
         subprocess.run(
             ["git", "worktree", "add", "--quiet", "--detach", str(worktree), args.ref],
             check=True,
         )
-
-        # Measure system twice (base/head) so its drift is a real noise proxy.
-        variants = {
-            "system_base": sys_tc(),
-            "ref": psy_tc(worktree / "include"),
-            "system_head": sys_tc(),
-            "head": psy_tc(REPO / "include"),
-        }
-        samples = {v: {p: [] for p in rw.PHASES} for v in variants}
-        for rep in range(args.reps):
-            for name, tc in variants.items():
-                print(
-                    f"[{rep + 1}/{args.reps}] building {args.project}: {name}",
-                    file=sys.stderr,
-                )
-                t = build(tc)
-                for p in rw.PHASES:
-                    samples[name][p].append(t[p])
-
-        def side(sys_key, psy_key, cxx_ver):
-            d = {
-                p: {
-                    "system_samples": samples[sys_key][p],
-                    "psychicstd_samples": samples[psy_key][p],
-                }
-                for p in rw.PHASES
+        try:
+            # Measure system twice (base/head) so its drift is a real noise proxy.
+            variants = {
+                "system_base": sys_tc(
+                    args.compiler, args.build_type, args.enable_ccache
+                ),
+                "ref": psy_tc(
+                    args.compiler,
+                    worktree / "include",
+                    args.build_type,
+                    args.enable_ccache,
+                ),
+                "system_head": sys_tc(
+                    args.compiler, args.build_type, args.enable_ccache
+                ),
+                "head": psy_tc(
+                    args.compiler, REPO / "include", args.build_type, args.enable_ccache
+                ),
             }
-            d["__meta__"] = {"compiler_version": cxx_ver}
-            return d
+            samples = _build_matrix(variants, build, args.reps, args.project)
+        finally:
+            subprocess.run(
+                ["git", "worktree", "remove", "--force", str(worktree)],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                check=False,
+            )
 
         ver = compiler_version(args.compiler)
         base_json = tmp / "base.json"
         head_json = tmp / "head.json"
-        base_json.write_text(json.dumps(side("system_base", "ref", ver)))
-        head_json.write_text(json.dumps(side("system_head", "head", ver)))
+        base_json.write_text(json.dumps(_side(samples, "system_base", "ref", ver)))
+        head_json.write_text(json.dumps(_side(samples, "system_head", "head", ver)))
 
         subprocess.run(
             [
@@ -133,17 +222,12 @@ def main() -> int:
                 "--what",
                 f"{args.project} build time with psychicstd",
                 "--reproduce",
-                f"scripts/compare_realworld.py {args.project} --reps {args.reps}",
+                f"scripts/compare_realworld.py {args.project} "
+                f"--build-type {args.build_type} --reps {args.reps}"
+                + (" --enable-ccache" if args.enable_ccache else ""),
             ],
             check=True,
         )
-    finally:
-        subprocess.run(
-            ["git", "worktree", "remove", "--force", str(worktree)],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-        )
-        shutil.rmtree(tmp, ignore_errors=True)
     return 0
 
 
