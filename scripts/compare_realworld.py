@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Compare a real-world project's build time (configure / compile / tests) with
-psychicstd: the working tree vs a git ref, on THIS machine, and print a markdown
-diff (suitable for a PR comment).
+"""Compare a real-world project's build time (configure / compile / run tests)
+with psychicstd: the working tree vs a git ref, on THIS machine, and print a
+markdown diff (suitable for a PR comment).
 
 It builds the project three ways on one host -- with libstdc++ (a noise proxy),
 with the reference's psychicstd headers, and with the working tree's -- swapping
@@ -218,7 +218,7 @@ def main() -> int:
                 "--head",
                 str(head_json),
                 "--title",
-                f"{args.project} build-time diff (configure / compile / tests)",
+                f"{args.project} build-time diff (configure / compile / run tests)",
                 "--what",
                 f"{args.project} build time with psychicstd",
                 "--reproduce",

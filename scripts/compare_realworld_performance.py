@@ -14,8 +14,8 @@ working tree's absolute speedup over system libstdc++.
 
 Usage:
   scripts/compare_realworld_performance.py [--compiler CXX]
-      [--build-type {debug,release,both}] [--reps N] [--project NAME ...]
-      [--enable-ccache]
+      [--build-type {debug,release,both}] [--reps N]
+      [--project {NAME,all} ...] [--enable-ccache] [--output PATH]
 """
 
 import argparse
@@ -133,8 +133,9 @@ def main() -> int:
         "--project",
         dest="projects",
         action="append",
-        choices=sorted(rw.PROJECTS),
-        help="project to include (repeatable; default: all)",
+        choices=(*sorted(rw.PROJECTS), "all"),
+        help="project to include (repeatable; 'all' for every known project; "
+        "default: all)",
     )
     ap.add_argument("--compiler", default="c++", help="C++ compiler (default: c++)")
     ap.add_argument(
@@ -152,9 +153,18 @@ def main() -> int:
         help="leave ccache enabled (faster iteration, but skews timings -- use "
         "for debugging the script/recipes, not for real measurements)",
     )
+    ap.add_argument(
+        "--output",
+        type=Path,
+        metavar="PATH",
+        help="also write the report to this file (in addition to stdout)",
+    )
     args = ap.parse_args()
 
-    projects = sorted(args.projects) if args.projects else sorted(rw.PROJECTS)
+    if not args.projects or "all" in args.projects:
+        projects = sorted(rw.PROJECTS)
+    else:
+        projects = sorted(args.projects)
     build_types = cr.BUILD_TYPES if args.build_type == "both" else (args.build_type,)
 
     results = {}
@@ -191,6 +201,8 @@ def main() -> int:
     for project in projects:
         spec = rw.PROJECTS[project]
         lines.append(f"## {project} ({spec.version})\n")
+        if spec.comment:
+            lines.append(f"{spec.comment}\n")
         for build_type in build_types:
             lines.append(f"### {build_type.title()}\n")
             lines.extend(_table(spec, results[project, build_type]))
@@ -203,7 +215,11 @@ def main() -> int:
         + "`"
     )
 
-    print("\n".join(lines))
+    report = "\n".join(lines)
+    print(report)
+    if args.output:
+        args.output.write_text(report + "\n", encoding="utf-8")
+        print(f"Report written to {args.output}", file=sys.stderr)
     return 0
 
 
