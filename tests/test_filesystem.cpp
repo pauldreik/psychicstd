@@ -3,6 +3,7 @@
 #include <fstream>
 #include <queue>
 #include <string>
+#include <string_view>
 
 int main() {
   namespace fs = std::filesystem;
@@ -20,6 +21,10 @@ int main() {
 
   fs::path joined = fs::path("/tmp/some") / "dir" / fs::path("file.txt");
   assert(joined == p1);
+
+  std::u8string u8 = p1.u8string();
+  fs::path from_u8{std::u8string_view(u8)};
+  assert(from_u8 == p1);
 
   std::queue<fs::path> q;
   q.push(std::string("/tmp/a"));
