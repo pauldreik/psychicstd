@@ -144,7 +144,7 @@ def main() -> None:
         return "" if ci is None else f" [{ci[0]:+.1f}, {ci[1]:+.1f}]"
 
     common = sorted(bench_names(base) & bench_names(head))
-    # (name, base_ms, head_ms, delta_pct, ci, color)
+    # (name, base_ms, head_ms, delta_pct, ci, color, speedup_vs_system)
     rows: list[tuple] = []
     for name in common:
         b_s = samples(base, name, "psychicstd")
@@ -160,7 +160,11 @@ def main() -> None:
         # CI excludes 0) and clears the practical floors. Otherwise it's noise.
         real = not crosses_zero(ci) and abs(delta) >= thr and abs(h - b) >= min_abs
         color = (RED if delta > 0 else GREEN) if real else YELLOW
-        rows.append((name, b, h, delta, ci, color))
+        # This PR's own speedup over system libstdc++, for context: a
+        # regression is less alarming if psychicstd is still far ahead.
+        h_sys_s = samples(head, name, "system")
+        speedup = statistics.median(h_sys_s) / h if h_sys_s and h else None
+        rows.append((name, b, h, delta, ci, color, speedup))
 
     # System-time drift on the same files: a proxy for host/run noise, since the
     # system config compiles identical work on both runs.
@@ -190,17 +194,21 @@ def main() -> None:
         f"{args.what}, main vs this PR (same runner). "
         f"{GREEN} faster · {RED} slower · {YELLOW} within noise. A change is colored only "
         f"when its bootstrap 95% CI excludes 0 and it clears ±{thr:g}% / {min_abs:g}ms. "
+        f"`vs system` is this PR's speedup over system libstdc++, for context -- a "
+        f"regression is less alarming if psychicstd is still far ahead. "
         f"Median system-time drift (noise proxy): **{noise:.1f}%**.\n"
     )
 
     def table(rowset):
         out = [
-            "| benchmark | main | PR | Δ (95% CI) |",
-            "|-----------|-----:|---:|:--|",
+            "| benchmark | main | PR | Δ (95% CI) | vs system |",
+            "|-----------|-----:|---:|:--|--:|",
         ]
-        for name, b, h, delta, ci, color in rowset:
+        for name, b, h, delta, ci, color, speedup in rowset:
+            speedup_cell = f"{speedup:.1f}x" if speedup is not None else "—"
             out.append(
-                f"| `{name}` | {b:.1f}ms | {h:.1f}ms | {color} {delta:+.1f}%{ci_str(ci)} |"
+                f"| `{name}` | {b:.1f}ms | {h:.1f}ms | {color} {delta:+.1f}%{ci_str(ci)} "
+                f"| {speedup_cell} |"
             )
         return out
 
