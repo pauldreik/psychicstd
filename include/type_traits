@@ -1,5 +1,6 @@
 #pragma once
 #include <cstddef>
+#include <version>
 
 namespace std {
 
@@ -816,5 +817,9 @@ struct common_reference<T, U, Rest...>
 
 template <typename... Ts>
 using common_reference_t = typename common_reference<Ts...>::type;
+
+constexpr bool is_constant_evaluated() noexcept {
+  return __builtin_is_constant_evaluated();
+}
 
 } // namespace std
