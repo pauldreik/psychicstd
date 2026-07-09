@@ -1,0 +1,48 @@
+#pragma once
+#include <chrono>
+#include <mutex>
+
+namespace std {
+
+enum class cv_status { no_timeout, timeout };
+
+// psychicstd: non-threadsafe condition_variable stub — all operations are
+// no-ops, matching the mutex/thread stubs in <mutex>/<thread>.
+struct condition_variable {
+  constexpr condition_variable() noexcept = default;
+  condition_variable(const condition_variable&) = delete;
+  condition_variable& operator=(const condition_variable&) = delete;
+
+  void notify_one() noexcept {}
+  void notify_all() noexcept {}
+
+  void wait(unique_lock<mutex>&) noexcept {}
+  template <typename Predicate> void wait(unique_lock<mutex>&, Predicate pred) {
+    while (!pred()) {
+    }
+  }
+
+  template <typename Rep, typename Period>
+  cv_status wait_for(unique_lock<mutex>&,
+                     const chrono::duration<Rep, Period>&) noexcept {
+    return cv_status::no_timeout;
+  }
+  template <typename Rep, typename Period, typename Predicate>
+  bool wait_for(unique_lock<mutex>&, const chrono::duration<Rep, Period>&,
+                Predicate pred) {
+    return pred();
+  }
+
+  template <typename Clock, typename Duration>
+  cv_status wait_until(unique_lock<mutex>&,
+                       const chrono::time_point<Clock, Duration>&) noexcept {
+    return cv_status::no_timeout;
+  }
+  template <typename Clock, typename Duration, typename Predicate>
+  bool wait_until(unique_lock<mutex>&,
+                  const chrono::time_point<Clock, Duration>&, Predicate pred) {
+    return pred();
+  }
+};
+
+} // namespace std
