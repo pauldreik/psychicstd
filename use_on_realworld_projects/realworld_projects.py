@@ -50,17 +50,13 @@ class Project:
     """A real-world project recipe: the pinned version under test and its
     `build(toolchain) -> {phase: milliseconds}` function.
 
-    phases: which of PHASES are meaningful to report for this project (the
-    recipe still runs and times all of them internally; this only controls
-    what a report shows). E.g. a CMake project's "configure" is often mostly
-    download/CMake overhead unrelated to psychicstd, while for an autoconf
-    project like rdfind it's a real, relevant measurement.
+    phases: the phase keys of `build()`'s return value to measure and report
+    (a project may return extra keys it doesn't want reported). Defaults to
+    PHASES, but a project can use its own names, e.g. fmt has no test suite to
+    run and reports "example"/"run example" instead of "run tests".
 
-    comment: optional project-level note (e.g. what build system it uses, or
-    what psychicstd compatibility level it's tested at). Empty by default.
-
-    comments: optional per-phase caveat shown alongside the numbers (e.g. "some
-    tests are excluded"). Empty by default.
+    comment: optional project-level note. comments: optional per-phase note.
+    Both empty by default.
     """
 
     version: str
@@ -165,9 +161,105 @@ def _catch2() -> Project:
         version=version,
         build=build,
         phases=("compile", "run tests"),
-        comments={
-            "run tests": "the approval tests are ignored"
-        },
+        comments={"run tests": "the approval tests are ignored"},
+    )
+
+
+# --- fmt --------------------------------------------------------------
+
+
+_FMT_SMOKE_TEST = """\
+#include <cassert>
+#include <fmt/core.h>
+#include <string>
+
+int main() {
+    auto s = fmt::format("hello {}!", "psychicstd");
+    assert(s == "hello psychicstd!");
+
+    auto n = fmt::format("{} + {} = {}", 2, 3, 5);
+    assert(n == "2 + 3 = 5");
+
+    return 0;
+}
+"""
+
+
+def _fmt() -> Project:
+    version = "11.1.4"
+    url = f"https://github.com/fmtlib/fmt/archive/refs/tags/{version}.tar.gz"
+    checksum = "ac366b7b4c2e9f0dde63a59b3feb5ee59b67974b14ee5dc9ea8ad78aa2c1ee1e"
+
+    def build(tc: Toolchain) -> dict[str, float]:
+        tarball = RW_DIR / f"fmt-{version}.tar.gz"
+        _fetch(url, tarball, checksum)
+
+        with tempfile.TemporaryDirectory(
+            prefix="rw-fmt-", ignore_cleanup_errors=True
+        ) as work_dir:
+            work = Path(work_dir)
+            with tarfile.open(tarball) as t:
+                t.extractall(work)
+            src = work / f"fmt-{version}"
+
+            env = _env(tc)
+            configure = [
+                "cmake",
+                "-S",
+                ".",
+                "-B",
+                "build",
+                "-GNinja",
+                "-DCMAKE_BUILD_TYPE=" + tc.build_type.capitalize(),
+                "-DCMAKE_CXX_COMPILER=" + tc.cxx,
+                "-DCMAKE_CXX_FLAGS=-DFMT_USE_LOCALE=0 " + tc.cxxflags,
+                "-DCMAKE_EXE_LINKER_FLAGS=" + tc.ldflags,
+                "-DCMAKE_CXX_STANDARD_LIBRARIES=" + tc.libs,
+                "-DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY",
+                "-DFMT_DOC=OFF",
+                "-DFMT_TEST=OFF",
+                "-DFMT_INSTALL=OFF",
+                "-DBUILD_SHARED_LIBS=OFF",
+            ]
+            jobs = f"-j{os.cpu_count() or 1}"
+            configure_ms = _timed(configure, src, env)
+            compile_ms = _timed(["cmake", "--build", "build", jobs], src, env)
+
+            # fmt's own test suite is disabled, so compile and run a small
+            # program against the library instead (as two phases: one's
+            # compile time, the other's runtime).
+            lib_name = "libfmtd.a" if tc.build_type == "debug" else "libfmt.a"
+            smoke_cpp = src / "psychicstd_smoke_test.cpp"
+            smoke_cpp.write_text(_FMT_SMOKE_TEST)
+            smoke_bin = src / "psychicstd_smoke_test"
+            compile_smoke = (
+                [tc.cxx, *tc.cxxflags.split(), "-DFMT_USE_LOCALE=0"]
+                + [
+                    "-I",
+                    str(src / "include"),
+                    str(smoke_cpp),
+                    str(src / "build" / lib_name),
+                ]
+                + (tc.ldflags.split() if tc.ldflags else [])
+                + (tc.libs.split() if tc.libs else [])
+                + ["-o", str(smoke_bin)]
+            )
+            example_ms = _timed(compile_smoke, src, env)
+            run_example_ms = _timed([str(smoke_bin)], src, env)
+
+            return {
+                "configure": configure_ms,
+                "compile": compile_ms,
+                "example": example_ms,
+                "run example": run_example_ms,
+            }
+
+    return Project(
+        version=version,
+        build=build,
+        phases=("compile", "example", "run example"),
+        comment="fmt is built with FMT_USE_LOCALE=0 (psychicstd's <locale> is "
+        "a no-op stub); its own test suite is disabled.",
     )
 
 
@@ -314,6 +406,7 @@ def _simdutf() -> Project:
 
 PROJECTS: dict[str, Project] = {
     "catch2": _catch2(),
+    "fmt": _fmt(),
     "rdfind": _rdfind(),
     "simdutf": _simdutf(),
 }

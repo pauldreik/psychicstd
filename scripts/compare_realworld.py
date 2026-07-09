@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Compare a real-world project's build time (configure / compile / run tests)
-with psychicstd: the working tree vs a git ref, on THIS machine, and print a
-markdown diff (suitable for a PR comment).
+"""Compare a real-world project's build time (per its own Project.phases, e.g.
+configure / compile / run tests) with psychicstd: the working tree vs a git
+ref, on THIS machine, and print a markdown diff (suitable for a PR comment).
 
 It builds the project three ways on one host -- with libstdc++ (a noise proxy),
 with the reference's psychicstd headers, and with the working tree's -- swapping
@@ -82,14 +82,15 @@ def _build_matrix(
     reps: int,
     project: str,
 ) -> dict[str, dict[str, list[float]]]:
+    phases = rw.PROJECTS[project].phases
     samples: dict[str, dict[str, list[float]]] = {
-        name: {p: [] for p in rw.PHASES} for name in variants
+        name: {p: [] for p in phases} for name in variants
     }
     for rep in range(reps):
         for name, tc in variants.items():
             print(f"[{rep + 1}/{reps}] building {project}: {name}", file=sys.stderr)
             t = build(tc)
-            for p in rw.PHASES:
+            for p in phases:
                 samples[name][p].append(t[p])
     return samples
 
@@ -121,13 +122,14 @@ def _side(
     sys_key: str,
     psy_key: str,
     cxx_ver: str | None,
+    phases: tuple[str, ...],
 ) -> dict:
     d = {
         p: {
             "system_samples": samples[sys_key][p],
             "psychicstd_samples": samples[psy_key][p],
         }
-        for p in rw.PHASES
+        for p in phases
     }
     d["__meta__"] = {"compiler_version": cxx_ver}
     return d
@@ -203,11 +205,16 @@ def main() -> int:
                 check=False,
             )
 
+        phases = rw.PROJECTS[args.project].phases
         ver = compiler_version(args.compiler)
         base_json = tmp / "base.json"
         head_json = tmp / "head.json"
-        base_json.write_text(json.dumps(_side(samples, "system_base", "ref", ver)))
-        head_json.write_text(json.dumps(_side(samples, "system_head", "head", ver)))
+        base_json.write_text(
+            json.dumps(_side(samples, "system_base", "ref", ver, phases))
+        )
+        head_json.write_text(
+            json.dumps(_side(samples, "system_head", "head", ver, phases))
+        )
 
         subprocess.run(
             [
@@ -218,7 +225,7 @@ def main() -> int:
                 "--head",
                 str(head_json),
                 "--title",
-                f"{args.project} build-time diff (configure / compile / run tests)",
+                f"{args.project} build-time diff ({' / '.join(phases)})",
                 "--what",
                 f"{args.project} build time with psychicstd",
                 "--reproduce",
