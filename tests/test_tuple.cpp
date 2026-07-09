@@ -8,6 +8,19 @@ struct S {
   int v = 42;
 };
 
+struct Tracker {
+  int copies = 0, moves = 0;
+  Tracker() = default;
+  Tracker(const Tracker& o) : copies(o.copies + 1), moves(o.moves) {}
+  Tracker(Tracker&& o) noexcept : copies(o.copies), moves(o.moves + 1) {}
+};
+struct Wrapper {
+  Tracker t;
+  Wrapper() = default;
+  Wrapper(const Tracker& x) : t(x) {}
+  Wrapper(Tracker&& x) : t(static_cast<Tracker&&>(x)) {}
+};
+
 std::tuple<const char*, int, bool> make_result(const char* p, int n) {
   return {p, n, false};
 }
@@ -45,5 +58,13 @@ int main() {
     std::tuple<int> single{1};
     std::tuple<int> copy(single); // direct-init copy from non-const lvalue
     assert(std::get<0>(copy) == 1);
+  }
+
+  {
+    // Heterogeneous move-converting construction must move, not copy.
+    std::tuple<Tracker> src{};
+    std::tuple<Wrapper> dst(std::move(src));
+    assert(std::get<0>(dst).t.moves == 1);
+    assert(std::get<0>(dst).t.copies == 0);
   }
 }

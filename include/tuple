@@ -91,6 +91,17 @@ public:
   tuple(const tuple<Us...>& other)
       : tuple(other, make_index_sequence<sizeof...(Ts)>{}) {}
 
+  template <typename... Us, size_t... Is>
+  tuple(tuple<Us...>&& other, index_sequence<Is...>)
+      : base(static_cast<Us&&>(
+            static_cast<detail::tuple_leaf<Is, Us>&>(other).value)...) {}
+  template <typename... Us>
+    requires(sizeof...(Us) == sizeof...(Ts) &&
+             (is_constructible_v<Ts, Us&&> && ...))
+  tuple(tuple<Us...>&& other)
+      : tuple(static_cast<tuple<Us...>&&>(other),
+              make_index_sequence<sizeof...(Ts)>{}) {}
+
   // Heterogeneous assignment — needed for std::tie(a,b) = tuple<Us...>{...}
   // where Ts are reference types and Us are value types.
   template <typename... Us>
