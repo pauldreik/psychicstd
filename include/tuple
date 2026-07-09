@@ -72,8 +72,12 @@ public:
     requires(sizeof...(Ts) != 0)
       : base(static_cast<Ts&&>(args)...) {}
 
+  // Excludes the sizeof...(Ts) == 1 case where the single argument is itself
+  // a tuple, so it doesn't hijack the copy/move/converting constructors.
   template <typename... Us>
-    requires(sizeof...(Us) == sizeof...(Ts) && sizeof...(Ts) != 0)
+    requires(sizeof...(Us) == sizeof...(Ts) && sizeof...(Ts) != 0 &&
+             !(sizeof...(Us) == 1 && (is_same_v<remove_cvref_t<Us>, tuple> ||
+                                      ...)))
   explicit(!(is_convertible_v<Us, Ts> && ...)) tuple(Us&&... args)
       : base(static_cast<Us&&>(args)...) {}
 

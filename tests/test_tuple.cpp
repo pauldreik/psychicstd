@@ -40,4 +40,10 @@ int main() {
 
     assert(std::get<S>(decltype(t2){}).v == 42);
   }
+
+  {
+    std::tuple<int> single{1};
+    std::tuple<int> copy(single); // direct-init copy from non-const lvalue
+    assert(std::get<0>(copy) == 1);
+  }
 }
