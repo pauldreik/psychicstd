@@ -10,9 +10,9 @@ It is not complete. It is not fully compliant. But it is good enough to quickly 
 | [cppcheck](https://github.com/cppcheck-opensource/cppcheck) | [2.5x](use_on_realworld_projects/cppcheck_speed_report.md)| |
 | [eigen](https://gitlab.com/libeigen/eigen) | [1.9x](use_on_realworld_projects/eigen_speed_report.md) | |
 | [fmt](https://github.com/fmtlib/fmt) | | Just compilation, no unit tests. (gtest has not been tested yet) |
-| [nlohmann json](https://json.nlohmann.me/) | | |
-| [rdfind](https://rdfind.pauldreik.se/) | [2.98x](use_on_realworld_projects/rdfind_speed_report.md) | Runs in psychic strict mode, see "Compatibility levels" further down this document. |
-| [simdutf](https://github.com/simdutf/simdutf) | 1.14x | Consists mostly of simd intrinsics, no speedup expected. Measured in release mode and without the tools component. |
+| [nlohmann json](https://json.nlohmann.me/) | | Uncovered a reliance on implementation-specific behaviour, fixed in [PR #5236](https://github.com/nlohmann/json/pull/5236). |
+| [rdfind](https://rdfind.pauldreik.se/) | [2.98x](use_on_realworld_projects/rdfind_speed_report.md) | Runs in psychic strict mode, see "Compatibility levels" further down this document. Strict mode uncovered code relying on transitive includes. |
+| [simdutf](https://github.com/simdutf/simdutf) | 1.14x | Consists mostly of simd intrinsics, no speedup expected. Measured in release mode. |
 | [wordcounter](benchmarks/compile_time/bench_wordcounter.cpp)| [4.8x](speed.md) | [demo program using STL](benchmarks/compile_time/bench_wordcounter.cpp). Counts word occurence in text files. |
 
 Find the scripts validating the build and generating the above number in the use_on_realworld_projects/ directory.
