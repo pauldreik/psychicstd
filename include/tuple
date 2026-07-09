@@ -67,8 +67,9 @@ public:
     return *this;
   }
 
-  // Non-template constructor: allows {} to initialise individual element types.
-  explicit(!(is_convertible_v<Ts, Ts> && ...)) tuple(Ts&&... args)
+  // Non-template constructor: allows {} to initialise individual element
+  // types. Never explicit: Ts is always convertible to itself.
+  tuple(Ts&&... args)
     requires(sizeof...(Ts) != 0)
       : base(static_cast<Ts&&>(args)...) {}
 
@@ -76,28 +77,20 @@ public:
   // a tuple, so it doesn't hijack the copy/move/converting constructors.
   template <typename... Us>
     requires(sizeof...(Us) == sizeof...(Ts) && sizeof...(Ts) != 0 &&
-             !(sizeof...(Us) == 1 && (is_same_v<remove_cvref_t<Us>, tuple> ||
-                                      ...)))
+             !(sizeof...(Us) == 1 &&
+               (is_same_v<remove_cvref_t<Us>, tuple> || ...)))
   explicit(!(is_convertible_v<Us, Ts> && ...)) tuple(Us&&... args)
       : base(static_cast<Us&&>(args)...) {}
 
-  template <typename... Us, size_t... Is>
-  tuple(const tuple<Us...>& other, index_sequence<Is...>)
-      : base(static_cast<const Us&>(
-            static_cast<const detail::tuple_leaf<Is, Us>&>(other).value)...) {}
   template <typename... Us>
     requires(sizeof...(Us) == sizeof...(Ts) &&
              (is_constructible_v<Ts, const Us&> && ...))
   tuple(const tuple<Us...>& other)
       : tuple(other, make_index_sequence<sizeof...(Ts)>{}) {}
 
-  template <typename... Us, size_t... Is>
-  tuple(tuple<Us...>&& other, index_sequence<Is...>)
-      : base(static_cast<Us&&>(
-            static_cast<detail::tuple_leaf<Is, Us>&>(other).value)...) {}
   template <typename... Us>
     requires(sizeof...(Us) == sizeof...(Ts) &&
-             (is_constructible_v<Ts, Us&&> && ...))
+             (is_constructible_v<Ts, Us &&> && ...))
   tuple(tuple<Us...>&& other)
       : tuple(static_cast<tuple<Us...>&&>(other),
               make_index_sequence<sizeof...(Ts)>{}) {}
@@ -112,6 +105,18 @@ public:
     }(make_index_sequence<sizeof...(Ts)>{});
     return *this;
   }
+
+private:
+  // Delegating helpers for the converting constructors above — kept private
+  // so a stray two-argument call can't accidentally select them.
+  template <typename... Us, size_t... Is>
+  tuple(const tuple<Us...>& other, index_sequence<Is...>)
+      : base(static_cast<const Us&>(
+            static_cast<const detail::tuple_leaf<Is, Us>&>(other).value)...) {}
+  template <typename... Us, size_t... Is>
+  tuple(tuple<Us...>&& other, index_sequence<Is...>)
+      : base(static_cast<Us&&>(
+            static_cast<detail::tuple_leaf<Is, Us>&>(other).value)...) {}
 };
 
 template <> class tuple<> {};
