@@ -643,7 +643,7 @@ def _simdutf() -> Project:
                 "-GNinja",
                 "-DCMAKE_BUILD_TYPE=" + tc.build_type.capitalize(),
                 "-DSIMDUTF_FAST_TESTS=On",
-                "-DSIMDUTF_TOOLS=Off",  # sutf/fastbase64 need <filesystem>, unsupported
+                "-DSIMDUTF_TOOLS=On",
                 "-DCMAKE_CXX_COMPILER=" + tc.cxx,
                 "-DSIMDUTF_CXX_STANDARD=20",
                 "-DCMAKE_CXX_FLAGS="
@@ -677,7 +677,7 @@ def _simdutf() -> Project:
         version=version,
         build=build,
         phases=("compile", "run tests"),
-        comment="simdutf code is mostly simd intrinsics. builds without tools because of filesystem not being available yet.",
+        comment="simdutf code is mostly simd intrinsics.",
     )
 
 
