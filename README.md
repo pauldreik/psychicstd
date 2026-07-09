@@ -17,6 +17,8 @@ It is not complete. It is not fully compliant. But it is good enough to quickly 
 
 Find the scripts validating the build and generating the above number in the use_on_realworld_projects/ directory.
 
+There's a second, smaller speedup too: since psychicstd headers are used with `-nostdinc++` and never pull in `libstdc++.so.6`, binaries link against fewer shared libraries. That means less work for the dynamic loader on every process start — a [1.7x faster startup](startup.md) for a trivial program in the measurement above. It's a minor effect on its own, but it's not nothing when it's paid on every one of the hundreds of test binaries `ctest` spawns during the edit-compile-debug cycle.
+
 Once you have coded for a while, switch to a real quality standard library (typically libstdc++ or libc++) and test and build real releases - psychicstd is just intended for speeding up the development.
 
 ## How complete is it?
@@ -222,6 +224,16 @@ python3 benchmarks/compile_time/run_bench.py
 ```
 
 View the results by inspecting [speed.md](speed.md).
+
+There is also a benchmark for process startup time (dynamic linker overhead, not compile time — see the note above):
+
+```bash
+cmake --build build --target startup_bench
+# or directly:
+python3 benchmarks/startup_time/run_bench.py <path-to-system-binary> <path-to-psychicstd-binary>
+```
+
+View the results by inspecting [startup.md](startup.md).
 
 For a deeper look at *why* psychicstd compiles faster, see the per-header case studies, which use clang's `-ftime-trace` to break down where the time goes:
 
