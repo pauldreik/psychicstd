@@ -67,25 +67,33 @@ public:
     return *this;
   }
 
-  // Non-template constructor: allows {} to initialise individual element types.
-  explicit(!(is_convertible_v<Ts, Ts> && ...)) tuple(Ts&&... args)
+  // Non-template constructor: allows {} to initialise individual element
+  // types. Never explicit: Ts is always convertible to itself.
+  tuple(Ts&&... args)
     requires(sizeof...(Ts) != 0)
       : base(static_cast<Ts&&>(args)...) {}
 
+  // Excludes the sizeof...(Ts) == 1 case where the single argument is itself
+  // a tuple, so it doesn't hijack the copy/move/converting constructors.
   template <typename... Us>
-    requires(sizeof...(Us) == sizeof...(Ts) && sizeof...(Ts) != 0)
+    requires(sizeof...(Us) == sizeof...(Ts) && sizeof...(Ts) != 0 &&
+             !(sizeof...(Us) == 1 &&
+               (is_same_v<remove_cvref_t<Us>, tuple> || ...)))
   explicit(!(is_convertible_v<Us, Ts> && ...)) tuple(Us&&... args)
       : base(static_cast<Us&&>(args)...) {}
 
-  template <typename... Us, size_t... Is>
-  tuple(const tuple<Us...>& other, index_sequence<Is...>)
-      : base(static_cast<const Us&>(
-            static_cast<const detail::tuple_leaf<Is, Us>&>(other).value)...) {}
   template <typename... Us>
     requires(sizeof...(Us) == sizeof...(Ts) &&
              (is_constructible_v<Ts, const Us&> && ...))
   tuple(const tuple<Us...>& other)
       : tuple(other, make_index_sequence<sizeof...(Ts)>{}) {}
+
+  template <typename... Us>
+    requires(sizeof...(Us) == sizeof...(Ts) &&
+             (is_constructible_v<Ts, Us &&> && ...))
+  tuple(tuple<Us...>&& other)
+      : tuple(static_cast<tuple<Us...>&&>(other),
+              make_index_sequence<sizeof...(Ts)>{}) {}
 
   // Heterogeneous assignment — needed for std::tie(a,b) = tuple<Us...>{...}
   // where Ts are reference types and Us are value types.
@@ -97,6 +105,18 @@ public:
     }(make_index_sequence<sizeof...(Ts)>{});
     return *this;
   }
+
+private:
+  // Delegating helpers for the converting constructors above — kept private
+  // so a stray two-argument call can't accidentally select them.
+  template <typename... Us, size_t... Is>
+  tuple(const tuple<Us...>& other, index_sequence<Is...>)
+      : base(static_cast<const Us&>(
+            static_cast<const detail::tuple_leaf<Is, Us>&>(other).value)...) {}
+  template <typename... Us, size_t... Is>
+  tuple(tuple<Us...>&& other, index_sequence<Is...>)
+      : base(static_cast<Us&&>(
+            static_cast<detail::tuple_leaf<Is, Us>&>(other).value)...) {}
 };
 
 template <> class tuple<> {};
@@ -110,12 +130,18 @@ inline constexpr size_t tuple_size_v = tuple_size<T>::value;
 
 // tuple_element
 namespace detail {
+#if __has_builtin(__type_pack_element)
+template <size_t I, typename... Ts> struct type_at {
+  using type = __type_pack_element<I, Ts...>;
+};
+#else
 template <size_t I, typename Head, typename... Tail> struct type_at {
   using type = typename type_at<I - 1, Tail...>::type;
 };
 template <typename Head, typename... Tail> struct type_at<0, Head, Tail...> {
   using type = Head;
 };
+#endif
 } // namespace detail
 
 template <size_t I, typename... Ts> struct tuple_element<I, tuple<Ts...>> {
@@ -145,57 +171,24 @@ constexpr tuple_element_t<I, tuple<Ts...>>&& get(tuple<Ts...>&& t) noexcept {
 }
 
 // get<T>(tuple)
+namespace detail {
+template <typename T, typename... Ts> constexpr size_t tuple_index_of() {
+  static_assert((is_same_v<T, Ts> || ...), "type not found in tuple");
+  static_assert((size_t{is_same_v<T, Ts>} + ...) == 1,
+                "type must occur only once in tuple");
+  return [&]<size_t... Is>(index_sequence<Is...>) {
+    return ((is_same_v<T, Ts> ? Is : 0) + ...);
+  }(index_sequence_for<Ts...>{});
+}
+} // namespace detail
+
 template <typename T, typename... Ts>
 constexpr T& get(tuple<Ts...>& t) noexcept {
-  constexpr std::size_t I = []() -> std::size_t {
-    std::size_t i = 0;
-    std::size_t ret; // uninit on purpose
-    auto count = 0;
-    for (auto& d : {std::is_same_v<T, Ts>...}) {
-      if (d) {
-        ret = i;
-        ++count;
-      }
-      ++i;
-    };
-    if (count == 0) {
-      // not found
-      return -1;
-    }
-    if (count == 1) {
-      return ret;
-    }
-    return -2;
-  }();
-  static_assert(I != -1, "type not found in tuple");
-  static_assert(I != -2, "type must occur only once in tuple");
-  return get<I>(t);
+  return get<detail::tuple_index_of<T, Ts...>()>(t);
 }
 template <typename T, typename... Ts>
 constexpr const T& get(const tuple<Ts...>& t) noexcept {
-  constexpr std::size_t I = []() -> std::size_t {
-    std::size_t i = 0;
-    std::size_t ret; // uninit on purpose
-    auto count = 0;
-    for (auto& d : {std::is_same_v<T, Ts>...}) {
-      if (d) {
-        ret = i;
-        ++count;
-      }
-      ++i;
-    };
-    if (count == 0) {
-      // not found
-      return -1;
-    }
-    if (count == 1) {
-      return ret;
-    }
-    return -2;
-  }();
-  static_assert(I != -1, "type not found in tuple");
-  static_assert(I != -2, "type must occur only once in tuple");
-  return get<I>(t);
+  return get<detail::tuple_index_of<T, Ts...>()>(t);
 }
 
 // Comparison operators
