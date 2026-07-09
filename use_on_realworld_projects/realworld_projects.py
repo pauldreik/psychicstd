@@ -165,6 +165,90 @@ def _catch2() -> Project:
     )
 
 
+# --- eigen ------------------------------------------------------------
+
+_EIGEN_TEST_LIST = (
+    "basicstuff",
+    "meta",
+    "numext",
+    "block",
+    "corners",
+    "determinant",
+    "diagonal",
+    "array_cwise",
+    "array_for_matrix",
+    "constructor",
+    "adjoint",
+    "triangular",
+)
+
+
+def _eigen() -> Project:
+    version = "3.4.0"
+    url = (
+        f"https://gitlab.com/libeigen/eigen/-/archive/{version}/eigen-{version}.tar.gz"
+    )
+    checksum = "8586084f71f9bde545ee7fa6d00288b264a2b7ac3607b974e54d13e7162c1c72"
+
+    def build(tc: Toolchain) -> dict[str, float]:
+        tarball = RW_DIR / f"eigen-{version}.tar.gz"
+        _fetch(url, tarball, checksum)
+
+        with tempfile.TemporaryDirectory(
+            prefix="rw-eigen-", ignore_cleanup_errors=True
+        ) as work_dir:
+            work = Path(work_dir)
+            with tarfile.open(tarball) as t:
+                t.extractall(work)
+            src = work / f"eigen-{version}"
+            test_dir = src / "test"
+
+            # main.h's FORBIDDEN_IDENTIFIER macros clash with psychicstd's names.
+            main_h = test_dir / "main.h"
+            text = main_h.read_text()
+            for name in (
+                "FORBIDDEN_IDENTIFIER",
+                "B0 FORBIDDEN_IDENTIFIER",
+                "I  FORBIDDEN_IDENTIFIER",
+            ):
+                text = text.replace(f"#define {name}", f"// DISABLED: #define {name}")
+            main_h.write_text(text)
+
+            env = _env(tc)
+            cxxflags = [
+                *tc.cxxflags.split(),
+                "-I",
+                str(src),
+                "-I",
+                str(test_dir),
+                "-DEIGEN_TEST_MAX_SIZE=320",
+            ]
+
+            compile_ms = 0.0
+            run_ms = 0.0
+            for name in _EIGEN_TEST_LIST:
+                cpp = test_dir / f"{name}.cpp"
+                binary = work / f"eigen_{name}"
+                cmd = (
+                    [tc.cxx, *cxxflags, str(cpp)]
+                    + (tc.ldflags.split() if tc.ldflags else [])
+                    + (tc.libs.split() if tc.libs else [])
+                    + ["-o", str(binary)]
+                )
+                compile_ms += _timed(cmd, src, env)
+                run_ms += _timed([str(binary)], src, env)
+
+            return {"compile": compile_ms, "run tests": run_ms}
+
+    return Project(
+        version=version,
+        build=build,
+        phases=("compile", "run tests"),
+        comment="eigen has no configure step; a fixed subset of its test "
+        "suite is compiled and run individually, with times summed.",
+    )
+
+
 # --- fmt --------------------------------------------------------------
 
 
@@ -406,6 +490,7 @@ def _simdutf() -> Project:
 
 PROJECTS: dict[str, Project] = {
     "catch2": _catch2(),
+    "eigen": _eigen(),
     "fmt": _fmt(),
     "rdfind": _rdfind(),
     "simdutf": _simdutf(),
