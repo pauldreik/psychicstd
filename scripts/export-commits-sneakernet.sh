@@ -105,9 +105,11 @@ For more details on applying patches manually:
 
 README_TEXT
 
-# Create tarball with descriptive name
+# Create tarball with descriptive name (branch may contain slashes, e.g.
+# "wt/main-work" -- sanitize so tar doesn't treat it as a subdirectory)
 TIMESTAMP=$(date +%Y%m%d-%H%M%S)
-TARBALL="patches-${BRANCH}-${TIMESTAMP}.tar.gz"
+SAFE_BRANCH="${BRANCH//\//-}"
+TARBALL="patches-${SAFE_BRANCH}-${TIMESTAMP}.tar.gz"
 
 # Maximum gzip compression (level 9) -- these bundles get sneakernetted, so
 # smaller is worth the extra CPU.
