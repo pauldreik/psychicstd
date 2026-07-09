@@ -27,8 +27,11 @@ public:
   using const_reference = const T&;
   using pointer = T*;
   using const_pointer = const T*;
-  using iterator = T*;
-  using const_iterator = const T*;
+  // __vec_iter (from <vector>, already pulled in below) instead of a raw T*:
+  // a raw pointer can't be decremented/incremented as an rvalue (e.g.
+  // `--v.end()`), which real STL containers support.
+  using iterator = __vec_iter<T>;
+  using const_iterator = __vec_iter<const T>;
   using reverse_iterator = std::reverse_iterator<iterator>;
   using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
@@ -205,8 +208,28 @@ public:
       cap_ = n;
     }
   }
+  deque(size_type n, const Allocator& a)
+      : data_(nullptr), start_(0), size_(0), cap_(0), alloc_(a) {
+    if (n) {
+      data_ = _alloc_mem(n);
+      for (size_type i = 0; i < n; ++i)
+        _construct(data_ + i);
+      size_ = n;
+      cap_ = n;
+    }
+  }
   deque(size_type n, const T& v)
       : data_(nullptr), start_(0), size_(0), cap_(0), alloc_() {
+    if (n) {
+      data_ = _alloc_mem(n);
+      for (size_type i = 0; i < n; ++i)
+        _construct(data_ + i, v);
+      size_ = n;
+      cap_ = n;
+    }
+  }
+  deque(size_type n, const T& v, const Allocator& a)
+      : data_(nullptr), start_(0), size_(0), cap_(0), alloc_(a) {
     if (n) {
       data_ = _alloc_mem(n);
       for (size_type i = 0; i < n; ++i)
@@ -226,10 +249,27 @@ public:
       cap_ = il.size();
     }
   }
+  deque(initializer_list<T> il, const Allocator& a)
+      : data_(nullptr), start_(0), size_(0), cap_(0), alloc_(a) {
+    if (il.size()) {
+      data_ = _alloc_mem(il.size());
+      size_type i = 0;
+      for (const T& v : il)
+        _construct(data_ + i++, v);
+      size_ = il.size();
+      cap_ = il.size();
+    }
+  }
   template <typename It>
     requires(!is_integral_v<It>)
   deque(It first, It last)
       : data_(nullptr), start_(0), size_(0), cap_(0), alloc_() {
+    _range_init(first, last);
+  }
+  template <typename It>
+    requires(!is_integral_v<It>)
+  deque(It first, It last, const Allocator& a)
+      : data_(nullptr), start_(0), size_(0), cap_(0), alloc_(a) {
     _range_init(first, last);
   }
 
@@ -246,6 +286,16 @@ public:
       cap_ = o.size_;
     }
   }
+  deque(const deque& o, const Allocator& a)
+      : data_(nullptr), start_(0), size_(0), cap_(0), alloc_(a) {
+    if (o.size_) {
+      data_ = _alloc_mem(o.size_);
+      for (size_type i = 0; i < o.size_; ++i)
+        _construct(data_ + i, o.data_[o.start_ + i]);
+      size_ = o.size_;
+      cap_ = o.size_;
+    }
+  }
   deque(deque&& o) noexcept
       : data_(o.data_), start_(o.start_), size_(o.size_), cap_(o.cap_),
         alloc_(std::move(o.alloc_)) {
@@ -253,6 +303,25 @@ public:
     o.start_ = 0;
     o.size_ = 0;
     o.cap_ = 0;
+  }
+  deque(deque&& o, const Allocator& a)
+      : data_(nullptr), start_(0), size_(0), cap_(0), alloc_(a) {
+    if (a == o.alloc_) {
+      data_ = o.data_;
+      start_ = o.start_;
+      size_ = o.size_;
+      cap_ = o.cap_;
+      o.data_ = nullptr;
+      o.start_ = 0;
+      o.size_ = 0;
+      o.cap_ = 0;
+    } else if (o.size_) {
+      data_ = _alloc_mem(o.size_);
+      for (size_type i = 0; i < o.size_; ++i)
+        _construct(data_ + i, _xfer(o.data_[o.start_ + i]));
+      size_ = o.size_;
+      cap_ = o.size_;
+    }
   }
 
   ~deque() {
@@ -349,6 +418,27 @@ public:
 
   allocator_type get_allocator() const noexcept { return alloc_; }
 
+  void assign(size_type n, const T& v) {
+    clear();
+    if (n > cap_) {
+      _free_mem(data_, cap_);
+      data_ = _alloc_mem(n);
+      cap_ = n;
+    }
+    start_ = 0;
+    for (size_type i = 0; i < n; ++i)
+      _construct(data_ + i, v);
+    size_ = n;
+  }
+  template <typename It>
+    requires(!is_integral_v<It>)
+  void assign(It first, It last) {
+    clear();
+    for (; first != last; ++first)
+      push_back(*first);
+  }
+  void assign(initializer_list<T> il) { assign(il.begin(), il.end()); }
+
   // Element access
   reference operator[](size_type i) noexcept { return data_[start_ + i]; }
   const_reference operator[](size_type i) const noexcept {
@@ -370,10 +460,14 @@ public:
   const_reference back() const noexcept { return data_[start_ + size_ - 1]; }
 
   // Iterators
-  iterator begin() noexcept { return data_ + start_; }
-  iterator end() noexcept { return data_ + start_ + size_; }
-  const_iterator begin() const noexcept { return data_ + start_; }
-  const_iterator end() const noexcept { return data_ + start_ + size_; }
+  iterator begin() noexcept { return iterator{data_ + start_}; }
+  iterator end() noexcept { return iterator{data_ + start_ + size_}; }
+  const_iterator begin() const noexcept {
+    return const_iterator{data_ + start_};
+  }
+  const_iterator end() const noexcept {
+    return const_iterator{data_ + start_ + size_};
+  }
   const_iterator cbegin() const noexcept { return begin(); }
   const_iterator cend() const noexcept { return end(); }
   reverse_iterator rbegin() noexcept { return reverse_iterator(end()); }
@@ -522,26 +616,38 @@ public:
     return data_[start_];
   }
 
+  template <typename... Args>
+  iterator emplace(const_iterator pos, Args&&... args) {
+    size_type idx = pos.ptr_ - (data_ + start_);
+    // args may alias an element of *this; build the value before the
+    // gap-opening shift can move or destroy its storage.
+    T tmp(std::forward<Args>(args)...);
+    _make_gap(idx, 1);
+    _construct(data_ + start_ + idx, std::move(tmp));
+    ++size_;
+    return iterator{data_ + start_ + idx};
+  }
+
   iterator insert(const_iterator pos, const T& v) {
-    size_type idx = pos - (data_ + start_);
+    size_type idx = pos.ptr_ - (data_ + start_);
     T tmp(v);
     _make_gap(idx, 1);
     _construct(data_ + start_ + idx, _xfer(tmp));
     ++size_;
-    return data_ + start_ + idx;
+    return iterator{data_ + start_ + idx};
   }
   iterator insert(const_iterator pos, T&& v) {
-    size_type idx = pos - (data_ + start_);
+    size_type idx = pos.ptr_ - (data_ + start_);
     T tmp(std::move(v));
     _make_gap(idx, 1);
     _construct(data_ + start_ + idx, std::move(tmp));
     ++size_;
-    return data_ + start_ + idx;
+    return iterator{data_ + start_ + idx};
   }
   iterator insert(const_iterator pos, size_type n, const T& v) {
-    size_type idx = pos - (data_ + start_);
+    size_type idx = pos.ptr_ - (data_ + start_);
     if (n == 0)
-      return data_ + start_ + idx;
+      return iterator{data_ + start_ + idx};
     // v may alias an element of *this; copy it before the gap-opening shift
     // can move or destroy its storage.
     T tmp(v);
@@ -549,7 +655,7 @@ public:
     for (size_type i = 0; i < n; ++i)
       _construct(data_ + start_ + idx + i, tmp);
     size_ += n;
-    return data_ + start_ + idx;
+    return iterator{data_ + start_ + idx};
   }
   iterator insert(const_iterator pos, initializer_list<T> il) {
     return insert(pos, il.begin(), il.end());
@@ -557,7 +663,7 @@ public:
   template <typename It>
     requires(!is_integral_v<It>)
   iterator insert(const_iterator pos, It first, It last) {
-    size_type idx = pos - (data_ + start_);
+    size_type idx = pos.ptr_ - (data_ + start_);
     if constexpr (!is_base_of_v<
                       forward_iterator_tag,
                       typename iterator_traits<It>::iterator_category>) {
@@ -565,35 +671,36 @@ public:
       vector<T> tmp;
       for (; first != last; ++first)
         tmp.push_back(*first);
-      return insert(data_ + start_ + idx, tmp.begin(), tmp.end());
+      return insert(const_iterator{data_ + start_ + idx}, tmp.begin(),
+                    tmp.end());
     }
     size_type n = 0;
     for (auto it = first; it != last; ++it)
       ++n;
     if (n == 0)
-      return data_ + start_ + idx;
+      return iterator{data_ + start_ + idx};
     _make_gap(idx, n);
     size_type i = 0;
     for (auto it = first; it != last; ++it)
       _construct(data_ + start_ + idx + (i++), *it);
     size_ += n;
-    return data_ + start_ + idx;
+    return iterator{data_ + start_ + idx};
   }
 
   iterator erase(const_iterator pos) {
-    size_type idx = pos - (data_ + start_);
+    size_type idx = pos.ptr_ - (data_ + start_);
     _make_erase_gap(idx, 1);
     --size_;
-    return data_ + start_ + idx;
+    return iterator{data_ + start_ + idx};
   }
   iterator erase(const_iterator first, const_iterator last) {
-    size_type idx = first - (data_ + start_);
+    size_type idx = first.ptr_ - (data_ + start_);
     size_type n = last - first;
     if (n == 0)
-      return data_ + start_ + idx;
+      return iterator{data_ + start_ + idx};
     _make_erase_gap(idx, n);
     size_ -= n;
-    return data_ + start_ + idx;
+    return iterator{data_ + start_ + idx};
   }
 
   void swap(deque& o) noexcept {
@@ -619,6 +726,86 @@ public:
 template <typename T, typename A>
 void swap(deque<T, A>& a, deque<T, A>& b) noexcept {
   a.swap(b);
+}
+
+template <typename T, typename A>
+bool operator==(const deque<T, A>& a, const deque<T, A>& b) {
+  if (a.size() != b.size())
+    return false;
+  for (size_t i = 0; i < a.size(); ++i)
+    if (!(a[i] == b[i]))
+      return false;
+  return true;
+}
+template <typename T, typename A>
+bool operator!=(const deque<T, A>& a, const deque<T, A>& b) {
+  return !(a == b);
+}
+template <typename T, typename A>
+bool operator<(const deque<T, A>& a, const deque<T, A>& b) {
+  for (size_t i = 0; i < a.size() && i < b.size(); ++i) {
+    if (a[i] < b[i])
+      return true;
+    if (b[i] < a[i])
+      return false;
+  }
+  return a.size() < b.size();
+}
+template <typename T, typename A>
+bool operator<=(const deque<T, A>& a, const deque<T, A>& b) {
+  return !(b < a);
+}
+template <typename T, typename A>
+bool operator>(const deque<T, A>& a, const deque<T, A>& b) {
+  return b < a;
+}
+template <typename T, typename A>
+bool operator>=(const deque<T, A>& a, const deque<T, A>& b) {
+  return !(a < b);
+}
+
+// Reuses vector's three-way-comparison helpers (__ntw/__stw/__cmp/__cmp_t) --
+// same logic, no need for a second copy.
+template <typename T, typename A>
+  requires(__vec_detail::__ntw<T> || __vec_detail::__stw<T>)
+auto operator<=>(const deque<T, A>& a, const deque<T, A>& b)
+    -> __vec_detail::__cmp_t<T> {
+  using R = __vec_detail::__cmp_t<T>;
+  size_t n = a.size() < b.size() ? a.size() : b.size();
+  for (size_t i = 0; i < n; ++i) {
+    R c = __vec_detail::__cmp(a[i], b[i]);
+    if (c != 0)
+      return c;
+  }
+  return static_cast<R>(a.size() <=> b.size());
+}
+
+// std::erase / std::erase_if (C++20)
+template <typename T, typename A, typename U>
+typename deque<T, A>::size_type erase(deque<T, A>& c, const U& value) {
+  typename deque<T, A>::size_type n = 0;
+  auto it = c.begin();
+  while (it != c.end()) {
+    if (*it == value) {
+      it = c.erase(it);
+      ++n;
+    } else
+      ++it;
+  }
+  return n;
+}
+template <typename T, typename A, typename Pred>
+typename deque<T, A>::size_type erase_if(deque<T, A>& c, Pred pred) {
+  typename deque<T, A>::size_type n = 0;
+  auto it = c.begin();
+  while (it != c.end()) {
+    if (pred(*it)) {
+      it = c.erase(it);
+      ++n;
+    } else
+      ++it;
+  }
+  return n;
 }
 
 } // namespace std
