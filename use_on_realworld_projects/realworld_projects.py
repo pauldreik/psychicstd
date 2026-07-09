@@ -308,7 +308,7 @@ def _simdutf() -> Project:
         version=version,
         build=build,
         phases=("compile", "run tests"),
-        comment="simdutf code is mostly simd intrinsics.",
+        comment="simdutf code is mostly simd intrinsics. builds without tools because of filesystem not being available yet.",
     )
 
 
