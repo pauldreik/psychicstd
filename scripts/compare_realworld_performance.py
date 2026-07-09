@@ -16,6 +16,7 @@ Usage:
   scripts/compare_realworld_performance.py [--compiler CXX]
       [--build-type {debug,release,both}] [--reps N]
       [--project {NAME,all} ...] [--enable-ccache] [--output PATH]
+  scripts/compare_realworld_performance.py --list
 """
 
 import argparse
@@ -159,7 +160,16 @@ def main() -> int:
         metavar="PATH",
         help="also write the report to this file (in addition to stdout)",
     )
+    ap.add_argument(
+        "--list",
+        action="store_true",
+        help="print known project names, one per line, and exit",
+    )
     args = ap.parse_args()
+
+    if args.list:
+        print("\n".join(sorted(rw.PROJECTS)))
+        return 0
 
     if not args.projects or "all" in args.projects:
         projects = sorted(rw.PROJECTS)
@@ -198,6 +208,11 @@ def main() -> int:
         f"CI is below 1x (reliably slower) · {YELLOW} the CI straddles 1x (not "
         "distinguishable from run-to-run noise).\n",
     ]
+    if args.enable_ccache:
+        lines.append(
+            f"{YELLOW} **ccache was left enabled -- these timings are skewed "
+            "and not representative of a real build.**\n"
+        )
     for project in projects:
         spec = rw.PROJECTS[project]
         lines.append(f"## {project} ({spec.version})\n")
