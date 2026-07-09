@@ -165,6 +165,86 @@ def _catch2() -> Project:
     )
 
 
+# --- cppcheck -----------------------------------------------------------
+
+_CPPCHECK_FILES = (
+    "lib/addoninfo.cpp",
+    "lib/analyzerinfo.cpp",
+    "lib/color.cpp",
+    "lib/timer.cpp",
+    "lib/errortypes.cpp",
+    "lib/astutils.cpp",
+    "lib/checkassert.cpp",
+    "lib/checkbool.cpp",
+    "lib/checkcondition.cpp",
+    "lib/checkfunctions.cpp",
+    "lib/tokenize.cpp",
+    "lib/symboldatabase.cpp",
+    "lib/valueflow.cpp",
+    "lib/checkclass.cpp",
+    "lib/checkbufferoverrun.cpp",
+    "cli/cmdlineparser.cpp",
+    "cli/filelister.cpp",
+    "cli/cppcheckexecutor.cpp",
+)
+
+
+def _cppcheck() -> Project:
+    version = "2.21.0"
+    url = f"https://github.com/danmar/cppcheck/archive/refs/tags/{version}.tar.gz"
+    checksum = "f028ff75ca5372738f3737c8b3e8611426a6526b6aea2ef01301ab0f5902f044"
+
+    def build(tc: Toolchain) -> dict[str, float]:
+        tarball = RW_DIR / f"cppcheck-{version}.tar.gz"
+        _fetch(url, tarball, checksum)
+
+        with tempfile.TemporaryDirectory(
+            prefix="rw-cppcheck-", ignore_cleanup_errors=True
+        ) as work_dir:
+            work = Path(work_dir)
+            with tarfile.open(tarball) as t:
+                t.extractall(work)
+            src = work / f"cppcheck-{version}"
+
+            env = _env(tc)
+            cxxflags = [
+                *tc.cxxflags.split(),
+                "-I",
+                str(src / "lib"),
+                "-I",
+                str(src / "externals" / "picojson"),
+                "-I",
+                str(src / "externals" / "simplecpp"),
+                "-I",
+                str(src / "externals" / "tinyxml2"),
+                "-I",
+                str(src / "cli"),
+                "-I",
+                str(src / "frontend"),
+                '-DFILESDIR="/usr/local/share/Cppcheck"',
+                "-DHAVE_EXECINFO_H=1",
+            ]
+
+            compile_ms = 0.0
+            for name in _CPPCHECK_FILES:
+                cpp = src / name
+                obj = work / (Path(name).stem + ".o")
+                cmd = [tc.cxx, *cxxflags, str(cpp), "-c", "-o", str(obj)]
+                compile_ms += _timed(cmd, src, env)
+
+            return {"compile": compile_ms}
+
+    return Project(
+        version=version,
+        build=build,
+        phases=("compile",),
+        comment="a fixed subset of cppcheck's source files is compiled "
+        "individually (no link/run step); times are summed. the real binary "
+        "doesn't build: threadexecutor.cpp needs <future> (unimplemented) "
+        "and stacktrace.cpp needs <cxxabi.h> (not shadowed by psychicstd).",
+    )
+
+
 # --- eigen ------------------------------------------------------------
 
 _EIGEN_TEST_LIST = (
@@ -490,6 +570,7 @@ def _simdutf() -> Project:
 
 PROJECTS: dict[str, Project] = {
     "catch2": _catch2(),
+    "cppcheck": _cppcheck(),
     "eigen": _eigen(),
     "fmt": _fmt(),
     "rdfind": _rdfind(),
