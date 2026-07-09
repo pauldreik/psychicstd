@@ -226,6 +226,9 @@ template <typename Ptr> constexpr auto to_address(const Ptr& p) noexcept {
 // unique_ptr (owning, non-copyable)
 template <typename T> struct default_delete {
   constexpr default_delete() noexcept = default;
+  template <typename U>
+    requires(is_convertible_v<U*, T*>)
+  constexpr default_delete(const default_delete<U>&) noexcept {}
   void operator()(T* p) const noexcept { delete p; }
 };
 
