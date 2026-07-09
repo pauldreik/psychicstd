@@ -234,6 +234,8 @@ def main() -> int:
     print(report)
     if args.output:
         args.output.write_text(report + "\n", encoding="utf-8")
+        if subprocess.run(["which", "mdformat"], capture_output=True).returncode == 0:
+            subprocess.run(["mdformat", str(args.output)], check=True)
         print(f"Report written to {args.output}", file=sys.stderr)
     return 0
 

@@ -18,42 +18,90 @@ jobs:
         run: pipx install mdformat
       - name: Install rdfind build dependencies
         run: sudo apt-get build-dep -y rdfind
-      - name: Benchmark rdfind (system STL vs psychicstd)
-        run: bash use_on_realworld_projects/benchmark_rdfind.sh
+      - name: Build and benchmark rdfind with psychicstd
+        run: >-
+          python3 scripts/compare_realworld_performance.py --project rdfind
+          --build-type both --reps 3
+          --output use_on_realworld_projects/rdfind_speed_report.md
       - name: Upload speed report
         if: always()
         uses: actions/upload-artifact@v7
         with:
           name: rdfind-speed-report
           path: use_on_realworld_projects/rdfind_speed_report.md
-      - name: run rdfind with sanitizers
-        run: |
-          export UBSAN_OPTIONS="print_stacktrace=1:halt_on_error=1"
-          bash use_on_realworld_projects/benchmark_rdfind.sh -a -u
+      # TODO: no project here is built with sanitizers yet. rdfind used to
+      # have a "run with sanitizers" step, but it silently ignored its own
+      # -a/-u flags and just rebuilt the same non-sanitized binary again.
   simdutf:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+      - name: Install Markdown formatter
+        run: pipx install mdformat
+      - name: Install ninja
+        run: sudo apt-get install -y ninja-build
       - name: Build and test simdutf with psychicstd
-        run: bash use_on_realworld_projects/test_simdutf.sh
+        run: >-
+          python3 scripts/compare_realworld_performance.py --project simdutf
+          --build-type debug --reps 1
+          --output use_on_realworld_projects/simdutf_speed_report.md
+      - name: Upload speed report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: simdutf-speed-report
+          path: use_on_realworld_projects/simdutf_speed_report.md
   nlohmann:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+      - name: Install Markdown formatter
+        run: pipx install mdformat
+      - name: Install ninja
+        run: sudo apt-get install -y ninja-build
       - name: Build nlohmann JSON examples with psychicstd
-        run: bash use_on_realworld_projects/test_nlohmann.sh
+        run: >-
+          python3 scripts/compare_realworld_performance.py --project nlohmann
+          --build-type debug --reps 1
+          --output use_on_realworld_projects/nlohmann_speed_report.md
+      - name: Upload speed report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: nlohmann-speed-report
+          path: use_on_realworld_projects/nlohmann_speed_report.md
   fmt:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+      - name: Install Markdown formatter
+        run: pipx install mdformat
+      - name: Install ninja
+        run: sudo apt-get install -y ninja-build
       - name: Build and test fmt with psychicstd
-        run: bash use_on_realworld_projects/test_fmt.sh
+        run: >-
+          python3 scripts/compare_realworld_performance.py --project fmt
+          --build-type debug --reps 1
+          --output use_on_realworld_projects/fmt_speed_report.md
+      - name: Upload speed report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: fmt-speed-report
+          path: use_on_realworld_projects/fmt_speed_report.md
   catch2:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+      - name: Install Markdown formatter
+        run: pipx install mdformat
+      - name: Install ninja
+        run: sudo apt-get install -y ninja-build
       - name: Build and test Catch2 with psychicstd
-        run: bash use_on_realworld_projects/test_catch2.sh
+        run: >-
+          python3 scripts/compare_realworld_performance.py --project catch2
+          --build-type debug --reps 1
+          --output use_on_realworld_projects/catch2_speed_report.md
       - name: Upload speed report
         if: always()
         uses: actions/upload-artifact@v7
@@ -64,8 +112,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+      - name: Install Markdown formatter
+        run: pipx install mdformat
       - name: Build and benchmark Eigen tests with psychicstd
-        run: bash use_on_realworld_projects/test_eigen.sh
+        run: >-
+          python3 scripts/compare_realworld_performance.py --project eigen
+          --build-type debug --reps 1
+          --output use_on_realworld_projects/eigen_speed_report.md
       - name: Upload speed report
         if: always()
         uses: actions/upload-artifact@v7
@@ -76,8 +129,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+      - name: Install Markdown formatter
+        run: pipx install mdformat
       - name: Build and benchmark cppcheck with psychicstd
-        run: bash use_on_realworld_projects/test_cppcheck.sh
+        run: >-
+          python3 scripts/compare_realworld_performance.py --project cppcheck
+          --build-type debug --reps 1
+          --output use_on_realworld_projects/cppcheck_speed_report.md
       - name: Upload speed report
         if: always()
         uses: actions/upload-artifact@v7
