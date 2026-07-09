@@ -1,0 +1,18 @@
+#pragma once
+#include <fenv.h>
+
+namespace std {
+using ::feclearexcept;
+using ::fegetenv;
+using ::fegetexceptflag;
+using ::fegetround;
+using ::feholdexcept;
+using ::fenv_t;
+using ::feraiseexcept;
+using ::fesetenv;
+using ::fesetexceptflag;
+using ::fesetround;
+using ::fetestexcept;
+using ::feupdateenv;
+using ::fexcept_t;
+} // namespace std
