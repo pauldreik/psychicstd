@@ -3,6 +3,8 @@
 
 namespace std {
 using ::fclose;
+using ::feof;
+using ::ferror;
 using ::fflush;
 using ::fgetc;
 using ::fgetpos;

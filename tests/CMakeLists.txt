@@ -16,6 +16,7 @@ set(TESTS
     test_cstdint
     test_deque
     test_exception
+    test_filesystem
     test_forward_list
     test_fstream
     test_functional
