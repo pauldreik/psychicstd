@@ -1,0 +1,119 @@
+#pragma once
+#include <__psychicstd_config>
+#include <cerrno>
+#include <cstdint>
+#include <string>
+#include <string_view>
+#include <sys/stat.h>
+#include <system_error>
+
+namespace std {
+namespace filesystem {
+
+class path {
+  using __str = std::string;
+
+public:
+  path() = default;
+  path(const char* s) : path_(s) {}
+  path(const __str& s) : path_(s) {}
+  path(__str&& s) : path_(move(s)) {}
+  path(string_view s) : path_(s.data(), s.size()) {}
+
+  path& operator=(const char* s) {
+    path_ = s;
+    return *this;
+  }
+  path& operator=(const __str& s) {
+    path_ = s;
+    return *this;
+  }
+
+  bool empty() const noexcept { return path_.empty(); }
+  const __str& string() const noexcept { return path_; }
+  const char* c_str() const noexcept { return path_.c_str(); }
+
+  path filename() const {
+    auto pos = path_.find_last_of('/');
+    return pos == __str::npos ? path_ : path_.substr(pos + 1);
+  }
+
+  path stem() const {
+    path name = filename();
+    auto pos = name.path_.find_last_of('.');
+    if (pos == __str::npos || pos == 0)
+      return name;
+    return name.path_.substr(0, pos);
+  }
+
+  path extension() const {
+    path name = filename();
+    auto pos = name.path_.find_last_of('.');
+    if (pos == __str::npos || pos == 0)
+      return path();
+    return name.path_.substr(pos);
+  }
+
+  path parent_path() const {
+    auto pos = path_.find_last_of('/');
+    return pos == __str::npos ? path() : path_.substr(0, pos);
+  }
+
+  path& operator/=(const path& p) {
+    if (!p.empty()) {
+      if (!path_.empty() && path_.back() != '/')
+        path_ += '/';
+      path_ += p.path_;
+    }
+    return *this;
+  }
+
+  friend path operator/(path lhs, const path& rhs) {
+    lhs /= rhs;
+    return lhs;
+  }
+
+  friend bool operator==(const path& a, const path& b) noexcept {
+    return a.path_ == b.path_;
+  }
+
+private:
+  __str path_;
+};
+
+class filesystem_error : public system_error {
+  path path1_;
+
+public:
+  filesystem_error(const string& what_arg, error_code ec)
+      : system_error(ec, what_arg) {}
+  filesystem_error(const string& what_arg, const path& p1, error_code ec)
+      : system_error(ec, what_arg), path1_(p1) {}
+  const path& path1() const noexcept { return path1_; }
+};
+
+inline bool exists(const path& p) noexcept {
+  struct stat st;
+  return ::stat(p.c_str(), &st) == 0;
+}
+
+inline bool is_directory(const path& p) noexcept {
+  struct stat st;
+  return ::stat(p.c_str(), &st) == 0 && S_ISDIR(st.st_mode);
+}
+
+inline bool is_regular_file(const path& p) noexcept {
+  struct stat st;
+  return ::stat(p.c_str(), &st) == 0 && S_ISREG(st.st_mode);
+}
+
+inline uintmax_t file_size(const path& p) {
+  struct stat st;
+  if (::stat(p.c_str(), &st) != 0)
+    _PSYCHICSTD_THROW(filesystem_error("file_size", p,
+                                       error_code(errno, generic_category())));
+  return (uintmax_t)st.st_size;
+}
+
+} // namespace filesystem
+} // namespace std
