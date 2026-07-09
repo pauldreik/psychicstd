@@ -110,12 +110,18 @@ inline constexpr size_t tuple_size_v = tuple_size<T>::value;
 
 // tuple_element
 namespace detail {
+#if __has_builtin(__type_pack_element)
+template <size_t I, typename... Ts> struct type_at {
+  using type = __type_pack_element<I, Ts...>;
+};
+#else
 template <size_t I, typename Head, typename... Tail> struct type_at {
   using type = typename type_at<I - 1, Tail...>::type;
 };
 template <typename Head, typename... Tail> struct type_at<0, Head, Tail...> {
   using type = Head;
 };
+#endif
 } // namespace detail
 
 template <size_t I, typename... Ts> struct tuple_element<I, tuple<Ts...>> {
