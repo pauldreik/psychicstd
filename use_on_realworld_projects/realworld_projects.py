@@ -21,6 +21,7 @@ import tempfile
 import time
 import urllib.request
 from collections.abc import Callable
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -66,8 +67,7 @@ class Project:
     comments: dict[str, str] = field(default_factory=dict)
 
 
-def _timed(cmd: list[str], cwd: Path, env: dict[str, str]) -> float:
-    t0 = time.monotonic()
+def _run(cmd: list[str], cwd: Path, env: dict[str, str]) -> None:
     r = subprocess.run(
         cmd,
         cwd=cwd,
@@ -81,6 +81,21 @@ def _timed(cmd: list[str], cwd: Path, env: dict[str, str]) -> float:
         print(r.stdout)
         r.check_returncode()
 
+
+def _timed(cmd: list[str], cwd: Path, env: dict[str, str]) -> float:
+    t0 = time.monotonic()
+    _run(cmd, cwd, env)
+    return (time.monotonic() - t0) * 1000.0
+
+
+def _timed_many(cmds: list[list[str]], cwd: Path, env: dict[str, str]) -> float:
+    """Wall-clock time to run many independent commands (e.g. compiling one
+    file each) concurrently across CPUs -- unlike summing each command's own
+    elapsed time, this reflects the phase's actual wall-clock duration."""
+    t0 = time.monotonic()
+    with ThreadPoolExecutor(max_workers=os.cpu_count() or 1) as pool:
+        for _ in pool.map(lambda cmd: _run(cmd, cwd, env), cmds):
+            pass
     return (time.monotonic() - t0) * 1000.0
 
 
@@ -427,6 +442,104 @@ def _fmt() -> Project:
     )
 
 
+# --- nlohmann json -----------------------------------------------------
+
+# unicode|cbor|msgpack: long-running (tens of seconds each) -- revisit later.
+# algorithms: one partial_sort assertion checks the tail order, which the
+# standard leaves unspecified (psychicstd's partial_sort is a full sort).
+# cmake_fetch: exercises FetchContent, not psychicstd.
+# cmake_import: upstream bug -- cmake_import(_minver)_configure/build add_test()
+# without WORKING_DIRECTORY, so both pairs default to the same build/tests dir
+# and race under -j; upstream already labels them "not_reproducible".
+_NLOHMANN_TEST_EXCLUDE = "unicode|cbor|msgpack|algorithms|cmake_fetch|cmake_import"
+
+
+def _nlohmann() -> Project:
+    version = "3.12.0"
+    url = f"https://github.com/nlohmann/json/archive/refs/tags/v{version}.tar.gz"
+    checksum = "4b92eb0c06d10683f7447ce9406cb97cd4b453be18d7279320f7b2f025c10187"
+
+    def build(tc: Toolchain) -> dict[str, float]:
+        tarball = RW_DIR / f"nlohmann-{version}.tar.gz"
+        _fetch(url, tarball, checksum)
+
+        with tempfile.TemporaryDirectory(
+            prefix="rw-nlohmann-", ignore_cleanup_errors=True
+        ) as work_dir:
+            work = Path(work_dir)
+            with tarfile.open(tarball) as t:
+                t.extractall(work)
+            src = work / f"json-{version}"
+
+            env = _env(tc)
+            configure = [
+                "cmake",
+                "-S",
+                ".",
+                "-B",
+                "build",
+                "-GNinja",
+                "-DCMAKE_BUILD_TYPE=" + tc.build_type.capitalize(),
+                "-DCMAKE_CXX_COMPILER=" + tc.cxx,
+                "-DCMAKE_CXX_FLAGS=" + tc.cxxflags,
+                "-DCMAKE_EXE_LINKER_FLAGS=" + tc.ldflags,
+                "-DCMAKE_CXX_STANDARD_LIBRARIES=" + tc.libs,
+                "-DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY",
+                "-DBUILD_SHARED_LIBS=OFF",
+                "-DJSON_TestStandards=20",
+                "-DJSON_BuildTests=ON",
+            ]
+            jobs = f"-j{os.cpu_count() or 1}"
+            configure_ms = _timed(configure, src, env)
+            compile_ms = _timed(["cmake", "--build", "build", jobs], src, env)
+            run_tests_ms = _timed(
+                [
+                    "ctest",
+                    "--test-dir",
+                    "build",
+                    "--output-on-failure",
+                    "-E",
+                    _NLOHMANN_TEST_EXCLUDE,
+                    jobs,
+                ],
+                src,
+                env,
+            )
+
+            # Compile (but don't run) the 217 documented API examples.
+            include_dir = src / "include"
+            example_cmds = []
+            for cpp in sorted(
+                (src / "docs" / "mkdocs" / "docs" / "examples").glob("*.cpp")
+            ):
+                binary = work / (cpp.stem + "_bin")
+                example_cmds.append(
+                    [tc.cxx, *tc.cxxflags.split(), "-I", str(include_dir), str(cpp)]
+                    + (tc.ldflags.split() if tc.ldflags else [])
+                    + (tc.libs.split() if tc.libs else [])
+                    + ["-o", str(binary)]
+                )
+            examples_ms = _timed_many(example_cmds, src, env)
+
+            return {
+                "configure": configure_ms,
+                "compile": compile_ms,
+                "run tests": run_tests_ms,
+                "examples": examples_ms,
+            }
+
+    return Project(
+        version=version,
+        build=build,
+        phases=("configure", "compile", "run tests", "examples"),
+        comments={
+            "run tests": "unicode/cbor/msgpack (slow), algorithms (unspecified "
+            "tail order), cmake_fetch/cmake_import (not applicable) excluded",
+            "examples": "217 documented API examples, compiled but not run",
+        },
+    )
+
+
 # --- rdfind ---------------------------------------------------------------
 
 
@@ -573,6 +686,7 @@ PROJECTS: dict[str, Project] = {
     "cppcheck": _cppcheck(),
     "eigen": _eigen(),
     "fmt": _fmt(),
+    "nlohmann": _nlohmann(),
     "rdfind": _rdfind(),
     "simdutf": _simdutf(),
 }
