@@ -58,3 +58,13 @@
 #ifndef __cpp_lib_span
 #define __cpp_lib_span 202002L
 #endif
+
+// std::is_constant_evaluated (<type_traits>)
+#ifndef __cpp_lib_is_constant_evaluated
+#define __cpp_lib_is_constant_evaluated 201811L
+#endif
+
+// std::bit_cast (<bit>)
+#ifndef __cpp_lib_bit_cast
+#define __cpp_lib_bit_cast 201806L
+#endif

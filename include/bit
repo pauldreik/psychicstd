@@ -1,0 +1,13 @@
+#pragma once
+#include <type_traits>
+
+namespace std {
+
+template <typename To, typename From>
+  requires(sizeof(To) == sizeof(From) && is_trivially_copyable_v<To> &&
+           is_trivially_copyable_v<From>)
+constexpr To bit_cast(const From& from) noexcept {
+  return __builtin_bit_cast(To, from);
+}
+
+} // namespace std

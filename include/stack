@@ -13,27 +13,27 @@ public:
   using const_reference = typename Container::const_reference;
 
   stack() = default;
-  explicit stack(const Container& c) : c_(c) {}
-  explicit stack(Container&& c) : c_(static_cast<Container&&>(c)) {}
+  explicit stack(const Container& c) : c(c) {}
+  explicit stack(Container&& c) : c(static_cast<Container&&>(c)) {}
 
-  bool empty() const { return c_.empty(); }
-  size_type size() const { return c_.size(); }
-  reference top() { return c_.back(); }
-  const_reference top() const { return c_.back(); }
-  void push(const value_type& v) { c_.push_back(v); }
-  void push(value_type&& v) { c_.push_back(static_cast<value_type&&>(v)); }
+  bool empty() const { return c.empty(); }
+  size_type size() const { return c.size(); }
+  reference top() { return c.back(); }
+  const_reference top() const { return c.back(); }
+  void push(const value_type& v) { c.push_back(v); }
+  void push(value_type&& v) { c.push_back(static_cast<value_type&&>(v)); }
   template <typename... Args> void emplace(Args&&... args) {
-    c_.emplace_back(static_cast<Args&&>(args)...);
+    c.emplace_back(static_cast<Args&&>(args)...);
   }
-  void pop() { c_.pop_back(); }
-  void swap(stack& other) noexcept { c_.swap(other.c_); }
+  void pop() { c.pop_back(); }
+  void swap(stack& other) noexcept { c.swap(other.c); }
 
-  bool operator==(const stack& o) const { return c_ == o.c_; }
-  bool operator!=(const stack& o) const { return c_ != o.c_; }
-  bool operator<(const stack& o) const { return c_ < o.c_; }
+  bool operator==(const stack& o) const { return c == o.c; }
+  bool operator!=(const stack& o) const { return c != o.c; }
+  bool operator<(const stack& o) const { return c < o.c; }
 
 protected:
-  Container c_;
+  Container c;
 };
 
 } // namespace std

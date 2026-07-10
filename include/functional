@@ -244,6 +244,13 @@ public:
   R operator()(Args... args) const {
     return ptr_->call(static_cast<Args&&>(args)...);
   }
+
+  friend bool operator==(const function& f, nullptr_t) noexcept {
+    return f.ptr_ == nullptr;
+  }
+  friend bool operator==(nullptr_t, const function& f) noexcept {
+    return f.ptr_ == nullptr;
+  }
 };
 
 // --- std::bind / placeholders (minimal) ---

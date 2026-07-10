@@ -67,6 +67,89 @@ template <typename Char> struct basic_string_view {
     return npos;
   }
 
+  constexpr size_type rfind(Char c, size_type pos = npos) const noexcept {
+    if (size_ == 0)
+      return npos;
+    size_type start = pos < size_ ? pos : size_ - 1;
+    for (size_type i = start + 1; i-- > 0;)
+      if (data_[i] == c)
+        return i;
+    return npos;
+  }
+
+  constexpr size_type rfind(basic_string_view sv,
+                            size_type pos = npos) const noexcept {
+    if (sv.size_ > size_)
+      return npos;
+    size_type start = pos < size_ - sv.size_ ? pos : size_ - sv.size_;
+    for (size_type i = start + 1; i-- > 0;)
+      if (__builtin_memcmp(data_ + i, sv.data_, sv.size_) == 0)
+        return i;
+    return npos;
+  }
+
+  constexpr size_type find_first_of(Char c, size_type pos = 0) const noexcept {
+    return find(c, pos);
+  }
+  constexpr size_type find_first_of(basic_string_view sv,
+                                    size_type pos = 0) const noexcept {
+    for (size_type i = pos; i < size_; ++i)
+      if (sv.find(data_[i]) != npos)
+        return i;
+    return npos;
+  }
+
+  constexpr size_type find_last_of(Char c,
+                                   size_type pos = npos) const noexcept {
+    return rfind(c, pos);
+  }
+  constexpr size_type find_last_of(basic_string_view sv,
+                                   size_type pos = npos) const noexcept {
+    if (size_ == 0)
+      return npos;
+    size_type start = pos < size_ ? pos : size_ - 1;
+    for (size_type i = start + 1; i-- > 0;)
+      if (sv.find(data_[i]) != npos)
+        return i;
+    return npos;
+  }
+
+  constexpr size_type find_first_not_of(Char c,
+                                        size_type pos = 0) const noexcept {
+    for (size_type i = pos; i < size_; ++i)
+      if (data_[i] != c)
+        return i;
+    return npos;
+  }
+  constexpr size_type find_first_not_of(basic_string_view sv,
+                                        size_type pos = 0) const noexcept {
+    for (size_type i = pos; i < size_; ++i)
+      if (sv.find(data_[i]) == npos)
+        return i;
+    return npos;
+  }
+
+  constexpr size_type find_last_not_of(Char c,
+                                       size_type pos = npos) const noexcept {
+    if (size_ == 0)
+      return npos;
+    size_type start = pos < size_ ? pos : size_ - 1;
+    for (size_type i = start + 1; i-- > 0;)
+      if (data_[i] != c)
+        return i;
+    return npos;
+  }
+  constexpr size_type find_last_not_of(basic_string_view sv,
+                                       size_type pos = npos) const noexcept {
+    if (size_ == 0)
+      return npos;
+    size_type start = pos < size_ ? pos : size_ - 1;
+    for (size_type i = start + 1; i-- > 0;)
+      if (sv.find(data_[i]) == npos)
+        return i;
+    return npos;
+  }
+
   constexpr int compare(basic_string_view o) const noexcept {
     size_type n = size_ < o.size_ ? size_ : o.size_;
     int r = n ? __builtin_memcmp(data_, o.data_, n) : 0;

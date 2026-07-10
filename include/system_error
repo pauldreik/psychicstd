@@ -36,15 +36,19 @@ inline const error_category& generic_category() noexcept {
 
 class error_code {
   int val_ = 0;
-  const error_category* cat_ = nullptr;
+  const error_category* cat_ = &system_category();
 
 public:
   error_code() = default;
   error_code(int v, const error_category& c) : val_(v), cat_(&c) {}
   int value() const noexcept { return val_; }
   const error_category& category() const noexcept { return *cat_; }
-  string message() const { return cat_ ? cat_->message(val_) : string(); }
+  string message() const { return cat_->message(val_); }
   explicit operator bool() const noexcept { return val_ != 0; }
+
+  friend bool operator==(const error_code& a, const error_code& b) noexcept {
+    return a.val_ == b.val_ && a.cat_ == b.cat_;
+  }
 };
 
 class system_error : public runtime_error {
@@ -55,10 +59,13 @@ public:
       : runtime_error(what_arg), ec_(ec) {}
   system_error(error_code ec, const char* what_arg)
       : runtime_error(what_arg), ec_(ec) {}
+  explicit system_error(error_code ec) : runtime_error(ec.message()), ec_(ec) {}
   system_error(int ev, const error_category& ecat, const string& what_arg)
       : runtime_error(what_arg), ec_(ev, ecat) {}
   system_error(int ev, const error_category& ecat, const char* what_arg)
       : runtime_error(what_arg), ec_(ev, ecat) {}
+  system_error(int ev, const error_category& ecat)
+      : runtime_error(error_code(ev, ecat).message()), ec_(ev, ecat) {}
   const error_code& code() const noexcept { return ec_; }
 };
 

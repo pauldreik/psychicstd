@@ -226,6 +226,9 @@ template <typename Ptr> constexpr auto to_address(const Ptr& p) noexcept {
 // unique_ptr (owning, non-copyable)
 template <typename T> struct default_delete {
   constexpr default_delete() noexcept = default;
+  template <typename U>
+    requires(is_convertible_v<U*, T*>)
+  constexpr default_delete(const default_delete<U>&) noexcept {}
   void operator()(T* p) const noexcept { delete p; }
 };
 
@@ -247,6 +250,11 @@ public:
   unique_ptr(pointer p, D&& d) noexcept : ptr_(p), del_(static_cast<D&&>(d)) {}
   unique_ptr(unique_ptr&& o) noexcept
       : ptr_(o.release()), del_(static_cast<D&&>(o.del_)) {}
+  template <typename U, typename E>
+    requires(!is_same_v<U, T> && is_convertible_v<U*, T*> &&
+             is_convertible_v<E, D>)
+  unique_ptr(unique_ptr<U, E>&& o) noexcept
+      : ptr_(o.release()), del_(static_cast<E&&>(o.get_deleter())) {}
   ~unique_ptr() {
     if (ptr_)
       del_(ptr_);
@@ -257,6 +265,14 @@ public:
       reset(o.release());
       del_ = static_cast<D&&>(o.del_);
     }
+    return *this;
+  }
+  template <typename U, typename E>
+    requires(!is_same_v<U, T> && is_convertible_v<U*, T*> &&
+             is_assignable_v<D&, E &&>)
+  unique_ptr& operator=(unique_ptr<U, E>&& o) noexcept {
+    reset(o.release());
+    del_ = static_cast<E&&>(o.get_deleter());
     return *this;
   }
   unique_ptr& operator=(nullptr_t) noexcept {
