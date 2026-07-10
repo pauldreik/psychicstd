@@ -1,4 +1,5 @@
 #pragma once
+#include <__psychicstd_algo>
 #include <functional>
 #include <initializer_list>
 #include <iterator>
@@ -961,73 +962,8 @@ OutIt set_symmetric_difference(It1 f1, It1 l1, It2 f2, It2 l2, OutIt out) {
   return copy(f2, l2, out);
 }
 
-// Heap operations
-template <typename It, typename Compare>
-void __push_heap(It first, ptrdiff_t hole, ptrdiff_t top, Compare cmp,
-                 typename iterator_traits<It>::value_type val) {
-  ptrdiff_t parent = (hole - 1) / 2;
-  while (hole > top && cmp(*(first + parent), val)) {
-    *(first + hole) = static_cast<decltype(val)&&>(*(first + parent));
-    hole = parent;
-    parent = (hole - 1) / 2;
-  }
-  *(first + hole) = static_cast<decltype(val)&&>(val);
-}
-
-template <typename It, typename Compare>
-void push_heap(It first, It last, Compare cmp) {
-  if (last - first > 1) {
-    auto val = std::move(*(last - 1));
-    __push_heap(first, last - first - 1, ptrdiff_t(0), cmp, std::move(val));
-  }
-}
-template <typename It> void push_heap(It first, It last) {
-  push_heap(first, last, [](const auto& a, const auto& b) { return a < b; });
-}
-
-template <typename It, typename Compare>
-void __adjust_heap(It first, ptrdiff_t hole, ptrdiff_t len, Compare cmp,
-                   typename iterator_traits<It>::value_type val) {
-  ptrdiff_t top = hole;
-  ptrdiff_t rchild = 2 * hole + 2;
-  while (rchild < len) {
-    if (cmp(*(first + rchild), *(first + (rchild - 1))))
-      --rchild;
-    *(first + hole) = static_cast<decltype(val)&&>(*(first + rchild));
-    hole = rchild;
-    rchild = 2 * hole + 2;
-  }
-  if (rchild == len) {
-    *(first + hole) = static_cast<decltype(val)&&>(*(first + (rchild - 1)));
-    hole = rchild - 1;
-  }
-  __push_heap(first, hole, top, cmp, std::move(val));
-}
-
-template <typename It, typename Compare>
-void pop_heap(It first, It last, Compare cmp) {
-  if (last - first > 1) {
-    --last;
-    auto val = std::move(*last);
-    *last = std::move(*first);
-    __adjust_heap(first, ptrdiff_t(0), last - first, cmp, std::move(val));
-  }
-}
-template <typename It> void pop_heap(It first, It last) {
-  pop_heap(first, last, [](const auto& a, const auto& b) { return a < b; });
-}
-
-template <typename It, typename Compare>
-void make_heap(It first, It last, Compare cmp) {
-  ptrdiff_t n = last - first;
-  for (ptrdiff_t i = n / 2 - 1; i >= 0; --i) {
-    auto val = std::move(*(first + i));
-    __adjust_heap(first, i, n, cmp, std::move(val));
-  }
-}
-template <typename It> void make_heap(It first, It last) {
-  make_heap(first, last, [](const auto& a, const auto& b) { return a < b; });
-}
+// push_heap/pop_heap/make_heap live in <__psychicstd_algo> so <queue>'s
+// priority_queue can use them without pulling in all of <algorithm>.
 
 template <typename It, typename Compare>
 void sort_heap(It first, It last, Compare cmp) {
