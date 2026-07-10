@@ -1,4 +1,5 @@
 #pragma once
+#include <__psychicstd_algo>
 #include <deque>
 #include <functional>
 #include <vector>

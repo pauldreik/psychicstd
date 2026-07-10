@@ -8,12 +8,31 @@ set(TESTS
     test_any
     test_array
     test_atomic
+    test_bit
+    test_cassert
+    test_cctype
+    test_cerrno
+    test_cfenv
+    test_cfloat
     test_chrono
+    test_cinttypes
+    test_ciso646
+    test_climits
+    test_clocale
+    test_cmath
     test_compare
     test_complex
     test_concepts
+    test_condition_variable
+    test_csignal
+    test_cstdarg
     test_cstddef
     test_cstdint
+    test_cstdio
+    test_cstdlib
+    test_cstring
+    test_ctime
+    test_cwchar
     test_deque
     test_exception
     test_filesystem
@@ -23,17 +42,21 @@ set(TESTS
     test_initializer_list
     test_iomanip
     test_ios
+    test_iosfwd
     test_iostream
     test_istream
     test_iterator
     test_limits
     test_list
+    test_locale
     test_map
     test_memory
     test_mutex
     test_new
     test_numeric
     test_optional
+    test_ostream
+    test_queue
     test_random
     test_ranges
     test_ratio
@@ -43,11 +66,14 @@ set(TESTS
     test_sstream
     test_stack
     test_stdexcept
+    test_streambuf
     test_string
     test_string_view
+    test_system_error
     test_thread
     test_tuple
     test_type_traits
+    test_typeindex
     test_typeinfo
     test_unordered_map
     test_unordered_set
@@ -55,6 +81,7 @@ set(TESTS
     test_valarray
     test_variant
     test_vector
+    test_version
 )
 
 foreach(t ${TESTS})
