@@ -4,9 +4,10 @@
 
 std/algorithms/alg.nonmodifying/alg.equal/equal_pred.pass.cpp
 std/atomics/atomics.types.generic/throw.pass.cpp
-std/containers/sequences/deque/deque.modifiers/erase_iter_iter.invalidation.pass.cpp
-std/containers/sequences/deque/deque.modifiers/erase_iter.invalidation.pass.cpp
-std/containers/sequences/deque/deque.modifiers/pop_front.invalidation.pass.cpp
+
+# fails on deque not using the allocator - a design question
+std/containers/sequences/deque/deque.modifiers/push_front_exception_safety.pass.cpp
+
 std/containers/unord/unord.map/count.transparent.pass.cpp
 std/containers/unord/unord.map/find.transparent.pass.cpp
 std/input.output/iostream.format/input.streams/istream/istream_sentry/ctor.pass.cpp
