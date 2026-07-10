@@ -20,4 +20,11 @@ public:
   const char* name() const noexcept { return ptr_->name(); }
 };
 
+template <typename T> struct hash;
+template <> struct hash<type_index> {
+  size_t operator()(const type_index& ti) const noexcept {
+    return ti.hash_code();
+  }
+};
+
 } // namespace std
