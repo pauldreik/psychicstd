@@ -2,6 +2,7 @@
 #include <chrono>
 #include <compare>
 #include <ctime>
+#include <iosfwd>
 #include <pthread.h>
 #include <ratio>
 #include <sched.h>
@@ -103,6 +104,11 @@ inline auto operator<=>(thread::id a, thread::id b) noexcept {
   return a.operator<(b)   ? strong_ordering::less
          : b.operator<(a) ? strong_ordering::greater
                           : strong_ordering::equal;
+}
+template <typename Char, typename Traits>
+basic_ostream<Char, Traits>& operator<<(basic_ostream<Char, Traits>& os,
+                                        thread::id value) {
+  return os << value._value();
 }
 
 namespace this_thread {

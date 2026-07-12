@@ -10,6 +10,9 @@
 int main() {
   std::string_view sv = "hello";
   assert(sv.size() == 5);
+  constexpr std::wstring_view wide = L"wide";
+  static_assert(wide.size() == 4);
+  assert(wide.size() == 4);
 
   // find empty
   constexpr auto npos = std::string_view::npos;

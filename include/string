@@ -284,6 +284,16 @@ public:
     size_ += n;
     return *this;
   }
+  iterator insert(const_iterator pos, Char c) {
+    size_type idx = pos - data_;
+    insert(idx, 1, c);
+    return data_ + idx;
+  }
+  iterator insert(const_iterator pos, size_type n, Char c) {
+    size_type idx = pos - data_;
+    insert(idx, n, c);
+    return data_ + idx;
+  }
   basic_string& insert(size_type pos, const basic_string& o) {
     return insert(pos, o.data(), o.size());
   }

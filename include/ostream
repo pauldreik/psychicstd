@@ -123,6 +123,23 @@ public:
     }
     return *this;
   }
+  template <typename C = Char>
+    requires(!is_same_v<C, char>)
+  basic_ostream& operator<<(Char c) {
+    pad_and_write(&c, 1);
+    return *this;
+  }
+  template <typename C = Char>
+    requires(!is_same_v<C, char>)
+  basic_ostream& operator<<(const Char* s) {
+    if (s) {
+      streamsize n = 0;
+      while (s[n])
+        ++n;
+      pad_and_write(s, n);
+    }
+    return *this;
+  }
   basic_ostream& operator<<(const signed char* s) {
     return *this << reinterpret_cast<const char*>(s);
   }
@@ -138,13 +155,13 @@ protected:
   basic_ostream() { this->init(nullptr); }
 
 private:
-  void emit(const char* s, streamsize n) {
+  void emit(const Char* s, streamsize n) {
     auto* sb = this->rdbuf();
     if (!sb || sb->sputn(s, n) != n)
       this->setstate(ios_base::badbit);
   }
 
-  void pad_and_write(const char* s, streamsize n) {
+  void pad_and_write(const Char* s, streamsize n) {
     streamsize w = this->width_;
     this->width_ = 0; // width is consumed after use
     if (w <= n) {
@@ -152,7 +169,7 @@ private:
       return;
     }
     streamsize pad = w - n;
-    char fc = this->fill_;
+    Char fc = this->fill_;
     if (this->flags_ & ios_base::left) {
       emit(s, n);
       for (streamsize i = 0; i < pad; ++i)
@@ -162,6 +179,17 @@ private:
         emit(&fc, 1);
       emit(s, n);
     }
+  }
+
+  template <typename C = Char>
+    requires(!is_same_v<C, char>)
+  void pad_and_write(const char* s, streamsize n) {
+    Char text[128];
+    if (n > (streamsize)(sizeof(text) / sizeof(*text)))
+      n = sizeof(text) / sizeof(*text);
+    for (streamsize i = 0; i < n; ++i)
+      text[i] = static_cast<Char>(s[i]);
+    pad_and_write(text, n);
   }
 
   basic_ostream& write_padded(const char* s) {
@@ -180,12 +208,12 @@ private:
     }
     char dp = (char)np->decimal_point();
     char ts = (char)np->thousands_sep();
-    basic_string<Char> grp = np->grouping();
-    char out[80];
+    basic_string<char> grp = np->grouping();
+    Char out[80];
     int o = 0;
     auto emit1 = [&](char c) {
       if (o < (int)sizeof(out) - 1)
-        out[o++] = c;
+        out[o++] = static_cast<Char>(c);
     };
     int i = 0;
     if (i < n && (buf[i] == '-' || buf[i] == '+'))
