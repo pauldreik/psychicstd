@@ -81,4 +81,12 @@ int main() {
   std::atomic<double> number(1.5);
   assert(number.fetch_add(0.5) == 1.5);
   assert((number -= 0.25) == 1.75);
+
+  alignas(std::atomic_ref<int>::required_alignment) int referenced = 1;
+  std::atomic_ref ref(referenced);
+  assert(ref.fetch_add(2) == 1);
+  assert(referenced == 3);
+  expected = 3;
+  assert(ref.compare_exchange_strong(expected, 4));
+  assert(referenced == 4);
 }
