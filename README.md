@@ -162,15 +162,27 @@ cmake -S . -B build-with-psychic \
     -DCMAKE_CXX_STANDARD_LIBRARIES="-lsupc++"
 ```
 
+### CMake toolchain file
+
+For CMake projects, the most convenient integration point is the toolchain
+overlay in [`cmake/psychicstd-toolchain.cmake`](cmake/psychicstd-toolchain.cmake).
+It keeps the compiler choice outside the toolchain and only injects the
+psychicstd-specific flags.
+
+```bash
+cmake -S . -B build-with-psychic \
+    -DCMAKE_CXX_COMPILER=g++-14 \
+    -DCMAKE_TOOLCHAIN_FILE=/path/to/psychicstd/cmake/psychicstd-toolchain.cmake
+```
+
+The toolchain is designed to compose with user flags and sanitizer settings.
+If you already have a generated toolchain file, include the psychicstd one
+after it from a small wrapper toolchain file.
 ### Notes for all configurations
 
 `-fvisibility=hidden` prevents psychicstd's symbols from interposing with
-libstdc++ at runtime (needed when sanitizers pull in `libstdc++.so`).
+libstdc++ at runtime.
 `-isystem` (rather than `-I`) suppresses warnings from psychicstd headers.
-
-`CMAKE_CXX_STANDARD_LIBRARIES` places the libraries *after* the object files
-on the link line. This is required because `-lsupc++` is a static archive
-and the linker processes archives in order.
 
 To switch back to the system STL, configure without these flags.
 See `tests/external_project/run.sh` for a self-contained working example.
