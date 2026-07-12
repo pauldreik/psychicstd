@@ -36,4 +36,10 @@ protected:
   Container c;
 };
 
+template <typename T, typename Container>
+void swap(stack<T, Container>& a,
+          stack<T, Container>& b) noexcept(noexcept(a.swap(b))) {
+  a.swap(b);
+}
+
 } // namespace std
