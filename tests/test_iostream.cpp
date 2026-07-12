@@ -8,4 +8,8 @@ int main() {
   std::cout << "test";
   std::cout.rdbuf(old);
   assert(buf.str() == "test");
+
+  std::wostringstream wide;
+  wide << 42 << L'-' << L"wide";
+  assert(wide.str() == L"42-wide");
 }

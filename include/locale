@@ -1,14 +1,17 @@
 #pragma once
+#include <ctime>
 #include <cwchar>
+#include <iterator>
 #include <string>
+#include <type_traits>
 
 namespace std {
 
-// Minimal locale: enough to declare facets (numpunct), install one via the
-// (locale, facet*) constructor, set the global, and imbue a stream. Facets are
-// reference-counted and owned, so code that does `new Facet` and hands it to a
-// locale does not leak. psychicstd's formatting is locale-independent, so the
-// installed facets do not affect output -- they just need to compile and run.
+class ios_base;
+
+// A small, process-local locale implementation. It supports the facet model
+// used by formatting libraries: a locale owns installed facets, derived facets
+// are found through their base class, and copies share their facet storage.
 class locale {
 public:
   class facet {
@@ -39,9 +42,11 @@ public:
   }
   ~locale() { _release(); }
 
-  // Install facet f into (a copy of) other. Minimal: owns only f.
+  // Install facet f into a copy of other. The new locale owns f while the
+  // facets inherited from other remain shared with it.
   template <typename Facet>
-  locale(const locale&, Facet* f) : rep_(new _rep(f)) {}
+  locale(const locale& other, Facet* f)
+      : rep_(new _rep(f, other.rep_ ? other.rep_->head : nullptr)) {}
 
   static const locale& classic() {
     static locale c;
@@ -57,17 +62,39 @@ public:
   bool operator==(const locale& o) const noexcept { return rep_ == o.rep_; }
   bool operator!=(const locale& o) const noexcept { return rep_ != o.rep_; }
 
-  // Internal: the installed facet if it is (dynamic-castable to) F, else null.
   template <typename F> const F* _facet() const {
-    return rep_ ? dynamic_cast<const F*>(rep_->f) : nullptr;
+    for (_node* node = rep_ ? rep_->head : nullptr; node; node = node->next)
+      if (const auto* facet = dynamic_cast<const F*>(node->value))
+        return facet;
+    return nullptr;
   }
 
 private:
+  struct _node {
+    long refs = 1;
+    facet* value;
+    _node* next;
+
+    _node(facet* f, _node* n) : value(f), next(n) {
+      if (next)
+        ++next->refs;
+    }
+  };
   struct _rep {
     long refs = 1;
-    facet* f = nullptr;
-    explicit _rep(facet* fp) : f(fp) {}
-    ~_rep() { delete f; }
+    _node* head = nullptr;
+    explicit _rep(facet* f, _node* inherited) : head(new _node(f, inherited)) {}
+    ~_rep() { _release_node(head); }
+
+  private:
+    static void _release_node(_node* node) noexcept {
+      if (node && --node->refs == 0) {
+        _node* next = node->next;
+        delete node->value;
+        delete node;
+        _release_node(next);
+      }
+    }
   };
   _rep* rep_ = nullptr;
   void _release() noexcept {
@@ -83,30 +110,97 @@ private:
 template <typename Char> class numpunct : public locale::facet {
 public:
   using char_type = Char;
-  using string_type = basic_string<Char>;
+  // [locale.numpunct] specifies a narrow string even for wchar_t facets.
+  using string_type = basic_string<char>;
 
   Char decimal_point() const { return do_decimal_point(); }
   Char thousands_sep() const { return do_thousands_sep(); }
   string_type grouping() const { return do_grouping(); }
 
-protected:
   ~numpunct() override = default;
+
+protected:
   virtual Char do_decimal_point() const { return Char('.'); }
   virtual Char do_thousands_sep() const { return Char(','); }
   virtual string_type do_grouping() const { return string_type(); }
 };
-
-// Stub facets for fmt's chrono support
-template <typename Facet> Facet use_facet(const locale&) { return Facet{}; }
 
 class codecvt_base {
 public:
   enum result { ok, partial, error, noconv };
 };
 
-template <typename I, typename E, typename S>
-class codecvt : public codecvt_base {};
+template <typename Intern, typename E, typename S>
+class codecvt : public locale::facet, public codecvt_base {
+public:
+  using intern_type = Intern;
+  using extern_type = E;
+  using state_type = S;
 
-template <typename CharT, typename OutIt = void> class time_put {};
+  result in(state_type&, const E* from, const E* from_end, const E*& from_next,
+            Intern* to, Intern* to_end, Intern*& to_next) const {
+    while (from != from_end && to != to_end)
+      *to++ = static_cast<Intern>(*from++);
+    from_next = from;
+    to_next = to;
+    return from == from_end ? ok : partial;
+  }
+};
+
+template <typename CharT, typename OutIt = ostreambuf_iterator<CharT>>
+class time_put : public locale::facet {
+public:
+  using char_type = CharT;
+  using iter_type = OutIt;
+
+  iter_type put(iter_type out, ios_base&, char_type, const tm* time,
+                const char_type* first, const char_type* last) const {
+    char_type format[64]{};
+    size_t n = static_cast<size_t>(last - first);
+    if (n >= sizeof(format) / sizeof(*format))
+      n = sizeof(format) / sizeof(*format) - 1;
+    for (size_t i = 0; i < n; ++i)
+      format[i] = first[i];
+    char_type text[256]{};
+    if constexpr (is_same_v<char_type, char>)
+      ::strftime(text, sizeof(text), format, time);
+    else
+      ::wcsftime(text, sizeof(text) / sizeof(*text), format, time);
+    for (const char_type* p = text; *p; ++p)
+      *out++ = *p;
+    return out;
+  }
+  iter_type put(iter_type out, ios_base& ios, char_type fill, const tm* time,
+                char format, char modifier = 0) const {
+    char_type spec[3] = {char_type('%'), static_cast<char_type>(format), 0};
+    if (modifier) {
+      spec[1] = static_cast<char_type>(modifier);
+      spec[2] = static_cast<char_type>(format);
+    }
+    return put(out, ios, fill, time, spec, spec + (modifier ? 3 : 2));
+  }
+};
+
+template <typename Facet> struct __default_locale_facet : false_type {};
+template <typename Char>
+struct __default_locale_facet<numpunct<Char>> : true_type {};
+template <typename Intern, typename E, typename S>
+struct __default_locale_facet<codecvt<Intern, E, S>> : true_type {};
+template <typename Char, typename OutIt>
+struct __default_locale_facet<time_put<Char, OutIt>> : true_type {};
+
+template <typename Facet> bool has_facet(const locale& loc) {
+  return loc.template _facet<Facet>() != nullptr ||
+         __default_locale_facet<Facet>::value;
+}
+
+template <typename Facet> const Facet& use_facet(const locale& loc) {
+  if (const Facet* facet = loc.template _facet<Facet>())
+    return *facet;
+  // Standard facets are present in every locale. For the small set of facets
+  // implemented here, a default-constructed instance is the classic facet.
+  static const Facet classic_facet{};
+  return classic_facet;
+}
 
 } // namespace std

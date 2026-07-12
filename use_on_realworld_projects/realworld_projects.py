@@ -347,23 +347,6 @@ def _eigen() -> Project:
 # --- fmt --------------------------------------------------------------
 
 
-_FMT_SMOKE_TEST = """\
-#include <cassert>
-#include <fmt/core.h>
-#include <string>
-
-int main() {
-    auto s = fmt::format("hello {}!", "psychicstd");
-    assert(s == "hello psychicstd!");
-
-    auto n = fmt::format("{} + {} = {}", 2, 3, 5);
-    assert(n == "2 + 3 = 5");
-
-    return 0;
-}
-"""
-
-
 def _fmt() -> Project:
     version = "11.1.4"
     url = f"https://github.com/fmtlib/fmt/archive/refs/tags/{version}.tar.gz"
@@ -391,12 +374,12 @@ def _fmt() -> Project:
                 "-GNinja",
                 "-DCMAKE_BUILD_TYPE=" + tc.build_type.capitalize(),
                 "-DCMAKE_CXX_COMPILER=" + tc.cxx,
-                "-DCMAKE_CXX_FLAGS=-DFMT_USE_LOCALE=0 " + tc.cxxflags,
+                "-DCMAKE_CXX_FLAGS=" + tc.cxxflags,
                 "-DCMAKE_EXE_LINKER_FLAGS=" + tc.ldflags,
                 "-DCMAKE_CXX_STANDARD_LIBRARIES=" + tc.libs,
                 "-DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY",
                 "-DFMT_DOC=OFF",
-                "-DFMT_TEST=OFF",
+                "-DFMT_TEST=ON",
                 "-DFMT_INSTALL=OFF",
                 "-DBUILD_SHARED_LIBS=OFF",
             ]
@@ -404,41 +387,30 @@ def _fmt() -> Project:
             configure_ms = _timed(configure, src, env)
             compile_ms = _timed(["cmake", "--build", "build", jobs], src, env)
 
-            # fmt's own test suite is disabled, so compile and run a small
-            # program against the library instead (as two phases: one's
-            # compile time, the other's runtime).
-            lib_name = "libfmtd.a" if tc.build_type == "debug" else "libfmt.a"
-            smoke_cpp = src / "psychicstd_smoke_test.cpp"
-            smoke_cpp.write_text(_FMT_SMOKE_TEST)
-            smoke_bin = src / "psychicstd_smoke_test"
-            compile_smoke = (
-                [tc.cxx, *tc.cxxflags.split(), "-DFMT_USE_LOCALE=0"]
-                + [
-                    "-I",
-                    str(src / "include"),
-                    str(smoke_cpp),
-                    str(src / "build" / lib_name),
-                ]
-                + (tc.ldflags.split() if tc.ldflags else [])
-                + (tc.libs.split() if tc.libs else [])
-                + ["-o", str(smoke_bin)]
+            run_tests_ms = _timed(
+                [
+                    "ctest",
+                    "--test-dir",
+                    "build",
+                    "--output-on-failure",
+                    "-j",
+                    str(os.cpu_count() or 1),
+                ],
+                src,
+                env,
             )
-            example_ms = _timed(compile_smoke, src, env)
-            run_example_ms = _timed([str(smoke_bin)], src, env)
 
             return {
                 "configure": configure_ms,
                 "compile": compile_ms,
-                "example": example_ms,
-                "run example": run_example_ms,
+                "run tests": run_tests_ms,
             }
 
     return Project(
         version=version,
         build=build,
-        phases=("compile", "example", "run example"),
-        comment="fmt is built with FMT_USE_LOCALE=0 (psychicstd's <locale> is "
-        "a no-op stub); its own test suite is disabled.",
+        phases=("compile", "run tests"),
+        comment="fmt is built with locale support; its own unit tests are run.",
     )
 
 

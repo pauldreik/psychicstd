@@ -8,6 +8,7 @@ set(TESTS
     test_any
     test_array
     test_atomic
+    test_bitset
     test_chrono
     test_compare
     test_complex
@@ -28,6 +29,7 @@ set(TESTS
     test_iterator
     test_limits
     test_list
+    test_locale
     test_map
     test_memory
     test_mutex

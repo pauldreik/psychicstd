@@ -65,6 +65,22 @@ constexpr T* construct_at(T* p, Args&&... args) {
 }
 template <typename T> constexpr void destroy_at(T* p) { p->~T(); }
 
+template <typename InputIt, typename Size, typename ForwardIt>
+constexpr ForwardIt uninitialized_copy_n(InputIt first, Size count,
+                                         ForwardIt result) {
+  for (; count > 0; --count, ++first, ++result)
+    construct_at(addressof(*result), *first);
+  return result;
+}
+
+template <typename ForwardIt, typename Size, typename T>
+constexpr ForwardIt uninitialized_fill_n(ForwardIt first, Size count,
+                                         const T& value) {
+  for (; count > 0; --count, ++first)
+    construct_at(addressof(*first), value);
+  return first;
+}
+
 namespace __detail {
 // Detect optional nested types in allocator
 template <typename A, typename = void> struct __alloc_pocca : false_type {};
