@@ -178,6 +178,40 @@ cmake -S . -B build-with-psychic \
 The toolchain is designed to compose with user flags and sanitizer settings.
 If you already have a generated toolchain file, include the psychicstd one
 after it from a small wrapper toolchain file.
+
+### Using with Conan
+
+If you already use Conan, the intended integration point is a single overlay
+profile: [`tests/conan_project/psychic.profile`](tests/conan_project/psychic.profile).
+It composes with your existing host/build profiles and injects the psychicstd
+toolchain plus the small `fmt`-specific define used by the example project.
+
+Apply it to both host and build contexts so your app and its C++ dependencies
+are built with the same standard library choice:
+
+```bash
+conan install . \
+    -pr:h=your-host.profile \
+    -pr:h=/path/to/psychic.profile \
+    -pr:b=your-build.profile \
+    -pr:b=/path/to/psychic.profile \
+    --build=missing
+```
+
+If your host and build profiles are the same, reuse the same base profile for
+both contexts and append the psychic profile last. File-based composition works
+too:
+
+```text
+include(/path/to/psychic.profile)
+```
+
+The example in `tests/conan_project/` uses `fmt` to show a real third-party
+dependency built this way. The profile does not overwrite sanitizer flags, so
+ASan and UBSan keep working the way Conan or your project already configures
+them. Supported compilers are the same as the native CMake path: clang and GCC
+13+ on Linux.
+
 ### Notes for all configurations
 
 `-fvisibility=hidden` prevents psychicstd's symbols from interposing with
