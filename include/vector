@@ -8,7 +8,6 @@
 #include <memory>
 #include <new>
 #include <type_traits>
-#include <utility>
 
 namespace std {
 
@@ -154,7 +153,8 @@ private:
       allocator<T>{}.deallocate(p, n);
   }
   template <typename... Args> constexpr void _construct(T* p, Args&&... args) {
-    allocator_traits<Alloc>::construct(alloc_, p, std::forward<Args>(args)...);
+    // forward
+    allocator_traits<Alloc>::construct(alloc_, p, static_cast<Args&&>(args)...);
   }
   // Bulk fill of n uninitialized slots. For trivially copyable T at runtime, a
   // flat assignment loop the compiler lowers to memset, not a per-element
@@ -183,9 +183,10 @@ private:
   // Transfer: move if movable, copy otherwise.
   static constexpr decltype(auto)
   _xfer(T& x) noexcept(is_nothrow_move_constructible_v<T>) {
-    if constexpr (is_move_constructible_v<T>)
-      return std::move(x);
-    else
+    if constexpr (is_move_constructible_v<T>) {
+      // move
+      return static_cast<T&&>(x);
+    } else
       return static_cast<const T&>(x);
   }
   constexpr void _destroy(T* p) noexcept {
@@ -208,14 +209,16 @@ private:
   constexpr void _shift_right(size_type idx, size_type n) {
     for (size_type i = size_; i-- > idx;) {
       if (i + n >= size_) {
-        if constexpr (is_move_constructible_v<T>)
-          _construct(data_ + i + n, std::move(data_[i]));
-        else
+        if constexpr (is_move_constructible_v<T>) {
+          // move
+          _construct(data_ + i + n, static_cast<T&&>(data_[i]));
+        } else
           _construct(data_ + i + n, data_[i]);
       } else {
-        if constexpr (is_move_assignable_v<T>)
-          data_[i + n] = std::move(data_[i]);
-        else
+        if constexpr (is_move_assignable_v<T>) {
+          // move
+          data_[i + n] = static_cast<T&&>(data_[i]);
+        } else
           data_[i + n] = data_[i];
       }
     }
@@ -230,11 +233,13 @@ private:
   // Shift elements [from, size_) left by n positions.
   constexpr void _shift_left(size_type from, size_type n) {
     for (size_type i = from; i < size_; ++i) {
-      if constexpr (is_move_assignable_v<T>)
-        data_[i - n] = std::move(data_[i]);
-      else if constexpr (is_move_constructible_v<T>) {
+      if constexpr (is_move_assignable_v<T>) {
+        // move
+        data_[i - n] = static_cast<T&&>(data_[i]);
+      } else if constexpr (is_move_constructible_v<T>) {
         _destroy(data_ + i - n);
-        _construct(data_ + i - n, std::move(data_[i]));
+        // move
+        _construct(data_ + i - n, static_cast<T&&>(data_[i]));
         _destroy(data_ + i);
       } else
         data_[i - n] = data_[i];
@@ -316,11 +321,15 @@ private:
       return; // insert-at-end: no shift was done
     // Restore [idx, size_) from [idx+n, size_+n)
     // [idx, idx+i): just destroyed → use construct_at
-    for (size_type j = 0; j < i; ++j)
-      construct_at(data_ + idx + j, std::move(data_[idx + j + n]));
+    for (size_type j = 0; j < i; ++j) {
+      // move
+      construct_at(data_ + idx + j, static_cast<T&&>(data_[idx + j + n]));
+    }
     // [idx+i, size_): still live moved-from → use move-assign
-    for (size_type j = i; j + idx < size_; ++j)
-      data_[idx + j] = std::move(data_[idx + j + n]);
+    for (size_type j = i; j + idx < size_; ++j) {
+      // move
+      data_[idx + j] = static_cast<T&&>(data_[idx + j + n]);
+    }
     // Destroy construct_at'd elements at [size_, size_+n)
     for (size_type j = 0; j < n; ++j)
       _destroy(data_ + size_ + j);
@@ -396,9 +405,10 @@ public:
     }
   }
 
+  // move
   constexpr vector(vector&& o) noexcept
       : data_(o.data_), size_(o.size_), cap_(o.cap_),
-        alloc_(std::move(o.alloc_)) {
+        alloc_(static_cast<Alloc&&>(o.alloc_)) {
     o.data_ = nullptr;
     o.size_ = 0;
     o.cap_ = 0;
@@ -494,7 +504,8 @@ public:
       data_ = o.data_;
       size_ = o.size_;
       cap_ = o.cap_;
-      alloc_ = std::move(o.alloc_);
+      // move
+      alloc_ = static_cast<Alloc&&>(o.alloc_);
       o.data_ = nullptr;
       o.size_ = 0;
       o.cap_ = 0;
@@ -511,10 +522,14 @@ public:
       // Different allocators: must move elements individually
       if (o.size_ <= cap_) {
         size_type mn = (size_ < o.size_) ? size_ : o.size_;
-        for (size_type i = 0; i < mn; ++i)
-          data_[i] = std::move(o.data_[i]);
-        for (size_type i = size_; i < o.size_; ++i)
-          _construct(data_ + i, std::move(o.data_[i]));
+        for (size_type i = 0; i < mn; ++i) {
+          // move
+          data_[i] = static_cast<T&&>(o.data_[i]);
+        }
+        for (size_type i = size_; i < o.size_; ++i) {
+          // move
+          _construct(data_ + i, static_cast<T&&>(o.data_[i]));
+        }
         for (size_type i = o.size_; i < size_; ++i)
           _destroy(data_ + i);
         size_ = o.size_;
@@ -526,8 +541,10 @@ public:
         cap_ = 0;
         if (o.size_) {
           data_ = _alloc_mem(o.size_);
-          for (size_type i = 0; i < o.size_; ++i)
-            _construct(data_ + i, std::move(o.data_[i]));
+          for (size_type i = 0; i < o.size_; ++i) {
+            // move
+            _construct(data_ + i, static_cast<T&&>(o.data_[i]));
+          }
           size_ = o.size_;
           cap_ = o.size_;
         }
@@ -636,15 +653,18 @@ public:
     ++size_;
   }
   constexpr void push_back(T&& v) {
-    T tmp(std::move(v));
+    // move
+    T tmp(static_cast<T&&>(v));
     _grow();
-    _construct(data_ + size_, std::move(tmp));
+    // move
+    _construct(data_ + size_, static_cast<T&&>(tmp));
     ++size_;
   }
 
   template <typename... Args> constexpr T& emplace_back(Args&&... args) {
     if (size_ < cap_) {
-      _construct(data_ + size_, std::forward<Args>(args)...);
+      // forward
+      _construct(data_ + size_, static_cast<Args&&>(args)...);
       return data_[size_++];
     }
     // Need to grow. Construct the new element into the new buffer BEFORE
@@ -654,7 +674,8 @@ public:
     T* np = _alloc_mem(nc);
     for (size_type i = 0; i < size_; ++i)
       _construct(np + i, _xfer(data_[i]));
-    _construct(np + size_, std::forward<Args>(args)...);
+    // forward
+    _construct(np + size_, static_cast<Args&&>(args)...);
     _destroy_all();
     _free_mem(data_, cap_);
     data_ = np;
@@ -677,7 +698,8 @@ public:
   }
   constexpr iterator insert(const_iterator pos, T&& v) {
     size_type idx = pos.ptr_ - data_;
-    T tmp(std::move(v));
+    // move
+    T tmp(static_cast<T&&>(v));
     _grow_and_shift(idx, 1);
     _construct(data_ + idx, _xfer(tmp));
     ++size_;
@@ -788,9 +810,12 @@ public:
     o.size_ = ts;
     o.cap_ = tc;
     if constexpr (allocator_traits<Alloc>::propagate_on_container_swap::value) {
-      Alloc ta = std::move(alloc_);
-      alloc_ = std::move(o.alloc_);
-      o.alloc_ = std::move(ta);
+      // move
+      Alloc ta = static_cast<Alloc&&>(alloc_);
+      // move
+      alloc_ = static_cast<Alloc&&>(o.alloc_);
+      // move
+      o.alloc_ = static_cast<Alloc&&>(ta);
     }
   }
 
