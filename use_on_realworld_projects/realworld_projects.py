@@ -588,9 +588,9 @@ def _rdfind() -> Project:
 
 
 def _simdutf() -> Project:
-    version = "9.0.0"
-    url = f"https://github.com/simdutf/simdutf/archive/refs/tags/v{version}.tar.gz"
-    checksum = "fd2ce975f29809a975a8da8843cfb3a7265af3f71be548f199d23cf65e101764"
+    version = "fix_missing_include"
+    url = f"https://github.com/simdutf/simdutf/archive/refs/heads/{version}.tar.gz"
+    checksum = "9200df11e7e9cfe42d3118ede2a85f6702c25349d0936cea2736e862355cc4a1"
     psychicstrictlevel = 0
 
     def build(tc: Toolchain) -> dict[str, float]:
