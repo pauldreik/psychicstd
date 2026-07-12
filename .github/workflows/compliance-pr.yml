@@ -46,6 +46,7 @@ jobs:
           python3 tools/compliance_diff.py \
             --base base_cache.json \
             --head .compliance_cache.json \
+            --reproduce "LLVM_ROOT=\$PWD/llvm-project cp base_cache.json .compliance_cache.json && python3 tools/compliance.py --recheck" \
             > diff.md
           cat diff.md
       - name: Post compliance diff as PR comment

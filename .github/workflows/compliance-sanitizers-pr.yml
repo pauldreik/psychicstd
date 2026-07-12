@@ -49,6 +49,7 @@ jobs:
             --base sanitize_base_cache.json \
             --head .compliance_cache.sanitize.json \
             --title "Sanitizer diff (ASan/UBSan)" \
+            --reproduce "LLVM_ROOT=\$PWD/llvm-project cp sanitize_base_cache.json .compliance_cache.sanitize.json && python3 tools/compliance.py --sanitize --recheck" \
             > diff.md
           cat diff.md
       - name: Post sanitizer diff as PR comment
