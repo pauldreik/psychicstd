@@ -284,12 +284,18 @@ public:
     size_ += n;
     return *this;
   }
-  iterator insert(const_iterator pos, Char c) {
+  template <typename It>
+    requires(is_same_v<remove_cvref_t<It>, iterator> ||
+             is_same_v<remove_cvref_t<It>, const_iterator>)
+  iterator insert(It pos, Char c) {
     size_type idx = pos - data_;
     insert(idx, 1, c);
     return data_ + idx;
   }
-  iterator insert(const_iterator pos, size_type n, Char c) {
+  template <typename It>
+    requires(is_same_v<remove_cvref_t<It>, iterator> ||
+             is_same_v<remove_cvref_t<It>, const_iterator>)
+  iterator insert(It pos, size_type n, Char c) {
     size_type idx = pos - data_;
     insert(idx, n, c);
     return data_ + idx;

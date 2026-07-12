@@ -9,4 +9,8 @@ int main() {
   assert(s == "hel:lo");
   s.insert(s.begin() + 1, 2, '!');
   assert(s == "h!!el:lo");
+  s.insert(0, 2, '?');
+  assert(s == "??h!!el:lo");
+  s.insert(s.cbegin() + 2, 1, '#');
+  assert(s == "??#h!!el:lo");
 }
