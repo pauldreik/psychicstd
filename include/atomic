@@ -13,6 +13,9 @@
 #define ATOMIC_LONG_LOCK_FREE __GCC_ATOMIC_LONG_LOCK_FREE
 #define ATOMIC_LLONG_LOCK_FREE __GCC_ATOMIC_LLONG_LOCK_FREE
 #define ATOMIC_POINTER_LOCK_FREE __GCC_ATOMIC_POINTER_LOCK_FREE
+#define ATOMIC_FLAG_INIT                                                       \
+  {                                                                            \
+  }
 #define ATOMIC_VAR_INIT(value) {value}
 
 namespace std {
@@ -31,6 +34,75 @@ inline constexpr memory_order memory_order_acquire = memory_order::acquire;
 inline constexpr memory_order memory_order_release = memory_order::release;
 inline constexpr memory_order memory_order_acq_rel = memory_order::acq_rel;
 inline constexpr memory_order memory_order_seq_cst = memory_order::seq_cst;
+
+struct atomic_flag {
+  bool val_ = false;
+
+  constexpr atomic_flag() noexcept = default;
+  atomic_flag(const atomic_flag&) = delete;
+  atomic_flag& operator=(const atomic_flag&) = delete;
+
+  bool test(memory_order order = memory_order_seq_cst) const noexcept {
+    return __atomic_load_n(&val_, int(order));
+  }
+  bool test(memory_order order = memory_order_seq_cst) const volatile noexcept {
+    return __atomic_load_n(&val_, int(order));
+  }
+  bool test_and_set(memory_order order = memory_order_seq_cst) noexcept {
+    return __atomic_test_and_set(&val_, int(order));
+  }
+  bool
+  test_and_set(memory_order order = memory_order_seq_cst) volatile noexcept {
+    return __atomic_test_and_set(&val_, int(order));
+  }
+  void clear(memory_order order = memory_order_seq_cst) noexcept {
+    __atomic_clear(&val_, int(order));
+  }
+  void clear(memory_order order = memory_order_seq_cst) volatile noexcept {
+    __atomic_clear(&val_, int(order));
+  }
+};
+
+inline bool atomic_flag_test(const atomic_flag* obj) noexcept {
+  return obj->test();
+}
+inline bool atomic_flag_test(const volatile atomic_flag* obj) noexcept {
+  return obj->test();
+}
+inline bool atomic_flag_test_explicit(const atomic_flag* obj,
+                                      memory_order order) noexcept {
+  return obj->test(order);
+}
+inline bool atomic_flag_test_explicit(const volatile atomic_flag* obj,
+                                      memory_order order) noexcept {
+  return obj->test(order);
+}
+inline bool atomic_flag_test_and_set(atomic_flag* obj) noexcept {
+  return obj->test_and_set();
+}
+inline bool atomic_flag_test_and_set(volatile atomic_flag* obj) noexcept {
+  return obj->test_and_set();
+}
+inline bool atomic_flag_test_and_set_explicit(atomic_flag* obj,
+                                              memory_order order) noexcept {
+  return obj->test_and_set(order);
+}
+inline bool atomic_flag_test_and_set_explicit(volatile atomic_flag* obj,
+                                              memory_order order) noexcept {
+  return obj->test_and_set(order);
+}
+inline void atomic_flag_clear(atomic_flag* obj) noexcept { obj->clear(); }
+inline void atomic_flag_clear(volatile atomic_flag* obj) noexcept {
+  obj->clear();
+}
+inline void atomic_flag_clear_explicit(atomic_flag* obj,
+                                       memory_order order) noexcept {
+  obj->clear(order);
+}
+inline void atomic_flag_clear_explicit(volatile atomic_flag* obj,
+                                       memory_order order) noexcept {
+  obj->clear(order);
+}
 
 template <typename T> struct atomic {
   using value_type = T;

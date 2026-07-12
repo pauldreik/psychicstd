@@ -11,6 +11,13 @@ int main() {
                 (ATOMIC_INT_LOCK_FREE == 2));
   static_assert(sizeof(std::atomic_uint64_t::value_type) == 8);
 
+  std::atomic_flag flag = ATOMIC_FLAG_INIT;
+  assert(!flag.test());
+  assert(!std::atomic_flag_test_and_set(&flag));
+  assert(flag.test());
+  std::atomic_flag_clear_explicit(&flag, std::memory_order_release);
+  assert(!std::atomic_flag_test_explicit(&flag, std::memory_order_acquire));
+
   try {
     std::atomic<throwing> value;
     (void)value;
