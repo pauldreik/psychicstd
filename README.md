@@ -1,23 +1,23 @@
 # psychicstd - a C++ standard library implementation
 
-This is a **higly experimental** C++ standard library optimized for compilation speed. It is intended to be used during general C++ development to speed up the edit-compile-debug cycle. It is not at all intended to be used for shipping binaries.
+This is a **highly experimental** C++ standard library optimized for compilation speed. It is intended to be used during general C++ development to speed up the edit-compile-debug cycle. It is not at all intended to be used for shipping binaries.
 
-It is not complete. It is not fully compliant. But it is good enough to quickly iterate on code. Here are some real world projects that compile with psychicstd. The number indicate the speedup relative libstdc++ for the compilation phase (1x means same speed, higher is better):
+It is not complete. It is not fully compliant. But it is good enough to quickly iterate on code. Here are some real world projects that compile and pass their unit tests with psychicstd. The number in the second column indicates the speedup relative libstdc++ for the compilation phase (1x means same speed, higher is better):
 
 | Project | Compile time speedup | comment |
 |-------------------------------------------------------------|-----------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------|
-| [catch2](https://github.com/catchorg/Catch2) | [1.8x](use_on_realworld_projects/catch2_speed_report.md) | |
-| [cppcheck](https://github.com/cppcheck-opensource/cppcheck) | [2.5x](use_on_realworld_projects/cppcheck_speed_report.md)| |
-| [eigen](https://gitlab.com/libeigen/eigen) | [1.9x](use_on_realworld_projects/eigen_speed_report.md) | |
-| [fmt](https://github.com/fmtlib/fmt) | | Full build and test suite pass in both drop-in and strict psychicstd mode. |
-| [nlohmann json](https://json.nlohmann.me/) | | Uncovered a reliance on implementation-specific behaviour, fixed in [PR #5236](https://github.com/nlohmann/json/pull/5236). |
-| [rdfind](https://rdfind.pauldreik.se/) | [2.98x](use_on_realworld_projects/rdfind_speed_report.md) | Runs in psychic strict mode, see "Compatibility levels" further down this document. Strict mode uncovered code relying on transitive includes. |
-| [simdutf](https://github.com/simdutf/simdutf) | 1.14x | Consists mostly of simd intrinsics, no speedup expected. Measured in release mode. |
+| [catch2](https://github.com/catchorg/Catch2) | [3.21x](use_on_realworld_projects/catch2_speed_report.md) | |
+| [cppcheck](https://github.com/cppcheck-opensource/cppcheck) | [2.45x](use_on_realworld_projects/cppcheck_speed_report.md)| |
+| [eigen](https://gitlab.com/libeigen/eigen) | [1.86x](use_on_realworld_projects/eigen_speed_report.md) | |
+| [fmt](https://github.com/fmtlib/fmt) | [1.70x](use_on_realworld_projects/fmt_speed_report.md) | Full build and test suite pass in both drop-in and strict psychicstd mode. |
+| [nlohmann json](https://json.nlohmann.me/) | [1.97x](use_on_realworld_projects/nlohmann_speed_report.md) | Uncovered a reliance on implementation-specific behaviour, fixed in [PR #5236](https://github.com/nlohmann/json/pull/5236). |
+| [rdfind](https://rdfind.pauldreik.se/) | [3.80x](use_on_realworld_projects/rdfind_speed_report.md) | Runs in psychic strict mode, see "Compatibility levels" further down this document. Strict mode uncovered code relying on transitive includes. |
+| [simdutf](https://github.com/simdutf/simdutf) | [1.19x](use_on_realworld_projects/simdutf_speed_report.md) | Consists mostly of simd intrinsics, no speedup expected. [Strict mode uncovered code relying on transitive includes](https://github.com/simdutf/simdutf/pull/998). |
 | [wordcounter](benchmarks/compile_time/bench_wordcounter.cpp)| [4.8x](speed.md) | [demo program using STL](benchmarks/compile_time/bench_wordcounter.cpp). Counts word occurence in text files. |
 
-Find the scripts validating the build and generating the above number in the use_on_realworld_projects/ directory.
+Find the scripts validating the build and generating the above number in the [use_on_realworld_projects/](use_on_realworld_projects) directory.
 
-There's a second, smaller speedup too: since psychicstd headers are used with `-nostdinc++` and never pull in `libstdc++.so.6`, binaries link against fewer shared libraries. That means less work for the dynamic loader on every process start — a [1.7x faster startup](startup.md) for a trivial program in the measurement above. It's a minor effect on its own, but it's not nothing when it's paid on every one of the hundreds of test binaries `ctest` spawns during the edit-compile-debug cycle.
+There's a second, smaller speedup too: since psychicstd headers are used with `-nostdinc++` and never pull in `libstdc++.so.6`, binaries link against fewer shared libraries. That means less work for the dynamic loader on every process start — a [1.80x faster startup](startup.md) for a trivial program in the measurement above. It's a minor effect on its own, but it's not nothing when it's paid on every one of the hundreds of test binaries `ctest` spawns during the edit-compile-debug cycle.
 
 Once you have coded for a while, switch to a real quality standard library (typically libstdc++ or libc++) and test and build real releases - psychicstd is just intended for speeding up the development.
 
