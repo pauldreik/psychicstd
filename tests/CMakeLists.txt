@@ -70,6 +70,13 @@ foreach(t ${TESTS})
     add_test(NAME ${t}_psychicstd COMMAND ${t}_psychicstd)
 endforeach()
 
+# Generic system atomics can also require GCC's out-of-line atomic runtime.
+target_link_libraries(test_atomic_system PRIVATE atomic)
+target_compile_options(
+    test_atomic_psychicstd
+    PRIVATE $<$<CXX_COMPILER_ID:Clang>:-Wno-atomic-alignment>
+)
+
 # Self-containment tests: every header must be usable on its own. Including
 # just that one header (and nothing else) must compile. This catches headers
 # that rely on another header having been included first. The source is

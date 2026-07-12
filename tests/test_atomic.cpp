@@ -11,6 +11,13 @@ struct pair {
   int second;
 };
 
+struct alignas(16) wide_value {
+  int first;
+  int second;
+  int third;
+  int fourth;
+};
+
 int main() {
   static_assert(std::atomic_int::is_always_lock_free ==
                 (ATOMIC_INT_LOCK_FREE == 2));
@@ -71,6 +78,12 @@ int main() {
   pair wanted{3, 4};
   assert(record.compare_exchange_strong(wanted, pair{5, 6}));
   assert(record.load().second == 6);
+
+  std::atomic<wide_value> wide_record(wide_value{1, 2, 3, 4});
+  wide_value wide_wanted{1, 2, 3, 4};
+  assert(
+      wide_record.compare_exchange_strong(wide_wanted, wide_value{5, 6, 7, 8}));
+  assert(wide_record.load().fourth == 8);
 
   int values[4] = {};
   std::atomic<int*> pointer(values);

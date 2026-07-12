@@ -1,9 +1,17 @@
 #include <algorithm>
+#include <atomic>
 #include <cassert>
 #include <iostream>
 #include <numeric>
 #include <string>
 #include <vector>
+
+struct alignas(16) wide_value {
+  int first;
+  int second;
+  int third;
+  int fourth;
+};
 
 int main() {
   // I/O — verifies <iostream> + <ostream> + streambuf work
@@ -23,6 +31,12 @@ int main() {
 
   // Numeric
   assert(std::gcd(12, 8) == 4);
+
+  // Generic atomics may use the out-of-line libatomic runtime.
+  std::atomic<wide_value> atomic_value(wide_value{1, 2, 3, 4});
+  wide_value expected{1, 2, 3, 4};
+  assert(
+      atomic_value.compare_exchange_strong(expected, wide_value{5, 6, 7, 8}));
 
   std::cout << "all checks passed\n";
   return 0;

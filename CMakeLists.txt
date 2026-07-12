@@ -19,6 +19,7 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
         target_link_options(psychicstd INTERFACE -nodefaultlibs)
         set(__psychicstd_libs
             -lsupc++
+            -latomic
             -lm
             -lc
             -lgcc_s
@@ -44,7 +45,7 @@ elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     # link set but keeps libc, libm, libgcc_s, libgcc. Add libsupc++ back for
     # the C++ ABI runtime (operator new/delete, __gxx_personality_v0, RTTI).
     target_link_options(psychicstd INTERFACE -nostdlib++)
-    target_link_libraries(psychicstd INTERFACE -lsupc++)
+    target_link_libraries(psychicstd INTERFACE -lsupc++ -latomic)
 else()
     message(FATAL_ERROR "Unsupported compiler: ${CMAKE_CXX_COMPILER_ID}")
 endif()

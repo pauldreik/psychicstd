@@ -40,7 +40,7 @@ import realworld_projects as rw  # noqa: E402
 
 # psychicstd's link additions (GCC 12-compatible: drop libstdc++, spell out the rest).
 PSY_LDFLAGS = "-nodefaultlibs"
-PSY_LIBS = "-lsupc++ -lm -lc -lgcc_s -lgcc"
+PSY_LIBS = "-lsupc++ -latomic -lm -lc -lgcc_s -lgcc"
 
 # Selectable from the outside; each project's recipe translates this into its own
 # build system's convention (CMAKE_BUILD_TYPE, an -O flag, ...) -- see Toolchain.

@@ -129,7 +129,7 @@ cmake -S . -B build-with-psychic \
     -DCMAKE_CXX_COMPILER_WORKS=1 \
     -DCMAKE_CXX_FLAGS="-nostdinc++ -fvisibility=hidden -isystem /path/to/psychicstd/include" \
     -DCMAKE_EXE_LINKER_FLAGS="-nodefaultlibs" \
-    -DCMAKE_CXX_STANDARD_LIBRARIES="-lsupc++ -lm -lc -lgcc_s -lgcc"
+    -DCMAKE_CXX_STANDARD_LIBRARIES="-lsupc++ -latomic -lm -lc -lgcc_s -lgcc"
 ```
 
 `CMAKE_CXX_COMPILER_WORKS=1` skips the compiler detection link test (the test
@@ -139,14 +139,15 @@ detection).
 ### CMake / GCC 13+
 
 GCC 13 added `-nostdlib++`, which drops libstdc++ while keeping libc, libm,
-libgcc_s and libgcc — only `-lsupc++` needs to be added back:
+libgcc_s and libgcc. Add `libsupc++` for the C++ ABI and `libatomic` for
+generic atomic operations that the compiler cannot lower inline:
 
 ```bash
 cmake -S . -B build-with-psychic \
     -DCMAKE_CXX_STANDARD=20 \
     -DCMAKE_CXX_FLAGS="-nostdinc++ -fvisibility=hidden -isystem /path/to/psychicstd/include" \
     -DCMAKE_EXE_LINKER_FLAGS="-nostdlib++" \
-    -DCMAKE_CXX_STANDARD_LIBRARIES="-lsupc++"
+    -DCMAKE_CXX_STANDARD_LIBRARIES="-lsupc++ -latomic"
 ```
 
 No `CMAKE_CXX_COMPILER_WORKS` needed — libc is still linked by default.
@@ -159,7 +160,7 @@ cmake -S . -B build-with-psychic \
     -DCMAKE_CXX_COMPILER=clang++ \
     -DCMAKE_CXX_FLAGS="-nostdinc++ -fvisibility=hidden -isystem /path/to/psychicstd/include" \
     -DCMAKE_EXE_LINKER_FLAGS="-nostdlib++" \
-    -DCMAKE_CXX_STANDARD_LIBRARIES="-lsupc++"
+    -DCMAKE_CXX_STANDARD_LIBRARIES="-lsupc++ -latomic"
 ```
 
 ### CMake toolchain file
@@ -230,7 +231,7 @@ plain `make` then works without extra flags:
 ./configure \
     CXXFLAGS="-std=c++20 -nostdinc++ -isystem /path/to/psychicstd/include" \
     LDFLAGS="-nodefaultlibs" \
-    LIBS="-lsupc++ -lm -lc -lgcc_s -lgcc"
+    LIBS="-lsupc++ -latomic -lm -lc -lgcc_s -lgcc"
 make
 ```
 
