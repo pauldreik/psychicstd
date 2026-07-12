@@ -1,7 +1,11 @@
 #pragma once
 #include <cstddef>
 #include <cstdint>
+#include <linux/futex.h>
+#include <sched.h>
+#include <sys/syscall.h>
 #include <type_traits>
+#include <unistd.h>
 
 #define ATOMIC_BOOL_LOCK_FREE __GCC_ATOMIC_BOOL_LOCK_FREE
 #define ATOMIC_CHAR_LOCK_FREE __GCC_ATOMIC_CHAR_LOCK_FREE
@@ -36,6 +40,34 @@ inline constexpr memory_order memory_order_release = memory_order::release;
 inline constexpr memory_order memory_order_acq_rel = memory_order::acq_rel;
 inline constexpr memory_order memory_order_seq_cst = memory_order::seq_cst;
 
+namespace __atomic_detail {
+template <typename T> bool equal(const T& a, const T& b) noexcept {
+  return __builtin_memcmp(&a, &b, sizeof(T)) == 0;
+}
+template <typename T>
+void wait(const volatile T* ptr, T old, memory_order order) noexcept {
+  while (true) {
+    T current;
+    __atomic_load(ptr, &current, int(order));
+    if (!equal(current, old))
+      return;
+    if constexpr (sizeof(T) == sizeof(int)) {
+      int expected;
+      __builtin_memcpy(&expected, &old, sizeof(expected));
+      ::syscall(SYS_futex, const_cast<T*>(ptr), FUTEX_WAIT_PRIVATE, expected,
+                nullptr, nullptr, 0);
+    } else {
+      ::sched_yield();
+    }
+  }
+}
+template <typename T> void notify(const volatile T* ptr, int count) noexcept {
+  if constexpr (sizeof(T) == sizeof(int))
+    ::syscall(SYS_futex, const_cast<T*>(ptr), FUTEX_WAKE_PRIVATE, count,
+              nullptr, nullptr, 0);
+}
+} // namespace __atomic_detail
+
 struct atomic_flag {
   bool val_ = false;
 
@@ -61,6 +93,20 @@ struct atomic_flag {
   }
   void clear(memory_order order = memory_order_seq_cst) volatile noexcept {
     __atomic_clear(&val_, int(order));
+  }
+  void wait(bool old,
+            memory_order order = memory_order_seq_cst) const noexcept {
+    __atomic_detail::wait(&val_, old, order);
+  }
+  void wait(bool old, memory_order order = memory_order_seq_cst) const
+      volatile noexcept {
+    __atomic_detail::wait(&val_, old, order);
+  }
+  void notify_one() noexcept { __atomic_detail::notify(&val_, 1); }
+  void notify_one() volatile noexcept { __atomic_detail::notify(&val_, 1); }
+  void notify_all() noexcept { __atomic_detail::notify(&val_, 0x7fffffff); }
+  void notify_all() volatile noexcept {
+    __atomic_detail::notify(&val_, 0x7fffffff);
   }
 };
 
@@ -103,6 +149,33 @@ inline void atomic_flag_clear_explicit(atomic_flag* obj,
 inline void atomic_flag_clear_explicit(volatile atomic_flag* obj,
                                        memory_order order) noexcept {
   obj->clear(order);
+}
+inline void atomic_flag_wait(const atomic_flag* obj, bool old) noexcept {
+  obj->wait(old);
+}
+inline void atomic_flag_wait(const volatile atomic_flag* obj,
+                             bool old) noexcept {
+  obj->wait(old);
+}
+inline void atomic_flag_wait_explicit(const atomic_flag* obj, bool old,
+                                      memory_order order) noexcept {
+  obj->wait(old, order);
+}
+inline void atomic_flag_wait_explicit(const volatile atomic_flag* obj, bool old,
+                                      memory_order order) noexcept {
+  obj->wait(old, order);
+}
+inline void atomic_flag_notify_one(atomic_flag* obj) noexcept {
+  obj->notify_one();
+}
+inline void atomic_flag_notify_one(volatile atomic_flag* obj) noexcept {
+  obj->notify_one();
+}
+inline void atomic_flag_notify_all(atomic_flag* obj) noexcept {
+  obj->notify_all();
+}
+inline void atomic_flag_notify_all(volatile atomic_flag* obj) noexcept {
+  obj->notify_all();
 }
 
 template <typename T> struct atomic {
@@ -321,6 +394,19 @@ template <typename T> struct atomic {
   {
     return __atomic_xor_fetch(&val_, v, __ATOMIC_SEQ_CST);
   }
+  void wait(T old, memory_order order = memory_order_seq_cst) const noexcept {
+    __atomic_detail::wait(&val_, old, order);
+  }
+  void wait(T old, memory_order order = memory_order_seq_cst) const
+      volatile noexcept {
+    __atomic_detail::wait(&val_, old, order);
+  }
+  void notify_one() noexcept { __atomic_detail::notify(&val_, 1); }
+  void notify_one() volatile noexcept { __atomic_detail::notify(&val_, 1); }
+  void notify_all() noexcept { __atomic_detail::notify(&val_, 0x7fffffff); }
+  void notify_all() volatile noexcept {
+    __atomic_detail::notify(&val_, 0x7fffffff);
+  }
 };
 
 template <typename T> class atomic_ref {
@@ -462,6 +548,13 @@ public:
   {
     return __atomic_xor_fetch(ptr_, value, __ATOMIC_SEQ_CST);
   }
+  void wait(T old, memory_order order = memory_order_seq_cst) const noexcept {
+    __atomic_detail::wait(ptr_, old, order);
+  }
+  void notify_one() const noexcept { __atomic_detail::notify(ptr_, 1); }
+  void notify_all() const noexcept {
+    __atomic_detail::notify(ptr_, 0x7fffffff);
+  }
 };
 
 template <typename T> void atomic_init(atomic<T>* obj, T value) noexcept {
@@ -596,6 +689,36 @@ _PSYCHICSTD_ATOMIC_FETCH(and)
 _PSYCHICSTD_ATOMIC_FETCH(or)
 _PSYCHICSTD_ATOMIC_FETCH(xor)
 #undef _PSYCHICSTD_ATOMIC_FETCH
+
+template <typename T> void atomic_wait(const atomic<T>* obj, T old) noexcept {
+  obj->wait(old);
+}
+template <typename T>
+void atomic_wait(const volatile atomic<T>* obj, T old) noexcept {
+  obj->wait(old);
+}
+template <typename T>
+void atomic_wait_explicit(const atomic<T>* obj, T old,
+                          memory_order order) noexcept {
+  obj->wait(old, order);
+}
+template <typename T>
+void atomic_wait_explicit(const volatile atomic<T>* obj, T old,
+                          memory_order order) noexcept {
+  obj->wait(old, order);
+}
+template <typename T> void atomic_notify_one(atomic<T>* obj) noexcept {
+  obj->notify_one();
+}
+template <typename T> void atomic_notify_one(volatile atomic<T>* obj) noexcept {
+  obj->notify_one();
+}
+template <typename T> void atomic_notify_all(atomic<T>* obj) noexcept {
+  obj->notify_all();
+}
+template <typename T> void atomic_notify_all(volatile atomic<T>* obj) noexcept {
+  obj->notify_all();
+}
 
 using atomic_bool = atomic<bool>;
 using atomic_char = atomic<char>;

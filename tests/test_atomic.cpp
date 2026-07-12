@@ -89,4 +89,21 @@ int main() {
   expected = 3;
   assert(ref.compare_exchange_strong(expected, 4));
   assert(referenced == 4);
+
+  std::atomic<int> state(0);
+  int observed = 0;
+  std::thread waiter([&] {
+    state.wait(0);
+    observed = state.load();
+  });
+  state.store(1);
+  state.notify_one();
+  waiter.join();
+  assert(observed == 1);
+
+  state.store(2);
+  std::atomic_wait(&state, 1);
+  flag.test_and_set();
+  flag.notify_all();
+  flag.wait(false);
 }
