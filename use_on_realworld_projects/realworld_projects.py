@@ -525,7 +525,7 @@ def _rdfind() -> Project:
 
     if fromcommit:
         # from a certain commit hash
-        psychicstrictlevel = 0
+        psychicstrictlevel = -0
         commithash = _RDFIND_COMMIT
         url = f"https://github.com/pauldreik/rdfind/archive/{commithash}.tar.gz"
         checksum = "057ae066b2f7349cb84e4b48ab3ab897d88afc3005bd6d8292c95fa012467659"
@@ -588,13 +588,14 @@ def _rdfind() -> Project:
 
 
 def _simdutf() -> Project:
-    version = "9.0.0"
-    url = f"https://github.com/simdutf/simdutf/archive/refs/tags/v{version}.tar.gz"
-    checksum = "fd2ce975f29809a975a8da8843cfb3a7265af3f71be548f199d23cf65e101764"
+    version = "master260712"  #
+    commithash = "c04f2db9eee13fbd1b6dd1c2b2fb52374738dd4d"
+    url = f"https://github.com/simdutf/simdutf/archive/{commithash}.tar.gz"
+    checksum = "face6b2056da68df9d758ce0ac4cca91df90ab1c668512fa541eba4cd6668686"
     psychicstrictlevel = 0
 
     def build(tc: Toolchain) -> dict[str, float]:
-        tarball = RW_DIR / f"simdutf-{version}.tar.gz"
+        tarball = RW_DIR / f"simdutf-{commithash}.tar.gz"
         _fetch(url, tarball, checksum)
 
         with tempfile.TemporaryDirectory(
@@ -603,7 +604,7 @@ def _simdutf() -> Project:
             work = Path(work_dir)
             with tarfile.open(tarball) as t:
                 t.extractall(work)
-            src = work / f"simdutf-{version}"
+            src = work / f"simdutf-{commithash}"
 
             env = _env(tc)
             configure = [
