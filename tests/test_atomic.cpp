@@ -2,7 +2,19 @@
 #include <cassert>
 #include <thread>
 
+struct throwing {
+  throwing() { throw 42; }
+};
+
 int main() {
+  try {
+    std::atomic<throwing> value;
+    (void)value;
+    assert(false);
+  } catch (int value) {
+    assert(value == 42);
+  }
+
   std::atomic<int> x{42};
   assert(x.load() == 42);
 

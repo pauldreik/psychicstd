@@ -21,7 +21,7 @@ inline constexpr memory_order memory_order_seq_cst = memory_order::seq_cst;
 template <typename T> struct atomic {
   T val_{};
 
-  constexpr atomic() noexcept = default;
+  constexpr atomic() = default;
   constexpr atomic(T v) noexcept : val_(v) {}
   atomic(const atomic&) = delete;
   atomic& operator=(const atomic&) = delete;
