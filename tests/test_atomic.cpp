@@ -7,6 +7,10 @@ struct throwing {
 };
 
 int main() {
+  static_assert(std::atomic_int::is_always_lock_free ==
+                (ATOMIC_INT_LOCK_FREE == 2));
+  static_assert(sizeof(std::atomic_uint64_t::value_type) == 8);
+
   try {
     std::atomic<throwing> value;
     (void)value;
@@ -34,4 +38,10 @@ int main() {
   assert(x.exchange(9) == 7);
   assert(x.fetch_add(2) == 9);
   assert(x.load() == 11);
+
+  volatile std::atomic_uint bits(1);
+  assert(bits.fetch_or(2) == 1);
+  assert(bits.fetch_xor(1) == 3);
+  assert(bits.fetch_and(2) == 2);
+  assert(bits.load() == 2);
 }
