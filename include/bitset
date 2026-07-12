@@ -1,0 +1,52 @@
+#pragma once
+#include <cstddef>
+
+namespace std {
+
+template <size_t N> class bitset {
+  static_assert(N <= sizeof(unsigned long long) * 8,
+                "psychicstd bitset currently supports up to 64 bits");
+
+public:
+  class reference {
+  public:
+    reference(unsigned long long* bits, size_t pos) : bits_(bits), pos_(pos) {}
+    reference& operator=(bool value) noexcept {
+      if (value)
+        *bits_ |= 1ULL << pos_;
+      else
+        *bits_ &= ~(1ULL << pos_);
+      return *this;
+    }
+    operator bool() const noexcept { return (*bits_ & (1ULL << pos_)) != 0; }
+    reference& flip() noexcept {
+      *bits_ ^= 1ULL << pos_;
+      return *this;
+    }
+
+  private:
+    unsigned long long* bits_;
+    size_t pos_;
+  };
+
+  constexpr bitset() = default;
+  constexpr bitset(unsigned long long value) : bits_(value & mask()) {}
+
+  constexpr bool operator[](size_t pos) const noexcept {
+    return (bits_ & (1ULL << pos)) != 0;
+  }
+  reference operator[](size_t pos) noexcept { return reference(&bits_, pos); }
+  constexpr size_t size() const noexcept { return N; }
+
+private:
+  static constexpr unsigned long long mask() {
+    if constexpr (N == 0)
+      return 0;
+    if constexpr (N == sizeof(unsigned long long) * 8)
+      return ~0ULL;
+    return (1ULL << N) - 1;
+  }
+  unsigned long long bits_ = 0;
+};
+
+} // namespace std
