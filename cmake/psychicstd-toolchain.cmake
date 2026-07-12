@@ -34,7 +34,7 @@ set(CMAKE_CXX_FLAGS
     "${CMAKE_CXX_FLAGS} -nostdinc++ -fvisibility=hidden -isystem ${PSYCHICSTD_INCLUDE_DIR}"
 )
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -nostdlib++")
-set(CMAKE_CXX_STANDARD_LIBRARIES "${CMAKE_CXX_STANDARD_LIBRARIES} -lsupc++")
+set(CMAKE_CXX_STANDARD_LIBRARIES "${CMAKE_CXX_STANDARD_LIBRARIES} -lsupc++ -latomic")
 
 # Run a validation pass after the real compiler is identified.
 set(_psychicstd_validate "${CMAKE_CURRENT_LIST_DIR}/psychicstd-toolchain-validate.cmake")
