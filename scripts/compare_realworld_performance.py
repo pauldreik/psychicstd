@@ -16,6 +16,7 @@ Usage:
   scripts/compare_realworld_performance.py [--compiler CXX]
       [--build-type {debug,release,both}] [--reps N]
       [--project {NAME,all} ...] [--enable-ccache] [--output PATH]
+      [--check-only]
   scripts/compare_realworld_performance.py --list
 """
 
@@ -161,6 +162,12 @@ def main() -> int:
         help="also write the report to this file (in addition to stdout)",
     )
     ap.add_argument(
+        "--check-only",
+        action="store_true",
+        help="only verify that the selected project(s) build under psychicstd; "
+        "skip the system-vs-psychicstd timing report",
+    )
+    ap.add_argument(
         "--list",
         action="store_true",
         help="print known project names, one per line, and exit",
@@ -176,6 +183,24 @@ def main() -> int:
     else:
         projects = sorted(args.projects)
     build_types = cr.BUILD_TYPES if args.build_type == "both" else (args.build_type,)
+
+    if args.check_only:
+        if args.output:
+            print(
+                "--output is ignored with --check-only",
+                file=sys.stderr,
+            )
+        for project in projects:
+            for build_type in build_types:
+                print(f"Checking {project} ({build_type}) ...", file=sys.stderr)
+                cr.check_project(
+                    project,
+                    args.compiler,
+                    build_type,
+                    REPO / "include",
+                    args.enable_ccache,
+                )
+        return 0
 
     results = {}
     for project in projects:
