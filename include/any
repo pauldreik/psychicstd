@@ -5,7 +5,6 @@
 #include <new>
 #include <type_traits>
 #include <typeinfo>
-#include <utility>
 
 namespace std {
 
@@ -38,7 +37,8 @@ class any {
       dst.vt_ = src.vt_;
     }
     static void move(any& src, any& dst) noexcept {
-      new (&dst.buf_) T(std::move(*ptr(src)));
+      // move
+      new (&dst.buf_) T(static_cast<T&&>(*ptr(src)));
       dst.vt_ = src.vt_;
       src.vt_ = nullptr;
     }
@@ -88,8 +88,10 @@ public:
     using U = decay_t<T>;
     static constexpr VTable vt = Ops<U>::make();
     if constexpr (is_small<U>) {
+      // forward
       new (&buf_) U(static_cast<T&&>(v));
     } else {
+      // forward
       heap_ = new U(static_cast<T&&>(v));
     }
     vt_ = &vt;
@@ -114,6 +116,7 @@ public:
   }
   template <typename T, typename = enable_if_t<!is_same_v<decay_t<T>, any>>>
   any& operator=(T&& v) {
+    // forward
     *this = any(static_cast<T&&>(v));
     return *this;
   }
@@ -132,9 +135,12 @@ public:
 };
 
 inline void swap(any& a, any& b) noexcept {
-  any tmp = std::move(a);
-  a = std::move(b);
-  b = std::move(tmp);
+  // move
+  any tmp = static_cast<any&&>(a);
+  // move
+  a = static_cast<any&&>(b);
+  // move
+  b = static_cast<any&&>(tmp);
 }
 
 template <typename T> T* any_cast(any* a) noexcept {
@@ -164,10 +170,12 @@ template <typename T> T any_cast(any&& a) {
   auto* p = any_cast<remove_cvref_t<T>>(&a);
   if (!p)
     _PSYCHICSTD_THROW(bad_cast{});
-  return static_cast<T>(std::move(*p));
+  // move
+  return static_cast<T>(static_cast<remove_cvref_t<T>&&>(*p));
 }
 
 template <typename T, typename... Args> any make_any(Args&&... args) {
+  // forward
   return any(T(static_cast<Args&&>(args)...));
 }
 

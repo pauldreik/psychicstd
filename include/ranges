@@ -2,7 +2,6 @@
 #include <concepts>
 #include <iterator>
 #include <type_traits>
-#include <utility>
 
 namespace std::ranges {
 
@@ -37,19 +36,23 @@ void iter_swap() = delete;
 
 template <typename I>
 concept __has_adl_iter_move =
+    // forward
     requires(I&& i) { iter_move(static_cast<I&&>(i)); };
 
 template <typename I>
 concept __has_adl_iter_swap = requires(I&& a, I&& b) {
+  // forward
   iter_swap(static_cast<I&&>(a), static_cast<I&&>(b));
 };
 
 struct __iter_move_fn {
   template <typename I> constexpr auto operator()(I&& i) const {
     if constexpr (__has_adl_iter_move<I&&>) {
+      // forward
       return iter_move(static_cast<I&&>(i));
     } else {
-      return std::move(*i);
+      // move
+      return static_cast<std::remove_reference_t<decltype(*i)>&&>(*i);
     }
   }
 };
@@ -57,11 +60,15 @@ struct __iter_swap_fn {
   template <typename I1, typename I2>
   constexpr void operator()(I1&& a, I2&& b) const {
     if constexpr (__has_adl_iter_swap<I1&&>) {
+      // forward
       iter_swap(static_cast<I1&&>(a), static_cast<I2&&>(b));
     } else {
-      auto tmp = std::move(*a);
-      *a = std::move(*b);
-      *b = std::move(tmp);
+      // move
+      auto tmp = static_cast<std::remove_reference_t<decltype(*a)>&&>(*a);
+      // move
+      *a = static_cast<std::remove_reference_t<decltype(*b)>&&>(*b);
+      // move
+      *b = static_cast<decltype(tmp)&&>(tmp);
     }
   }
 };
@@ -147,6 +154,7 @@ template <typename R> using all_t = std::remove_cvref_t<R>;
 
 struct __all_fn {
   template <typename R> constexpr auto operator()(R&& r) const noexcept -> R&& {
+    // forward
     return static_cast<R&&>(r);
   }
 };
