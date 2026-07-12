@@ -6,3 +6,4 @@ patches-*.tar.gz
 .compliance_cache.sanitize.json
 compliance.sanitize.md
 libcxx.*
+__pycache__
