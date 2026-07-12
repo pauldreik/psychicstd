@@ -6,6 +6,11 @@ struct throwing {
   throwing() { throw 42; }
 };
 
+struct pair {
+  int first;
+  int second;
+};
+
 int main() {
   static_assert(std::atomic_int::is_always_lock_free ==
                 (ATOMIC_INT_LOCK_FREE == 2));
@@ -59,4 +64,21 @@ int main() {
   assert(std::atomic_compare_exchange_weak(&x, &expected, 4));
   std::atomic_store_explicit(&x, 5, std::memory_order_release);
   assert(std::atomic_exchange(&x, 6) == 5);
+
+  std::atomic<pair> record(pair{1, 2});
+  pair old = record.exchange(pair{3, 4});
+  assert(old.first == 1 && old.second == 2);
+  pair wanted{3, 4};
+  assert(record.compare_exchange_strong(wanted, pair{5, 6}));
+  assert(record.load().second == 6);
+
+  int values[4] = {};
+  std::atomic<int*> pointer(values);
+  assert(pointer.fetch_add(2) == values);
+  assert(pointer.load() == values + 2);
+  assert(--pointer == values + 1);
+
+  std::atomic<double> number(1.5);
+  assert(number.fetch_add(0.5) == 1.5);
+  assert((number -= 0.25) == 1.75);
 }
