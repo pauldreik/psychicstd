@@ -1,27 +1,23 @@
-# Cppcheck Compile-Time Comparison
+# Real-world project speed comparison
 
-psychicstd vs system libstdc++ (GCC 14)
+Compiler: `c++ (Debian 14.2.0-19) 14.2.0`. Each project is built 7 time(s) per side (system libstdc++, psychicstd); `system (s)`/`psychicstd (s)` are the *median* build time of those repetitions, in seconds -- the median is used instead of the mean so one repetition disturbed by another process on the machine doesn't skew the result. `speedup` = system median / psychicstd median (>1x means psychicstd is faster); its bracketed range is a 95% confidence interval on that *same ratio* (obtained by resampling the raw per-repetition timings, not just the two medians, 2000 times) -- so it reflects how much the repetitions varied, not a different unit. 🟢 the whole CI is above 1x (reliably faster) · 🔴 the whole CI is below 1x (reliably slower) · 🟡 the CI straddles 1x (not distinguishable from run-to-run noise).
 
-| Source file | psychicstd (ms) | libstdc++ (ms) | Speedup |
-|-------------|-----------------|----------------|---------|
-| addoninfo | — | — | — |
-| analyzerinfo | 218 | 546 | 2.5x |
-| color | 99 | 206 | 2.1x |
-| timer | 181 | 960 | 5.3x |
-| errortypes | 68 | 296 | 4.4x |
-| astutils | 729 | 1586 | 2.2x |
-| checkassert | 191 | 690 | 3.6x |
-| checkbool | 202 | 706 | 3.5x |
-| checkcondition | 487 | 1135 | 2.3x |
-| checkfunctions | 294 | 863 | 2.9x |
-| tokenize | 1582 | 3694 | 2.3x |
-| symboldatabase | 1424 | 3055 | 2.1x |
-| valueflow | 1861 | 4515 | 2.4x |
-| checkclass | 845 | 1813 | 2.1x |
-| checkbufferoverrun | 424 | 1126 | 2.7x |
-| cmdlineparser | — | — | — |
-| filelister | 137 | 498 | 3.6x |
-| cppcheckexecutor | 365 | 1449 | 4.0x |
-| **Total (16 files)** | **9107** | **23138** | **2.5x** |
+## cppcheck (2.21.0)
 
-Generated 2026-07-07T07:39:39+02:00
+a fixed subset of cppcheck's source files is compiled individually (no link/run step); times are summed. the real binary doesn't build: threadexecutor.cpp needs <future> (unimplemented) and stacktrace.cpp needs \<cxxabi.h> (not shadowed by psychicstd).
+
+### Debug
+
+| step | system (s) | psychicstd (s) | speedup | comment |
+| --- | ---: | ---: | ---: | --- |
+| compile | 21.94 | 8.97 | 🟢 2.45x [2.44x, 2.45x] | |
+
+### Release
+
+| step | system (s) | psychicstd (s) | speedup | comment |
+| --- | ---: | ---: | ---: | --- |
+| compile | 21.95 | 8.98 | 🟢 2.44x [2.44x, 2.46x] | |
+
+______________________________________________________________________
+
+Reproduce this on your machine: `scripts/compare_realworld_performance.py --compiler c++ --build-type both --reps 7`
