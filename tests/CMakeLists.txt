@@ -105,7 +105,45 @@ endforeach()
 
 # Simulates a completely independent project consuming psychicstd via a bash
 # script
-add_test(
-    NAME ext_project
-    COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/external_project/run.sh ${CMAKE_SOURCE_DIR}
-)
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 13)
+        set(_psychicstd_toolchain_supported ON)
+    elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+        set(_psychicstd_toolchain_supported ON)
+    endif()
+endif()
+
+if(_psychicstd_toolchain_supported)
+    add_test(
+        NAME ext_project_toolchain
+        COMMAND
+            bash ${CMAKE_CURRENT_SOURCE_DIR}/external_project/run.sh ${CMAKE_SOURCE_DIR} toolchain
+            ${CMAKE_CXX_COMPILER}
+    )
+    add_test(
+        NAME ext_project_toolchain_asan
+        COMMAND
+            bash ${CMAKE_CURRENT_SOURCE_DIR}/external_project/run.sh ${CMAKE_SOURCE_DIR}
+            toolchain-asan ${CMAKE_CXX_COMPILER}
+    )
+    add_test(
+        NAME ext_project_toolchain_ubsan
+        COMMAND
+            bash ${CMAKE_CURRENT_SOURCE_DIR}/external_project/run.sh ${CMAKE_SOURCE_DIR}
+            toolchain-ubsan ${CMAKE_CXX_COMPILER}
+    )
+    add_test(
+        NAME ext_project_toolchain_asan_ubsan
+        COMMAND
+            bash ${CMAKE_CURRENT_SOURCE_DIR}/external_project/run.sh ${CMAKE_SOURCE_DIR}
+            toolchain-asan-ubsan ${CMAKE_CXX_COMPILER}
+    )
+endif()
+
+find_program(_psychicstd_conan_executable conan)
+if(_psychicstd_conan_executable AND _psychicstd_toolchain_supported)
+    add_test(
+        NAME conan_project_profile
+        COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/conan_project/run.sh ${CMAKE_CXX_COMPILER}
+    )
+endif()
