@@ -42,6 +42,11 @@ def main() -> None:
     ap.add_argument(
         "--title", default="Compliance diff", help="Heading for the markdown table"
     )
+    ap.add_argument(
+        "--reproduce",
+        metavar="CMD",
+        help="Append a line telling the reader how to regenerate this diff locally",
+    )
     args = ap.parse_args()
 
     base = load(args.base)
@@ -96,6 +101,9 @@ def main() -> None:
             p, n = passes(head, h)
             lines.append(f"| `{h}` | {p}/{n} |")
         lines.append("\n</details>")
+
+    if args.reproduce:
+        lines.append(f"\n---\nReproduce this on your machine: `{args.reproduce}`")
 
     print("\n".join(lines))
 
