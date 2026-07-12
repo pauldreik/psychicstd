@@ -44,4 +44,12 @@ int main() {
   assert(bits.fetch_xor(1) == 3);
   assert(bits.fetch_and(2) == 2);
   assert(bits.load() == 2);
+
+  std::atomic_init(&x, 1);
+  assert(std::atomic_fetch_xor_explicit(&x, 3, std::memory_order_relaxed) == 1);
+  assert(std::atomic_load(&x) == 2);
+  expected = 2;
+  assert(std::atomic_compare_exchange_weak(&x, &expected, 4));
+  std::atomic_store_explicit(&x, 5, std::memory_order_release);
+  assert(std::atomic_exchange(&x, 6) == 5);
 }
