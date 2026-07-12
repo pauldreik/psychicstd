@@ -1,4 +1,5 @@
 #pragma once
+#include <ctime>
 #include <ios>
 #include <ostream>
 
@@ -76,6 +77,26 @@ template <typename Char, typename Traits>
 basic_ostream<Char, Traits>& operator<<(basic_ostream<Char, Traits>& os,
                                         _resetiosflags m) {
   os.unsetf(m.mask);
+  return os;
+}
+
+template <typename Char> struct _put_time {
+  const tm* time;
+  const Char* format;
+};
+template <typename Char>
+_put_time<Char> put_time(const tm* time, const Char* format) {
+  return {time, format};
+}
+template <typename Char, typename Traits>
+basic_ostream<Char, Traits>& operator<<(basic_ostream<Char, Traits>& os,
+                                        _put_time<Char> value) {
+  const Char* end = value.format;
+  while (*end)
+    ++end;
+  use_facet<time_put<Char>>(os.getloc())
+      .put(ostreambuf_iterator<Char, Traits>(os), os, Char(' '), value.time,
+           value.format, end);
   return os;
 }
 

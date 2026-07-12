@@ -23,9 +23,24 @@ template <typename Char> struct basic_string_view {
   constexpr basic_string_view(const Char* s, size_type n) noexcept
       : data_(s), size_(n) {}
   constexpr basic_string_view(const Char* s) noexcept
-      : data_(s), size_(s ? __builtin_strlen(s) : 0) {}
+      : data_(s), size_(_length(s)) {}
   constexpr basic_string_view(nullptr_t) = delete;
 
+private:
+  static constexpr size_type _length(const Char* s) noexcept {
+    if (!s)
+      return 0;
+    if constexpr (is_same_v<Char, char>) {
+      return __builtin_strlen(s);
+    } else {
+      size_type n = 0;
+      while (s[n])
+        ++n;
+      return n;
+    }
+  }
+
+public:
   constexpr const Char* data() const noexcept { return data_; }
   constexpr size_type size() const noexcept { return size_; }
   constexpr size_type length() const noexcept { return size_; }

@@ -117,6 +117,23 @@ def measure_project(
     return _build_matrix(variants, rw.PROJECTS[project].build, reps, project)
 
 
+def check_project(
+    project: str,
+    compiler: str,
+    build_type: str,
+    include: Path,
+    enable_ccache: bool = False,
+) -> None:
+    """Run a single psychicstd build of `project` and fail on build errors.
+
+    This is a lightweight compile/build check, not a performance measurement.
+    """
+    variants = {
+        "psychicstd": psy_tc(compiler, include, build_type, enable_ccache),
+    }
+    _build_matrix(variants, rw.PROJECTS[project].build, 1, project)
+
+
 def _side(
     samples: dict[str, dict[str, list[float]]],
     sys_key: str,

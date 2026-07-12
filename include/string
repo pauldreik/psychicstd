@@ -5,10 +5,10 @@
 #include <cstddef>
 #include <cstdlib>
 #include <cstring>
+#include <initializer_list>
 #include <iosfwd>
 #include <iterator>
 #include <string_view>
-#include <utility>
 #include <version>
 
 #if _PSYCHICSTD_COMPATIBILITY_LEVEL >= _PSYCHICSTD_COMPAT_DROPIN
@@ -283,6 +283,22 @@ public:
       data_[pos + i] = c;
     size_ += n;
     return *this;
+  }
+  template <typename It>
+    requires(is_same_v<remove_cvref_t<It>, iterator> ||
+             is_same_v<remove_cvref_t<It>, const_iterator>)
+  iterator insert(It pos, Char c) {
+    size_type idx = pos - data_;
+    insert(idx, 1, c);
+    return data_ + idx;
+  }
+  template <typename It>
+    requires(is_same_v<remove_cvref_t<It>, iterator> ||
+             is_same_v<remove_cvref_t<It>, const_iterator>)
+  iterator insert(It pos, size_type n, Char c) {
+    size_type idx = pos - data_;
+    insert(idx, n, c);
+    return data_ + idx;
   }
   basic_string& insert(size_type pos, const basic_string& o) {
     return insert(pos, o.data(), o.size());
@@ -607,12 +623,14 @@ template <typename C, typename T, typename A>
 basic_string<C, T, A> operator+(basic_string<C, T, A>&& a,
                                 const basic_string<C, T, A>& b) {
   a.append(b);
-  return std::move(a);
+  // move
+  return static_cast<basic_string<C, T, A>&&>(a);
 }
 template <typename C, typename T, typename A>
 basic_string<C, T, A> operator+(basic_string<C, T, A>&& a, const C* b) {
   a.append(b);
-  return std::move(a);
+  // move
+  return static_cast<basic_string<C, T, A>&&>(a);
 }
 template <typename C, typename T, typename A>
 basic_string<C, T, A> operator+(const basic_string<C, T, A>& a, C c) {
@@ -625,7 +643,8 @@ basic_string<C, T, A> operator+(const basic_string<C, T, A>& a, C c) {
 template <typename C, typename T, typename A>
 basic_string<C, T, A> operator+(basic_string<C, T, A>&& a, C c) {
   a.push_back(c);
-  return std::move(a);
+  // move
+  return static_cast<basic_string<C, T, A>&&>(a);
 }
 template <typename C, typename T, typename A>
 basic_string<C, T, A> operator+(C c, const basic_string<C, T, A>& b) {

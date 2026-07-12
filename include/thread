@@ -2,6 +2,8 @@
 #include <chrono>
 #include <compare>
 #include <ctime>
+#include <iosfwd>
+#include <pthread.h>
 #include <ratio>
 #include <sched.h>
 #include <time.h>
@@ -11,7 +13,24 @@ extern "C" long sysconf(int) noexcept;
 namespace std {
 
 class thread {
-  bool joined_ = false;
+  pthread_t handle_{};
+  bool joinable_ = false;
+
+  struct __state {
+    virtual ~__state() = default;
+    virtual void run() noexcept = 0;
+  };
+  template <typename F> struct __state_impl final : __state {
+    F function;
+    explicit __state_impl(F&& f) : function(static_cast<F&&>(f)) {}
+    void run() noexcept override { function(); }
+  };
+  static void* __start(void* ptr) noexcept {
+    __state* state = static_cast<__state*>(ptr);
+    state->run();
+    delete state;
+    return nullptr;
+  }
 
 public:
   class id {
@@ -21,22 +40,57 @@ public:
   public:
     id(unsigned long v) noexcept : val_(v) {}
     id() noexcept = default;
+    unsigned long _value() const noexcept { return val_; }
     bool operator!=(id o) const noexcept { return val_ != o.val_; }
     bool operator<(id o) const noexcept { return val_ < o.val_; }
   };
 
   thread() = default;
-  template <typename F, typename... Args>
-  explicit thread(F&&, Args&&...) { /* no-op stub */ }
-  thread(thread&&) = default;
-  thread& operator=(thread&&) = default;
+  template <typename F, typename... Args> explicit thread(F&& f, Args&&...) {
+    static_assert(
+        sizeof...(Args) == 0,
+        "psychicstd::thread currently requires a zero-argument callable");
+    auto* state = new __state_impl<F>(static_cast<F&&>(f));
+    if (::pthread_create(&handle_, nullptr, __start, state) != 0) {
+      delete state;
+      __builtin_trap();
+    }
+    joinable_ = true;
+  }
+  thread(thread&& other) noexcept
+      : handle_(other.handle_), joinable_(other.joinable_) {
+    other.joinable_ = false;
+  }
+  thread& operator=(thread&& other) noexcept {
+    if (this != &other) {
+      if (joinable_)
+        __builtin_trap();
+      handle_ = other.handle_;
+      joinable_ = other.joinable_;
+      other.joinable_ = false;
+    }
+    return *this;
+  }
   thread(const thread&) = delete;
   thread& operator=(const thread&) = delete;
-  ~thread() = default;
-  bool joinable() const noexcept { return false; }
-  void join() { joined_ = true; }
-  void detach() {}
-  id get_id() const noexcept { return id(); }
+  ~thread() {
+    if (joinable_)
+      __builtin_trap();
+  }
+  bool joinable() const noexcept { return joinable_; }
+  void join() {
+    if (!joinable_ || ::pthread_join(handle_, nullptr) != 0)
+      __builtin_trap();
+    joinable_ = false;
+  }
+  void detach() {
+    if (!joinable_ || ::pthread_detach(handle_) != 0)
+      __builtin_trap();
+    joinable_ = false;
+  }
+  id get_id() const noexcept {
+    return joinable_ ? id(static_cast<unsigned long>(handle_)) : id();
+  }
   static unsigned hardware_concurrency() noexcept {
     long n = sysconf(84); /* _SC_NPROCESSORS_ONLN */
     return n > 0 ? (unsigned)n : 1;
@@ -51,10 +105,17 @@ inline auto operator<=>(thread::id a, thread::id b) noexcept {
          : b.operator<(a) ? strong_ordering::greater
                           : strong_ordering::equal;
 }
+template <typename Char, typename Traits>
+basic_ostream<Char, Traits>& operator<<(basic_ostream<Char, Traits>& os,
+                                        thread::id value) {
+  return os << value._value();
+}
 
 namespace this_thread {
 
-inline thread::id get_id() noexcept { return thread::id(1); }
+inline thread::id get_id() noexcept {
+  return thread::id(static_cast<unsigned long>(::pthread_self()));
+}
 
 template <typename Rep, typename Period>
 void sleep_for(const chrono::duration<Rep, Period>& d) {

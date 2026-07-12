@@ -347,23 +347,6 @@ def _eigen() -> Project:
 # --- fmt --------------------------------------------------------------
 
 
-_FMT_SMOKE_TEST = """\
-#include <cassert>
-#include <fmt/core.h>
-#include <string>
-
-int main() {
-    auto s = fmt::format("hello {}!", "psychicstd");
-    assert(s == "hello psychicstd!");
-
-    auto n = fmt::format("{} + {} = {}", 2, 3, 5);
-    assert(n == "2 + 3 = 5");
-
-    return 0;
-}
-"""
-
-
 def _fmt() -> Project:
     version = "11.1.4"
     url = f"https://github.com/fmtlib/fmt/archive/refs/tags/{version}.tar.gz"
@@ -391,12 +374,12 @@ def _fmt() -> Project:
                 "-GNinja",
                 "-DCMAKE_BUILD_TYPE=" + tc.build_type.capitalize(),
                 "-DCMAKE_CXX_COMPILER=" + tc.cxx,
-                "-DCMAKE_CXX_FLAGS=-DFMT_USE_LOCALE=0 " + tc.cxxflags,
+                "-DCMAKE_CXX_FLAGS=" + tc.cxxflags,
                 "-DCMAKE_EXE_LINKER_FLAGS=" + tc.ldflags,
                 "-DCMAKE_CXX_STANDARD_LIBRARIES=" + tc.libs,
                 "-DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY",
                 "-DFMT_DOC=OFF",
-                "-DFMT_TEST=OFF",
+                "-DFMT_TEST=ON",
                 "-DFMT_INSTALL=OFF",
                 "-DBUILD_SHARED_LIBS=OFF",
             ]
@@ -404,41 +387,30 @@ def _fmt() -> Project:
             configure_ms = _timed(configure, src, env)
             compile_ms = _timed(["cmake", "--build", "build", jobs], src, env)
 
-            # fmt's own test suite is disabled, so compile and run a small
-            # program against the library instead (as two phases: one's
-            # compile time, the other's runtime).
-            lib_name = "libfmtd.a" if tc.build_type == "debug" else "libfmt.a"
-            smoke_cpp = src / "psychicstd_smoke_test.cpp"
-            smoke_cpp.write_text(_FMT_SMOKE_TEST)
-            smoke_bin = src / "psychicstd_smoke_test"
-            compile_smoke = (
-                [tc.cxx, *tc.cxxflags.split(), "-DFMT_USE_LOCALE=0"]
-                + [
-                    "-I",
-                    str(src / "include"),
-                    str(smoke_cpp),
-                    str(src / "build" / lib_name),
-                ]
-                + (tc.ldflags.split() if tc.ldflags else [])
-                + (tc.libs.split() if tc.libs else [])
-                + ["-o", str(smoke_bin)]
+            run_tests_ms = _timed(
+                [
+                    "ctest",
+                    "--test-dir",
+                    "build",
+                    "--output-on-failure",
+                    "-j",
+                    str(os.cpu_count() or 1),
+                ],
+                src,
+                env,
             )
-            example_ms = _timed(compile_smoke, src, env)
-            run_example_ms = _timed([str(smoke_bin)], src, env)
 
             return {
                 "configure": configure_ms,
                 "compile": compile_ms,
-                "example": example_ms,
-                "run example": run_example_ms,
+                "run tests": run_tests_ms,
             }
 
     return Project(
         version=version,
         build=build,
-        phases=("compile", "example", "run example"),
-        comment="fmt is built with FMT_USE_LOCALE=0 (psychicstd's <locale> is "
-        "a no-op stub); its own test suite is disabled.",
+        phases=("compile", "run tests"),
+        comment="fmt is built with locale support; its own unit tests are run.",
     )
 
 
@@ -553,7 +525,7 @@ def _rdfind() -> Project:
 
     if fromcommit:
         # from a certain commit hash
-        psychicstrictlevel = 0
+        psychicstrictlevel = -0
         commithash = _RDFIND_COMMIT
         url = f"https://github.com/pauldreik/rdfind/archive/{commithash}.tar.gz"
         checksum = "057ae066b2f7349cb84e4b48ab3ab897d88afc3005bd6d8292c95fa012467659"
@@ -616,13 +588,14 @@ def _rdfind() -> Project:
 
 
 def _simdutf() -> Project:
-    version = "9.0.0"
-    url = f"https://github.com/simdutf/simdutf/archive/refs/tags/v{version}.tar.gz"
-    checksum = "fd2ce975f29809a975a8da8843cfb3a7265af3f71be548f199d23cf65e101764"
+    version = "master260712"  #
+    commithash = "c04f2db9eee13fbd1b6dd1c2b2fb52374738dd4d"
+    url = f"https://github.com/simdutf/simdutf/archive/{commithash}.tar.gz"
+    checksum = "face6b2056da68df9d758ce0ac4cca91df90ab1c668512fa541eba4cd6668686"
     psychicstrictlevel = 0
 
     def build(tc: Toolchain) -> dict[str, float]:
-        tarball = RW_DIR / f"simdutf-{version}.tar.gz"
+        tarball = RW_DIR / f"simdutf-{commithash}.tar.gz"
         _fetch(url, tarball, checksum)
 
         with tempfile.TemporaryDirectory(
@@ -631,7 +604,7 @@ def _simdutf() -> Project:
             work = Path(work_dir)
             with tarfile.open(tarball) as t:
                 t.extractall(work)
-            src = work / f"simdutf-{version}"
+            src = work / f"simdutf-{commithash}"
 
             env = _env(tc)
             configure = [

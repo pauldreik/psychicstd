@@ -18,7 +18,8 @@ public:
   path() = default;
   path(const char* s) : path_(s) {}
   path(const __str& s) : path_(s) {}
-  path(__str&& s) : path_(move(s)) {}
+  // move
+  path(__str&& s) : path_(static_cast<__str&&>(s)) {}
   path(string_view s) : path_(s.data(), s.size()) {}
   path(u8string_view s)
       : path_(reinterpret_cast<const char*>(s.data()), s.size()) {}

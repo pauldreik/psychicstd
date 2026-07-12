@@ -2,7 +2,6 @@
 #include <cstddef>
 #include <new>
 #include <type_traits>
-#include <utility>
 
 namespace std {
 
@@ -61,9 +60,26 @@ constexpr bool operator==(const allocator<T>&, const allocator<U>&) noexcept {
 // construct_at / destroy_at — declared before allocator_traits which uses them
 template <typename T, typename... Args>
 constexpr T* construct_at(T* p, Args&&... args) {
-  return ::new (static_cast<void*>(p)) T(std::forward<Args>(args)...);
+  // forward
+  return ::new (static_cast<void*>(p)) T(static_cast<Args&&>(args)...);
 }
 template <typename T> constexpr void destroy_at(T* p) { p->~T(); }
+
+template <typename InputIt, typename Size, typename ForwardIt>
+constexpr ForwardIt uninitialized_copy_n(InputIt first, Size count,
+                                         ForwardIt result) {
+  for (; count > 0; --count, ++first, ++result)
+    construct_at(addressof(*result), *first);
+  return result;
+}
+
+template <typename ForwardIt, typename Size, typename T>
+constexpr ForwardIt uninitialized_fill_n(ForwardIt first, Size count,
+                                         const T& value) {
+  for (; count > 0; --count, ++first)
+    construct_at(addressof(*first), value);
+  return first;
+}
 
 namespace __detail {
 // Detect optional nested types in allocator
@@ -115,7 +131,8 @@ struct __alloc_max_size<A, void_t<decltype(declval<const A&>().max_size())>> {
 
 template <typename A, typename T, typename... Args>
 concept __has_construct = requires(A& a, T* p, Args&&... args) {
-  a.construct(p, std::forward<Args>(args)...);
+  // forward
+  a.construct(p, static_cast<Args&&>(args)...);
 };
 
 template <typename A, typename T>
@@ -198,10 +215,13 @@ template <typename Alloc> struct allocator_traits {
   }
   template <typename T, typename... Args>
   static constexpr void construct(Alloc& a, T* p, Args&&... args) {
-    if constexpr (__detail::__has_construct<Alloc, T, Args...>)
-      a.construct(p, std::forward<Args>(args)...);
-    else
-      construct_at(p, std::forward<Args>(args)...);
+    if constexpr (__detail::__has_construct<Alloc, T, Args...>) {
+      // forward
+      a.construct(p, static_cast<Args&&>(args)...);
+    } else {
+      // forward
+      construct_at(p, static_cast<Args&&>(args)...);
+    }
   }
   template <typename T> static constexpr void destroy(Alloc& a, T* p) {
     if constexpr (__detail::__has_destroy<Alloc, T>)
@@ -399,7 +419,8 @@ private:
 
 template <typename T, typename... Args>
 unique_ptr<T> make_unique(Args&&... args) {
-  return unique_ptr<T>(new T(std::forward<Args>(args)...));
+  // forward
+  return unique_ptr<T>(new T(static_cast<Args&&>(args)...));
 }
 template <typename T>
 unique_ptr<T> make_unique(size_t n)
@@ -574,7 +595,8 @@ bool operator!=(const shared_ptr<T>& a, const shared_ptr<U>& b) noexcept {
 
 template <typename T, typename... Args>
 shared_ptr<T> make_shared(Args&&... args) {
-  return shared_ptr<T>(new T(std::forward<Args>(args)...));
+  // forward
+  return shared_ptr<T>(new T(static_cast<Args&&>(args)...));
 }
 
 template <typename T, typename U>

@@ -188,6 +188,11 @@ constexpr time_point<C, D> operator+(const time_point<C, D>& tp,
                                      const duration<R, P>& d) {
   return time_point<C, D>(tp.time_since_epoch() + d);
 }
+template <typename C, typename D, typename R, typename P>
+constexpr time_point<C, D> operator-(const time_point<C, D>& tp,
+                                     const duration<R, P>& d) {
+  return time_point<C, D>(tp.time_since_epoch() - d);
+}
 
 template <typename ToDur, typename Clock, typename Dur>
 constexpr time_point<Clock, ToDur>

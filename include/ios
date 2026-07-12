@@ -122,6 +122,7 @@ protected:
 
 template <typename Char, typename Traits> class basic_ios : public ios_base {
 public:
+  explicit basic_ios(basic_streambuf<Char, Traits>* sb) : buf_(sb) {}
   using char_type = Char;
   using traits_type = Traits;
   using int_type = typename Traits::int_type;

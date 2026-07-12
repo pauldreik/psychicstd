@@ -1,5 +1,7 @@
 #include <cassert>
 #include <chrono>
+#include <cmath>
+#include <limits>
 
 using namespace std::chrono;
 
@@ -32,9 +34,29 @@ static void test_duration_cast_up() {
   assert(ms.count() == 2'000);
 }
 
+static void test_time_point_arithmetic() {
+  time_point<system_clock, milliseconds> epoch(milliseconds(0));
+  assert((epoch + milliseconds(5)).time_since_epoch().count() == 5);
+  assert((epoch - milliseconds(2)).time_since_epoch().count() == -2);
+}
+
+static void test_duration_bounds() {
+  assert(seconds::min().count() == std::numeric_limits<long long>::min());
+  assert(seconds::max().count() == std::numeric_limits<long long>::max());
+}
+
+static void test_integral_is_finite() {
+  static_assert(std::isfinite(0));
+  static_assert(!std::isinf(0LL));
+  static_assert(!std::isnan(0U));
+}
+
 int main() {
   test_duration_cast_identity();
   test_duration_cast_down();
   test_duration_cast_up();
   test_duration_cast_same_period();
+  test_time_point_arithmetic();
+  test_duration_bounds();
+  test_integral_is_finite();
 }

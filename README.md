@@ -9,7 +9,7 @@ It is not complete. It is not fully compliant. But it is good enough to quickly 
 | [catch2](https://github.com/catchorg/Catch2) | [1.8x](use_on_realworld_projects/catch2_speed_report.md) | |
 | [cppcheck](https://github.com/cppcheck-opensource/cppcheck) | [2.5x](use_on_realworld_projects/cppcheck_speed_report.md)| |
 | [eigen](https://gitlab.com/libeigen/eigen) | [1.9x](use_on_realworld_projects/eigen_speed_report.md) | |
-| [fmt](https://github.com/fmtlib/fmt) | | Just compilation, no unit tests. (gtest has not been tested yet) |
+| [fmt](https://github.com/fmtlib/fmt) | | Full build and test suite pass in both drop-in and strict psychicstd mode. |
 | [nlohmann json](https://json.nlohmann.me/) | | Uncovered a reliance on implementation-specific behaviour, fixed in [PR #5236](https://github.com/nlohmann/json/pull/5236). |
 | [rdfind](https://rdfind.pauldreik.se/) | [2.98x](use_on_realworld_projects/rdfind_speed_report.md) | Runs in psychic strict mode, see "Compatibility levels" further down this document. Strict mode uncovered code relying on transitive includes. |
 | [simdutf](https://github.com/simdutf/simdutf) | 1.14x | Consists mostly of simd intrinsics, no speedup expected. Measured in release mode. |
@@ -162,15 +162,61 @@ cmake -S . -B build-with-psychic \
     -DCMAKE_CXX_STANDARD_LIBRARIES="-lsupc++"
 ```
 
+### CMake toolchain file
+
+For CMake projects, the most convenient integration point is the toolchain
+overlay in [`cmake/psychicstd-toolchain.cmake`](cmake/psychicstd-toolchain.cmake).
+It keeps the compiler choice outside the toolchain and only injects the
+psychicstd-specific flags.
+
+```bash
+cmake -S . -B build-with-psychic \
+    -DCMAKE_CXX_COMPILER=g++-14 \
+    -DCMAKE_TOOLCHAIN_FILE=/path/to/psychicstd/cmake/psychicstd-toolchain.cmake
+```
+
+The toolchain is designed to compose with user flags and sanitizer settings.
+If you already have a generated toolchain file, include the psychicstd one
+after it from a small wrapper toolchain file.
+
+### Using with Conan
+
+If you already use Conan, the intended integration point is a single overlay
+profile: [`tests/conan_project/psychic.profile`](tests/conan_project/psychic.profile).
+It composes with your existing host/build profiles and injects the psychicstd
+toolchain plus the small `fmt`-specific define used by the example project.
+
+Apply it to both host and build contexts so your app and its C++ dependencies
+are built with the same standard library choice:
+
+```bash
+conan install . \
+    -pr:h=your-host.profile \
+    -pr:h=/path/to/psychic.profile \
+    -pr:b=your-build.profile \
+    -pr:b=/path/to/psychic.profile \
+    --build=missing
+```
+
+If your host and build profiles are the same, reuse the same base profile for
+both contexts and append the psychic profile last. File-based composition works
+too:
+
+```text
+include(/path/to/psychic.profile)
+```
+
+The example in `tests/conan_project/` uses `fmt` to show a real third-party
+dependency built this way. The profile does not overwrite sanitizer flags, so
+ASan and UBSan keep working the way Conan or your project already configures
+them. Supported compilers are the same as the native CMake path: clang and GCC
+13+ on Linux.
+
 ### Notes for all configurations
 
 `-fvisibility=hidden` prevents psychicstd's symbols from interposing with
-libstdc++ at runtime (needed when sanitizers pull in `libstdc++.so`).
+libstdc++ at runtime.
 `-isystem` (rather than `-I`) suppresses warnings from psychicstd headers.
-
-`CMAKE_CXX_STANDARD_LIBRARIES` places the libraries *after* the object files
-on the link line. This is required because `-lsupc++` is a static archive
-and the linker processes archives in order.
 
 To switch back to the system STL, configure without these flags.
 See `tests/external_project/run.sh` for a self-contained working example.

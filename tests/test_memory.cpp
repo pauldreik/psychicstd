@@ -11,6 +11,32 @@ struct Derived : Base {
   int y = 99;
 };
 
+struct Forwarded {
+  int kind;
+  explicit Forwarded(int&) : kind(1) {}
+  explicit Forwarded(int&&) : kind(2) {}
+};
+
+static void test_forwarding() {
+  int value = 1;
+  alignas(Forwarded) unsigned char storage[sizeof(Forwarded)];
+  auto* raw = reinterpret_cast<Forwarded*>(storage);
+  auto* constructed = std::construct_at(raw, value);
+  assert(constructed->kind == 1);
+  std::destroy_at(constructed);
+
+  std::allocator<Forwarded> alloc;
+  auto* allocated = alloc.allocate(1);
+  std::allocator_traits<decltype(alloc)>::construct(alloc, allocated,
+                                                    static_cast<int&&>(value));
+  assert(allocated->kind == 2);
+  std::allocator_traits<decltype(alloc)>::destroy(alloc, allocated);
+  alloc.deallocate(allocated, 1);
+
+  assert(std::make_unique<Forwarded>(value)->kind == 1);
+  assert(std::make_shared<Forwarded>(static_cast<int&&>(value))->kind == 2);
+}
+
 static void test_converting_copy_ctor() {
   std::shared_ptr<Derived> d = std::make_shared<Derived>();
   assert(d.use_count() == 1);
@@ -79,6 +105,7 @@ static void test_member_init_from_template_prvalue() {
 }
 
 int main() {
+  test_forwarding();
   test_converting_copy_ctor();
   test_converting_ctor_from_prvalue();
   test_member_init_from_template_prvalue();

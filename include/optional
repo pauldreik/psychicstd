@@ -1,9 +1,9 @@
 #pragma once
 #include <__psychicstd_config>
 #include <exception>
+#include <initializer_list>
 #include <memory>
 #include <type_traits>
-#include <utility>
 
 namespace std {
 
@@ -42,14 +42,16 @@ public:
   }
   constexpr optional(optional&& o) noexcept : _dummy(0), has_(false) {
     if (o.has_) {
-      construct_at(ptr(), move(*o.ptr()));
+      // move
+      construct_at(ptr(), static_cast<T&&>(*o.ptr()));
       has_ = true;
       o.reset();
     }
   }
   template <typename U = T>
     requires(!is_same_v<remove_cvref_t<U>, optional>)
-  constexpr optional(U&& v) : val_(forward<U>(v)), has_(true) {}
+  // forward
+  constexpr optional(U&& v) : val_(static_cast<U&&>(v)), has_(true) {}
 
   constexpr ~optional() { reset(); }
 
@@ -74,10 +76,12 @@ public:
     if (&o == this)
       return *this;
     if (has_ && o.has_) {
-      val_ = move(*o.ptr());
+      // move
+      val_ = static_cast<T&&>(*o.ptr());
       o.reset();
     } else if (o.has_) {
-      construct_at(ptr(), move(*o.ptr()));
+      // move
+      construct_at(ptr(), static_cast<T&&>(*o.ptr()));
       has_ = true;
       o.reset();
     } else {
@@ -105,7 +109,8 @@ public:
   constexpr const T* operator->() const noexcept { return ptr(); }
 
   template <typename U> constexpr T value_or(U&& u) const& {
-    return has_ ? val_ : static_cast<T>(forward<U>(u));
+    // forward
+    return has_ ? val_ : static_cast<T>(static_cast<U&&>(u));
   }
 
   constexpr void reset() noexcept {
@@ -117,7 +122,8 @@ public:
 
   template <typename... Args> constexpr T& emplace(Args&&... args) {
     reset();
-    construct_at(ptr(), forward<Args>(args)...);
+    // forward
+    construct_at(ptr(), static_cast<Args&&>(args)...);
     has_ = true;
     return val_;
   }
@@ -161,7 +167,8 @@ constexpr bool operator!=(const U& a, const optional<T>& b) {
 }
 
 template <typename T> constexpr optional<decay_t<T>> make_optional(T&& v) {
-  return optional<decay_t<T>>(forward<T>(v));
+  // forward
+  return optional<decay_t<T>>(static_cast<T&&>(v));
 }
 
 } // namespace std
