@@ -5,15 +5,15 @@
 namespace std {
 
 // tuple_element / tuple_size — forward declarations
-template <size_t I, typename T> struct tuple_element;
+template <size_t Index, typename T> struct tuple_element;
 template <typename T> struct tuple_size;
-template <size_t I, typename T>
-using tuple_element_t = typename tuple_element<I, T>::type;
+template <size_t Index, typename T>
+using tuple_element_t = typename tuple_element<Index, T>::type;
 
 // --- tuple implementation using recursive inheritance ---
 
 namespace detail {
-template <size_t I, typename T> struct tuple_leaf {
+template <size_t Index, typename T> struct tuple_leaf {
   T value;
   tuple_leaf() = default;
   explicit tuple_leaf(const T& v) : value(v) {}
@@ -22,7 +22,7 @@ template <size_t I, typename T> struct tuple_leaf {
   explicit tuple_leaf(U&& v) : value(static_cast<U&&>(v)) {}
 };
 // Reference-type specialisation: value is a reference, so assign through it.
-template <size_t I, typename T> struct tuple_leaf<I, T&> {
+template <size_t Index, typename T> struct tuple_leaf<Index, T&> {
   T& value;
   explicit tuple_leaf(T& v) : value(v) {}
   tuple_leaf& operator=(const tuple_leaf& o) {
@@ -131,12 +131,12 @@ inline constexpr size_t tuple_size_v = tuple_size<T>::value;
 // tuple_element
 namespace detail {
 #if __has_builtin(__type_pack_element)
-template <size_t I, typename... Ts> struct type_at {
-  using type = __type_pack_element<I, Ts...>;
+template <size_t Index, typename... Ts> struct type_at {
+  using type = __type_pack_element<Index, Ts...>;
 };
 #else
-template <size_t I, typename Head, typename... Tail> struct type_at {
-  using type = typename type_at<I - 1, Tail...>::type;
+template <size_t Index, typename Head, typename... Tail> struct type_at {
+  using type = typename type_at<Index - 1, Tail...>::type;
 };
 template <typename Head, typename... Tail> struct type_at<0, Head, Tail...> {
   using type = Head;
@@ -144,29 +144,31 @@ template <typename Head, typename... Tail> struct type_at<0, Head, Tail...> {
 #endif
 } // namespace detail
 
-template <size_t I, typename... Ts> struct tuple_element<I, tuple<Ts...>> {
-  using type = typename detail::type_at<I, Ts...>::type;
+template <size_t Index, typename... Ts>
+struct tuple_element<Index, tuple<Ts...>> {
+  using type = typename detail::type_at<Index, Ts...>::type;
 };
-template <size_t I, typename T> struct tuple_element<I, const T> {
-  using type = const typename tuple_element<I, T>::type;
+template <size_t Index, typename T> struct tuple_element<Index, const T> {
+  using type = const typename tuple_element<Index, T>::type;
 };
 
-// get<I>(tuple)
-template <size_t I, typename... Ts>
-constexpr tuple_element_t<I, tuple<Ts...>>& get(tuple<Ts...>& t) noexcept {
-  using Leaf = detail::tuple_leaf<I, tuple_element_t<I, tuple<Ts...>>>;
+// get<Index>(tuple)
+template <size_t Index, typename... Ts>
+constexpr tuple_element_t<Index, tuple<Ts...>>& get(tuple<Ts...>& t) noexcept {
+  using Leaf = detail::tuple_leaf<Index, tuple_element_t<Index, tuple<Ts...>>>;
   return static_cast<Leaf&>(t).value;
 }
-template <size_t I, typename... Ts>
-constexpr const tuple_element_t<I, tuple<Ts...>>&
+template <size_t Index, typename... Ts>
+constexpr const tuple_element_t<Index, tuple<Ts...>>&
 get(const tuple<Ts...>& t) noexcept {
-  using Leaf = detail::tuple_leaf<I, tuple_element_t<I, tuple<Ts...>>>;
+  using Leaf = detail::tuple_leaf<Index, tuple_element_t<Index, tuple<Ts...>>>;
   return static_cast<const Leaf&>(t).value;
 }
-template <size_t I, typename... Ts>
-constexpr tuple_element_t<I, tuple<Ts...>>&& get(tuple<Ts...>&& t) noexcept {
-  using Leaf = detail::tuple_leaf<I, tuple_element_t<I, tuple<Ts...>>>;
-  return static_cast<tuple_element_t<I, tuple<Ts...>>&&>(
+template <size_t Index, typename... Ts>
+constexpr tuple_element_t<Index, tuple<Ts...>>&&
+get(tuple<Ts...>&& t) noexcept {
+  using Leaf = detail::tuple_leaf<Index, tuple_element_t<Index, tuple<Ts...>>>;
+  return static_cast<tuple_element_t<Index, tuple<Ts...>>&&>(
       static_cast<Leaf&>(t).value);
 }
 
@@ -193,16 +195,16 @@ constexpr const T& get(const tuple<Ts...>& t) noexcept {
 
 // Comparison operators
 namespace detail {
-template <size_t I, typename Tup>
+template <size_t Index, typename Tup>
 constexpr bool tuple_lt(const Tup& a, const Tup& b) {
-  if constexpr (I == tuple_size_v<Tup>)
+  if constexpr (Index == tuple_size_v<Tup>)
     return false;
-  else if (get<I>(a) < get<I>(b))
+  else if (get<Index>(a) < get<Index>(b))
     return true;
-  else if (get<I>(b) < get<I>(a))
+  else if (get<Index>(b) < get<Index>(a))
     return false;
   else
-    return tuple_lt<I + 1>(a, b);
+    return tuple_lt<Index + 1>(a, b);
 }
 } // namespace detail
 
@@ -286,23 +288,23 @@ template <typename T1, typename T2> struct tuple_element<0, pair<T1, T2>> {
 template <typename T1, typename T2> struct tuple_element<1, pair<T1, T2>> {
   using type = T2;
 };
-template <size_t I, typename T1, typename T2>
+template <size_t Index, typename T1, typename T2>
 constexpr decltype(auto) get(pair<T1, T2>& p) noexcept {
-  if constexpr (I == 0)
+  if constexpr (Index == 0)
     return (p.first);
   else
     return (p.second);
 }
-template <size_t I, typename T1, typename T2>
+template <size_t Index, typename T1, typename T2>
 constexpr decltype(auto) get(const pair<T1, T2>& p) noexcept {
-  if constexpr (I == 0)
+  if constexpr (Index == 0)
     return (p.first);
   else
     return (p.second);
 }
-template <size_t I, typename T1, typename T2>
+template <size_t Index, typename T1, typename T2>
 constexpr decltype(auto) get(pair<T1, T2>&& p) noexcept {
-  if constexpr (I == 0)
+  if constexpr (Index == 0)
     return static_cast<T1&&>(p.first);
   else
     return static_cast<T2&&>(p.second);
