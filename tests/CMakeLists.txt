@@ -45,6 +45,7 @@ set(TESTS
     test_sstream
     test_stack
     test_stdexcept
+    test_stop_token
     test_string
     test_string_view
     test_thread
