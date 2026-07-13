@@ -51,6 +51,16 @@ jobs:
         with:
           name: simdutf-speed-report
           path: use_on_realworld_projects/simdutf_speed_report.md
+  cmake:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install ninja
+        run: sudo apt-get install -y ninja-build
+      - name: Build and test CMake with psychicstd
+        run: >-
+          python3 scripts/compare_realworld_performance.py --check-only
+          --project cmake --build-type both
   nlohmann:
     runs-on: ubuntu-latest
     steps:
