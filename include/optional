@@ -89,6 +89,17 @@ public:
     }
     return *this;
   }
+  template <typename U = T>
+    requires(!is_same_v<remove_cvref_t<U>, optional>)
+  constexpr optional& operator=(U&& value) {
+    if (has_)
+      val_ = static_cast<U&&>(value);
+    else {
+      construct_at(ptr(), static_cast<U&&>(value));
+      has_ = true;
+    }
+    return *this;
+  }
 
   constexpr explicit operator bool() const noexcept { return has_; }
   constexpr bool has_value() const noexcept { return has_; }
@@ -147,6 +158,22 @@ template <typename T>
 constexpr bool operator!=(const optional<T>& a, const optional<T>& b) {
   return !(a == b);
 }
+template <typename T>
+constexpr bool operator<(const optional<T>& a, const optional<T>& b) {
+  return b.has_value() && (!a.has_value() || *a < *b);
+}
+template <typename T>
+constexpr bool operator>(const optional<T>& a, const optional<T>& b) {
+  return b < a;
+}
+template <typename T>
+constexpr bool operator<=(const optional<T>& a, const optional<T>& b) {
+  return !(b < a);
+}
+template <typename T>
+constexpr bool operator>=(const optional<T>& a, const optional<T>& b) {
+  return !(a < b);
+}
 
 // Mixed comparisons: optional<T> vs T
 template <typename T, typename U>
@@ -169,6 +196,10 @@ constexpr bool operator!=(const U& a, const optional<T>& b) {
 template <typename T> constexpr optional<decay_t<T>> make_optional(T&& v) {
   // forward
   return optional<decay_t<T>>(static_cast<T&&>(v));
+}
+template <typename T, typename... Args>
+constexpr optional<T> make_optional(Args&&... args) {
+  return optional<T>(T(static_cast<Args&&>(args)...));
 }
 
 } // namespace std

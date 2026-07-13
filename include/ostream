@@ -13,10 +13,12 @@ public:
   using char_type = Char;
   using traits_type = Traits;
   using int_type = typename Traits::int_type;
+  using pos_type = typename Traits::pos_type;
+  using off_type = typename Traits::off_type;
 
   explicit basic_ostream(basic_streambuf<Char, Traits>* sb) { this->init(sb); }
 
-  ~basic_ostream() = default;
+  virtual ~basic_ostream() = default;
   basic_ostream(const basic_ostream&) = delete;
   basic_ostream& operator=(const basic_ostream&) = delete;
 
@@ -44,6 +46,23 @@ public:
   basic_ostream& flush() {
     if (this->rdbuf() && this->rdbuf()->pubsync() == -1)
       this->setstate(ios_base::badbit);
+    return *this;
+  }
+  pos_type tellp() {
+    return this->rdbuf()
+               ? this->rdbuf()->pubseekoff(0, ios_base::cur, ios_base::out)
+               : pos_type(off_type(-1));
+  }
+  basic_ostream& seekp(pos_type pos) {
+    if (!this->rdbuf() ||
+        this->rdbuf()->pubseekpos(pos, ios_base::out) == pos_type(off_type(-1)))
+      this->setstate(ios_base::failbit);
+    return *this;
+  }
+  basic_ostream& seekp(off_type off, ios_base::seekdir dir) {
+    if (!this->rdbuf() || this->rdbuf()->pubseekoff(off, dir, ios_base::out) ==
+                              pos_type(off_type(-1)))
+      this->setstate(ios_base::failbit);
     return *this;
   }
 
@@ -456,6 +475,17 @@ inline ios_base& defaultfloat(ios_base& s) {
 inline ios_base& hexfloat(ios_base& s) {
   s.setf(ios_base::fixed | ios_base::scientific, ios_base::floatfield);
   return s;
+}
+
+template <typename Ostream, typename T>
+  requires(!is_lvalue_reference_v<Ostream> &&
+           is_base_of_v<ios_base, remove_reference_t<Ostream>> &&
+           requires(remove_reference_t<Ostream>& stream, const T& value) {
+             stream << value;
+           })
+Ostream&& operator<<(Ostream&& stream, const T& value) {
+  stream << value;
+  return static_cast<Ostream&&>(stream);
 }
 
 using ostream = basic_ostream<char>;

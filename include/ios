@@ -4,11 +4,30 @@
 #include <cstddef>
 #include <iosfwd>
 #include <locale>
+#include <system_error>
 
 namespace std {
 
 class ios_base {
 public:
+  class Init {
+  public:
+    Init() = default;
+    ~Init() = default;
+  };
+
+  class failure : public system_error {
+  public:
+    explicit failure(const string& message)
+        : system_error(error_code(1, generic_category()), message) {}
+    explicit failure(const char* message)
+        : system_error(error_code(1, generic_category()), message) {}
+    failure(const string& message, const error_code& code)
+        : system_error(code, message) {}
+    failure(const char* message, const error_code& code)
+        : system_error(code, message) {}
+  };
+
   using fmtflags = unsigned;
   using iostate = unsigned;
   using openmode = unsigned;
@@ -107,7 +126,7 @@ protected:
   ios_base()
       : flags_(dec | skipws), width_(0), prec_(6), state_(goodbit), fill_(' ') {
   }
-  ~ios_base() = default;
+  virtual ~ios_base() = default;
   ios_base(const ios_base&) = delete;
   ios_base& operator=(const ios_base&) = delete;
 

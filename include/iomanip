@@ -1,7 +1,9 @@
 #pragma once
 #include <ctime>
 #include <ios>
+#include <istream>
 #include <ostream>
+#include <string>
 
 namespace std {
 
@@ -78,6 +80,73 @@ basic_ostream<Char, Traits>& operator<<(basic_ostream<Char, Traits>& os,
                                         _resetiosflags m) {
   os.unsetf(m.mask);
   return os;
+}
+
+template <typename Char, typename Traits, typename Alloc> struct _quoted_out {
+  const basic_string<Char, Traits, Alloc>& value;
+  Char delim;
+  Char escape;
+};
+template <typename Char, typename Traits, typename Alloc> struct _quoted_in {
+  basic_string<Char, Traits, Alloc>& value;
+  Char delim;
+  Char escape;
+};
+template <typename Char, typename Traits, typename Alloc>
+_quoted_out<Char, Traits, Alloc>
+quoted(const basic_string<Char, Traits, Alloc>& value, Char delim = Char('"'),
+       Char escape = Char('\\')) {
+  return {value, delim, escape};
+}
+template <typename Char, typename Traits, typename Alloc>
+_quoted_in<Char, Traits, Alloc> quoted(basic_string<Char, Traits, Alloc>& value,
+                                       Char delim = Char('"'),
+                                       Char escape = Char('\\')) {
+  return {value, delim, escape};
+}
+template <typename Char, typename Traits, typename Alloc>
+basic_ostream<Char, Traits>&
+operator<<(basic_ostream<Char, Traits>& os,
+           const _quoted_out<Char, Traits, Alloc>& value) {
+  os << value.delim;
+  for (Char c : value.value) {
+    if (c == value.delim || c == value.escape)
+      os << value.escape;
+    os << c;
+  }
+  return os << value.delim;
+}
+template <typename Char, typename Traits, typename Alloc>
+basic_ostream<Char, Traits>&
+operator<<(basic_ostream<Char, Traits>& os,
+           const _quoted_in<Char, Traits, Alloc>& value) {
+  return os << _quoted_out<Char, Traits, Alloc>{value.value, value.delim,
+                                                value.escape};
+}
+template <typename Char, typename Traits, typename Alloc>
+basic_istream<Char, Traits>&
+operator>>(basic_istream<Char, Traits>& is,
+           const _quoted_in<Char, Traits, Alloc>& value) {
+  Char c{};
+  if (!(is >> c))
+    return is;
+  value.value.clear();
+  if (c != value.delim) {
+    value.value.push_back(c);
+    return is;
+  }
+  bool escaped = false;
+  while (is.get(c)) {
+    if (!escaped && c == value.delim)
+      break;
+    if (!escaped && c == value.escape) {
+      escaped = true;
+      continue;
+    }
+    value.value.push_back(c);
+    escaped = false;
+  }
+  return is;
 }
 
 template <typename Char> struct _put_time {

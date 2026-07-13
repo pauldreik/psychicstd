@@ -12,4 +12,11 @@ int main() {
   auto m = std::mismatch(a.begin(), a.end(), b.begin(), b.end());
   psyassert(*m.first == 3);
   psyassert(*m.second == 9);
+
+  std::vector<int> needles = {7, 3};
+  psyassert(std::find_first_of(a.begin(), a.end(), needles.begin(),
+                               needles.end()) == a.begin() + 2);
+  needles = {7, 8};
+  psyassert(std::find_first_of(a.begin(), a.end(), needles.begin(),
+                               needles.end()) == a.end());
 }

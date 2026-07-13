@@ -80,6 +80,17 @@ protected:
       return Traits::eof();
     return Traits::to_int_type(buf_[rpos_++]);
   }
+  int_type pbackfail(int_type c = Traits::eof()) override {
+    if (rpos_ == 0)
+      return Traits::eof();
+    if (!Traits::eq_int_type(c, Traits::eof()) &&
+        !Traits::eq(Traits::to_char_type(c), buf_[rpos_ - 1]))
+      return Traits::eof();
+    --rpos_;
+    return Traits::eq_int_type(c, Traits::eof())
+               ? Traits::to_int_type(buf_[rpos_])
+               : c;
+  }
   streamsize xsgetn(Char* s, streamsize n) override {
     size_t avail = buf_.size() > rpos_ ? buf_.size() - rpos_ : 0;
     size_t got = (size_t)n < avail ? (size_t)n : avail;
@@ -205,9 +216,11 @@ public:
   basic_stringstream()
       : basic_istream<Char, Traits>(&buf_), basic_ostream<Char, Traits>(&buf_) {
   }
-  explicit basic_stringstream(const string_type& s)
+  explicit basic_stringstream(const string_type& s,
+                              ios_base::openmode which = ios_base::in |
+                                                         ios_base::out)
       : basic_istream<Char, Traits>(&buf_), basic_ostream<Char, Traits>(&buf_),
-        buf_(s) {}
+        buf_(s, which) {}
 
   string_type str() const { return buf_.str(); }
   void str(const string_type& s) { buf_.str(s); }

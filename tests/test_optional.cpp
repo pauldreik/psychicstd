@@ -15,6 +15,16 @@ struct move_only {
   }
 };
 
+struct multiple_arguments {
+  int value;
+  multiple_arguments(int a, int b) : value(a + b) {}
+};
+
+struct aggregate {
+  int first;
+  int second;
+};
+
 int main() {
   std::optional<int> o = 42;
   psyassert(o.value() == 42);
@@ -29,4 +39,22 @@ int main() {
 
   auto c = std::make_optional(move_only(9));
   psyassert(c->value == 9);
+
+  auto d = std::make_optional<multiple_arguments>(10, 20);
+  psyassert(d->value == 30);
+
+  std::optional<int> empty;
+  std::optional<int> low = 1;
+  std::optional<int> high = 2;
+  psyassert(empty < low);
+  psyassert(low < high);
+  psyassert(high > low);
+  psyassert(low <= low);
+  psyassert(high >= low);
+
+  std::optional<aggregate> aggregate_value;
+  aggregate_value = {3, 4};
+  psyassert(aggregate_value->first == 3);
+  aggregate_value = {5, 6};
+  psyassert(aggregate_value->second == 6);
 }

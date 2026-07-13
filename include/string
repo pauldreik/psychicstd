@@ -8,28 +8,21 @@
 #include <initializer_list>
 #include <iosfwd>
 #include <iterator>
+#include <memory>
 #include <string_view>
 #include <version>
 
 #if _PSYCHICSTD_COMPATIBILITY_LEVEL >= _PSYCHICSTD_COMPAT_DROPIN
-// <string> itself uses neither of these, but libstdc++ exposes them through
+// <string> itself does not use <algorithm>, but libstdc++ exposes it through
 // <string>, so real code relies on the transitive include (e.g. Catch2's
-// std::equal, fmt's std::allocator_traits). Keep them for drop-in compat.
+// std::equal). Keep it for drop-in compat.
 #include <algorithm>
-#include <memory>
 #endif
 
 namespace std {
 
 // Forward declaration of hash<> so we can specialize it below
 template <typename T> struct hash;
-
-#if _PSYCHICSTD_COMPATIBILITY_LEVEL < _PSYCHICSTD_COMPAT_DROPIN
-// In strict mode we don't pull in <memory>; basic_string only names
-// allocator<> as a default template argument, so a forward declaration is
-// enough (it is never allocated through).
-template <typename T> class allocator;
-#endif
 
 template <typename Char, typename Traits = char_traits<Char>,
           typename Alloc = allocator<Char>>
@@ -55,6 +48,7 @@ public:
   using reverse_iterator = std::reverse_iterator<iterator>;
   using const_reverse_iterator = std::reverse_iterator<const_iterator>;
   using traits_type = Traits;
+  using allocator_type = Alloc;
 
   static constexpr size_type npos = size_type(-1);
 
@@ -77,6 +71,17 @@ public:
   }
 
   basic_string(const basic_string& o) : basic_string(o.data_, o.size_) {}
+
+  basic_string(const basic_string& o, size_type pos, size_type count = npos) {
+    const size_type start = pos < o.size_ ? pos : o.size_;
+    const size_type available = o.size_ - start;
+    size_ = count < available ? count : available;
+    cap_ = size_;
+    data_ = alloc(size_ + 1);
+    if (size_)
+      Traits::copy(data_, o.data_ + start, size_);
+    data_[size_] = 0;
+  }
 
   basic_string(basic_string&& o) noexcept
       : data_(o.data_), size_(o.size_), cap_(o.cap_) {
@@ -119,12 +124,22 @@ public:
     return *this = basic_string(sv);
   }
   basic_string& assign(const basic_string& o) { return *this = o; }
+  basic_string& assign(const basic_string& o, size_type pos,
+                       size_type count = npos) {
+    size_type len = count < o.size_ - pos ? count : o.size_ - pos;
+    return *this = basic_string(o.data_ + pos, len);
+  }
   basic_string& assign(const Char* s) { return *this = s; }
   basic_string& assign(const Char* s, size_type n) {
     return *this = basic_string(s, n);
   }
   basic_string& assign(size_type n, Char c) {
     return *this = basic_string(n, c);
+  }
+  template <typename It>
+    requires(!is_integral_v<It>)
+  basic_string& assign(It first, It last) {
+    return *this = basic_string(first, last);
   }
 
   // Element access
@@ -330,6 +345,10 @@ public:
     erase(pos, n);
     insert(pos, o);
     return *this;
+  }
+  basic_string& replace(const_iterator first, const_iterator last,
+                        const basic_string& o) {
+    return replace(first - data_, last - first, o);
   }
 
   // Search

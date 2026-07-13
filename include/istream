@@ -129,6 +129,16 @@ public:
     return *this;
   }
 
+  basic_istream& putback(Char c) {
+    sentry s(*this, true);
+    if (!s)
+      return *this;
+    auto* sb = this->rdbuf();
+    if (!sb || Traits::eq_int_type(sb->sputbackc(c), Traits::eof()))
+      this->setstate(ios_base::badbit);
+    return *this;
+  }
+
   basic_istream& ignore(streamsize n = 1, int_type delim = Traits::eof()) {
     sentry s(*this, true);
     if (!s)

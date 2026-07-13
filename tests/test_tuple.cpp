@@ -27,6 +27,12 @@ std::tuple<const char*, int, bool> make_result(const char* p, int n) {
 } // namespace
 
 int main() {
+  int referenced = 7;
+  auto references = std::forward_as_tuple(referenced);
+  auto moved_references = std::move(references);
+  std::get<0>(moved_references) = 8;
+  psyassert(referenced == 8);
+
   auto r = make_result("hi", 3);
   psyassert(std::get<0>(r) == std::string_view("hi"));
   psyassert(std::get<1>(r) == 3);

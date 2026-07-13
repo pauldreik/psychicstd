@@ -247,9 +247,18 @@ distance(InputIt first, InputIt last) {
 
 template <typename InputIt, typename Distance>
 constexpr void advance(InputIt& it, Distance n) {
-  if constexpr (__is_same(typename iterator_traits<InputIt>::iterator_category,
-                          random_access_iterator_tag)) {
+  using category = typename iterator_traits<InputIt>::iterator_category;
+  if constexpr (is_base_of_v<random_access_iterator_tag, category>) {
     it += n;
+  } else if constexpr (is_base_of_v<bidirectional_iterator_tag, category>) {
+    while (n > 0) {
+      ++it;
+      --n;
+    }
+    while (n < 0) {
+      --it;
+      ++n;
+    }
   } else {
     while (n-- > 0)
       ++it;
@@ -327,6 +336,16 @@ template <typename C> constexpr auto size(const C& c) -> decltype(c.size()) {
   return c.size();
 }
 template <typename T, size_t N> constexpr size_t size(const T (&)[N]) noexcept {
+  return N;
+}
+template <typename C>
+constexpr auto ssize(const C& c)
+    -> common_type_t<ptrdiff_t, make_signed_t<decltype(c.size())>> {
+  using result_type =
+      common_type_t<ptrdiff_t, make_signed_t<decltype(c.size())>>;
+  return static_cast<result_type>(c.size());
+}
+template <typename T, ptrdiff_t N> constexpr ptrdiff_t ssize(const T (&)[N]) {
   return N;
 }
 template <typename C> constexpr auto empty(const C& c) -> decltype(c.empty()) {

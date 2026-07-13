@@ -137,10 +137,61 @@ public:
   using extern_type = E;
   using state_type = S;
 
-  result in(state_type&, const E* from, const E* from_end, const E*& from_next,
-            Intern* to, Intern* to_end, Intern*& to_next) const {
+  result out(state_type& state, const Intern* from, const Intern* from_end,
+             const Intern*& from_next, E* to, E* to_end, E*& to_next) const {
+    return do_out(state, from, from_end, from_next, to, to_end, to_next);
+  }
+  result in(state_type& state, const E* from, const E* from_end,
+            const E*& from_next, Intern* to, Intern* to_end,
+            Intern*& to_next) const {
+    return do_in(state, from, from_end, from_next, to, to_end, to_next);
+  }
+  result unshift(state_type& state, E* to, E* to_end, E*& to_next) const {
+    return do_unshift(state, to, to_end, to_next);
+  }
+  int encoding() const noexcept { return do_encoding(); }
+  bool always_noconv() const noexcept { return do_always_noconv(); }
+  int length(state_type& state, const E* from, const E* end, size_t max) const {
+    return do_length(state, from, end, max);
+  }
+  int max_length() const noexcept { return do_max_length(); }
+  ~codecvt() override = default;
+
+protected:
+  virtual result do_out(state_type&, const Intern* from, const Intern* from_end,
+                        const Intern*& from_next, E* to, E* to_end,
+                        E*& to_next) const {
+    return convert(from, from_end, from_next, to, to_end, to_next);
+  }
+  virtual result do_in(state_type&, const E* from, const E* from_end,
+                       const E*& from_next, Intern* to, Intern* to_end,
+                       Intern*& to_next) const {
+    return convert(from, from_end, from_next, to, to_end, to_next);
+  }
+  virtual result do_unshift(state_type&, E* to, E*, E*& to_next) const {
+    to_next = to;
+    return noconv;
+  }
+  virtual int do_encoding() const noexcept {
+    return is_same_v<Intern, E> ? 1 : 0;
+  }
+  virtual bool do_always_noconv() const noexcept {
+    return is_same_v<Intern, E>;
+  }
+  virtual int do_length(state_type&, const E* from, const E* end,
+                        size_t max) const {
+    size_t available = static_cast<size_t>(end - from);
+    return static_cast<int>(available < max ? available : max);
+  }
+  virtual int do_max_length() const noexcept { return 1; }
+
+private:
+  template <typename From, typename To>
+  static result convert(const From* from, const From* from_end,
+                        const From*& from_next, To* to, To* to_end,
+                        To*& to_next) {
     while (from != from_end && to != to_end)
-      *to++ = static_cast<Intern>(*from++);
+      *to++ = static_cast<To>(*from++);
     from_next = from;
     to_next = to;
     return from == from_end ? ok : partial;

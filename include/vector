@@ -231,8 +231,16 @@ private:
         if constexpr (is_move_assignable_v<T>) {
           // move
           data_[i + n] = static_cast<T&&>(data_[i]);
-        } else
+        } else if constexpr (is_move_constructible_v<T>) {
+          _destroy(data_ + i + n);
+          // move
+          _construct(data_ + i + n, static_cast<T&&>(data_[i]));
+        } else if constexpr (is_copy_assignable_v<T>) {
           data_[i + n] = data_[i];
+        } else {
+          _destroy(data_ + i + n);
+          _construct(data_ + i + n, data_[i]);
+        }
       }
     }
     // Move-assign above leaves the vacated gap [idx, idx+n) holding live

@@ -13,4 +13,13 @@ int main() {
   std::ostringstream out;
   out << std::put_time(&value, "%Y");
   psyassert(out.str() == "2024");
+
+  std::string text = "a\\\"b";
+  std::ostringstream quoted_out;
+  quoted_out << std::quoted(text);
+  psyassert(quoted_out.str() == "\"a\\\\\\\"b\"");
+  std::istringstream quoted_in(quoted_out.str());
+  std::string roundtrip;
+  quoted_in >> std::quoted(roundtrip);
+  psyassert(roundtrip == text);
 }

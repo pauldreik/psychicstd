@@ -18,6 +18,7 @@ public:
   using difference_type = ptrdiff_t;
   using key_compare = Compare;
   using value_compare = Compare;
+  using allocator_type = Alloc;
   using reference = const Key&;
   using const_reference = const Key&;
   using iterator = typename vector<Key>::const_iterator;
@@ -27,11 +28,26 @@ public:
 
   set() = default;
   explicit set(const Compare& c) : comp_(c) {}
+  explicit set(const Alloc& a) : alloc_(a) {}
+  set(const Compare& c, const Alloc& a) : comp_(c), alloc_(a) {}
   template <typename It> set(It first, It last) {
     for (; first != last; ++first)
       insert(*first);
   }
   set(initializer_list<Key> il) {
+    for (auto& v : il)
+      insert(v);
+  }
+  set(initializer_list<Key> il, const Compare& c) : comp_(c) {
+    for (auto& v : il)
+      insert(v);
+  }
+  set(initializer_list<Key> il, const Compare& c, const Alloc& a)
+      : comp_(c), alloc_(a) {
+    for (auto& v : il)
+      insert(v);
+  }
+  set(initializer_list<Key> il, const Alloc& a) : alloc_(a) {
     for (auto& v : il)
       insert(v);
   }
@@ -134,6 +150,7 @@ public:
 private:
   vector<Key> data_;
   Compare comp_ = {};
+  [[no_unique_address]] Alloc alloc_ = {};
 
   const_iterator lower_bound_(const Key& k) const {
     return std::__lower_bound(data_.begin(), data_.end(), k, comp_);
@@ -148,10 +165,17 @@ public:
   using key_type = Key;
   using value_type = Key;
   using size_type = size_t;
+  using key_compare = Compare;
+  using value_compare = Compare;
+  using allocator_type = Alloc;
   using iterator = typename vector<Key>::const_iterator;
   using const_iterator = typename vector<Key>::const_iterator;
 
   multiset() = default;
+  explicit multiset(const Compare& comp) : comp_(comp) {}
+  explicit multiset(const Alloc& alloc) : alloc_(alloc) {}
+  multiset(const Compare& comp, const Alloc& alloc)
+      : comp_(comp), alloc_(alloc) {}
   multiset(initializer_list<Key> il) {
     for (const auto& v : il)
       insert(v);
@@ -170,6 +194,10 @@ public:
   iterator insert(const Key& k) {
     auto it = std::__lower_bound(data_.begin(), data_.end(), k, comp_);
     return data_.insert(data_.begin() + (it - data_.begin()), k);
+  }
+  template <typename It> void insert(It first, It last) {
+    for (; first != last; ++first)
+      insert(*first);
   }
   template <typename... Args> iterator emplace(Args&&... args) {
     return insert(Key(static_cast<Args&&>(args)...));
@@ -199,6 +227,7 @@ public:
 private:
   vector<Key> data_;
   Compare comp_ = {};
+  [[no_unique_address]] Alloc alloc_ = {};
 };
 
 } // namespace std

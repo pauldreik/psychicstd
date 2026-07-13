@@ -1,0 +1,529 @@
+#pragma once
+#include <__psychicstd_except>
+#include <cstddef>
+#include <initializer_list>
+#include <iterator>
+#include <memory>
+#include <tuple>
+#include <utility>
+
+namespace std {
+
+// Fallback for mapped values that cannot be relocated by the vector-backed map.
+template <typename Key, typename T, typename Compare, typename Alloc>
+class __map_node {
+  struct node {
+    node* previous = nullptr;
+    node* next = nullptr;
+    pair<const Key, T> value;
+
+    template <typename... Args>
+    explicit node(Args&&... args) : value(static_cast<Args&&>(args)...) {}
+  };
+
+public:
+  using key_type = Key;
+  using mapped_type = T;
+  using value_type = pair<const Key, T>;
+  using size_type = size_t;
+  using difference_type = ptrdiff_t;
+  using key_compare = Compare;
+  using allocator_type = Alloc;
+  using reference = value_type&;
+  using const_reference = const value_type&;
+  using pointer = typename allocator_traits<Alloc>::pointer;
+  using const_pointer = typename allocator_traits<Alloc>::const_pointer;
+
+  class const_iterator;
+  class iterator {
+    friend class __map_node;
+    friend class const_iterator;
+    node* node_ = nullptr;
+    const __map_node* owner_ = nullptr;
+
+    iterator(node* n, const __map_node* owner) : node_(n), owner_(owner) {}
+
+  public:
+    using iterator_category = bidirectional_iterator_tag;
+    using value_type = pair<const Key, T>;
+    using difference_type = ptrdiff_t;
+    using pointer = value_type*;
+    using reference = value_type&;
+
+    iterator() = default;
+    reference operator*() const { return node_->value; }
+    pointer operator->() const { return &node_->value; }
+    iterator& operator++() {
+      node_ = node_->next;
+      return *this;
+    }
+    iterator operator++(int) {
+      auto old = *this;
+      ++*this;
+      return old;
+    }
+    iterator& operator--() {
+      node_ = node_ ? node_->previous : owner_->last_;
+      return *this;
+    }
+    iterator operator--(int) {
+      auto old = *this;
+      --*this;
+      return old;
+    }
+    bool operator==(const iterator& other) const {
+      return node_ == other.node_;
+    }
+    bool operator==(const const_iterator& other) const {
+      return node_ == other.node_;
+    }
+  };
+
+  class const_iterator {
+    friend class __map_node;
+    friend class iterator;
+    const node* node_ = nullptr;
+    const __map_node* owner_ = nullptr;
+
+    const_iterator(const node* n, const __map_node* owner)
+        : node_(n), owner_(owner) {}
+
+  public:
+    using iterator_category = bidirectional_iterator_tag;
+    using value_type = const pair<const Key, T>;
+    using difference_type = ptrdiff_t;
+    using pointer = const pair<const Key, T>*;
+    using reference = const pair<const Key, T>&;
+
+    const_iterator() = default;
+    const_iterator(iterator other) : node_(other.node_), owner_(other.owner_) {}
+    reference operator*() const { return node_->value; }
+    pointer operator->() const { return &node_->value; }
+    const_iterator& operator++() {
+      node_ = node_->next;
+      return *this;
+    }
+    const_iterator operator++(int) {
+      auto old = *this;
+      ++*this;
+      return old;
+    }
+    const_iterator& operator--() {
+      node_ = node_ ? node_->previous : owner_->last_;
+      return *this;
+    }
+    const_iterator operator--(int) {
+      auto old = *this;
+      --*this;
+      return old;
+    }
+    bool operator==(const const_iterator& other) const {
+      return node_ == other.node_;
+    }
+    bool operator==(const iterator& other) const {
+      return node_ == other.node_;
+    }
+  };
+
+  using reverse_iterator = std::reverse_iterator<iterator>;
+  using const_reverse_iterator = std::reverse_iterator<const_iterator>;
+
+  class value_compare {
+    friend class __map_node;
+
+  protected:
+    Compare comp;
+    explicit value_compare(Compare value) : comp(value) {}
+
+  public:
+    using result_type = bool;
+    using first_argument_type = value_type;
+    using second_argument_type = value_type;
+
+    bool operator()(const value_type& a, const value_type& b) const {
+      return comp(a.first, b.first);
+    }
+  };
+
+  __map_node() = default;
+  explicit __map_node(const Compare& comp) : comp_(comp) {}
+  explicit __map_node(const Alloc& alloc) : alloc_(alloc) {}
+  __map_node(const Compare& comp, const Alloc& alloc)
+      : comp_(comp), alloc_(alloc) {}
+  template <typename It>
+  __map_node(It first, It last, const Compare& comp = Compare(),
+             const Alloc& alloc = Alloc())
+      : comp_(comp), alloc_(alloc) {
+    insert(first, last);
+  }
+  __map_node(initializer_list<value_type> values,
+             const Compare& comp = Compare(), const Alloc& alloc = Alloc())
+      : comp_(comp), alloc_(alloc) {
+    insert(values);
+  }
+  __map_node(initializer_list<value_type> values, const Alloc& alloc)
+      : alloc_(alloc) {
+    insert(values);
+  }
+  __map_node(const __map_node& other)
+      : comp_(other.comp_), alloc_(other.alloc_) {
+    insert(other.begin(), other.end());
+  }
+  __map_node(__map_node&& other) noexcept(
+      is_nothrow_move_constructible_v<Compare> &&
+      is_nothrow_move_constructible_v<Alloc>)
+      : first_(other.first_), last_(other.last_), size_(other.size_),
+        comp_(static_cast<Compare&&>(other.comp_)),
+        alloc_(static_cast<Alloc&&>(other.alloc_)) {
+    other.first_ = other.last_ = nullptr;
+    other.size_ = 0;
+  }
+  ~__map_node() { clear(); }
+
+  __map_node& operator=(const __map_node& other) {
+    if (this != &other) {
+      clear();
+      comp_ = other.comp_;
+      insert(other.begin(), other.end());
+    }
+    return *this;
+  }
+  __map_node& operator=(__map_node&& other) noexcept {
+    if (this != &other) {
+      clear();
+      first_ = other.first_;
+      last_ = other.last_;
+      size_ = other.size_;
+      comp_ = static_cast<Compare&&>(other.comp_);
+      alloc_ = static_cast<Alloc&&>(other.alloc_);
+      other.first_ = other.last_ = nullptr;
+      other.size_ = 0;
+    }
+    return *this;
+  }
+  __map_node& operator=(initializer_list<value_type> values) {
+    clear();
+    insert(values);
+    return *this;
+  }
+
+  allocator_type get_allocator() const noexcept { return alloc_; }
+  key_compare key_comp() const { return comp_; }
+  value_compare value_comp() const { return value_compare(comp_); }
+
+  iterator begin() noexcept { return {first_, this}; }
+  iterator end() noexcept { return {nullptr, this}; }
+  const_iterator begin() const noexcept { return {first_, this}; }
+  const_iterator end() const noexcept { return {nullptr, this}; }
+  const_iterator cbegin() const noexcept { return begin(); }
+  const_iterator cend() const noexcept { return end(); }
+  reverse_iterator rbegin() noexcept { return reverse_iterator(end()); }
+  reverse_iterator rend() noexcept { return reverse_iterator(begin()); }
+  const_reverse_iterator rbegin() const noexcept {
+    return const_reverse_iterator(end());
+  }
+  const_reverse_iterator rend() const noexcept {
+    return const_reverse_iterator(begin());
+  }
+
+  bool empty() const noexcept { return size_ == 0; }
+  size_type size() const noexcept { return size_; }
+  size_type max_size() const noexcept { return size_type(-1) / sizeof(node); }
+
+  T& operator[](const Key& key) { return try_emplace(key).first->second; }
+  T& operator[](Key&& key) {
+    return try_emplace(static_cast<Key&&>(key)).first->second;
+  }
+  T& at(const Key& key) {
+    auto found = find(key);
+    if (found == end())
+      _PSYCHICSTD_THROW(out_of_range("map::at: key not found"));
+    return found->second;
+  }
+  const T& at(const Key& key) const {
+    auto found = find(key);
+    if (found == end())
+      _PSYCHICSTD_THROW(out_of_range("map::at: key not found"));
+    return found->second;
+  }
+
+  template <typename... Args> pair<iterator, bool> emplace(Args&&... args) {
+    node* candidate = new node(static_cast<Args&&>(args)...);
+    auto position = lower_bound(candidate->value.first);
+    if (position != end() &&
+        equivalent(candidate->value.first, position->first)) {
+      delete candidate;
+      return {position, false};
+    }
+    return {link(position.node_, candidate), true};
+  }
+  template <typename... Args>
+  iterator emplace_hint(const_iterator, Args&&... args) {
+    return emplace(static_cast<Args&&>(args)...).first;
+  }
+  pair<iterator, bool> insert(const value_type& value) {
+    return emplace(value);
+  }
+  pair<iterator, bool> insert(value_type&& value) {
+    return emplace(static_cast<value_type&&>(value));
+  }
+  iterator insert(const_iterator, const value_type& value) {
+    return insert(value).first;
+  }
+  iterator insert(const_iterator, value_type&& value) {
+    return insert(static_cast<value_type&&>(value)).first;
+  }
+  template <typename It> void insert(It first, It last) {
+    for (; first != last; ++first)
+      insert(*first);
+  }
+  void insert(initializer_list<value_type> values) {
+    insert(values.begin(), values.end());
+  }
+
+  template <typename... Args>
+  pair<iterator, bool> try_emplace(const Key& key, Args&&... args) {
+    auto position = lower_bound(key);
+    if (position != end() && equivalent(key, position->first))
+      return {position, false};
+    node* value = new node(piecewise_construct, forward_as_tuple(key),
+                           forward_as_tuple(static_cast<Args&&>(args)...));
+    return {link(position.node_, value), true};
+  }
+  template <typename... Args>
+  pair<iterator, bool> try_emplace(Key&& key, Args&&... args) {
+    auto position = lower_bound(key);
+    if (position != end() && equivalent(key, position->first))
+      return {position, false};
+    node* value =
+        new node(piecewise_construct, forward_as_tuple(static_cast<Key&&>(key)),
+                 forward_as_tuple(static_cast<Args&&>(args)...));
+    return {link(position.node_, value), true};
+  }
+  template <typename... Args>
+  iterator try_emplace(const_iterator, const Key& key, Args&&... args) {
+    return try_emplace(key, static_cast<Args&&>(args)...).first;
+  }
+  template <typename... Args>
+  iterator try_emplace(const_iterator, Key&& key, Args&&... args) {
+    return try_emplace(static_cast<Key&&>(key), static_cast<Args&&>(args)...)
+        .first;
+  }
+
+  template <typename M>
+  pair<iterator, bool> insert_or_assign(const Key& key, M&& value) {
+    auto result = try_emplace(key, static_cast<M&&>(value));
+    if (!result.second)
+      result.first->second = static_cast<M&&>(value);
+    return result;
+  }
+  template <typename M>
+  pair<iterator, bool> insert_or_assign(Key&& key, M&& value) {
+    auto result = try_emplace(static_cast<Key&&>(key), static_cast<M&&>(value));
+    if (!result.second)
+      result.first->second = static_cast<M&&>(value);
+    return result;
+  }
+  template <typename M>
+  iterator insert_or_assign(const_iterator, const Key& key, M&& value) {
+    return insert_or_assign(key, static_cast<M&&>(value)).first;
+  }
+  template <typename M>
+  iterator insert_or_assign(const_iterator, Key&& key, M&& value) {
+    return insert_or_assign(static_cast<Key&&>(key), static_cast<M&&>(value))
+        .first;
+  }
+
+  iterator erase(const_iterator position) {
+    node* value = const_cast<node*>(position.node_);
+    node* next = value->next;
+    unlink(value);
+    return {next, this};
+  }
+  iterator erase(iterator position) { return erase(const_iterator(position)); }
+  iterator erase(const_iterator first, const_iterator last) {
+    while (first != last)
+      first = erase(first);
+    return {const_cast<node*>(last.node_), this};
+  }
+  size_type erase(const Key& key) {
+    auto found = find(key);
+    if (found == end())
+      return 0;
+    erase(found);
+    return 1;
+  }
+  void clear() noexcept {
+    while (first_) {
+      node* next = first_->next;
+      delete first_;
+      first_ = next;
+    }
+    last_ = nullptr;
+    size_ = 0;
+  }
+  void swap(__map_node& other) noexcept(
+      (allocator_traits<Alloc>::propagate_on_container_swap::value ||
+       allocator_traits<Alloc>::is_always_equal::value) &&
+      is_nothrow_swappable_v<Compare>) {
+    using std::swap;
+    swap(first_, other.first_);
+    swap(last_, other.last_);
+    swap(size_, other.size_);
+    swap(comp_, other.comp_);
+    swap(alloc_, other.alloc_);
+  }
+  friend void swap(__map_node& a, __map_node& b) noexcept(noexcept(a.swap(b))) {
+    a.swap(b);
+  }
+
+  iterator find(const Key& key) { return find_impl(key); }
+  const_iterator find(const Key& key) const { return find_impl(key); }
+  size_type count(const Key& key) const { return find(key) == end() ? 0 : 1; }
+  bool contains(const Key& key) const { return find(key) != end(); }
+  iterator lower_bound(const Key& key) { return lower_bound_impl(key); }
+  const_iterator lower_bound(const Key& key) const {
+    return lower_bound_impl(key);
+  }
+  iterator upper_bound(const Key& key) { return upper_bound_impl(key); }
+  const_iterator upper_bound(const Key& key) const {
+    return upper_bound_impl(key);
+  }
+  pair<iterator, iterator> equal_range(const Key& key) {
+    return {lower_bound(key), upper_bound(key)};
+  }
+  pair<const_iterator, const_iterator> equal_range(const Key& key) const {
+    return {lower_bound(key), upper_bound(key)};
+  }
+
+  template <typename K>
+    requires requires { typename Compare::is_transparent; }
+  iterator find(const K& key) {
+    return find_impl(key);
+  }
+  template <typename K>
+    requires requires { typename Compare::is_transparent; }
+  const_iterator find(const K& key) const {
+    return find_impl(key);
+  }
+  template <typename K>
+    requires requires { typename Compare::is_transparent; }
+  size_type count(const K& key) const {
+    auto [first, last] = equal_range(key);
+    size_type result = 0;
+    while (first != last) {
+      ++first;
+      ++result;
+    }
+    return result;
+  }
+  template <typename K>
+    requires requires { typename Compare::is_transparent; }
+  bool contains(const K& key) const {
+    return find(key) != end();
+  }
+  template <typename K>
+    requires requires { typename Compare::is_transparent; }
+  iterator lower_bound(const K& key) {
+    return lower_bound_impl(key);
+  }
+  template <typename K>
+    requires requires { typename Compare::is_transparent; }
+  const_iterator lower_bound(const K& key) const {
+    return lower_bound_impl(key);
+  }
+  template <typename K>
+    requires requires { typename Compare::is_transparent; }
+  iterator upper_bound(const K& key) {
+    return upper_bound_impl(key);
+  }
+  template <typename K>
+    requires requires { typename Compare::is_transparent; }
+  const_iterator upper_bound(const K& key) const {
+    return upper_bound_impl(key);
+  }
+  template <typename K>
+    requires requires { typename Compare::is_transparent; }
+  pair<iterator, iterator> equal_range(const K& key) {
+    return {lower_bound(key), upper_bound(key)};
+  }
+  template <typename K>
+    requires requires { typename Compare::is_transparent; }
+  pair<const_iterator, const_iterator> equal_range(const K& key) const {
+    return {lower_bound(key), upper_bound(key)};
+  }
+
+private:
+  node* first_ = nullptr;
+  node* last_ = nullptr;
+  size_type size_ = 0;
+  [[no_unique_address]] Compare comp_ = {};
+  [[no_unique_address]] Alloc alloc_ = {};
+
+  template <typename A, typename B>
+  bool equivalent(const A& a, const B& b) const {
+    return !comp_(a, b) && !comp_(b, a);
+  }
+  iterator link(node* position, node* value) {
+    value->next = position;
+    if (position) {
+      value->previous = position->previous;
+      position->previous = value;
+    } else {
+      value->previous = last_;
+      last_ = value;
+    }
+    if (value->previous)
+      value->previous->next = value;
+    else
+      first_ = value;
+    ++size_;
+    return {value, this};
+  }
+  void unlink(node* value) {
+    if (value->previous)
+      value->previous->next = value->next;
+    else
+      first_ = value->next;
+    if (value->next)
+      value->next->previous = value->previous;
+    else
+      last_ = value->previous;
+    delete value;
+    --size_;
+  }
+  template <typename K> iterator lower_bound_impl(const K& key) {
+    node* current = first_;
+    while (current && comp_(current->value.first, key))
+      current = current->next;
+    return {current, this};
+  }
+  template <typename K> const_iterator lower_bound_impl(const K& key) const {
+    const node* current = first_;
+    while (current && comp_(current->value.first, key))
+      current = current->next;
+    return {current, this};
+  }
+  template <typename K> iterator upper_bound_impl(const K& key) {
+    node* current = first_;
+    while (current && !comp_(key, current->value.first))
+      current = current->next;
+    return {current, this};
+  }
+  template <typename K> const_iterator upper_bound_impl(const K& key) const {
+    const node* current = first_;
+    while (current && !comp_(key, current->value.first))
+      current = current->next;
+    return {current, this};
+  }
+  template <typename K> iterator find_impl(const K& key) {
+    auto found = lower_bound_impl(key);
+    return found != end() && equivalent(key, found->first) ? found : end();
+  }
+  template <typename K> const_iterator find_impl(const K& key) const {
+    auto found = lower_bound_impl(key);
+    return found != end() && equivalent(key, found->first) ? found : end();
+  }
+};
+
+} // namespace std
