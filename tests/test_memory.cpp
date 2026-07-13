@@ -1,6 +1,7 @@
 #include "psyassert.h"
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 struct Base {
@@ -15,6 +16,14 @@ struct Forwarded {
   int kind;
   explicit Forwarded(int&) : kind(1) {}
   explicit Forwarded(int&&) : kind(2) {}
+};
+
+struct CountingDeleter {
+  int* count;
+  void operator()(Derived* ptr) const {
+    ++*count;
+    delete ptr;
+  }
 };
 
 static void test_forwarding() {
@@ -60,6 +69,38 @@ static void test_converting_ctor_from_prvalue() {
   b.reset();
   psyassert(b2.use_count() == 1);
   psyassert(b2->x == 42);
+}
+
+static void test_shared_ptr_from_unique_ptr() {
+  int deletes = 0;
+  std::unique_ptr<Derived, CountingDeleter> unique(new Derived, {&deletes});
+  std::shared_ptr<Base> shared = std::move(unique);
+  psyassert(!unique);
+  psyassert(shared->x == 42);
+  psyassert(deletes == 0);
+
+  std::unique_ptr<Derived, CountingDeleter> replacement(new Derived,
+                                                        {&deletes});
+  shared = std::move(replacement);
+  psyassert(!replacement);
+  psyassert(shared->x == 42);
+  psyassert(deletes == 1);
+  shared.reset();
+  psyassert(deletes == 2);
+}
+
+static void test_shared_ptr_custom_deleter() {
+  int deletes = 0;
+  std::shared_ptr<Derived> shared;
+  shared.reset(new Derived, CountingDeleter{&deletes});
+
+  auto* deleter = std::get_deleter<CountingDeleter>(shared);
+  psyassert(deleter);
+  psyassert(deleter->count == &deletes);
+  psyassert(!std::get_deleter<std::default_delete<Derived>>(shared));
+
+  shared.reset();
+  psyassert(deletes == 1);
 }
 
 // Bug: at -O2 the old converting constructor used reinterpret_cast to read
@@ -108,5 +149,7 @@ int main() {
   test_forwarding();
   test_converting_copy_ctor();
   test_converting_ctor_from_prvalue();
+  test_shared_ptr_from_unique_ptr();
+  test_shared_ptr_custom_deleter();
   test_member_init_from_template_prvalue();
 }

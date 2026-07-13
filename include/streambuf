@@ -66,6 +66,13 @@ public:
 
   // read up to n chars into s, return number read
   streamsize sgetn(char_type* s, streamsize n) { return xsgetn(s, n); }
+  streamsize in_avail() {
+    return gptr_ < egptr_ ? egptr_ - gptr_ : showmanyc();
+  }
+
+  basic_streambuf* pubsetbuf(char_type* buffer, streamsize size) {
+    return setbuf(buffer, size);
+  }
 
   // seek to absolute position
   streampos pubseekpos(streampos pos,
@@ -109,6 +116,8 @@ protected:
 
   virtual int_type underflow() { return traits_type::eof(); }
 
+  virtual streamsize showmanyc() { return 0; }
+
   virtual int_type pbackfail(int_type c = traits_type::eof()) {
     (void)c;
     return traits_type::eof();
@@ -144,6 +153,8 @@ protected:
   }
 
   virtual int sync() { return 0; }
+
+  virtual basic_streambuf* setbuf(char_type*, streamsize) { return this; }
 
   virtual streampos seekpos(streampos, ios_base::openmode) {
     return streampos(-1);

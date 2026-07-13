@@ -10,4 +10,13 @@ int main() {
   bits[1].flip();
   psyassert(bits[0] && !bits[1]);
   static_assert(std::is_nothrow_assignable<decltype(bits[0]), bool>::value);
+
+  std::bitset<633> large;
+  large.set(632);
+  psyassert(large.test(632));
+  psyassert(large.count() == 1);
+  large.flip();
+  psyassert(large.count() == 632);
+  large.reset();
+  psyassert(large.none());
 }

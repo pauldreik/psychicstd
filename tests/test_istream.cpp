@@ -6,4 +6,9 @@ int main() {
   int x = 0;
   in >> x;
   psyassert(x == 42);
+
+  std::istringstream chars("ab");
+  psyassert(chars.get() == 'a');
+  chars.putback('a');
+  psyassert(chars.get() == 'a');
 }

@@ -1,6 +1,12 @@
 #pragma once
+#include <__psychicstd_config>
 #include <math.h>
 #include <stdlib.h>
+
+#if _PSYCHICSTD_COMPATIBILITY_LEVEL >= _PSYCHICSTD_COMPAT_DROPIN
+// libstdc++ exposes numeric_limits through <cmath>; Catch2 relies on it.
+#include <limits>
+#endif
 
 // C99 defines isnan/isinf/isfinite/isnormal/signbit as macros.
 // Undefine them so qualified names like std::isnan and Catch::isnan work.
@@ -70,10 +76,23 @@ inline bool isinf(long double x) { return __builtin_isinf(x); }
 inline bool isfinite(float x) { return __builtin_isfinite(x); }
 inline bool isfinite(double x) { return __builtin_isfinite(x); }
 inline bool isfinite(long double x) { return __builtin_isfinite(x); }
+inline int fpclassify(float x) {
+  return __builtin_fpclassify(FP_NAN, FP_INFINITE, FP_NORMAL, FP_SUBNORMAL,
+                              FP_ZERO, x);
+}
+inline int fpclassify(double x) {
+  return __builtin_fpclassify(FP_NAN, FP_INFINITE, FP_NORMAL, FP_SUBNORMAL,
+                              FP_ZERO, x);
+}
+inline int fpclassify(long double x) {
+  return __builtin_fpclassify(FP_NAN, FP_INFINITE, FP_NORMAL, FP_SUBNORMAL,
+                              FP_ZERO, x);
+}
 #define _PSYCHICSTD_INTEGRAL_FINITE(T)                                         \
   constexpr bool isnan(T) { return false; }                                    \
   constexpr bool isinf(T) { return false; }                                    \
-  constexpr bool isfinite(T) { return true; }
+  constexpr bool isfinite(T) { return true; }                                  \
+  constexpr int fpclassify(T x) { return x == 0 ? FP_ZERO : FP_NORMAL; }
 _PSYCHICSTD_INTEGRAL_FINITE(bool)
 _PSYCHICSTD_INTEGRAL_FINITE(char)
 _PSYCHICSTD_INTEGRAL_FINITE(signed char)

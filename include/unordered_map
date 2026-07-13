@@ -87,20 +87,24 @@ public:
   using mapped_type = T;
   using value_type = pair<const Key, T>;
   using allocator_type = Allocator;
+  using hasher = Hash;
+  using key_equal = KeyEqual;
   using size_type = size_t;
   using difference_type = ptrdiff_t;
   using reference = value_type&;
   using const_reference = const value_type&;
 
+  struct const_iterator;
   struct iterator {
     using iterator_category = forward_iterator_tag;
     using value_type = pair<const Key, T>;
     using difference_type = ptrdiff_t;
     using pointer = value_type*;
     using reference = value_type&;
-    unordered_map* m;
-    size_t b;
-    Node* n;
+    unordered_map* m = nullptr;
+    size_t b = 0;
+    Node* n = nullptr;
+    iterator() = default;
     iterator(unordered_map* m, size_t b, Node* n) : m(m), b(b), n(n) {}
     value_type& operator*() const { return n->kv; }
     value_type* operator->() const { return &n->kv; }
@@ -124,9 +128,10 @@ public:
     using difference_type = ptrdiff_t;
     using pointer = const value_type*;
     using reference = const value_type&;
-    const unordered_map* m;
-    size_t b;
-    const Node* n;
+    const unordered_map* m = nullptr;
+    size_t b = 0;
+    const Node* n = nullptr;
+    const_iterator() = default;
     const_iterator(const unordered_map* m, size_t b, const Node* n)
         : m(m), b(b), n(n) {}
     const_iterator(iterator it) : m(it.m), b(it.b), n(it.n) {}
@@ -134,6 +139,12 @@ public:
     const value_type* operator->() const { return &n->kv; }
     bool operator==(const const_iterator& o) const { return n == o.n; }
     bool operator!=(const const_iterator& o) const { return n != o.n; }
+    friend bool operator==(const iterator& a, const const_iterator& b) {
+      return a.n == b.n;
+    }
+    friend bool operator!=(const iterator& a, const const_iterator& b) {
+      return a.n != b.n;
+    }
     const_iterator& operator++() {
       n = n->next;
       while (!n && ++b < m->nbuckets_)
@@ -146,6 +157,8 @@ public:
       return t;
     }
   };
+  using local_iterator = iterator;
+  using const_local_iterator = const_iterator;
 
   unordered_map() = default;
   explicit unordered_map(const Allocator&) {}
@@ -180,6 +193,15 @@ public:
 
   size_type size() const noexcept { return size_; }
   bool empty() const noexcept { return size_ == 0; }
+  size_type bucket_count() const noexcept { return nbuckets_; }
+  float load_factor() const noexcept {
+    return static_cast<float>(size_) / static_cast<float>(nbuckets_);
+  }
+  void rehash(size_type count) {
+    if (count > nbuckets_)
+      _rehash(count);
+  }
+  void reserve(size_type count) { rehash(count); }
 
   iterator begin() {
     for (size_t b = 0; b < nbuckets_; ++b)
@@ -413,9 +435,12 @@ public:
 
   struct const_iterator;
   struct iterator {
-    unordered_multimap* m;
-    size_t b;
-    Node* n;
+    unordered_multimap* m = nullptr;
+    size_t b = 0;
+    Node* n = nullptr;
+    iterator() = default;
+    iterator(unordered_multimap* map, size_t bucket, Node* node)
+        : m(map), b(bucket), n(node) {}
     value_type& operator*() const { return n->kv; }
     value_type* operator->() const { return &n->kv; }
     iterator& operator++() {
@@ -434,9 +459,13 @@ public:
     operator const_iterator() const { return {m, b, n}; }
   };
   struct const_iterator {
-    const unordered_multimap* m;
-    size_t b;
-    const Node* n;
+    const unordered_multimap* m = nullptr;
+    size_t b = 0;
+    const Node* n = nullptr;
+    const_iterator() = default;
+    const_iterator(const unordered_multimap* map, size_t bucket,
+                   const Node* node)
+        : m(map), b(bucket), n(node) {}
     const value_type& operator*() const { return n->kv; }
     const value_type* operator->() const { return &n->kv; }
     const_iterator& operator++() {

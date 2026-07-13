@@ -185,23 +185,31 @@ private:
   basic_filebuf<Char, Traits> buf_;
 };
 
-// basic_fstream — simplified: inherits only from basic_ostream,
-// read ops go through the filebuf directly.
 template <typename Char, typename Traits>
-class basic_fstream : public basic_ostream<Char, Traits> {
+class basic_fstream : public basic_istream<Char, Traits>,
+                      public basic_ostream<Char, Traits> {
 public:
   using string_type = basic_string<Char, Traits>;
   using off_type = typename Traits::off_type;
 
-  basic_fstream() : basic_ostream<Char, Traits>(&buf_) {}
+  using basic_istream<Char, Traits>::bad;
+  using basic_istream<Char, Traits>::clear;
+  using basic_istream<Char, Traits>::eof;
+  using basic_istream<Char, Traits>::fail;
+  using basic_istream<Char, Traits>::good;
+  using basic_istream<Char, Traits>::setstate;
+
+  basic_fstream()
+      : basic_istream<Char, Traits>(&buf_), basic_ostream<Char, Traits>(&buf_) {
+  }
   explicit basic_fstream(const char* path,
                          ios_base::openmode mode = ios_base::in | ios_base::out)
-      : basic_ostream<Char, Traits>(&buf_) {
+      : basic_istream<Char, Traits>(&buf_), basic_ostream<Char, Traits>(&buf_) {
     open(path, mode);
   }
   explicit basic_fstream(const string_type& path,
                          ios_base::openmode mode = ios_base::in | ios_base::out)
-      : basic_ostream<Char, Traits>(&buf_) {
+      : basic_istream<Char, Traits>(&buf_), basic_ostream<Char, Traits>(&buf_) {
     open(path.c_str(), mode);
   }
 
@@ -219,26 +227,12 @@ public:
   void close() { buf_.close(); }
   bool is_open() const { return buf_.is_open(); }
 
-  basic_fstream& read(Char* buf, streamsize n) {
-    streamsize got = buf_.sgetn(buf, n);
-    gcount_ = got;
-    if (got < n)
-      this->setstate(ios_base::eofbit | ios_base::failbit);
-    return *this;
-  }
-  basic_fstream& seekg(off_type off, ios_base::seekdir dir) {
-    buf_.pubseekoff(off, dir, ios_base::in);
-    return *this;
-  }
-  streamsize gcount() const { return gcount_; }
-
   basic_filebuf<Char, Traits>* rdbuf() const {
     return const_cast<basic_filebuf<Char, Traits>*>(&buf_);
   }
 
 private:
   basic_filebuf<Char, Traits> buf_;
-  streamsize gcount_ = 0;
 };
 
 // unitbuf / nounitbuf (no-op — we flush immediately)

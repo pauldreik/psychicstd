@@ -1,6 +1,30 @@
 #include "psyassert.h"
 #include <ctime>
 #include <locale>
+
+class passthrough_codecvt : public std::codecvt<char, char, std::mbstate_t> {
+public:
+  bool called = false;
+  ~passthrough_codecvt() override = default;
+
+protected:
+  bool do_always_noconv() const noexcept override { return true; }
+  result do_out(std::mbstate_t&, const char* from, const char*,
+                const char*& from_next, char* to, char*,
+                char*& to_next) const override {
+    const_cast<passthrough_codecvt*>(this)->called = true;
+    from_next = from;
+    to_next = to;
+    return noconv;
+  }
+  result do_unshift(std::mbstate_t&, char* to, char*,
+                    char*& to_next) const override {
+    to_next = to;
+    return noconv;
+  }
+  int do_max_length() const noexcept override { return 1; }
+  int do_encoding() const noexcept override { return 1; }
+};
 #include <sstream>
 
 struct punct : std::numpunct<char> {
@@ -53,4 +77,13 @@ int main() {
   psyassert(result == std::codecvt_base::ok);
   psyassert(from_next == input + 3 && to_next == output + 3);
   psyassert(output[0] == U'a' && output[2] == U'c');
+
+  passthrough_codecvt passthrough;
+  const char* out_next = nullptr;
+  char converted[3]{};
+  char* converted_next = nullptr;
+  result = passthrough.out(state, input, input + 3, out_next, converted,
+                           converted + 3, converted_next);
+  psyassert(result == std::codecvt_base::noconv);
+  psyassert(passthrough.called);
 }

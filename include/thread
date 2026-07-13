@@ -2,6 +2,7 @@
 #include <chrono>
 #include <compare>
 #include <ctime>
+#include <functional>
 #include <iosfwd>
 #include <pthread.h>
 #include <ratio>
@@ -19,8 +20,8 @@ namespace __thread_detail {
 template <typename F, typename Tuple, size_t... Is>
 constexpr decltype(auto) __invoke_from_tuple(F&& f, Tuple& args,
                                              index_sequence<Is...>) {
-  return static_cast<F&&>(f)(
-      static_cast<tuple_element_t<Is, Tuple>&&>(get<Is>(args))...);
+  return invoke(static_cast<F&&>(f),
+                static_cast<tuple_element_t<Is, Tuple>&&>(get<Is>(args))...);
 }
 template <typename F, typename Tuple>
 constexpr decltype(auto) __invoke_from_tuple(F&& f, Tuple& args) {
@@ -31,9 +32,8 @@ template <typename F, typename Token, typename Tuple, size_t... Is>
 constexpr decltype(auto) __invoke_from_tuple_token(F&& f, Token&& token,
                                                    Tuple& args,
                                                    index_sequence<Is...>) {
-  return static_cast<F&&>(f)(
-      static_cast<Token&&>(token),
-      static_cast<tuple_element_t<Is, Tuple>&&>(get<Is>(args))...);
+  return invoke(static_cast<F&&>(f), static_cast<Token&&>(token),
+                static_cast<tuple_element_t<Is, Tuple>&&>(get<Is>(args))...);
 }
 template <typename F, typename Token, typename Tuple>
 constexpr decltype(auto) __invoke_from_tuple_token(F&& f, Token&& token,

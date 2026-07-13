@@ -25,6 +25,8 @@ template <size_t Index, typename T> struct tuple_leaf {
 template <size_t Index, typename T> struct tuple_leaf<Index, T&> {
   T& value;
   explicit tuple_leaf(T& v) : value(v) {}
+  tuple_leaf(const tuple_leaf&) = default;
+  tuple_leaf(tuple_leaf&&) = default;
   tuple_leaf& operator=(const tuple_leaf& o) {
     value = o.value;
     return *this;
@@ -171,6 +173,17 @@ get(tuple<Ts...>&& t) noexcept {
   return static_cast<tuple_element_t<Index, tuple<Ts...>>&&>(
       static_cast<Leaf&>(t).value);
 }
+
+template <typename T1, typename T2>
+template <typename... Args1, typename... Args2>
+constexpr pair<T1, T2>::pair(piecewise_construct_t, tuple<Args1...> first_args,
+                             tuple<Args2...> second_args)
+    : first([&]<size_t... Is>(index_sequence<Is...>) {
+        return T1(get<Is>(static_cast<tuple<Args1...>&&>(first_args))...);
+      }(index_sequence_for<Args1...>{})),
+      second([&]<size_t... Is>(index_sequence<Is...>) {
+        return T2(get<Is>(static_cast<tuple<Args2...>&&>(second_args))...);
+      }(index_sequence_for<Args2...>{})) {}
 
 // get<T>(tuple)
 namespace detail {

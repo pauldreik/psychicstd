@@ -4,6 +4,11 @@
 #include <stop_token>
 #include <thread>
 
+struct worker {
+  std::atomic<int>* runs;
+  void run(int count) { runs->fetch_add(count, std::memory_order_relaxed); }
+};
+
 int main() {
   std::this_thread::sleep_for(std::chrono::milliseconds(1));
   std::atomic<int> ran(0);
@@ -11,6 +16,10 @@ int main() {
   psyassert(thread_worker.joinable());
   thread_worker.join();
   psyassert(ran == 1);
+  worker member_worker{&ran};
+  std::thread member_thread(&worker::run, &member_worker, 2);
+  member_thread.join();
+  psyassert(ran == 3);
   std::ostringstream out;
   out << std::this_thread::get_id();
   psyassert(!out.str().empty());

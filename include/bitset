@@ -4,49 +4,134 @@
 namespace std {
 
 template <size_t N> class bitset {
-  static_assert(N <= sizeof(unsigned long long) * 8,
-                "psychicstd bitset currently supports up to 64 bits");
+  static constexpr size_t word_bits = sizeof(unsigned long long) * 8;
+  static constexpr size_t word_count =
+      N == 0 ? 1 : (N + word_bits - 1) / word_bits;
 
 public:
   class reference {
   public:
-    reference(unsigned long long* bits, size_t pos) : bits_(bits), pos_(pos) {}
+    reference(unsigned long long* word, size_t bit) : word_(word), bit_(bit) {}
     reference& operator=(bool value) noexcept {
       if (value)
-        *bits_ |= 1ULL << pos_;
+        *word_ |= 1ULL << bit_;
       else
-        *bits_ &= ~(1ULL << pos_);
+        *word_ &= ~(1ULL << bit_);
       return *this;
     }
-    operator bool() const noexcept { return (*bits_ & (1ULL << pos_)) != 0; }
+    operator bool() const noexcept { return (*word_ & (1ULL << bit_)) != 0; }
     reference& flip() noexcept {
-      *bits_ ^= 1ULL << pos_;
+      *word_ ^= 1ULL << bit_;
       return *this;
     }
 
   private:
-    unsigned long long* bits_;
-    size_t pos_;
+    unsigned long long* word_;
+    size_t bit_;
   };
 
   constexpr bitset() = default;
-  constexpr bitset(unsigned long long value) : bits_(value & mask()) {}
+  constexpr bitset(unsigned long long value) : words_{value} { trim(); }
 
   constexpr bool operator[](size_t pos) const noexcept {
-    return (bits_ & (1ULL << pos)) != 0;
+    return (words_[pos / word_bits] & (1ULL << (pos % word_bits))) != 0;
   }
-  reference operator[](size_t pos) noexcept { return reference(&bits_, pos); }
+  reference operator[](size_t pos) noexcept {
+    return reference(&words_[pos / word_bits], pos % word_bits);
+  }
+  constexpr bool test(size_t pos) const { return (*this)[pos]; }
   constexpr size_t size() const noexcept { return N; }
 
+  bitset& set() noexcept {
+    for (auto& word : words_)
+      word = ~0ULL;
+    trim();
+    return *this;
+  }
+  bitset& set(size_t pos, bool value = true) {
+    (*this)[pos] = value;
+    return *this;
+  }
+  bitset& reset() noexcept {
+    for (auto& word : words_)
+      word = 0;
+    return *this;
+  }
+  bitset& reset(size_t pos) {
+    (*this)[pos] = false;
+    return *this;
+  }
+  bitset& flip() noexcept {
+    for (auto& word : words_)
+      word = ~word;
+    trim();
+    return *this;
+  }
+  bitset& flip(size_t pos) {
+    words_[pos / word_bits] ^= 1ULL << (pos % word_bits);
+    return *this;
+  }
+
+  constexpr bool any() const noexcept {
+    for (auto word : words_)
+      if (word)
+        return true;
+    return false;
+  }
+  constexpr bool none() const noexcept { return !any(); }
+  constexpr bool all() const noexcept {
+    if constexpr (N == 0)
+      return true;
+    for (size_t i = 0; i + 1 < word_count; ++i)
+      if (words_[i] != ~0ULL)
+        return false;
+    return words_[word_count - 1] == last_mask();
+  }
+  constexpr size_t count() const noexcept {
+    size_t result = 0;
+    for (auto word : words_)
+      result += __builtin_popcountll(word);
+    return result;
+  }
+
+  bitset& operator|=(const bitset& other) noexcept {
+    for (size_t i = 0; i < word_count; ++i)
+      words_[i] |= other.words_[i];
+    return *this;
+  }
+  bitset& operator&=(const bitset& other) noexcept {
+    for (size_t i = 0; i < word_count; ++i)
+      words_[i] &= other.words_[i];
+    return *this;
+  }
+  bitset& operator^=(const bitset& other) noexcept {
+    for (size_t i = 0; i < word_count; ++i)
+      words_[i] ^= other.words_[i];
+    return *this;
+  }
+  constexpr bitset operator~() const noexcept {
+    bitset result(*this);
+    return result.flip();
+  }
+  constexpr bool operator==(const bitset& other) const noexcept {
+    for (size_t i = 0; i < word_count; ++i)
+      if (words_[i] != other.words_[i])
+        return false;
+    return true;
+  }
+
 private:
-  static constexpr unsigned long long mask() {
+  static constexpr unsigned long long last_mask() {
     if constexpr (N == 0)
       return 0;
-    if constexpr (N == sizeof(unsigned long long) * 8)
+    constexpr size_t bits = N % word_bits;
+    if constexpr (bits == 0)
       return ~0ULL;
-    return (1ULL << N) - 1;
+    return (1ULL << bits) - 1;
   }
-  unsigned long long bits_ = 0;
+  constexpr void trim() { words_[word_count - 1] &= last_mask(); }
+
+  unsigned long long words_[word_count]{};
 };
 
 } // namespace std

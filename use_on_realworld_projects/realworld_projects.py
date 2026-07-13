@@ -15,6 +15,7 @@ real-world build recipes (currently spread across the test_*.sh scripts).
 
 import hashlib
 import os
+import shlex
 import subprocess
 import tarfile
 import tempfile
@@ -116,6 +117,36 @@ def _env(tc: Toolchain, **extra: str) -> dict[str, str]:
     return env
 
 
+def _compiler_wrapper(
+    path: Path, tc: Toolchain, extra_cxxflags: tuple[str, ...] = ()
+) -> Path:
+    """Write a compiler wrapper that keeps toolchain flags last.
+
+    Some projects add their own -std flag after CMAKE_CXX_FLAGS.  psychicstd
+    requires C++20, so a wrapper is the simplest way to retain the last word.
+    Link-only additions are kept off compile and preprocess invocations.
+    """
+    compiler = shlex.split(tc.cxx)
+    cxxflags = [*shlex.split(tc.cxxflags), *extra_cxxflags]
+    link_flags = shlex.split(tc.ldflags) + shlex.split(tc.libs)
+    path.write_text(
+        "#!/usr/bin/env python3\n"
+        "import os\n"
+        "import sys\n\n"
+        f"compiler = {compiler!r}\n"
+        f"cxxflags = {cxxflags!r}\n"
+        f"link_flags = {link_flags!r}\n"
+        "args = sys.argv[1:]\n"
+        "linking = not any(flag in args for flag in ('-c', '-E', '-S'))\n"
+        "argv = compiler + args + cxxflags\n"
+        "if linking:\n"
+        "    argv += link_flags\n"
+        "os.execvp(compiler[0], argv)\n"
+    )
+    path.chmod(0o755)
+    return path
+
+
 # --- catch2 -----
 
 
@@ -177,6 +208,97 @@ def _catch2() -> Project:
         build=build,
         phases=("compile", "run tests"),
         comments={"run tests": "the approval tests are ignored"},
+    )
+
+
+# --- cmake -------------------------------------------------------------
+
+
+def _cmake() -> Project:
+    version = "4.3.4"
+    url = f"https://cmake.org/files/v4.3/cmake-{version}.tar.gz"
+    checksum = "fdeff897b9eb49d764539f2b1edc6eb7e1440df325678a97c1978499e931adda"
+
+    def build(tc: Toolchain) -> dict[str, float]:
+        tarball = RW_DIR / f"cmake-{version}.tar.gz"
+        _fetch(url, tarball, checksum)
+
+        with tempfile.TemporaryDirectory(
+            prefix="rw-cmake-", ignore_cleanup_errors=True
+        ) as work_dir:
+            work = Path(work_dir)
+            with tarfile.open(tarball) as t:
+                t.extractall(work)
+            src = work / f"cmake-{version}"
+            # CMake relies on ADL finding these through its string iterator,
+            # which is not guaranteed when an implementation uses pointers.
+            compat_header = work / "cmake-compat.h"
+            compat_header.write_text(
+                "#include <algorithm>\nusing std::find;\nusing std::find_if_not;\n"
+            )
+            wrapper = _compiler_wrapper(
+                work / "cxx", tc, ("-include", str(compat_header))
+            )
+
+            env = _env(tc)
+            configure = [
+                "cmake",
+                "-S",
+                ".",
+                "-B",
+                "build",
+                "-GNinja",
+                "-DCMAKE_BUILD_TYPE=" + tc.build_type.capitalize(),
+                "-DCMAKE_CXX_COMPILER=" + str(wrapper),
+                "-DCMAKE_CXX_STANDARD=20",
+                "-DCMAKE_USE_OPENSSL=OFF",
+                "-DCMake_ENABLE_DEBUGGER=OFF",
+                "-DBUILD_TESTING=ON",
+            ]
+            jobs = f"-j{os.cpu_count() or 1}"
+            configure_ms = _timed(configure, src, env)
+            compile_ms = _timed(
+                [
+                    "cmake",
+                    "--build",
+                    "build",
+                    "--target",
+                    "cmsysTestsCxx",
+                    "testEncoding",
+                    "cmjsoncpp",
+                    "cmstd",
+                    "CMakeLib",
+                    jobs,
+                ],
+                src,
+                env,
+            )
+            run_tests_ms = _timed(
+                [
+                    "ctest",
+                    "--test-dir",
+                    "build",
+                    "--output-on-failure",
+                    "-R",
+                    r"^kwsys\.test(Configure|Status|SystemTools|"
+                    r"CommandLineArguments1?|Directory|Encoding|"
+                    r"SystemInformation)$",
+                ],
+                src,
+                env,
+            )
+            return {
+                "configure": configure_ms,
+                "compile": compile_ms,
+                "run tests": run_tests_ms,
+            }
+
+    return Project(
+        version=version,
+        build=build,
+        comment="Builds upstream CMake's core static library together with "
+        "its KWSys, std-compatibility, and JSON support targets, then runs "
+        "the supported KWSys tests. OpenSSL and debugger support are disabled.",
     )
 
 
@@ -656,6 +778,7 @@ def _simdutf() -> Project:
 
 PROJECTS: dict[str, Project] = {
     "catch2": _catch2(),
+    "cmake": _cmake(),
     "cppcheck": _cppcheck(),
     "eigen": _eigen(),
     "fmt": _fmt(),

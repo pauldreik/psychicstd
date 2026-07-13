@@ -241,6 +241,12 @@ public:
 
   explicit operator bool() const noexcept { return ptr_ != nullptr; }
 
+  void swap(function& other) noexcept {
+    base* value = ptr_;
+    ptr_ = other.ptr_;
+    other.ptr_ = value;
+  }
+
   R operator()(Args... args) const {
     return ptr_->call(static_cast<Args&&>(args)...);
   }
@@ -327,6 +333,11 @@ private:
   }
 };
 } // namespace detail
+
+template <typename F, typename... Args>
+constexpr decltype(auto) invoke(F&& f, Args&&... args) {
+  return detail::__invoke(static_cast<F&&>(f), static_cast<Args&&>(args)...);
+}
 
 template <typename F, typename... Args>
 constexpr auto bind(F&& f, Args&&... args) {

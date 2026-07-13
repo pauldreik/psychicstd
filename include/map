@@ -2,567 +2,75 @@
 #include <__psychicstd_algo>
 #include <__psychicstd_config>
 #include <__psychicstd_except>
+#include <__psychicstd_node_map>
 #include <compare>
 #include <functional>
 #include <initializer_list>
+#include <tuple>
 #include <utility>
 #include <vector>
 
 namespace std {
 
-// map backed by sorted vector — O(log n) lookup, O(n) insert
+// One node-based implementation keeps this header small and preserves iterator
+// stability for every mapped type.
+template <typename Key, typename T, typename Compare, typename Alloc>
+using __map_base = __map_node<Key, T, Compare, Alloc>;
+
 template <typename Key, typename T, typename Compare = less<Key>,
           typename Alloc = allocator<pair<const Key, T>>>
-class map {
+class map : public __map_base<Key, T, Compare, Alloc> {
+  using base = __map_base<Key, T, Compare, Alloc>;
+
 public:
-  using key_type = Key;
-  using mapped_type = T;
-  using value_type = pair<const Key, T>;
-  using size_type = size_t;
-  using difference_type = ptrdiff_t;
-  using key_compare = Compare;
-  using allocator_type = Alloc;
-  using reference = value_type&;
-  using const_reference = const value_type&;
-  using pointer = typename allocator_traits<Alloc>::pointer;
-  using const_pointer = typename allocator_traits<Alloc>::const_pointer;
-
-  // Internal storage uses non-const Key to allow element shifting on insert
-  using storage_type = pair<Key, T>;
-
-  // Custom iterator that returns value_type& instead of storage_type&
-  struct const_iterator;
-  struct iterator {
-    using iterator_category = random_access_iterator_tag;
-    using value_type = pair<const Key, T>;
-    using difference_type = ptrdiff_t;
-    using pointer = value_type*;
-    using reference = value_type&;
-    typename vector<storage_type>::iterator it_;
-    iterator() = default;
-    iterator(typename vector<storage_type>::iterator it) : it_(it) {}
-    operator typename vector<storage_type>::iterator() const { return it_; }
-    value_type& operator*() const {
-      return reinterpret_cast<value_type&>(*it_);
-    }
-    value_type* operator->() const { return &operator*(); }
-    iterator& operator++() {
-      ++it_;
-      return *this;
-    }
-    iterator operator++(int) {
-      auto t = *this;
-      ++it_;
-      return t;
-    }
-    iterator& operator--() {
-      --it_;
-      return *this;
-    }
-    iterator operator--(int) {
-      auto t = *this;
-      --it_;
-      return t;
-    }
-    iterator& operator+=(difference_type n) {
-      it_ += n;
-      return *this;
-    }
-    iterator& operator-=(difference_type n) {
-      it_ -= n;
-      return *this;
-    }
-    iterator operator+(difference_type n) const { return {it_ + n}; }
-    iterator operator-(difference_type n) const { return {it_ - n}; }
-    difference_type operator-(iterator o) const { return it_ - o.it_; }
-    value_type& operator[](difference_type n) const { return *(*this + n); }
-    bool operator==(iterator o) const { return it_ == o.it_; }
-    bool operator!=(iterator o) const { return it_ != o.it_; }
-    bool operator==(const_iterator o) const { return it_ == o.it_; }
-    bool operator!=(const_iterator o) const { return it_ != o.it_; }
-    bool operator<(iterator o) const { return it_ < o.it_; }
-    bool operator>(iterator o) const { return it_ > o.it_; }
-    bool operator<=(iterator o) const { return it_ <= o.it_; }
-    bool operator>=(iterator o) const { return it_ >= o.it_; }
-  };
-  struct const_iterator {
-    using iterator_category = random_access_iterator_tag;
-    using value_type = const pair<const Key, T>;
-    using difference_type = ptrdiff_t;
-    using pointer = value_type*;
-    using reference = value_type&;
-    typename vector<storage_type>::const_iterator it_;
-    const_iterator() = default;
-    const_iterator(typename vector<storage_type>::const_iterator it)
-        : it_(it) {}
-    const_iterator(iterator it) : it_(it.it_) {}
-    operator typename vector<storage_type>::const_iterator() const {
-      return it_;
-    }
-    const value_type& operator*() const {
-      return reinterpret_cast<const value_type&>(*it_);
-    }
-    const value_type* operator->() const { return &operator*(); }
-    const_iterator& operator++() {
-      ++it_;
-      return *this;
-    }
-    const_iterator operator++(int) {
-      auto t = *this;
-      ++it_;
-      return t;
-    }
-    const_iterator& operator--() {
-      --it_;
-      return *this;
-    }
-    const_iterator operator--(int) {
-      auto t = *this;
-      --it_;
-      return t;
-    }
-    const_iterator& operator+=(difference_type n) {
-      it_ += n;
-      return *this;
-    }
-    const_iterator& operator-=(difference_type n) {
-      it_ -= n;
-      return *this;
-    }
-    const_iterator operator+(difference_type n) const { return {it_ + n}; }
-    const_iterator operator-(difference_type n) const { return {it_ - n}; }
-    difference_type operator-(const_iterator o) const { return it_ - o.it_; }
-    const value_type& operator[](difference_type n) const {
-      return *(*this + n);
-    }
-    bool operator==(const_iterator o) const { return it_ == o.it_; }
-    bool operator!=(const_iterator o) const { return it_ != o.it_; }
-    bool operator==(iterator o) const { return it_ == o.it_; }
-    bool operator!=(iterator o) const { return it_ != o.it_; }
-    bool operator<(const_iterator o) const { return it_ < o.it_; }
-    bool operator>(const_iterator o) const { return it_ > o.it_; }
-    bool operator<=(const_iterator o) const { return it_ <= o.it_; }
-    bool operator>=(const_iterator o) const { return it_ >= o.it_; }
-  };
-  using reverse_iterator = std::reverse_iterator<iterator>;
-  using const_reverse_iterator = std::reverse_iterator<const_iterator>;
-
-  struct value_compare {
-    using result_type = bool;
-    using first_argument_type = value_type;
-    using second_argument_type = value_type;
-    Compare comp;
-    bool operator()(const storage_type& a, const storage_type& b) const {
-      return comp(a.first, b.first);
-    }
-    bool operator()(const storage_type& a, const Key& b) const {
-      return comp(a.first, b);
-    }
-    bool operator()(const Key& a, const storage_type& b) const {
-      return comp(a, b.first);
-    }
-    template <typename K>
-    bool operator()(const storage_type& a, const K& b) const {
-      return comp(a.first, b);
-    }
-    template <typename K>
-    bool operator()(const K& a, const storage_type& b) const {
-      return comp(a, b.first);
-    }
-  };
-
-  map() = default;
-  explicit map(const Compare& c) : comp_{c} {}
-  explicit map(const Alloc& a) : alloc_(a) {}
-  map(const Compare& c, const Alloc& a) : comp_{c}, alloc_(a) {}
-  template <typename It> map(It first, It last) {
-    for (; first != last; ++first)
-      insert(*first);
-  }
-  template <typename It> map(It first, It last, const Compare& c) : comp_{c} {
-    for (; first != last; ++first)
-      insert(*first);
-  }
-  template <typename It> map(It first, It last, const Alloc& a) : alloc_(a) {
-    for (; first != last; ++first)
-      insert(*first);
-  }
-  template <typename It>
-  map(It first, It last, const Compare& c, const Alloc& a)
-      : comp_{c}, alloc_(a) {
-    for (; first != last; ++first)
-      insert(*first);
-  }
-  map(initializer_list<value_type> il) {
-    for (auto& v : il)
-      insert(v);
-  }
-  map(initializer_list<value_type> il, const Compare& c) : comp_{c} {
-    for (auto& v : il)
-      insert(v);
-  }
-  map(initializer_list<value_type> il, const Compare& c, const Alloc& a)
-      : comp_{c}, alloc_(a) {
-    for (auto& v : il)
-      insert(v);
-  }
-  map(initializer_list<value_type> il, const Alloc& a) : alloc_(a) {
-    for (auto& v : il)
-      insert(v);
-  }
-  map(const map&) = default;
-  map(map&&) = default;
-  map& operator=(const map&) = default;
-  map& operator=(map&& other) noexcept(
-      (allocator_traits<Alloc>::propagate_on_container_move_assignment::value ||
-       allocator_traits<Alloc>::is_always_equal::value) &&
-      is_nothrow_move_assignable_v<Alloc> &&
-      is_nothrow_move_assignable_v<Compare>) {
-    data_ = static_cast<vector<storage_type>&&>(other.data_);
-    comp_ = static_cast<value_compare&&>(other.comp_);
-    alloc_ = static_cast<Alloc&&>(other.alloc_);
-    return *this;
-  }
-  map& operator=(initializer_list<value_type> il) {
-    data_.clear();
-    for (auto& v : il)
-      insert(v);
-    return *this;
-  }
-
-  allocator_type get_allocator() const noexcept { return alloc_; }
-  key_compare key_comp() const { return comp_.comp; }
-  value_compare value_comp() const { return comp_; }
-
-  // Iterators
-  iterator begin() noexcept { return data_.begin(); }
-  iterator end() noexcept { return data_.end(); }
-  const_iterator begin() const noexcept { return data_.begin(); }
-  const_iterator end() const noexcept { return data_.end(); }
-  const_iterator cbegin() const noexcept { return data_.cbegin(); }
-  const_iterator cend() const noexcept { return data_.cend(); }
-  reverse_iterator rbegin() noexcept { return data_.rbegin(); }
-  reverse_iterator rend() noexcept { return data_.rend(); }
-  const_reverse_iterator rbegin() const noexcept { return data_.rbegin(); }
-  const_reverse_iterator rend() const noexcept { return data_.rend(); }
-
-  // Capacity
-  bool empty() const noexcept { return data_.empty(); }
-  size_type size() const noexcept { return data_.size(); }
-  size_type max_size() const noexcept { return data_.max_size(); }
-
-  // Element access
-  T& operator[](const Key& k) {
-    auto it = lower_bound_(k);
-    if (it == data_.end() || comp_.comp(k, it->first))
-      it = data_.insert(it.it_, {k, T{}});
-    return it->second;
-  }
-  T& operator[](Key&& k) {
-    auto it = lower_bound_(k);
-    if (it == data_.end() || comp_.comp(k, it->first))
-      it = data_.insert(it.it_, {static_cast<Key&&>(k), T{}});
-    return it->second;
-  }
-  T& at(const Key& k) {
-    auto it = find(k);
-    if (it == end())
-      _PSYCHICSTD_THROW(out_of_range("map::at: key not found"));
-    return it->second;
-  }
-  const T& at(const Key& k) const {
-    auto it = find(k);
-    if (it == end())
-      _PSYCHICSTD_THROW(out_of_range("map::at: key not found"));
-    return it->second;
-  }
-
-  // Modifiers
-  pair<iterator, bool> insert(const value_type& v) {
-    auto it = lower_bound_(v.first);
-    if (it != data_.end() && !comp_.comp(v.first, it->first))
-      return {it, false};
-    return {data_.insert(it.it_, {v.first, v.second}), true};
-  }
-  pair<iterator, bool> insert(value_type&& v) {
-    auto it = lower_bound_(v.first);
-    if (it != data_.end() && !comp_.comp(v.first, it->first))
-      return {it, false};
-    // v is rvalue-owned; cast away const on key so we can move it
-    return {data_.insert(it.it_, storage_type{static_cast<Key&&>(
-                                                  const_cast<Key&>(v.first)),
-                                              static_cast<T&&>(v.second)}),
-            true};
-  }
-  // Hint versions (hint ignored for our sorted-vector implementation)
-  iterator insert(const_iterator, const value_type& v) {
-    return insert(v).first;
-  }
-  iterator insert(const_iterator, value_type&& v) {
-    return insert(static_cast<value_type&&>(v)).first;
-  }
-  template <typename It> void insert(It first, It last) {
-    for (; first != last; ++first)
-      insert(*first);
-  }
-  void insert(initializer_list<value_type> il) {
-    for (auto& v : il)
-      insert(v);
-  }
-
-  template <typename... Args> pair<iterator, bool> emplace(Args&&... args) {
-    return insert(value_type(static_cast<Args&&>(args)...));
-  }
-  template <typename... Args>
-  pair<iterator, bool> try_emplace(const Key& k, Args&&... args) {
-    auto it = lower_bound_(k);
-    if (it != data_.end() && !comp_.comp(k, it->first))
-      return {it, false};
-    return {data_.insert(it.it_, {k, T(static_cast<Args&&>(args)...)}), true};
-  }
-  template <typename... Args>
-  pair<iterator, bool> try_emplace(Key&& k, Args&&... args) {
-    auto it = lower_bound_(k);
-    if (it != data_.end() && !comp_.comp(k, it->first))
-      return {it, false};
-    return {data_.insert(
-                it, {static_cast<Key&&>(k), T(static_cast<Args&&>(args)...)}),
-            true};
-  }
-
-  iterator erase(const_iterator pos) { return data_.erase(pos); }
-  iterator erase(iterator pos) { return erase(const_iterator(pos)); }
-  iterator erase(const_iterator first, const_iterator last) {
-    return data_.erase(first, last);
-  }
-  size_type erase(const Key& k) {
-    auto it = lower_bound_(k);
-    if (it == data_.end() || comp_.comp(k, it->first))
-      return 0;
-    data_.erase(it.it_);
-    return 1;
-  }
-  void clear() noexcept { data_.clear(); }
+  using base::base;
+  using base::operator=;
   void
-  swap(map& other) noexcept(allocator_traits<Alloc>::is_always_equal::value &&
-                            is_nothrow_swappable_v<Compare>) {
-    using std::swap;
-    data_.swap(other.data_);
-    swap(comp_.comp, other.comp_.comp);
-    swap(alloc_, other.alloc_);
+  swap(map& other) noexcept(noexcept(declval<base&>().swap(declval<base&>()))) {
+    base::swap(other);
   }
   friend void swap(map& a, map& b) noexcept(noexcept(a.swap(b))) { a.swap(b); }
-
-  template <class M>
-  pair<iterator, bool> insert_or_assign(const Key& k, M&& obj) {
-    auto it = lower_bound_(k);
-    if (it != data_.end() && !comp_.comp(k, it->first)) {
-      it->second = static_cast<M&&>(obj);
-      return {it, false};
-    }
-    return {data_.insert(it.it_, {k, static_cast<M&&>(obj)}), true};
-  }
-  template <class M> pair<iterator, bool> insert_or_assign(Key&& k, M&& obj) {
-    auto it = lower_bound_(k);
-    if (it != data_.end() && !comp_.comp(k, it->first)) {
-      it->second = static_cast<M&&>(obj);
-      return {it, false};
-    }
-    return {
-        data_.insert(it.it_, {static_cast<Key&&>(k), static_cast<M&&>(obj)}),
-        true};
-  }
-  template <class M>
-  iterator insert_or_assign(const_iterator, const Key& k, M&& obj) {
-    return insert_or_assign(k, static_cast<M&&>(obj)).first;
-  }
-  template <class M>
-  iterator insert_or_assign(const_iterator, Key&& k, M&& obj) {
-    return insert_or_assign(static_cast<Key&&>(k), static_cast<M&&>(obj)).first;
-  }
-
-  template <typename... Args>
-  iterator try_emplace(const_iterator, const Key& k, Args&&... args) {
-    return try_emplace(k, static_cast<Args&&>(args)...).first;
-  }
-  template <typename... Args>
-  iterator try_emplace(const_iterator, Key&& k, Args&&... args) {
-    return try_emplace(static_cast<Key&&>(k), static_cast<Args&&>(args)...)
-        .first;
-  }
-
-  // Lookup
-  iterator find(const Key& k) {
-    auto it = lower_bound_(k);
-    if (it != data_.end() && !comp_.comp(k, it->first))
-      return it;
-    return data_.end();
-  }
-  const_iterator find(const Key& k) const {
-    auto it = lower_bound_(k);
-    if (it != data_.end() && !comp_.comp(k, it->first))
-      return it;
-    return data_.end();
-  }
-  size_type count(const Key& k) const { return find(k) != data_.end() ? 1 : 0; }
-  bool contains(const Key& k) const { return find(k) != data_.end(); }
-
-  iterator lower_bound(const Key& k) { return lower_bound_(k); }
-  const_iterator lower_bound(const Key& k) const { return lower_bound_(k); }
-  iterator upper_bound(const Key& k) {
-    return std::__upper_bound(data_.begin(), data_.end(), k, comp_);
-  }
-  const_iterator upper_bound(const Key& k) const {
-    return std::__upper_bound(data_.begin(), data_.end(), k, comp_);
-  }
-  pair<iterator, iterator> equal_range(const Key& k) {
-    return {lower_bound(k), upper_bound(k)};
-  }
-  pair<const_iterator, const_iterator> equal_range(const Key& k) const {
-    return {lower_bound(k), upper_bound(k)};
-  }
-
-  // Transparent lookup (requires Compare::is_transparent)
-  template <typename K>
-    requires requires { typename Compare::is_transparent; }
-  iterator lower_bound(const K& k) {
-    return lower_bound_(k);
-  }
-
-  template <typename K>
-    requires requires { typename Compare::is_transparent; }
-  const_iterator lower_bound(const K& k) const {
-    return lower_bound_(k);
-  }
-
-  template <typename K>
-    requires requires { typename Compare::is_transparent; }
-  iterator upper_bound(const K& k) {
-    return std::__upper_bound(data_.begin(), data_.end(), k, comp_);
-  }
-
-  template <typename K>
-    requires requires { typename Compare::is_transparent; }
-  const_iterator upper_bound(const K& k) const {
-    return std::__upper_bound(data_.begin(), data_.end(), k, comp_);
-  }
-
-  template <typename K>
-    requires requires { typename Compare::is_transparent; }
-  pair<iterator, iterator> equal_range(const K& k) {
-    return {lower_bound(k), upper_bound(k)};
-  }
-
-  template <typename K>
-    requires requires { typename Compare::is_transparent; }
-  pair<const_iterator, const_iterator> equal_range(const K& k) const {
-    return {lower_bound(k), upper_bound(k)};
-  }
-
-  template <typename K>
-    requires requires { typename Compare::is_transparent; }
-  size_type count(const K& k) const {
-    return static_cast<size_type>(upper_bound(k) - lower_bound(k));
-  }
-
-  template <typename K>
-    requires requires { typename Compare::is_transparent; }
-  iterator find(const K& k) {
-    auto it = lower_bound(k);
-    if (it != data_.end() && !comp_.comp(k, it->first))
-      return it;
-    return data_.end();
-  }
-
-  template <typename K>
-    requires requires { typename Compare::is_transparent; }
-  const_iterator find(const K& k) const {
-    auto it = lower_bound(k);
-    if (it != data_.end() && !comp_.comp(k, it->first))
-      return it;
-    return data_.end();
-  }
-
-  template <typename K>
-    requires requires { typename Compare::is_transparent; }
-  bool contains(const K& k) const {
-    return find(k) != data_.end();
-  }
-
-  template <typename K2, typename T2, typename C2, typename A2>
-  friend bool operator==(const map<K2, T2, C2, A2>&,
-                         const map<K2, T2, C2, A2>&);
-  template <typename K2, typename T2, typename C2, typename A2>
-  friend bool operator<(const map<K2, T2, C2, A2>&, const map<K2, T2, C2, A2>&);
-
-  auto operator<=>(const map& other) const
-    requires requires(const Key& k, const T& t) {
-      __detail::__synth_three_way(k, k);
-      __detail::__synth_three_way(t, t);
-    }
-  {
-    using result_t = common_comparison_category_t<
-        decltype(__detail::__synth_three_way(declval<const Key&>(),
-                                             declval<const Key&>())),
-        decltype(__detail::__synth_three_way(declval<const T&>(),
-                                             declval<const T&>()))>;
-    auto xi = begin(), xe = end();
-    auto yi = other.begin(), ye = other.end();
-    for (; xi != xe && yi != ye; ++xi, ++yi) {
-      if (auto c = static_cast<result_t>(
-              __detail::__synth_three_way(xi->first, yi->first));
-          c != 0)
-        return c;
-      if (auto c = static_cast<result_t>(
-              __detail::__synth_three_way(xi->second, yi->second));
-          c != 0)
-        return c;
-    }
-    return static_cast<result_t>(size() <=> other.size());
-  }
-
-private:
-  vector<storage_type> data_;
-  value_compare comp_ = {};
-  [[no_unique_address]] Alloc alloc_ = {};
-
-  template <typename K> iterator lower_bound_(const K& k) {
-    return std::__lower_bound(data_.begin(), data_.end(), k, comp_);
-  }
-  template <typename K> const_iterator lower_bound_(const K& k) const {
-    return std::__lower_bound(data_.begin(), data_.end(), k, comp_);
-  }
 };
 
 template <typename Key, typename T, typename Compare, typename Alloc>
 bool operator==(const map<Key, T, Compare, Alloc>& a,
                 const map<Key, T, Compare, Alloc>& b) {
-  return a.data_ == b.data_;
+  if (a.size() != b.size())
+    return false;
+  auto ai = a.begin();
+  auto bi = b.begin();
+  for (; ai != a.end(); ++ai, ++bi) {
+    if (!(*ai == *bi))
+      return false;
+  }
+  return true;
 }
 template <typename Key, typename T, typename Compare, typename Alloc>
-bool operator!=(const map<Key, T, Compare, Alloc>& a,
-                const map<Key, T, Compare, Alloc>& b) {
-  return !(a == b);
-}
-template <typename Key, typename T, typename Compare, typename Alloc>
-bool operator<(const map<Key, T, Compare, Alloc>& a,
-               const map<Key, T, Compare, Alloc>& b) {
-  return a.data_ < b.data_;
-}
-template <typename Key, typename T, typename Compare, typename Alloc>
-bool operator<=(const map<Key, T, Compare, Alloc>& a,
-                const map<Key, T, Compare, Alloc>& b) {
-  return !(b < a);
-}
-template <typename Key, typename T, typename Compare, typename Alloc>
-bool operator>(const map<Key, T, Compare, Alloc>& a,
-               const map<Key, T, Compare, Alloc>& b) {
-  return b < a;
-}
-template <typename Key, typename T, typename Compare, typename Alloc>
-bool operator>=(const map<Key, T, Compare, Alloc>& a,
-                const map<Key, T, Compare, Alloc>& b) {
-  return !(a < b);
+auto operator<=>(const map<Key, T, Compare, Alloc>& a,
+                 const map<Key, T, Compare, Alloc>& b)
+  requires requires(const Key& k, const T& t) {
+    __detail::__synth_three_way(k, k);
+    __detail::__synth_three_way(t, t);
+  }
+{
+  using result_t = common_comparison_category_t<
+      decltype(__detail::__synth_three_way(declval<const Key&>(),
+                                           declval<const Key&>())),
+      decltype(__detail::__synth_three_way(declval<const T&>(),
+                                           declval<const T&>()))>;
+  auto ai = a.begin();
+  auto bi = b.begin();
+  for (; ai != a.end() && bi != b.end(); ++ai, ++bi) {
+    if (auto c = static_cast<result_t>(
+            __detail::__synth_three_way(ai->first, bi->first));
+        c != 0)
+      return c;
+    if (auto c = static_cast<result_t>(
+            __detail::__synth_three_way(ai->second, bi->second));
+        c != 0)
+      return c;
+  }
+  return static_cast<result_t>(a.size() <=> b.size());
 }
 
 // multimap (simplified — allows duplicate keys)

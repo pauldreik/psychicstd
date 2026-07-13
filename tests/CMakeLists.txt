@@ -10,6 +10,7 @@ set(TESTS
     test_atomic
     test_bitset
     test_chrono
+    test_cmath
     test_compare
     test_complex
     test_concepts

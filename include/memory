@@ -2,6 +2,7 @@
 #include <cstddef>
 #include <new>
 #include <type_traits>
+#include <typeinfo>
 
 namespace std {
 
@@ -437,6 +438,7 @@ namespace __detail {
 struct __sp_ctrl {
   long count = 1;
   virtual void destroy() noexcept = 0;
+  virtual void* get_deleter(const type_info&) noexcept { return nullptr; }
   virtual ~__sp_ctrl() = default;
 };
 template <typename U> struct __sp_ctrl_impl : __sp_ctrl {
@@ -447,8 +449,12 @@ template <typename U> struct __sp_ctrl_impl : __sp_ctrl {
 template <typename U, typename D> struct __sp_ctrl_del : __sp_ctrl {
   U* obj;
   D del;
-  __sp_ctrl_del(U* p, D d) : obj(p), del(d) {}
+  template <typename E>
+  __sp_ctrl_del(U* p, E&& d) : obj(p), del(static_cast<E&&>(d)) {}
   void destroy() noexcept override { del(obj); }
+  void* get_deleter(const type_info& type) noexcept override {
+    return type == typeid(D) ? addressof(del) : nullptr;
+  }
 };
 } // namespace __detail
 
@@ -457,6 +463,8 @@ template <typename T> class shared_ptr {
   // Allow shared_ptr<U> to read our private members directly.  Required by
   // the converting constructors and the aliasing constructor below.
   template <typename U> friend class shared_ptr;
+  template <typename D, typename U>
+  friend D* get_deleter(const shared_ptr<U>&) noexcept;
 
   T* ptr_ = nullptr;
   __detail::__sp_ctrl* ctrl_ = nullptr;
@@ -511,6 +519,16 @@ public:
     o.ctrl_ = nullptr;
   }
 
+  template <typename U, typename D> shared_ptr(unique_ptr<U, D>&& o) {
+    U* owned = o.get();
+    if (owned) {
+      ctrl_ = new __detail::__sp_ctrl_del<U, D>(
+          owned, static_cast<D&&>(o.get_deleter()));
+      ptr_ = owned;
+      o.release();
+    }
+  }
+
   // Aliasing constructor: share ownership with r but store a different pointer.
   // Used by static_pointer_cast / dynamic_pointer_cast.
   template <typename U>
@@ -537,6 +555,11 @@ public:
     o.ctrl_ = nullptr;
     return *this;
   }
+  template <typename U, typename D>
+  shared_ptr& operator=(unique_ptr<U, D>&& o) {
+    shared_ptr(static_cast<unique_ptr<U, D>&&>(o)).swap(*this);
+    return *this;
+  }
   shared_ptr& operator=(nullptr_t) noexcept {
     dec();
     ptr_ = nullptr;
@@ -556,10 +579,9 @@ public:
     ptr_ = nullptr;
     ctrl_ = nullptr;
   }
-  template <typename U> void reset(U* p) {
-    dec();
-    ptr_ = p;
-    ctrl_ = new __detail::__sp_ctrl_impl<U>(p);
+  template <typename U> void reset(U* p) { shared_ptr(p).swap(*this); }
+  template <typename U, typename D> void reset(U* p, D d) {
+    shared_ptr(p, d).swap(*this);
   }
 
   void swap(shared_ptr& o) noexcept {
@@ -575,6 +597,13 @@ public:
     return ctrl_ < o.ctrl_;
   }
 };
+
+template <typename D, typename T>
+D* get_deleter(const shared_ptr<T>& value) noexcept {
+  if (!value.ctrl_)
+    return nullptr;
+  return static_cast<D*>(value.ctrl_->get_deleter(typeid(D)));
+}
 
 template <typename T, typename U>
 bool operator==(const shared_ptr<T>& a, const shared_ptr<U>& b) noexcept {
