@@ -1,7 +1,7 @@
-#include <cassert>
+#include "psyassert.h"
 #include <regex>
 
 int main() {
   std::regex re("hello");
-  assert(std::regex_match("hello", re));
+  psyassert(std::regex_match("hello", re));
 }

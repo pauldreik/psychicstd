@@ -1,9 +1,11 @@
 add_executable(bench_startup_system bench_startup.cpp)
 target_compile_features(bench_startup_system PRIVATE cxx_std_23)
+psychicstd_enable_warnings(bench_startup_system)
 
 add_executable(bench_startup_psychicstd bench_startup.cpp)
 target_link_libraries(bench_startup_psychicstd PRIVATE psychicstd::psychicstd)
 target_compile_features(bench_startup_psychicstd PRIVATE cxx_std_23)
+psychicstd_enable_warnings(bench_startup_psychicstd)
 
 add_custom_target(
     startup_bench

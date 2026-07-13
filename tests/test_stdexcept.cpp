@@ -1,8 +1,8 @@
-#include <cassert>
+#include "psyassert.h"
 #include <stdexcept>
 #include <string>
 
 int main() {
   std::runtime_error e("test");
-  assert(std::string(e.what()) == "test");
+  psyassert(std::string(e.what()) == "test");
 }

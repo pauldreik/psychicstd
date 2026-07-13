@@ -1,4 +1,4 @@
-#include <cassert>
+#include "psyassert.h"
 #include <optional>
 
 struct move_only {
@@ -17,16 +17,16 @@ struct move_only {
 
 int main() {
   std::optional<int> o = 42;
-  assert(o.value() == 42);
+  psyassert(o.value() == 42);
 
   std::optional<move_only> a(move_only(7));
   std::optional<move_only> b(static_cast<decltype(a)&&>(a));
-  assert(b->value == 7);
+  psyassert(b->value == 7);
 
   a.emplace(8);
   b = static_cast<decltype(a)&&>(a);
-  assert(b->value == 8);
+  psyassert(b->value == 8);
 
   auto c = std::make_optional(move_only(9));
-  assert(c->value == 9);
+  psyassert(c->value == 9);
 }

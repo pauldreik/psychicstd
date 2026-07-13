@@ -1,8 +1,8 @@
-#include <cassert>
+#include "psyassert.h"
 #include <ios>
 
 int main() {
-  assert(std::ios_base::goodbit == 0);
+  psyassert(std::ios_base::goodbit == 0);
   std::ios ios(nullptr);
-  assert(!ios.rdbuf());
+  psyassert(!ios.rdbuf());
 }

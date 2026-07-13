@@ -1,4 +1,4 @@
-#include <cassert>
+#include "psyassert.h"
 #include <chrono>
 #include <cmath>
 #include <limits>
@@ -13,36 +13,36 @@ static void test_duration_cast_same_period() {
   // calls duration_cast<nanoseconds>(steady_clock::now().time_since_epoch()).
   nanoseconds large(63'514'168'108'767LL); // ~17.6 hours in ns
   auto result = duration_cast<nanoseconds>(large);
-  assert(result.count() == 63'514'168'108'767LL);
+  psyassert(result.count() == 63'514'168'108'767LL);
 }
 
 static void test_duration_cast_identity() {
   milliseconds ms(42);
   auto ns = duration_cast<nanoseconds>(ms);
-  assert(ns.count() == 42'000'000);
+  psyassert(ns.count() == 42'000'000);
 }
 
 static void test_duration_cast_down() {
   nanoseconds ns(1'500'000'000);
   auto sec = duration_cast<seconds>(ns);
-  assert(sec.count() == 1);
+  psyassert(sec.count() == 1);
 }
 
 static void test_duration_cast_up() {
   seconds sec(2);
   auto ms = duration_cast<milliseconds>(sec);
-  assert(ms.count() == 2'000);
+  psyassert(ms.count() == 2'000);
 }
 
 static void test_time_point_arithmetic() {
   time_point<system_clock, milliseconds> epoch(milliseconds(0));
-  assert((epoch + milliseconds(5)).time_since_epoch().count() == 5);
-  assert((epoch - milliseconds(2)).time_since_epoch().count() == -2);
+  psyassert((epoch + milliseconds(5)).time_since_epoch().count() == 5);
+  psyassert((epoch - milliseconds(2)).time_since_epoch().count() == -2);
 }
 
 static void test_duration_bounds() {
-  assert(seconds::min().count() == std::numeric_limits<long long>::min());
-  assert(seconds::max().count() == std::numeric_limits<long long>::max());
+  psyassert(seconds::min().count() == std::numeric_limits<long long>::min());
+  psyassert(seconds::max().count() == std::numeric_limits<long long>::max());
 }
 
 static void test_integral_is_finite() {

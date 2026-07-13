@@ -1,4 +1,4 @@
-#include <cassert>
+#include "psyassert.h"
 #include <ranges>
 #include <vector>
 
@@ -21,18 +21,18 @@ void iter_swap(iterator a, iterator b) {
 
 int main() {
   std::vector<int> v = {1, 2, 3};
-  assert(*std::ranges::begin(v) == 1);
+  psyassert(*std::ranges::begin(v) == 1);
 
   int a = 4;
   int b = 5;
   std::ranges::iter_swap(&a, &b);
-  assert(a == 5 && b == 4);
-  assert(std::ranges::iter_move(&a) == 5);
+  psyassert(a == 5 && b == 4);
+  psyassert(std::ranges::iter_move(&a) == 5);
 
   custom::iterator ai{&a};
   custom::iterator bi{&b};
-  assert(std::ranges::iter_move(ai) == 15);
+  psyassert(std::ranges::iter_move(ai) == 15);
   std::ranges::iter_swap(ai, bi);
-  assert(custom::swaps == 1);
-  assert(a == 4 && b == 5);
+  psyassert(custom::swaps == 1);
+  psyassert(a == 4 && b == 5);
 }

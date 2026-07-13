@@ -1,4 +1,4 @@
-#include <cassert>
+#include "psyassert.h"
 #include <string>
 #include <variant>
 
@@ -11,48 +11,48 @@ using std::visit;
 
 int main() {
   variant<int, std::string, double> v = 42;
-  assert(v.index() == 0);
-  assert(holds_alternative<int>(v));
-  assert(get<int>(v) == 42);
-  assert(get<0>(v) == 42);
+  psyassert(v.index() == 0);
+  psyassert(holds_alternative<int>(v));
+  psyassert(get<int>(v) == 42);
+  psyassert(get<0>(v) == 42);
 
   v = std::string("hello");
-  assert(v.index() == 1);
-  assert(get<std::string>(v) == "hello");
-  assert(*get_if<std::string>(&v) == "hello");
-  assert(get_if<int>(&v) == nullptr);
+  psyassert(v.index() == 1);
+  psyassert(get<std::string>(v) == "hello");
+  psyassert(*get_if<std::string>(&v) == "hello");
+  psyassert(get_if<int>(&v) == nullptr);
 
   v = 3.14;
-  assert(v.index() == 2);
-  assert(get<double>(v) == 3.14);
+  psyassert(v.index() == 2);
+  psyassert(get<double>(v) == 3.14);
 
   variant<int, std::string> w(std::in_place_type<std::string>, 3, 'x');
-  assert(get<std::string>(w) == "xxx");
+  psyassert(get<std::string>(w) == "xxx");
   variant<int, std::string> w2(std::in_place_index<0>, 7);
-  assert(get<0>(w2) == 7);
+  psyassert(get<0>(w2) == 7);
 
   w.emplace<int>(99);
-  assert(get<int>(w) == 99);
+  psyassert(get<int>(w) == 99);
 
   variant<int, std::string> a = std::string("a");
   variant<int, std::string> b = a;
-  assert(get<std::string>(b) == "a");
+  psyassert(get<std::string>(b) == "a");
   b = std::move(a);
-  assert(get<std::string>(b) == "a");
+  psyassert(get<std::string>(b) == "a");
 
   variant<int, double> num = 2;
   int r = visit([](auto x) { return (int)(x * 2); }, num);
-  assert(r == 4);
+  psyassert(r == 4);
 
   variant<int, std::string> c1 = 1;
   variant<int, std::string> c2 = 1;
   variant<int, std::string> c3 = 2;
-  assert(c1 == c2);
-  assert(c1 != c3);
-  assert(c1 < c3);
+  psyassert(c1 == c2);
+  psyassert(c1 != c3);
+  psyassert(c1 < c3);
 
   variant<monostate, int> m;
-  assert(m.index() == 0);
+  psyassert(m.index() == 0);
 
   bool threw = false;
   try {
@@ -60,7 +60,7 @@ int main() {
   } catch (const std::bad_variant_access&) {
     threw = true;
   }
-  assert(threw);
+  psyassert(threw);
 
   static_assert(std::variant_size_v<variant<int, double, char>> == 3);
   static_assert(

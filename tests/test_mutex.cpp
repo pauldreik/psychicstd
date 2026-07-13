@@ -1,5 +1,5 @@
+#include "psyassert.h"
 #include <atomic>
-#include <cassert>
 #include <condition_variable>
 #include <mutex>
 #include <thread>
@@ -18,18 +18,18 @@ template <typename Mutex> bool try_from_another_thread(Mutex& mutex) {
 int main() {
   std::mutex m;
   m.lock();
-  assert(!try_from_another_thread(m));
+  psyassert(!try_from_another_thread(m));
   m.unlock();
-  assert(try_from_another_thread(m));
+  psyassert(try_from_another_thread(m));
 
   std::recursive_mutex recursive;
-  assert(recursive.try_lock());
-  assert(recursive.try_lock());
-  assert(!try_from_another_thread(recursive));
+  psyassert(recursive.try_lock());
+  psyassert(recursive.try_lock());
+  psyassert(!try_from_another_thread(recursive));
   recursive.unlock();
-  assert(!try_from_another_thread(recursive));
+  psyassert(!try_from_another_thread(recursive));
   recursive.unlock();
-  assert(try_from_another_thread(recursive));
+  psyassert(try_from_another_thread(recursive));
 
   std::condition_variable condition;
   bool ready = false;
@@ -45,5 +45,5 @@ int main() {
   }
   condition.notify_one();
   waiter.join();
-  assert(observed);
+  psyassert(observed);
 }

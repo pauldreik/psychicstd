@@ -1,4 +1,4 @@
-#include <cassert>
+#include "psyassert.h"
 #include <compare>
 
-int main() { assert(std::strong_ordering::equal == 0); }
+int main() { psyassert(std::strong_ordering::equal == 0); }

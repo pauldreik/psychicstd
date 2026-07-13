@@ -1,4 +1,4 @@
-#include <cassert>
+#include "psyassert.h"
 #include <memory>
 #include <string>
 #include <vector>
@@ -22,44 +22,44 @@ static void test_forwarding() {
   alignas(Forwarded) unsigned char storage[sizeof(Forwarded)];
   auto* raw = reinterpret_cast<Forwarded*>(storage);
   auto* constructed = std::construct_at(raw, value);
-  assert(constructed->kind == 1);
+  psyassert(constructed->kind == 1);
   std::destroy_at(constructed);
 
   std::allocator<Forwarded> alloc;
   auto* allocated = alloc.allocate(1);
   std::allocator_traits<decltype(alloc)>::construct(alloc, allocated,
                                                     static_cast<int&&>(value));
-  assert(allocated->kind == 2);
+  psyassert(allocated->kind == 2);
   std::allocator_traits<decltype(alloc)>::destroy(alloc, allocated);
   alloc.deallocate(allocated, 1);
 
-  assert(std::make_unique<Forwarded>(value)->kind == 1);
-  assert(std::make_shared<Forwarded>(static_cast<int&&>(value))->kind == 2);
+  psyassert(std::make_unique<Forwarded>(value)->kind == 1);
+  psyassert(std::make_shared<Forwarded>(static_cast<int&&>(value))->kind == 2);
 }
 
 static void test_converting_copy_ctor() {
   std::shared_ptr<Derived> d = std::make_shared<Derived>();
-  assert(d.use_count() == 1);
+  psyassert(d.use_count() == 1);
 
   std::shared_ptr<Base> b = d;
-  assert(b.use_count() == 2);
-  assert(d.use_count() == 2);
+  psyassert(b.use_count() == 2);
+  psyassert(d.use_count() == 2);
 
   d.reset();
-  assert(b.use_count() == 1);
-  assert(b->x == 42);
+  psyassert(b.use_count() == 1);
+  psyassert(b->x == 42);
 }
 
 static void test_converting_ctor_from_prvalue() {
   std::shared_ptr<Base> b(std::make_shared<Derived>());
-  assert(b.use_count() == 1);
-  assert(b->x == 42);
+  psyassert(b.use_count() == 1);
+  psyassert(b->x == 42);
 
   std::shared_ptr<Base> b2 = b;
-  assert(b.use_count() == 2);
+  psyassert(b.use_count() == 2);
   b.reset();
-  assert(b2.use_count() == 1);
-  assert(b2->x == 42);
+  psyassert(b2.use_count() == 1);
+  psyassert(b2->x == 42);
 }
 
 // Bug: at -O2 the old converting constructor used reinterpret_cast to read
@@ -96,12 +96,12 @@ static void test_member_init_from_template_prvalue() {
   // a constructor.  The control block must be shared, not freed.
   std::vector<std::string> data;
   Slot s(data);
-  assert(s.use_count() == 1);
+  psyassert(s.use_count() == 1);
 
   // Copy — would ASAN-trap with use-after-free if ctrl_ is dangling.
   Slot s2 = s;
-  assert(s.use_count() == 2);
-  assert(s2.use_count() == 2);
+  psyassert(s.use_count() == 2);
+  psyassert(s2.use_count() == 2);
 }
 
 int main() {

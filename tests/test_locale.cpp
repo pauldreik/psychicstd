@@ -1,4 +1,4 @@
-#include <cassert>
+#include "psyassert.h"
 #include <ctime>
 #include <locale>
 #include <sstream>
@@ -12,20 +12,20 @@ protected:
 
 int main() {
   std::locale classic;
-  assert(std::has_facet<std::numpunct<char>>(classic));
+  psyassert(std::has_facet<std::numpunct<char>>(classic));
   auto localized = std::locale(classic, new punct);
 
-  assert(std::has_facet<std::numpunct<char>>(localized));
+  psyassert(std::has_facet<std::numpunct<char>>(localized));
   const auto& facet = std::use_facet<std::numpunct<char>>(localized);
-  assert(facet.decimal_point() == ',');
-  assert(facet.thousands_sep() == '.');
-  assert(facet.grouping() == "\3");
+  psyassert(facet.decimal_point() == ',');
+  psyassert(facet.thousands_sep() == '.');
+  psyassert(facet.grouping() == "\3");
 
   // Facets inherited by a later locale must remain alive after its parent is
   // destroyed. This is how locale copies and chains are used in practice.
   auto copy = localized;
   localized = classic;
-  assert(std::use_facet<std::numpunct<char>>(copy).decimal_point() == ',');
+  psyassert(std::use_facet<std::numpunct<char>>(copy).decimal_point() == ',');
 
   std::tm time{};
   time.tm_year = 124;
@@ -36,11 +36,11 @@ int main() {
   const char format[] = "%Y-%m-%d";
   std::use_facet<std::time_put<char>>(classic).put(it, out, ' ', &time, format,
                                                    format + sizeof(format) - 1);
-  assert(out.str() == "2024-01-02");
+  psyassert(out.str() == "2024-01-02");
   std::ostringstream year;
   std::use_facet<std::time_put<char>>(classic).put(
       std::ostreambuf_iterator<char>(year), year, ' ', &time, 'Y');
-  assert(year.str() == "2024");
+  psyassert(year.str() == "2024");
 
   std::mbstate_t state{};
   const char input[] = "abc";
@@ -50,7 +50,7 @@ int main() {
   auto result =
       std::use_facet<std::codecvt<char32_t, char, std::mbstate_t>>(classic).in(
           state, input, input + 3, from_next, output, output + 3, to_next);
-  assert(result == std::codecvt_base::ok);
-  assert(from_next == input + 3 && to_next == output + 3);
-  assert(output[0] == U'a' && output[2] == U'c');
+  psyassert(result == std::codecvt_base::ok);
+  psyassert(from_next == input + 3 && to_next == output + 3);
+  psyassert(output[0] == U'a' && output[2] == U'c');
 }

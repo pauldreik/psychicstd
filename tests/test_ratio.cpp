@@ -1,4 +1,4 @@
-#include <cassert>
+#include "psyassert.h"
 #include <ratio>
 
 int main() {

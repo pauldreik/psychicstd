@@ -1,7 +1,7 @@
-#include <cassert>
+#include "psyassert.h"
 #include <exception>
 
 int main() {
   std::exception e;
-  assert(e.what() != nullptr);
+  psyassert(e.what() != nullptr);
 }
