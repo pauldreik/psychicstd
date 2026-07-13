@@ -3,7 +3,6 @@
 # listed here. Regenerate: tools/compliance.py --sanitize --update-baseline
 
 std/algorithms/alg.nonmodifying/alg.equal/equal_pred.pass.cpp
-std/atomics/atomics.types.generic/throw.pass.cpp
 
 # fails on deque not using the allocator - a design question
 std/containers/sequences/deque/deque.modifiers/push_front_exception_safety.pass.cpp

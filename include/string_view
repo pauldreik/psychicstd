@@ -1,4 +1,6 @@
 #pragma once
+#include <__psychicstd_config>
+#include <__psychicstd_except>
 #include <compare>
 #include <cstddef>
 #include <cstring>
@@ -54,10 +56,9 @@ public:
   constexpr iterator begin() const noexcept { return data_; }
   constexpr iterator end() const noexcept { return data_ + size_; }
 
-  constexpr basic_string_view substr(size_type pos,
-                                     size_type n = npos) const noexcept {
+  constexpr basic_string_view substr(size_type pos, size_type n = npos) const {
     if (pos > size_)
-      pos = size_;
+      _PSYCHICSTD_THROW(out_of_range("basic_string_view::substr"));
     if (n > size_ - pos)
       n = size_ - pos;
     return {data_ + pos, n};

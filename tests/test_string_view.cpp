@@ -1,4 +1,5 @@
 #include <cassert>
+#include <stdexcept>
 #include <string_view>
 
 #define DUALASSERT(...)                                                        \
@@ -13,6 +14,14 @@ int main() {
   constexpr std::wstring_view wide = L"wide";
   static_assert(wide.size() == 4);
   assert(wide.size() == 4);
+
+  bool threw = false;
+  try {
+    (void)sv.substr(sv.size() + 1);
+  } catch (const std::out_of_range&) {
+    threw = true;
+  }
+  assert(threw);
 
   // find empty
   constexpr auto npos = std::string_view::npos;
