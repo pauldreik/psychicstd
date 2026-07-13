@@ -7,3 +7,6 @@ find_package(fmt REQUIRED)
 
 add_executable(my_app main.cpp)
 target_link_libraries(my_app PRIVATE fmt::fmt)
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+    target_compile_options(my_app PRIVATE -Wall -Wextra)
+endif()

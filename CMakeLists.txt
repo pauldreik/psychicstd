@@ -9,6 +9,15 @@ add_library(psychicstd::psychicstd ALIAS psychicstd)
 target_compile_features(psychicstd INTERFACE cxx_std_23)
 target_compile_options(psychicstd INTERFACE -nostdinc++ -fvisibility=hidden)
 
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+    function(psychicstd_enable_warnings target)
+        target_compile_options(${target} PRIVATE -Wall -Wextra)
+    endfunction()
+else()
+    function(psychicstd_enable_warnings target)
+    endfunction()
+endif()
+
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS "17")
         # GCC 12 lacks -nostdlib++ (added in later versions), so use -nodefaultlibs instead.

@@ -63,11 +63,13 @@ set(TESTS
 foreach(t ${TESTS})
     add_executable(${t}_system ${t}.cpp)
     target_compile_features(${t}_system PRIVATE cxx_std_23)
+    psychicstd_enable_warnings(${t}_system)
     add_test(NAME ${t}_system COMMAND ${t}_system)
 
     add_executable(${t}_psychicstd ${t}.cpp)
     target_link_libraries(${t}_psychicstd PRIVATE psychicstd::psychicstd)
     target_compile_features(${t}_psychicstd PRIVATE cxx_std_23)
+    psychicstd_enable_warnings(${t}_psychicstd)
     add_test(NAME ${t}_psychicstd COMMAND ${t}_psychicstd)
 endforeach()
 
@@ -101,6 +103,7 @@ foreach(_hdr ${_psychic_headers})
     )
     add_executable(self_contained_${_h} ${_src})
     target_link_libraries(self_contained_${_h} PRIVATE psychicstd::psychicstd)
+    psychicstd_enable_warnings(self_contained_${_h})
     add_test(NAME self_contained_${_h} COMMAND self_contained_${_h})
 
     # Same, but with -fno-exceptions: every header must also compile when
@@ -108,6 +111,7 @@ foreach(_hdr ${_psychic_headers})
     add_executable(self_contained_noexcept_${_h} ${_src})
     target_link_libraries(self_contained_noexcept_${_h} PRIVATE psychicstd::psychicstd)
     target_compile_options(self_contained_noexcept_${_h} PRIVATE -fno-exceptions)
+    psychicstd_enable_warnings(self_contained_noexcept_${_h})
     add_test(NAME self_contained_noexcept_${_h} COMMAND self_contained_noexcept_${_h})
 endforeach()
 
