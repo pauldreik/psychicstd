@@ -7,6 +7,7 @@ It is not complete. It is not fully compliant. But it is good enough to quickly 
 | Project | Compile time speedup | comment |
 |-------------------------------------------------------------|-----------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------|
 | [catch2](https://github.com/catchorg/Catch2) | [3.21x](use_on_realworld_projects/catch2_speed_report.md) | |
+| [cmake](https://cmake.org/) | [3.22x](use_on_realworld_projects/cmake_speed_report.md) | Uses a compiler wrapper to build. |
 | [cppcheck](https://github.com/cppcheck-opensource/cppcheck) | [2.45x](use_on_realworld_projects/cppcheck_speed_report.md)| |
 | [eigen](https://gitlab.com/libeigen/eigen) | [1.86x](use_on_realworld_projects/eigen_speed_report.md) | |
 | [fmt](https://github.com/fmtlib/fmt) | [1.70x](use_on_realworld_projects/fmt_speed_report.md) | Full build and test suite pass in both drop-in and strict psychicstd mode. |
@@ -258,7 +259,7 @@ The default build covers the library itself — no third-party code, no network 
 
 ### Testing on real-world projects
 
-Correctness in practice is verified by compiling — and running the test suites of — actual third-party projects against psychicstd. The scripts in [`use_on_realworld_projects/`](use_on_realworld_projects/) clone, build, and run Catch2, cppcheck, eigen, fmt, nlohmann json and rdfind, and produce the speedup reports linked at the top of this README.
+Correctness in practice is verified by compiling — and running the test suites of — actual third-party projects against psychicstd. The scripts in [`use_on_realworld_projects/`](use_on_realworld_projects/) clone, build, and run Catch2, cppcheck, eigen, fmt, nlohmann json, rdfind and simdutf. The CMake recipe builds its supported upstream KWSys and utility targets. These recipes produce the speedup reports linked at the top of this README.
 
 ### Benchmarks
 
