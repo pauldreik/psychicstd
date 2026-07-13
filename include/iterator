@@ -107,8 +107,8 @@ concept indirectly_readable = requires(const remove_cvref_t<In>& i) {
 // indirectly_writable — simplified: can write T through I
 template <typename I, typename T>
 concept indirectly_writable = requires(I&& i, T&& t) {
-  *i = forward<T>(t);
-  *forward<I>(i) = forward<T>(t);
+  *i = static_cast<T&&>(t);
+  *static_cast<I&&>(i) = static_cast<T&&>(t);
 };
 
 // reverse_iterator
