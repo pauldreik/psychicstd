@@ -1,4 +1,4 @@
-#include <cassert>
+#include "psyassert.h"
 #include <limits>
 
-int main() { assert(std::numeric_limits<int>::max() > 0); }
+int main() { psyassert(std::numeric_limits<int>::max() > 0); }

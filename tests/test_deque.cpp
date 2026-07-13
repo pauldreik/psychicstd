@@ -1,4 +1,4 @@
-#include <cassert>
+#include "psyassert.h"
 #include <deque>
 
 struct value {
@@ -19,21 +19,21 @@ struct value {
 int main() {
   std::deque<int> d;
   d.push_back(1);
-  assert(d.front() == 1);
+  psyassert(d.front() == 1);
 
   int n = 1;
   std::deque<value> values;
   values.emplace_back(n);
   values.emplace_front(static_cast<int&&>(n));
   values.insert(values.begin() + 1, value(n));
-  assert(values.size() == 3);
-  assert(values[0].n == 11);
-  assert(values[1].n == 1);
-  assert(values[2].n == 1);
+  psyassert(values.size() == 3);
+  psyassert(values[0].n == 11);
+  psyassert(values[1].n == 1);
+  psyassert(values[2].n == 1);
 
   std::deque<value> moved(static_cast<decltype(values)&&>(values));
-  assert(moved.size() == 3);
+  psyassert(moved.size() == 3);
   std::deque<value> other;
   other.swap(moved);
-  assert(other.size() == 3);
+  psyassert(other.size() == 3);
 }

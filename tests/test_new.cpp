@@ -1,8 +1,8 @@
-#include <cassert>
+#include "psyassert.h"
 #include <new>
 
 int main() {
   auto* p = ::operator new(8);
-  assert(p != nullptr);
+  psyassert(p != nullptr);
   ::operator delete(p);
 }

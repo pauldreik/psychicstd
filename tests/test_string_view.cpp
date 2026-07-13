@@ -1,19 +1,19 @@
-#include <cassert>
+#include "psyassert.h"
 #include <stdexcept>
 #include <string_view>
 
 #define DUALASSERT(...)                                                        \
   do {                                                                         \
-    assert(__VA_ARGS__);                                                       \
+    psyassert(__VA_ARGS__);                                                    \
     static_assert(__VA_ARGS__);                                                \
   } while (0)
 
 int main() {
   std::string_view sv = "hello";
-  assert(sv.size() == 5);
+  psyassert(sv.size() == 5);
   constexpr std::wstring_view wide = L"wide";
   static_assert(wide.size() == 4);
-  assert(wide.size() == 4);
+  psyassert(wide.size() == 4);
 
   bool threw = false;
   try {
@@ -21,7 +21,7 @@ int main() {
   } catch (const std::out_of_range&) {
     threw = true;
   }
-  assert(threw);
+  psyassert(threw);
 
   // find empty
   constexpr auto npos = std::string_view::npos;

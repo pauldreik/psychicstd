@@ -1,4 +1,4 @@
-#include <cassert>
+#include "psyassert.h"
 #include <initializer_list>
 
 int sum(std::initializer_list<int> il) {
@@ -8,4 +8,4 @@ int sum(std::initializer_list<int> il) {
   return s;
 }
 
-int main() { assert(sum({1, 2, 3}) == 6); }
+int main() { psyassert(sum({1, 2, 3}) == 6); }

@@ -1,8 +1,8 @@
-#include <cassert>
+#include "psyassert.h"
 #include <cstring>
 #include <functional>
 
 int main() {
   auto h = std::hash<const char*>{};
-  assert(h("hello") != 0);
+  psyassert(h("hello") != 0);
 }
