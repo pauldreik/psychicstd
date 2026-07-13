@@ -592,6 +592,48 @@ void heap_sort(It first, It last, Compare cmp) {
     heap_sift(first, 0, end, cmp);
   }
 }
+
+// Three-way quickselect. Keeping values equivalent to the pivot together
+// avoids quadratic behaviour for duplicate-heavy ranges.
+template <typename It, typename Compare>
+constexpr void select_nth(It first, It nth, It last, Compare cmp) {
+  while (first != last && nth != last) {
+    auto count = last - first;
+    if (count < 2)
+      return;
+
+    It pivot = last - 1;
+    iter_swap(first + count / 2, pivot);
+
+    It less = first;
+    for (It it = first; it != pivot; ++it) {
+      if (cmp(*it, *pivot)) {
+        if (it != less)
+          iter_swap(it, less);
+        ++less;
+      }
+    }
+    iter_swap(less, pivot);
+
+    It equal_end = less + 1;
+    for (It it = equal_end; it != last; ++it) {
+      // The first partition established !cmp(*it, *less), so this is
+      // equivalent to testing equality under the strict weak ordering.
+      if (!cmp(*less, *it)) {
+        if (it != equal_end)
+          iter_swap(it, equal_end);
+        ++equal_end;
+      }
+    }
+
+    if (nth < less)
+      last = less;
+    else if (nth >= equal_end)
+      first = equal_end;
+    else
+      return;
+  }
+}
 } // namespace detail
 
 template <typename It> constexpr void sort(It first, It last) {
@@ -625,15 +667,14 @@ constexpr void partial_sort(It first, It middle, It last, Compare cmp) {
   (void)middle;
 }
 
-// nth_element (simple implementation using partial sort)
+// nth_element
 template <typename It> constexpr void nth_element(It first, It nth, It last) {
-  sort(first, last);
-  (void)nth;
+  detail::select_nth(first, nth, last,
+                     [](const auto& a, const auto& b) { return a < b; });
 }
 template <typename It, typename Compare>
 constexpr void nth_element(It first, It nth, It last, Compare cmp) {
-  sort(first, last, cmp);
-  (void)nth;
+  detail::select_nth(first, nth, last, cmp);
 }
 
 // partition
