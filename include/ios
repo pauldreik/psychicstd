@@ -1,5 +1,6 @@
 #pragma once
 #include <__psychicstd_char_traits>
+#include <__psychicstd_config>
 #include <cerrno>
 #include <cstddef>
 #include <iosfwd>
@@ -110,10 +111,17 @@ public:
   bool bad() const noexcept { return state_ & badbit; }
   explicit operator bool() const noexcept { return !fail(); }
   bool operator!() const noexcept { return fail(); }
-  void clear(iostate s = goodbit) { state_ = s; }
-  void setstate(iostate s) { state_ |= s; }
+  void clear(iostate s = goodbit) {
+    state_ = s;
+    if (state_ & except_)
+      _throw_failure();
+  }
+  void setstate(iostate s) { clear(state_ | s); }
   iostate exceptions() const noexcept { return except_; }
-  void exceptions(iostate mask) { except_ = mask; }
+  void exceptions(iostate mask) {
+    except_ = mask;
+    clear(state_);
+  }
 
   locale getloc() const { return loc_; }
   locale imbue(const locale& loc) {
@@ -123,6 +131,10 @@ public:
   }
 
 protected:
+  [[noreturn, gnu::cold, gnu::noinline]] static void _throw_failure() {
+    _PSYCHICSTD_THROW(failure("basic_ios::clear"));
+  }
+
   ios_base()
       : flags_(dec | skipws), width_(0), prec_(6), state_(goodbit), fill_(' ') {
   }
@@ -196,7 +208,10 @@ public:
 
 protected:
   basic_ios() : buf_(nullptr) {}
-  void init(basic_streambuf<Char, Traits>* sb) { buf_ = sb; }
+  void init(basic_streambuf<Char, Traits>* sb) {
+    buf_ = sb;
+    state_ = sb ? goodbit : badbit;
+  }
 
   basic_streambuf<Char, Traits>* buf_;
 };
