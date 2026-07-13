@@ -19,7 +19,9 @@ constexpr T&& forward(remove_reference_t<T>&& t) noexcept {
 }
 
 template <typename T> constexpr const T& as_const(T& t) noexcept { return t; }
-template <typename T> void as_const(const T&&) = delete;
+template <typename T>
+  requires(!is_lvalue_reference_v<T>)
+constexpr const T& as_const(T&&) = delete;
 
 template <typename T>
   requires(is_move_constructible_v<T> && is_move_assignable_v<T>)
