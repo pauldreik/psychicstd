@@ -73,24 +73,41 @@ public:
     gcount_ = 0;
     sentry sen(*this, true);
     if (!sen) {
+      if (s && n > 0)
+        s[0] = Char();
       this->setstate(ios_base::failbit);
       return *this;
     }
     auto* sb = this->rdbuf();
-    while (gcount_ < n - 1) {
-      int_type c = sb ? sb->sbumpc() : Traits::eof();
+    streamsize stored = 0;
+    ios_base::iostate state = ios_base::goodbit;
+    while (true) {
+      int_type c = sb ? sb->sgetc() : Traits::eof();
       if (Traits::eq_int_type(c, Traits::eof())) {
-        this->setstate(ios_base::eofbit);
+        state |= ios_base::eofbit;
         break;
       }
-      if (Traits::eq_int_type(c, Traits::to_int_type(delim)))
+      if (Traits::eq_int_type(c, Traits::to_int_type(delim))) {
+        sb->sbumpc();
+        ++gcount_;
         break;
+      }
+      if (stored >= n - 1) {
+        state |= ios_base::failbit;
+        break;
+      }
+      sb->sbumpc();
       if (s)
-        s[gcount_] = Traits::to_char_type(c);
+        s[stored] = Traits::to_char_type(c);
+      ++stored;
       ++gcount_;
     }
-    if (s)
-      s[gcount_] = Char();
+    if (s && n > 0)
+      s[stored] = Char();
+    if (gcount_ == 0)
+      state |= ios_base::failbit;
+    if (state)
+      this->setstate(state);
     return *this;
   }
 
@@ -110,6 +127,7 @@ public:
   }
 
   int_type peek() {
+    gcount_ = 0;
     sentry s(*this, true);
     if (!s)
       return Traits::eof();
@@ -118,6 +136,7 @@ public:
   }
 
   basic_istream& unget() {
+    gcount_ = 0;
     sentry s(*this, true);
     if (!s)
       return *this;
@@ -130,6 +149,7 @@ public:
   }
 
   basic_istream& putback(Char c) {
+    gcount_ = 0;
     sentry s(*this, true);
     if (!s)
       return *this;
@@ -140,6 +160,7 @@ public:
   }
 
   basic_istream& ignore(streamsize n = 1, int_type delim = Traits::eof()) {
+    gcount_ = 0;
     sentry s(*this, true);
     if (!s)
       return *this;
@@ -150,6 +171,7 @@ public:
         this->setstate(ios_base::eofbit);
         break;
       }
+      ++gcount_;
       if (Traits::eq_int_type(c, delim))
         break;
     }
@@ -285,7 +307,23 @@ private:
                   __is_same(V, unsigned short)) {
       v = (V)::strtoull(buf, nullptr, 10);
     } else {
-      v = (V)::strtoll(buf, nullptr, 10);
+      long long parsed = ::strtoll(buf, nullptr, 10);
+      long long low = 0;
+      long long high = 1;
+      if constexpr (!__is_same(V, bool)) {
+        auto high_bits = (1ULL << (sizeof(V) * 8 - 1)) - 1;
+        high = (long long)high_bits;
+        low = -high - 1;
+      }
+      if (parsed < low) {
+        v = (V)low;
+        this->setstate(ios_base::failbit);
+      } else if (parsed > high) {
+        v = (V)high;
+        this->setstate(ios_base::failbit);
+      } else {
+        v = (V)parsed;
+      }
     }
     return *this;
   }
