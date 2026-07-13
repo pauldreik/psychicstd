@@ -161,22 +161,34 @@ private:
   // construct_at chain some compilers refuse to inline (making a large fill
   // O(n) with a ~100x constant).
   constexpr void _default_fill(T* p, size_type n) {
-    if constexpr (is_trivially_copyable_v<T>)
+    if constexpr (is_integral_v<T> && sizeof(T) == 1 && !is_same_v<T, bool>) {
+      if (!__builtin_is_constant_evaluated()) {
+        __builtin_memset(p, 0, n);
+        return;
+      }
+    } else if constexpr (is_trivially_copyable_v<T>) {
       if (!__builtin_is_constant_evaluated()) {
         for (size_type i = 0; i < n; ++i)
           p[i] = T();
         return;
       }
+    }
     for (size_type i = 0; i < n; ++i)
       _construct(p + i);
   }
   constexpr void _value_fill(T* p, size_type n, const T& val) {
-    if constexpr (is_trivially_copyable_v<T>)
+    if constexpr (is_integral_v<T> && sizeof(T) == 1 && !is_same_v<T, bool>) {
+      if (!__builtin_is_constant_evaluated()) {
+        __builtin_memset(p, static_cast<unsigned char>(val), n);
+        return;
+      }
+    } else if constexpr (is_trivially_copyable_v<T>) {
       if (!__builtin_is_constant_evaluated()) {
         for (size_type i = 0; i < n; ++i)
           p[i] = val;
         return;
       }
+    }
     for (size_type i = 0; i < n; ++i)
       _construct(p + i, val);
   }
@@ -193,8 +205,9 @@ private:
     allocator_traits<Alloc>::destroy(alloc_, p);
   }
   constexpr void _destroy_all() noexcept {
-    for (size_type i = 0; i < size_; ++i)
-      _destroy(data_ + i);
+    if constexpr (!is_trivially_destructible_v<T>)
+      for (size_type i = 0; i < size_; ++i)
+        _destroy(data_ + i);
   }
 
   constexpr void _grow() {
@@ -702,6 +715,15 @@ public:
     T tmp(static_cast<T&&>(v));
     _grow_and_shift(idx, 1);
     _construct(data_ + idx, _xfer(tmp));
+    ++size_;
+    return iterator{data_ + idx};
+  }
+  template <typename... Args>
+  constexpr iterator emplace(const_iterator pos, Args&&... args) {
+    size_type idx = pos.ptr_ - data_;
+    T tmp(static_cast<Args&&>(args)...);
+    _grow_and_shift(idx, 1);
+    _construct(data_ + idx, static_cast<T&&>(tmp));
     ++size_;
     return iterator{data_ + idx};
   }
