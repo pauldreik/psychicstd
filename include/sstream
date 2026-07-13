@@ -22,34 +22,50 @@ public:
 
   basic_stringbuf() = default;
   explicit basic_stringbuf(const string_type& s,
-                           ios_base::openmode = ios_base::in | ios_base::out)
-      : buf_(s), rpos_(0) {}
+                           ios_base::openmode which = ios_base::in |
+                                                      ios_base::out)
+      : buf_(s), rpos_(0), ppos_((which & ios_base::ate) ? s.size() : 0) {}
   explicit basic_stringbuf(string_type&& s,
-                           ios_base::openmode = ios_base::in | ios_base::out)
-      : buf_(static_cast<string_type&&>(s)), rpos_(0) {}
+                           ios_base::openmode which = ios_base::in |
+                                                      ios_base::out)
+      : buf_(static_cast<string_type&&>(s)), rpos_(0),
+        ppos_((which & ios_base::ate) ? buf_.size() : 0) {}
 
   string_type str() const { return buf_; }
-  // O(1) buffer length, so tellp need not copy the whole buffer via str().
-  size_t _size() const noexcept { return buf_.size(); }
+  size_t _put_position() const noexcept { return ppos_; }
   void str(const string_type& s) {
     buf_ = s;
     rpos_ = 0;
+    ppos_ = 0;
   }
   void str(string_type&& s) {
     buf_ = static_cast<string_type&&>(s);
     rpos_ = 0;
+    ppos_ = 0;
   }
 
 protected:
   // Write support
   streamsize xsputn(const Char* s, streamsize n) override {
-    buf_.append(s, (size_t)n);
+    if (n <= 0)
+      return 0;
+    size_t count = (size_t)n;
+    size_t available = ppos_ < buf_.size() ? buf_.size() - ppos_ : 0;
+    size_t overwritten = count < available ? count : available;
+    Traits::copy(buf_.data() + ppos_, s, overwritten);
+    if (overwritten < count)
+      buf_.append(s + overwritten, count - overwritten);
+    ppos_ += count;
     return n;
   }
   int_type overflow(int_type c) override {
     if (Traits::eq_int_type(c, Traits::eof()))
       return Traits::eof();
-    buf_.push_back(Traits::to_char_type(c));
+    if (ppos_ < buf_.size())
+      buf_[ppos_] = Traits::to_char_type(c);
+    else
+      buf_.push_back(Traits::to_char_type(c));
+    ++ppos_;
     return c;
   }
 
@@ -79,7 +95,9 @@ protected:
       return streampos(-1);
     if (which & ios_base::in)
       rpos_ = p;
-    return streampos(rpos_);
+    if (which & ios_base::out)
+      ppos_ = p;
+    return streampos((which & ios_base::out) ? ppos_ : rpos_);
   }
   streampos seekoff(streamoff off, ios_base::seekdir dir,
                     ios_base::openmode which) override {
@@ -89,18 +107,21 @@ protected:
     else if (dir == ios_base::end)
       base = buf_.size();
     else
-      base = rpos_;
+      base = (which & ios_base::out) ? ppos_ : rpos_;
     size_t pos = (size_t)((long long)base + off);
     if (pos > buf_.size())
       return streampos(-1);
     if (which & ios_base::in)
       rpos_ = pos;
-    return streampos(rpos_);
+    if (which & ios_base::out)
+      ppos_ = pos;
+    return streampos((which & ios_base::out) ? ppos_ : rpos_);
   }
 
 private:
   string_type buf_;
   size_t rpos_ = 0;
+  size_t ppos_ = 0;
 };
 
 // basic_ostringstream (default args are in <iosfwd>)
@@ -197,8 +218,7 @@ public:
     return const_cast<basic_stringbuf<Char, Traits, Alloc>*>(&buf_);
   }
 
-  // Write position = length of accumulated string
-  streampos tellp() { return streampos(buf_._size()); }
+  streampos tellp() { return streampos(buf_._put_position()); }
   streampos tellg() { return buf_.pubseekoff(0, ios_base::cur, ios_base::in); }
 
 private:
