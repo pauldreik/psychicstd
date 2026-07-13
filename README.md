@@ -6,7 +6,7 @@ It is not complete. It is not fully compliant. But it is good enough to quickly 
 
 | Project | Compile time speedup | comment |
 |-------------------------------------------------------------|-----------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------|
-| [catch2](https://github.com/catchorg/Catch2) | [3.21x](use_on_realworld_projects/catch2_speed_report.md) | |
+| [catch2](https://github.com/catchorg/Catch2) | [3.26x](use_on_realworld_projects/catch2_speed_report.md) | |
 | [cmake](https://cmake.org/) | [3.22x](use_on_realworld_projects/cmake_speed_report.md) | Uses a compiler wrapper to build. |
 | [cppcheck](https://github.com/cppcheck-opensource/cppcheck) | [2.45x](use_on_realworld_projects/cppcheck_speed_report.md)| |
 | [eigen](https://gitlab.com/libeigen/eigen) | [1.86x](use_on_realworld_projects/eigen_speed_report.md) | |
