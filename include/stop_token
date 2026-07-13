@@ -213,7 +213,6 @@ public:
         }
       } guard{state};
       callback_();
-      guard.state_ = nullptr;
       return;
     }
 
