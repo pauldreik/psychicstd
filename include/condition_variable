@@ -6,20 +6,23 @@ namespace std {
 
 enum class cv_status { no_timeout, timeout };
 
-// psychicstd: non-threadsafe condition_variable stub — all operations are
-// no-ops, matching the mutex/thread stubs in <mutex>/<thread>.
 struct condition_variable {
   constexpr condition_variable() noexcept = default;
+  ~condition_variable() { ::pthread_cond_destroy(&condition_); }
   condition_variable(const condition_variable&) = delete;
   condition_variable& operator=(const condition_variable&) = delete;
 
-  void notify_one() noexcept {}
-  void notify_all() noexcept {}
+  void notify_one() noexcept { ::pthread_cond_signal(&condition_); }
+  void notify_all() noexcept { ::pthread_cond_broadcast(&condition_); }
 
-  void wait(unique_lock<mutex>&) noexcept {}
-  template <typename Predicate> void wait(unique_lock<mutex>&, Predicate pred) {
-    while (!pred()) {
-    }
+  void wait(unique_lock<mutex>& lock) noexcept {
+    if (::pthread_cond_wait(&condition_, lock.mutex()->native_handle()) != 0)
+      __builtin_trap();
+  }
+  template <typename Predicate>
+  void wait(unique_lock<mutex>& lock, Predicate pred) {
+    while (!pred())
+      wait(lock);
   }
 
   template <typename Rep, typename Period>
@@ -43,6 +46,9 @@ struct condition_variable {
                   const chrono::time_point<Clock, Duration>&, Predicate pred) {
     return pred();
   }
+
+private:
+  pthread_cond_t condition_ = PTHREAD_COND_INITIALIZER;
 };
 
 } // namespace std
