@@ -46,4 +46,29 @@ int main() {
   condition.notify_one();
   waiter.join();
   psyassert(observed);
+
+  std::unique_lock timeout_lock(m);
+  auto start = std::chrono::steady_clock::now();
+  psyassert(condition.wait_for(timeout_lock, std::chrono::milliseconds(10)) ==
+            std::cv_status::timeout);
+  psyassert(std::chrono::steady_clock::now() - start >=
+            std::chrono::milliseconds(10));
+  psyassert(!condition.wait_until(
+      timeout_lock, std::chrono::steady_clock::now(), [] { return false; }));
+  timeout_lock.unlock();
+
+  ready = false;
+  observed = false;
+  std::thread timed_waiter([&] {
+    std::unique_lock lock(m);
+    observed = condition.wait_for(lock, std::chrono::seconds(1),
+                                  [&] { return ready; });
+  });
+  {
+    std::lock_guard lock(m);
+    ready = true;
+  }
+  condition.notify_one();
+  timed_waiter.join();
+  psyassert(observed);
 }
