@@ -30,6 +30,12 @@ std/numerics/rand/rand.eng/rand.eng.lcong/alg.pass.cpp
 std/numerics/rand/rand.eng/rand.eng.lcong/eval.pass.cpp
 std/numerics/rand/rand.util/rand.util.seedseq/generate.pass.cpp
 std/re/re.alg/re.alg.match/inverted_character_classes.pass.cpp
+
+# Invalid join/detach trap instead of throwing system_error. Including
+# <system_error> in the header nearly doubles preprocessed <thread> output.
+std/thread/thread.threads/thread.thread.class/thread.thread.member/detach.pass.cpp
+std/thread/thread.threads/thread.thread.class/thread.thread.member/join.pass.cpp
+
 std/thread/thread.threads/thread.thread.this/sleep_for.signals.pass.cpp
 std/time/time.duration/time.duration.cast/duration_cast.pass.cpp
 std/utilities/function.objects/bind/func.bind/func.bind.bind/copy.pass.cpp

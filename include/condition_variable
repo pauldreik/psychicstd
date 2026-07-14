@@ -1,5 +1,6 @@
 #pragma once
 #include <chrono>
+#include <errno.h>
 #include <mutex>
 
 namespace std {
@@ -26,28 +27,64 @@ struct condition_variable {
   }
 
   template <typename Rep, typename Period>
-  cv_status wait_for(unique_lock<mutex>&,
-                     const chrono::duration<Rep, Period>&) noexcept {
-    return cv_status::no_timeout;
+  cv_status wait_for(unique_lock<mutex>& lock,
+                     const chrono::duration<Rep, Period>& duration) noexcept {
+    return wait_until(lock, chrono::steady_clock::now() + duration);
   }
   template <typename Rep, typename Period, typename Predicate>
-  bool wait_for(unique_lock<mutex>&, const chrono::duration<Rep, Period>&,
-                Predicate pred) {
-    return pred();
+  bool wait_for(unique_lock<mutex>& lock,
+                const chrono::duration<Rep, Period>& duration, Predicate pred) {
+    return wait_until(lock, chrono::steady_clock::now() + duration, pred);
   }
 
   template <typename Clock, typename Duration>
-  cv_status wait_until(unique_lock<mutex>&,
-                       const chrono::time_point<Clock, Duration>&) noexcept {
-    return cv_status::no_timeout;
+  cv_status
+  wait_until(unique_lock<mutex>& lock,
+             const chrono::time_point<Clock, Duration>& timeout) noexcept {
+    while (true) {
+      auto now = Clock::now();
+      if (timeout <= now)
+        return cv_status::timeout;
+      cv_status result = __wait_for(lock, timeout - now);
+      if (result == cv_status::no_timeout || Clock::now() >= timeout)
+        return result;
+    }
   }
   template <typename Clock, typename Duration, typename Predicate>
-  bool wait_until(unique_lock<mutex>&,
-                  const chrono::time_point<Clock, Duration>&, Predicate pred) {
-    return pred();
+  bool wait_until(unique_lock<mutex>& lock,
+                  const chrono::time_point<Clock, Duration>& timeout,
+                  Predicate pred) {
+    while (!pred()) {
+      if (wait_until(lock, timeout) == cv_status::timeout)
+        return pred();
+    }
+    return true;
   }
 
 private:
+  template <typename Rep, typename Period>
+  cv_status __wait_for(unique_lock<mutex>& lock,
+                       const chrono::duration<Rep, Period>& duration) noexcept {
+    long long ns = chrono::duration_cast<chrono::nanoseconds>(duration).count();
+    if (ns < 0)
+      ns = 0;
+    timespec timeout;
+    ::clock_gettime(CLOCK_REALTIME, &timeout);
+    timeout.tv_sec += ns / 1000000000LL;
+    timeout.tv_nsec += ns % 1000000000LL;
+    if (timeout.tv_nsec >= 1000000000L) {
+      ++timeout.tv_sec;
+      timeout.tv_nsec -= 1000000000L;
+    }
+    int result = ::pthread_cond_timedwait(
+        &condition_, lock.mutex()->native_handle(), &timeout);
+    if (result == 0)
+      return cv_status::no_timeout;
+    if (result == ETIMEDOUT)
+      return cv_status::timeout;
+    __builtin_trap();
+  }
+
   pthread_cond_t condition_ = PTHREAD_COND_INITIALIZER;
 };
 

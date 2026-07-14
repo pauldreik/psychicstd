@@ -16,6 +16,8 @@ extern "C" long sysconf(int) noexcept;
 
 namespace std {
 
+[[noreturn]] void terminate() noexcept;
+
 namespace __thread_detail {
 template <typename F, typename Tuple, size_t... Is>
 constexpr decltype(auto) __invoke_from_tuple(F&& f, Tuple& args,
@@ -106,7 +108,7 @@ public:
   thread& operator=(thread&& other) noexcept {
     if (this != &other) {
       if (joinable_)
-        __builtin_trap();
+        terminate();
       handle_ = other.handle_;
       joinable_ = other.joinable_;
       other.joinable_ = false;
@@ -117,7 +119,7 @@ public:
   thread& operator=(const thread&) = delete;
   ~thread() {
     if (joinable_)
-      __builtin_trap();
+      terminate();
   }
   bool joinable() const noexcept { return joinable_; }
   void join() {
