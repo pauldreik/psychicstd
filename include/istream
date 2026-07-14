@@ -132,7 +132,10 @@ public:
     if (!s)
       return Traits::eof();
     auto* sb = this->rdbuf();
-    return sb ? sb->sgetc() : Traits::eof();
+    int_type c = sb ? sb->sgetc() : Traits::eof();
+    if (Traits::eq_int_type(c, Traits::eof()))
+      this->setstate(ios_base::eofbit);
+    return c;
   }
 
   basic_istream& unget() {
@@ -366,6 +369,10 @@ private:
 
 template <typename Char, typename Traits>
 basic_istream<Char, Traits>& ws(basic_istream<Char, Traits>& is) {
+  if (!is.good()) {
+    is.setstate(ios_base::failbit);
+    return is;
+  }
   auto* sb = is.rdbuf();
   if (sb) {
     typename Traits::int_type c;
@@ -375,6 +382,8 @@ basic_istream<Char, Traits>& ws(basic_istream<Char, Traits>& is) {
         break;
       sb->sbumpc();
     }
+    if (Traits::eq_int_type(c, Traits::eof()))
+      is.setstate(ios_base::eofbit);
   }
   return is;
 }

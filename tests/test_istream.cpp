@@ -40,4 +40,24 @@ int main() {
   }
   psyassert(threw);
   psyassert(throwing.eof());
+
+  std::istringstream whitespace("  ");
+  std::ws(whitespace);
+  psyassert(whitespace.eof());
+  psyassert(!whitespace.fail());
+  std::ws(whitespace);
+  psyassert(whitespace.fail());
+
+  std::stringbuf peek_empty;
+  std::istream peek_throwing(&peek_empty);
+  peek_throwing.exceptions(std::ios_base::eofbit);
+  threw = false;
+  try {
+    (void)peek_throwing.peek();
+  } catch (const std::ios_base::failure&) {
+    threw = true;
+  }
+  psyassert(threw);
+  psyassert(peek_throwing.eof());
+  psyassert(!peek_throwing.fail());
 }
