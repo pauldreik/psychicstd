@@ -1,13 +1,32 @@
 #include "psyassert.h"
 #include <atomic>
+#include <cstdlib>
+#include <exception>
 #include <sstream>
 #include <stop_token>
+#include <sys/wait.h>
 #include <thread>
+#include <unistd.h>
+#include <utility>
 
 struct worker {
   std::atomic<int>* runs;
   void run(int count) { runs->fetch_add(count, std::memory_order_relaxed); }
 };
+
+void expect_terminate(void (*operation)()) {
+  pid_t child = fork();
+  psyassert(child >= 0);
+  if (child == 0) {
+    std::set_terminate([] { std::_Exit(0); });
+    operation();
+    std::_Exit(1);
+  }
+  int status = 0;
+  psyassert(waitpid(child, &status, 0) == child);
+  psyassert(WIFEXITED(status));
+  psyassert(WEXITSTATUS(status) == 0);
+}
 
 int main() {
   std::this_thread::sleep_for(std::chrono::milliseconds(1));
@@ -61,4 +80,11 @@ int main() {
   std::jthread plain([&] { ++plain_runs; });
   plain.join();
   psyassert(plain_runs == 1);
+
+  expect_terminate(+[] { std::thread joinable([] {}); });
+  expect_terminate(+[] {
+    std::thread joinable([] {});
+    std::thread empty;
+    joinable = std::move(empty);
+  });
 }
