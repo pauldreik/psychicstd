@@ -1,6 +1,6 @@
 #pragma once
 #include <__psychicstd_algo>
-#include <functional>
+#include <__psychicstd_functors>
 #include <initializer_list>
 #include <utility>
 #include <vector>

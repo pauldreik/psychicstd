@@ -2,9 +2,9 @@
 #include <__psychicstd_algo>
 #include <__psychicstd_config>
 #include <__psychicstd_except>
+#include <__psychicstd_functors>
 #include <__psychicstd_node_map>
 #include <compare>
-#include <functional>
 #include <initializer_list>
 #include <tuple>
 #include <utility>
