@@ -13,10 +13,11 @@
 #include <version>
 
 #if _PSYCHICSTD_COMPATIBILITY_LEVEL >= _PSYCHICSTD_COMPAT_DROPIN
-// <string> itself does not use <algorithm>, but libstdc++ exposes it through
-// <string>, so real code relies on the transitive include (e.g. Catch2's
-// std::equal). Keep it for drop-in compat.
-#include <algorithm>
+// <string> itself does not use these, but libstdc++ exposes the stl_algobase
+// subset of <algorithm> through <string>, so real code relies on the
+// transitive include (e.g. Catch2's std::equal). Keep that subset for drop-in
+// compat; sort/std::function/tuple are not part of libstdc++'s <string>.
+#include <__psychicstd_algobase>
 #endif
 
 namespace std {
