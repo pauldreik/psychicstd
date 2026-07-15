@@ -37,6 +37,18 @@ def samples_ms(binary: Path) -> list[float]:
 
 
 def shared_libs(binary: Path) -> list[str]:
+    if sys.platform == "darwin":
+        out = subprocess.run(
+            ["otool", "-L", str(binary)], capture_output=True, text=True
+        ).stdout
+        # First line is the binary itself; the rest are "\t/path/lib.dylib (...)".
+        libs = []
+        for line in out.splitlines()[1:]:
+            line = line.strip()
+            if not line:
+                continue
+            libs.append(line.split()[0].rsplit("/", 1)[-1])
+        return sorted(libs)
     out = subprocess.run(["ldd", str(binary)], capture_output=True, text=True).stdout
     libs = []
     for line in out.splitlines():

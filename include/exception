@@ -46,8 +46,21 @@ using terminate_handler = void (*)();
 terminate_handler get_terminate() noexcept;
 terminate_handler set_terminate(terminate_handler) noexcept;
 
+#ifdef __APPLE__
+// libc++abi exports only the __cxa_ entry point; the std:: wrappers live in
+// libc++.dylib, which we do not link.
+extern "C" unsigned int __cxa_uncaught_exceptions() noexcept;
+inline bool uncaught_exception() noexcept {
+  return __cxa_uncaught_exceptions() > 0;
+}
+inline int uncaught_exceptions() noexcept {
+  return static_cast<int>(__cxa_uncaught_exceptions());
+}
+#else
+// libsupc++ defines both.
 bool uncaught_exception() noexcept;
 int uncaught_exceptions() noexcept;
+#endif
 
 // Itanium ABI exception-handling globals — layout is ABI-stable across GCC.
 namespace __cxxabiv1 {

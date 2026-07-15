@@ -75,10 +75,13 @@ foreach(t ${TESTS})
 endforeach()
 
 # Generic system atomics can also require GCC's out-of-line atomic runtime.
-target_link_libraries(test_atomic_system PRIVATE atomic)
+# macOS has no libatomic; the compiler runtime covers it.
+if(NOT APPLE)
+    target_link_libraries(test_atomic_system PRIVATE atomic)
+endif()
 target_compile_options(
     test_atomic_psychicstd
-    PRIVATE $<$<CXX_COMPILER_ID:Clang>:-Wno-atomic-alignment>
+    PRIVATE $<$<CXX_COMPILER_ID:Clang,AppleClang>:-Wno-atomic-alignment>
 )
 
 # Self-containment tests: every header must be usable on its own. Including

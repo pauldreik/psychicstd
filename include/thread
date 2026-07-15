@@ -12,13 +12,25 @@
 #include <tuple>
 #include <type_traits>
 
+#ifdef __APPLE__
+// Darwin declares sysconf without an exception specification.
+extern "C" long sysconf(int);
+#else
 extern "C" long sysconf(int) noexcept;
+#endif
 
 namespace std {
 
 [[noreturn]] void terminate() noexcept;
 
 namespace __thread_detail {
+inline unsigned long __id_value(pthread_t t) noexcept {
+#ifdef __APPLE__
+  return reinterpret_cast<unsigned long>(t); // pthread_t is a pointer on Darwin
+#else
+  return static_cast<unsigned long>(t);
+#endif
+}
 template <typename F, typename Tuple, size_t... Is>
 constexpr decltype(auto) __invoke_from_tuple(F&& f, Tuple& args,
                                              index_sequence<Is...>) {
@@ -133,10 +145,14 @@ public:
     joinable_ = false;
   }
   id get_id() const noexcept {
-    return joinable_ ? id(static_cast<unsigned long>(handle_)) : id();
+    return joinable_ ? id(__thread_detail::__id_value(handle_)) : id();
   }
   static unsigned hardware_concurrency() noexcept {
+#ifdef __APPLE__
+    long n = sysconf(58); /* _SC_NPROCESSORS_ONLN */
+#else
     long n = sysconf(84); /* _SC_NPROCESSORS_ONLN */
+#endif
     return n > 0 ? (unsigned)n : 1;
   }
 };
@@ -224,7 +240,9 @@ public:
 };
 
 inline bool operator==(thread::id a, thread::id b) noexcept {
-  return !(a != b);
+  // Compare values directly: '!(a != b)' would recurse under C++20 rewritten
+  // candidates, since 'a != b' can resolve back to this operator==.
+  return a._value() == b._value();
 }
 inline auto operator<=>(thread::id a, thread::id b) noexcept {
   return a.operator<(b)   ? strong_ordering::less
@@ -240,7 +258,7 @@ basic_ostream<Char, Traits>& operator<<(basic_ostream<Char, Traits>& os,
 namespace this_thread {
 
 inline thread::id get_id() noexcept {
-  return thread::id(static_cast<unsigned long>(::pthread_self()));
+  return thread::id(__thread_detail::__id_value(::pthread_self()));
 }
 
 template <typename Rep, typename Period>

@@ -279,7 +279,8 @@ template <> struct numeric_limits<long double> {
   static constexpr bool has_quiet_NaN = true;
   static constexpr bool has_signaling_NaN = true;
   static constexpr bool has_denorm_loss = false;
-  static constexpr bool is_iec559 = true; // 80-bit x87 long double is IEC 60559
+  static constexpr bool is_iec559 =
+      true; // long double is IEC 60559 on all supported targets
   static constexpr bool tinyness_before = false;
   static constexpr bool traps = false;
   static constexpr int digits = LDBL_MANT_DIG;

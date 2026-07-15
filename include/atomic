@@ -1,11 +1,20 @@
 #pragma once
 #include <cstddef>
 #include <cstdint>
+#if defined(__linux__)
 #include <linux/futex.h>
-#include <sched.h>
 #include <sys/syscall.h>
-#include <type_traits>
 #include <unistd.h>
+#elif defined(__APPLE__) &&                                                    \
+    defined(__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__) &&                  \
+    __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ >= 140400
+// os_sync_wait_on_address requires macOS 14.4+; older deployment targets get
+// the sched_yield fallback instead of a weak import that is NULL at runtime.
+#define _PSYCHICSTD_OS_SYNC 1
+#include <os/os_sync_wait_on_address.h>
+#endif
+#include <sched.h>
+#include <type_traits>
 
 #define ATOMIC_BOOL_LOCK_FREE __GCC_ATOMIC_BOOL_LOCK_FREE
 #define ATOMIC_CHAR_LOCK_FREE __GCC_ATOMIC_CHAR_LOCK_FREE
@@ -51,6 +60,7 @@ void wait(const volatile T* ptr, T old, memory_order order) noexcept {
     __atomic_load(ptr, &current, int(order));
     if (!equal(current, old))
       return;
+#if defined(__linux__)
     if constexpr (sizeof(T) == sizeof(int)) {
       int expected;
       __builtin_memcpy(&expected, &old, sizeof(expected));
@@ -59,12 +69,38 @@ void wait(const volatile T* ptr, T old, memory_order order) noexcept {
     } else {
       ::sched_yield();
     }
+#elif defined(_PSYCHICSTD_OS_SYNC)
+    if constexpr (sizeof(T) == 4 || sizeof(T) == 8) {
+      uint64_t expected = 0;
+      __builtin_memcpy(&expected, &old, sizeof(T));
+      ::os_sync_wait_on_address(const_cast<T*>(ptr), expected, sizeof(T),
+                                OS_SYNC_WAIT_ON_ADDRESS_NONE);
+    } else {
+      ::sched_yield();
+    }
+#else
+    ::sched_yield();
+#endif
   }
 }
 template <typename T> void notify(const volatile T* ptr, int count) noexcept {
+#if defined(__linux__)
   if constexpr (sizeof(T) == sizeof(int))
     ::syscall(SYS_futex, const_cast<T*>(ptr), FUTEX_WAKE_PRIVATE, count,
               nullptr, nullptr, 0);
+#elif defined(_PSYCHICSTD_OS_SYNC)
+  if constexpr (sizeof(T) == 4 || sizeof(T) == 8) {
+    if (count == 1)
+      ::os_sync_wake_by_address_any(const_cast<T*>(ptr), sizeof(T),
+                                    OS_SYNC_WAKE_BY_ADDRESS_NONE);
+    else
+      ::os_sync_wake_by_address_all(const_cast<T*>(ptr), sizeof(T),
+                                    OS_SYNC_WAKE_BY_ADDRESS_NONE);
+  }
+#else
+  (void)ptr;
+  (void)count;
+#endif
 }
 } // namespace __atomic_detail
 

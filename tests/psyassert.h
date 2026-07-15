@@ -1,6 +1,11 @@
 #pragma once
 
+#ifdef __APPLE__
+// Match Darwin's asm alias so a later <unistd.h> include is compatible.
+extern "C" long write(int, const void*, unsigned long) __asm("_write");
+#else
 extern "C" long write(int, const void*, unsigned long);
+#endif
 
 namespace psyassert_detail {
 
