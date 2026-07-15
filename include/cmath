@@ -1,7 +1,8 @@
 #pragma once
 #include <__psychicstd_config>
 #include <math.h>
-#include <stdlib.h>
+// For abs/labs/llabs; via <cstdlib> so Darwin gets the cheap declarations.
+#include <cstdlib>
 
 #if _PSYCHICSTD_COMPATIBILITY_LEVEL >= _PSYCHICSTD_COMPAT_DROPIN
 // libstdc++ exposes numeric_limits through <cmath>; Catch2 relies on it.

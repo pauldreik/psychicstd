@@ -1,7 +1,78 @@
 #pragma once
+#ifdef __APPLE__
+// Darwin: the SDK's <stdlib.h> is expensive to preprocess (~5 ms). Declare
+// the exact names std needs instead, mirroring the SDK signatures verbatim
+// (attributes and asm aliases included) so a later direct #include <stdlib.h>
+// merges cleanly. Trade-off: unlike libc++, <cstdlib> does not drag in the
+// POSIX extras (setenv, arc4random, ...); include <stdlib.h> for those.
+typedef __SIZE_TYPE__ size_t;
+extern "C" {
+void* malloc(size_t) __attribute__((__warn_unused_result__))
+__attribute__((alloc_size(1)));
+void* calloc(size_t, size_t) __attribute__((__warn_unused_result__))
+__attribute__((alloc_size(1, 2)));
+void free(void*);
+void* realloc(void*, size_t) __attribute__((__warn_unused_result__))
+__attribute__((alloc_size(2)));
+void abort(void) __attribute__((__cold__)) __attribute__((__noreturn__));
+int abs(int) __attribute__((__const__));
+int atexit(void (*)(void));
+int at_quick_exit(void (*)(void));
+double atof(const char*);
+int atoi(const char*);
+long atol(const char*);
+long long atoll(const char*);
+void* bsearch(const void*, const void*, size_t, size_t,
+              int (*)(const void*, const void*));
+void exit(int) __attribute__((__noreturn__));
+char* getenv(const char*);
+long labs(long) __attribute__((__const__));
+long long llabs(long long);
+int mblen(const char*, size_t);
+size_t mbstowcs(wchar_t*, const char*, size_t);
+int mbtowc(wchar_t*, const char*, size_t);
+void qsort(void*, size_t, size_t, int (*)(const void*, const void*));
+void quick_exit(int) __attribute__((__noreturn__));
+int rand(void);
+void srand(unsigned);
+double strtod(const char*, char**) __asm("_strtod");
+float strtof(const char*, char**) __asm("_strtof");
+long strtol(const char*, char**, int);
+long double strtold(const char*, char**);
+long long strtoll(const char*, char**, int);
+unsigned long strtoul(const char*, char**, int);
+unsigned long long strtoull(const char*, char**, int);
+int system(const char*) __asm("_system");
+size_t wcstombs(char*, const wchar_t*, size_t);
+int wctomb(char*, wchar_t);
+void _Exit(int) __attribute__((__noreturn__));
+}
+#else
 #include <stdlib.h>
+#endif
 
 namespace std {
+#ifdef __APPLE__
+// std-only div family: the SDK's div_t/ldiv_t/lldiv_t are unguarded
+// anonymous-struct typedefs, so redeclaring them at global scope would clash
+// with a later direct #include <stdlib.h>. Define layout-compatible types in
+// std instead ([headers] leaves global-scope declarations unspecified).
+struct div_t {
+  int quot;
+  int rem;
+};
+struct ldiv_t {
+  long quot;
+  long rem;
+};
+struct lldiv_t {
+  long long quot;
+  long long rem;
+};
+inline div_t div(int n, int d) { return {n / d, n % d}; }
+inline ldiv_t ldiv(long n, long d) { return {n / d, n % d}; }
+inline lldiv_t lldiv(long long n, long long d) { return {n / d, n % d}; }
+#endif
 using ::_Exit;
 using ::abort;
 using ::abs;
@@ -13,15 +84,19 @@ using ::atol;
 using ::atoll;
 using ::bsearch;
 using ::calloc;
+#ifndef __APPLE__
 using ::div;
 using ::div_t;
+#endif
 using ::exit;
 using ::free;
 using ::getenv;
+#ifndef __APPLE__
 using ::ldiv;
 using ::ldiv_t;
 using ::lldiv;
 using ::lldiv_t;
+#endif
 using ::malloc;
 using ::mblen;
 using ::mbstowcs;

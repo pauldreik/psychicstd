@@ -16,6 +16,8 @@ set(TESTS
     test_concepts
     test_cstddef
     test_cstdint
+    test_cstdlib
+    test_cstdlib_order
     test_deque
     test_exception
     test_filesystem
