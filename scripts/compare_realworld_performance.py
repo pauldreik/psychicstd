@@ -220,7 +220,8 @@ def main() -> int:
     lines = [
         "# Real-world project speed comparison\n",
         f"Compiler: `{ver}`. Each project is built {args.reps} time(s) per side "
-        "(system libstdc++, psychicstd); `system (s)`/`psychicstd (s)` are the "
+        f"(system {'libc++' if sys.platform == 'darwin' else 'libstdc++'}, "
+        "psychicstd); `system (s)`/`psychicstd (s)` are the "
         "*median* build time of those repetitions, in seconds -- the median is "
         "used instead of the mean so one repetition disturbed by another process "
         "on the machine doesn't skew the result. `speedup` = system median / "

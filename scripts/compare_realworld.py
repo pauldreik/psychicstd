@@ -38,9 +38,15 @@ REPO = _git_toplevel()
 sys.path.insert(0, str(REPO / "use_on_realworld_projects"))
 import realworld_projects as rw  # noqa: E402
 
-# psychicstd's link additions (GCC 12-compatible: drop libstdc++, spell out the rest).
-PSY_LDFLAGS = "-nodefaultlibs"
-PSY_LIBS = "-lsupc++ -latomic -lm -lc -lgcc_s -lgcc"
+# psychicstd's link additions.
+if sys.platform == "darwin":
+    # Clang/AppleClang: drop libc++, add back the C++ ABI runtime (libc++abi).
+    PSY_LDFLAGS = "-nostdlib++"
+    PSY_LIBS = "-lc++abi"
+else:
+    # GCC 12-compatible: drop libstdc++, spell out the rest.
+    PSY_LDFLAGS = "-nodefaultlibs"
+    PSY_LIBS = "-lsupc++ -latomic -lm -lc -lgcc_s -lgcc"
 
 # Selectable from the outside; each project's recipe translates this into its own
 # build system's convention (CMAKE_BUILD_TYPE, an -O flag, ...) -- see Toolchain.
