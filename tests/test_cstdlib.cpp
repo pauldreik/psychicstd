@@ -2,6 +2,26 @@
 // itself: a direct #include <stdlib.h> afterwards must merge cleanly.
 #include <cstdlib>
 
+// Macro checks must run before <stdlib.h> could provide them instead.
+#ifndef EXIT_SUCCESS
+#error "<cstdlib> must define EXIT_SUCCESS"
+#endif
+#ifndef EXIT_FAILURE
+#error "<cstdlib> must define EXIT_FAILURE"
+#endif
+#ifndef RAND_MAX
+#error "<cstdlib> must define RAND_MAX"
+#endif
+#ifndef MB_CUR_MAX
+#error "<cstdlib> must define MB_CUR_MAX"
+#endif
+#ifndef NULL
+#error "<cstdlib> must define NULL"
+#endif
+static_assert(EXIT_SUCCESS == 0);
+static_assert(EXIT_FAILURE == 1);
+static_assert(RAND_MAX >= 32767);
+
 #include <stdlib.h>
 
 #include "psyassert.h"
@@ -47,5 +67,8 @@ int main() {
   // Names only <stdlib.h> provides (not part of std) must still work.
   psyassert(::setenv("PSYCHICSTD_TEST_VAR", "1", 1) == 0);
   psyassert(std::getenv("PSYCHICSTD_TEST_VAR") != nullptr);
+
+  psyassert(MB_CUR_MAX >= 1);
+  psyassert(std::rand() <= RAND_MAX);
   return 0;
 }
