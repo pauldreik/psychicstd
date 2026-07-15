@@ -37,6 +37,7 @@ set(TESTS
     test_new
     test_numeric
     test_optional
+    test_queue
     test_random
     test_ranges
     test_ratio
