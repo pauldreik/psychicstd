@@ -1,0 +1,9 @@
+#pragma once
+
+// Integer std::abs overloads shared by <cmath> and <cstdlib>. Defined via
+// compiler builtins (GCC 4.x+ and clang) so <cmath> does not need <stdlib.h>.
+namespace std {
+inline constexpr int abs(int __x) { return __builtin_abs(__x); }
+inline constexpr long abs(long __x) { return __builtin_labs(__x); }
+inline constexpr long long abs(long long __x) { return __builtin_llabs(__x); }
+} // namespace std

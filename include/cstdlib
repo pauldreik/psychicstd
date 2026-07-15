@@ -1,4 +1,5 @@
 #pragma once
+#include <__psychicstd_abs>
 #ifdef __APPLE__
 // Darwin: the SDK's <stdlib.h> is expensive to preprocess (~5 ms). Declare
 // the exact names std needs instead, mirroring the SDK signatures verbatim
@@ -75,7 +76,6 @@ inline lldiv_t lldiv(long long n, long long d) { return {n / d, n % d}; }
 #endif
 using ::_Exit;
 using ::abort;
-using ::abs;
 using ::at_quick_exit;
 using ::atexit;
 using ::atof;

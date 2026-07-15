@@ -1,8 +1,7 @@
 #pragma once
+#include <__psychicstd_abs>
 #include <__psychicstd_config>
 #include <math.h>
-// For abs/labs/llabs; via <cstdlib> so Darwin gets the cheap declarations.
-#include <cstdlib>
 
 #if _PSYCHICSTD_COMPATIBILITY_LEVEL >= _PSYCHICSTD_COMPAT_DROPIN
 // libstdc++ exposes numeric_limits through <cmath>; Catch2 relies on it.
@@ -31,7 +30,6 @@
 #endif
 
 namespace std {
-using ::abs;
 using ::acos;
 using ::acosh;
 using ::asin;
@@ -153,8 +151,7 @@ using ::tgammaf;
 inline float abs(float x) { return ::fabsf(x); }
 inline double abs(double x) { return ::fabs(x); }
 inline long double abs(long double x) { return ::fabsl(x); }
-inline long abs(long x) { return ::labs(x); }
-inline long long abs(long long x) { return ::llabs(x); }
+// integer abs overloads come from <__psychicstd_abs>
 using ::nextafter;
 using ::nextafterf;
 using ::nextafterl;
