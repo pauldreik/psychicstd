@@ -70,17 +70,21 @@ public:
   }
 
   // Non-template constructor: allows {} to initialise individual element
-  // types. Never explicit: Ts is always convertible to itself.
-  tuple(Ts&&... args)
-    requires(sizeof...(Ts) != 0)
-      : base(static_cast<Ts&&>(args)...) {}
+  // types. Takes const Ts& (not Ts&&) per [tuple.cnstr]; with Ts&& an rvalue
+  // argument needing a conversion (e.g. string literal -> const char*) ties
+  // with the forwarding template below and the call becomes ambiguous.
+  // Never explicit: Ts is nearly always convertible to itself.
+  tuple(const Ts&... args)
+    requires(sizeof...(Ts) != 0 && (is_copy_constructible_v<Ts> && ...))
+      : base(args...) {}
 
   // Excludes the sizeof...(Ts) == 1 case where the single argument is itself
   // a tuple, so it doesn't hijack the copy/move/converting constructors.
   template <typename... Us>
     requires(sizeof...(Us) == sizeof...(Ts) && sizeof...(Ts) != 0 &&
              !(sizeof...(Us) == 1 &&
-               (is_same_v<remove_cvref_t<Us>, tuple> || ...)))
+               (is_same_v<remove_cvref_t<Us>, tuple> || ...)) &&
+             (is_constructible_v<Ts, Us &&> && ...))
   explicit(!(is_convertible_v<Us, Ts> && ...)) tuple(Us&&... args)
       : base(static_cast<Us&&>(args)...) {}
 

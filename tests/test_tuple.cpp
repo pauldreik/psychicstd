@@ -73,4 +73,16 @@ int main() {
     psyassert(std::get<0>(dst).t.moves == 1);
     psyassert(std::get<0>(dst).t.copies == 0);
   }
+
+  {
+    // Regression (Catch2 CmdLine.tests.cpp): list-init from a string literal
+    // plus an int literal must not be ambiguous between the const Ts&...
+    // constructor and the forwarding constructor template.
+    using gen_type = std::tuple<const char*, unsigned int>;
+    gen_type g{"0xBEEF", 0xBEEF};
+    psyassert(std::get<0>(g) == std::string_view("0xBEEF"));
+    psyassert(std::get<1>(g) == 0xBEEFu);
+    gen_type g2("12345678", 12345678);
+    psyassert(std::get<1>(g2) == 12345678u);
+  }
 }
