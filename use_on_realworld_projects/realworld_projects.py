@@ -487,6 +487,13 @@ def _fmt() -> Project:
             src = work / f"fmt-{version}"
 
             env = _env(tc)
+            # fmt's tests specialize std::is_floating_point (UB but benign);
+            # Apple clang 21's libc++ hard-errors on that, so the SYSTEM
+            # baseline cannot build without disabling the diagnostic. No-op
+            # for psychicstd, which does not restrict specialization.
+            cxxflags = tc.cxxflags
+            if os.uname().sysname == "Darwin":
+                cxxflags += " -Wno-invalid-specialization"
             configure = [
                 "cmake",
                 "-S",
@@ -496,7 +503,7 @@ def _fmt() -> Project:
                 "-GNinja",
                 "-DCMAKE_BUILD_TYPE=" + tc.build_type.capitalize(),
                 "-DCMAKE_CXX_COMPILER=" + tc.cxx,
-                "-DCMAKE_CXX_FLAGS=" + tc.cxxflags,
+                "-DCMAKE_CXX_FLAGS=" + cxxflags,
                 "-DCMAKE_EXE_LINKER_FLAGS=" + tc.ldflags,
                 "-DCMAKE_CXX_STANDARD_LIBRARIES=" + tc.libs,
                 "-DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY",
