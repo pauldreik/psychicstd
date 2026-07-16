@@ -27,4 +27,11 @@ int main() {
   psyassert(s == "??#h!!el:lo");
   s.replace(s.begin(), s.begin() + 3, std::string("ok"));
   psyassert(s == "okh!!el:lo");
+  s.replace(0, 2, 3, '-');
+  psyassert(s == "---h!!el:lo");
+
+  // string <-> string_view in ?: must pick string_view (requires the
+  // string_view ctor to be explicit per [string.cons]; hit by cmake).
+  std::string_view sv = false ? s : std::string_view("vw");
+  psyassert(sv == "vw");
 }

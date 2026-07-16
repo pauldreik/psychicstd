@@ -91,7 +91,9 @@ public:
     o.cap_ = 0;
   }
 
-  basic_string(basic_string_view<Char> sv)
+  // Explicit per [string.cons]; if implicit, ?: between string and
+  // string_view is ambiguous (both directions convertible; hit by cmake).
+  explicit basic_string(basic_string_view<Char> sv)
       : basic_string(sv.data(), sv.size()) {}
 
   basic_string(initializer_list<Char> il)
@@ -350,6 +352,11 @@ public:
   basic_string& replace(const_iterator first, const_iterator last,
                         const basic_string& o) {
     return replace(first - data_, last - first, o);
+  }
+  basic_string& replace(size_type pos, size_type n1, size_type n2, Char c) {
+    erase(pos, n1);
+    insert(pos, n2, c);
+    return *this;
   }
 
   // Search
