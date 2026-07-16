@@ -1,11 +1,19 @@
 #pragma once
 #include <__psychicstd_abs>
-#ifdef __APPLE__
-// Darwin: the SDK's <stdlib.h> is expensive to preprocess (~5 ms). Declare
-// the exact names std needs instead, mirroring the SDK signatures verbatim
-// (attributes and asm aliases included) so a later direct #include <stdlib.h>
-// merges cleanly. Trade-off: unlike libc++, <cstdlib> does not drag in the
-// POSIX extras (setenv, arc4random, ...); include <stdlib.h> for those.
+#include <__psychicstd_config>
+
+// Darwin: the SDK's <stdlib.h> is expensive to preprocess (~5 ms). At STRICT
+// level, declare the exact names std needs instead, mirroring the SDK
+// signatures verbatim (attributes and asm aliases included) so a later direct
+// #include <stdlib.h> merges cleanly. At DROPIN level the real <stdlib.h> is
+// included: libstdc++'s <cstdlib> exposes the POSIX extras (alloca, setenv,
+// realpath, ...) and real-world code relies on that surface (eigen, cmake).
+#if defined(__APPLE__) &&                                                      \
+    _PSYCHICSTD_COMPATIBILITY_LEVEL == _PSYCHICSTD_COMPAT_STRICT
+#define _PSYCHICSTD_CSTDLIB_MIN_DECLS 1
+#endif
+
+#ifdef _PSYCHICSTD_CSTDLIB_MIN_DECLS
 typedef __SIZE_TYPE__ size_t;
 extern "C" {
 void* malloc(size_t) __attribute__((__warn_unused_result__))
@@ -69,7 +77,7 @@ extern int __mb_cur_max;
 #endif
 
 namespace std {
-#ifdef __APPLE__
+#ifdef _PSYCHICSTD_CSTDLIB_MIN_DECLS
 // std-only div family: the SDK's div_t/ldiv_t/lldiv_t are unguarded
 // anonymous-struct typedefs, so redeclaring them at global scope would clash
 // with a later direct #include <stdlib.h>. Define layout-compatible types in
@@ -100,14 +108,14 @@ using ::atol;
 using ::atoll;
 using ::bsearch;
 using ::calloc;
-#ifndef __APPLE__
+#ifndef _PSYCHICSTD_CSTDLIB_MIN_DECLS
 using ::div;
 using ::div_t;
 #endif
 using ::exit;
 using ::free;
 using ::getenv;
-#ifndef __APPLE__
+#ifndef _PSYCHICSTD_CSTDLIB_MIN_DECLS
 using ::ldiv;
 using ::ldiv_t;
 using ::lldiv;

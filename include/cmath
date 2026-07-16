@@ -6,6 +6,9 @@
 #if _PSYCHICSTD_COMPATIBILITY_LEVEL >= _PSYCHICSTD_COMPAT_DROPIN
 // libstdc++ exposes numeric_limits through <cmath>; Catch2 relies on it.
 #include <limits>
+// libstdc++'s <cmath> exposes <stdlib.h> via <bits/std_abs.h>; real-world
+// code (eigen, cmake) relies on that transitive surface.
+#include <cstdlib>
 #endif
 
 // C99 defines isnan/isinf/isfinite/isnormal/signbit as macros.
