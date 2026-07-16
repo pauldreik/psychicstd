@@ -57,6 +57,7 @@ set(TESTS
     test_tuple
     test_type_traits
     test_typeinfo
+    test_uchar
     test_unordered_map
     test_unordered_set
     test_utility

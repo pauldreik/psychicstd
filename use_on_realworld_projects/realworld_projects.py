@@ -714,7 +714,10 @@ def _simdutf() -> Project:
     commithash = "c04f2db9eee13fbd1b6dd1c2b2fb52374738dd4d"
     url = f"https://github.com/simdutf/simdutf/archive/{commithash}.tar.gz"
     checksum = "face6b2056da68df9d758ce0ac4cca91df90ab1c668512fa541eba4cd6668686"
-    psychicstrictlevel = 0
+    # DROPIN: tests/helpers/random_utf32.cpp calls ::abort without including
+    # <cstdlib> (an upstream include-what-you-use bug; we never patch pinned
+    # third-party sources), so strict mode cannot compile the test helpers.
+    psychicstrictlevel = 2
 
     def build(tc: Toolchain) -> dict[str, float]:
         tarball = RW_DIR / f"simdutf-{commithash}.tar.gz"
@@ -729,6 +732,14 @@ def _simdutf() -> Project:
             src = work / f"simdutf-{commithash}"
 
             env = _env(tc)
+            # Darwin: CMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY (below)
+            # skips the link step of try_compile, so FindIconv misdetects
+            # Darwin's separate libiconv as built into libc and the sutf tool
+            # fails to link (undefined _iconv*) -- with the system stdlib too,
+            # not just psychicstd. Link iconv explicitly.
+            libs = tc.libs
+            if os.uname().sysname == "Darwin":
+                libs += " -liconv"
             configure = [
                 "cmake",
                 "-S",
@@ -745,7 +756,7 @@ def _simdutf() -> Project:
                 + tc.cxxflags
                 + f" -D_PSYCHICSTD_COMPATIBILITY_LEVEL={psychicstrictlevel}",
                 "-DCMAKE_EXE_LINKER_FLAGS=" + tc.ldflags,
-                "-DCMAKE_CXX_STANDARD_LIBRARIES=" + tc.libs,
+                "-DCMAKE_CXX_STANDARD_LIBRARIES=" + libs,
                 "-DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY",
                 "-DBUILD_SHARED_LIBS=OFF",
             ]
