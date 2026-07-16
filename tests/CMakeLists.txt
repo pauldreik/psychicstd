@@ -52,6 +52,7 @@ set(TESTS
     test_stop_token
     test_string
     test_string_view
+    test_system_error
     test_thread
     test_tuple
     test_type_traits
