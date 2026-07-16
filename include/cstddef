@@ -9,10 +9,35 @@ using nullptr_t = decltype(nullptr);
 
 enum class byte : unsigned char {};
 
-template <class I> constexpr byte operator<<(byte b, I shift) noexcept {
+// [support.types.byteops]: byte shift operators must not participate in
+// overload resolution unless is_integral_v<I> is true. <type_traits> includes
+// this header, so use a local integral check instead of is_integral_v.
+template <class T> inline constexpr bool __byte_int_v = false;
+template <> inline constexpr bool __byte_int_v<bool> = true;
+template <> inline constexpr bool __byte_int_v<char> = true;
+template <> inline constexpr bool __byte_int_v<signed char> = true;
+template <> inline constexpr bool __byte_int_v<unsigned char> = true;
+template <> inline constexpr bool __byte_int_v<short> = true;
+template <> inline constexpr bool __byte_int_v<unsigned short> = true;
+template <> inline constexpr bool __byte_int_v<int> = true;
+template <> inline constexpr bool __byte_int_v<unsigned int> = true;
+template <> inline constexpr bool __byte_int_v<long> = true;
+template <> inline constexpr bool __byte_int_v<unsigned long> = true;
+template <> inline constexpr bool __byte_int_v<long long> = true;
+template <> inline constexpr bool __byte_int_v<unsigned long long> = true;
+template <> inline constexpr bool __byte_int_v<char8_t> = true;
+template <> inline constexpr bool __byte_int_v<char16_t> = true;
+template <> inline constexpr bool __byte_int_v<char32_t> = true;
+template <> inline constexpr bool __byte_int_v<wchar_t> = true;
+
+template <class I>
+  requires(__byte_int_v<I>)
+constexpr byte operator<<(byte b, I shift) noexcept {
   return byte(static_cast<unsigned char>(b) << shift);
 }
-template <class I> constexpr byte operator>>(byte b, I shift) noexcept {
+template <class I>
+  requires(__byte_int_v<I>)
+constexpr byte operator>>(byte b, I shift) noexcept {
   return byte(static_cast<unsigned char>(b) >> shift);
 }
 constexpr byte operator|(byte l, byte r) noexcept {
@@ -27,10 +52,14 @@ constexpr byte operator^(byte l, byte r) noexcept {
 constexpr byte operator~(byte b) noexcept {
   return byte(~static_cast<unsigned char>(b));
 }
-template <class I> constexpr byte& operator<<=(byte& b, I shift) noexcept {
+template <class I>
+  requires(__byte_int_v<I>)
+constexpr byte& operator<<=(byte& b, I shift) noexcept {
   return b = b << shift;
 }
-template <class I> constexpr byte& operator>>=(byte& b, I shift) noexcept {
+template <class I>
+  requires(__byte_int_v<I>)
+constexpr byte& operator>>=(byte& b, I shift) noexcept {
   return b = b >> shift;
 }
 constexpr byte& operator|=(byte& l, byte r) noexcept { return l = l | r; }
