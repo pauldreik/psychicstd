@@ -44,6 +44,11 @@ static void test_forwarding() {
 
   psyassert(std::make_unique<Forwarded>(value)->kind == 1);
   psyassert(std::make_shared<Forwarded>(static_cast<int&&>(value))->kind == 2);
+
+  // make_unique<T[]>(n) must select the array overload (value-initialized),
+  // not the variadic single-object one (cmake regression).
+  auto arr = std::make_unique<char[]>(16);
+  psyassert(arr[0] == 0 && arr[15] == 0);
 }
 
 static void test_converting_copy_ctor() {

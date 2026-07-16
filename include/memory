@@ -419,7 +419,11 @@ private:
 };
 
 template <typename T, typename... Args>
-unique_ptr<T> make_unique(Args&&... args) {
+unique_ptr<T> make_unique(Args&&... args)
+  // Constrained per [unique.ptr.create]; without this, make_unique<T[]>(n)
+  // prefers the exact-match variadic overload and hard-errors on new T(...).
+  requires(!is_array_v<T>)
+{
   // forward
   return unique_ptr<T>(new T(static_cast<Args&&>(args)...));
 }
