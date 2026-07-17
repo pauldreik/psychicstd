@@ -1,9 +1,10 @@
 #pragma once
 
-// Integer std::abs overloads shared by <cmath> and <cstdlib>. Defined via
-// compiler builtins (GCC 4.x+ and clang) so <cmath> does not need <stdlib.h>.
+// Integer std::abs overloads shared by <cmath> and <cstdlib>. Keep these as
+// plain arithmetic: Clang sanitizer instrumentation prevents the corresponding
+// compiler builtins from being constant expressions.
 namespace std {
-inline constexpr int abs(int __x) { return __builtin_abs(__x); }
-inline constexpr long abs(long __x) { return __builtin_labs(__x); }
-inline constexpr long long abs(long long __x) { return __builtin_llabs(__x); }
+inline constexpr int abs(int __x) { return __x < 0 ? -__x : __x; }
+inline constexpr long abs(long __x) { return __x < 0 ? -__x : __x; }
+inline constexpr long long abs(long long __x) { return __x < 0 ? -__x : __x; }
 } // namespace std

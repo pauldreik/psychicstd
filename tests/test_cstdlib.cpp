@@ -21,6 +21,11 @@
 static_assert(EXIT_SUCCESS == 0);
 static_assert(EXIT_FAILURE == 1);
 static_assert(RAND_MAX >= 32767);
+#ifdef _PSYCHICSTD_COMPATIBILITY_LEVEL
+static_assert(std::abs(-5) == 5);
+static_assert(std::abs(-5L) == 5L);
+static_assert(std::abs(-5LL) == 5LL);
+#endif
 
 #include <stdlib.h>
 
