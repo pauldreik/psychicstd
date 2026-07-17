@@ -2,8 +2,8 @@
 #include <string>
 
 int main() {
-#if !defined(_PSYCHICSTD_COMPATIBILITY_LEVEL) ||                               \
-    _PSYCHICSTD_COMPATIBILITY_LEVEL >= 2
+#if defined(PSYCHICSTD_TEST_PSYCHICSTD) &&                                     \
+    _PSYCHICSTD_COMPATIBILITY_LEVEL >= _PSYCHICSTD_COMPAT_DROPIN
   psyassert(isspace(' '));
   const char equal_left[] = "same";
   const char equal_right[] = "same";
