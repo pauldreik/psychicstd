@@ -84,10 +84,20 @@ endforeach()
 if(NOT APPLE)
     target_link_libraries(test_atomic_system PRIVATE atomic)
 endif()
-target_compile_options(
-    test_atomic_psychicstd
-    PRIVATE $<$<CXX_COMPILER_ID:Clang,AppleClang>:-Wno-atomic-alignment>
-)
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang$")
+    target_compile_options(test_atomic_psychicstd PRIVATE -Wno-atomic-alignment)
+endif()
+if(APPLE)
+    add_executable(test_atomic_macos_fallback test_atomic.cpp)
+    target_link_libraries(test_atomic_macos_fallback PRIVATE psychicstd::psychicstd)
+    target_compile_features(test_atomic_macos_fallback PRIVATE cxx_std_23)
+    target_compile_options(
+        test_atomic_macos_fallback
+        PRIVATE -mmacosx-version-min=13.0 -Wno-atomic-alignment
+    )
+    psychicstd_enable_warnings(test_atomic_macos_fallback)
+    add_test(NAME test_atomic_macos_fallback COMMAND test_atomic_macos_fallback)
+endif()
 
 # Self-containment tests: every header must be usable on its own. Including
 # just that one header (and nothing else) must compile. This catches headers
@@ -132,6 +142,8 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
         set(_psychicstd_toolchain_supported ON)
     endif()
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin" AND CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
+    set(_psychicstd_toolchain_supported ON)
 endif()
 
 if(_psychicstd_toolchain_supported)
@@ -162,7 +174,11 @@ if(_psychicstd_toolchain_supported)
 endif()
 
 find_program(_psychicstd_conan_executable conan)
-if(_psychicstd_conan_executable AND _psychicstd_toolchain_supported)
+if(
+    _psychicstd_conan_executable
+    AND CMAKE_SYSTEM_NAME STREQUAL "Linux"
+    AND _psychicstd_toolchain_supported
+)
     add_test(
         NAME conan_project_profile
         COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/conan_project/run.sh ${CMAKE_CXX_COMPILER}
