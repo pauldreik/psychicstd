@@ -4,7 +4,6 @@
 // use them without pulling in all of <algorithm>.
 
 #include <iterator>
-#include <utility>
 
 namespace std {
 
@@ -23,8 +22,10 @@ void __push_heap(It first, ptrdiff_t hole, ptrdiff_t top, Compare cmp,
 template <typename It, typename Compare>
 void push_heap(It first, It last, Compare cmp) {
   if (last - first > 1) {
-    auto val = std::move(*(last - 1));
-    __push_heap(first, last - first - 1, ptrdiff_t(0), cmp, std::move(val));
+    auto val =
+        static_cast<typename iterator_traits<It>::value_type&&>(*(last - 1));
+    __push_heap(first, last - first - 1, ptrdiff_t(0), cmp,
+                static_cast<decltype(val)&&>(val));
   }
 }
 template <typename It> void push_heap(It first, It last) {
@@ -47,16 +48,17 @@ void __adjust_heap(It first, ptrdiff_t hole, ptrdiff_t len, Compare cmp,
     *(first + hole) = static_cast<decltype(val)&&>(*(first + (rchild - 1)));
     hole = rchild - 1;
   }
-  __push_heap(first, hole, top, cmp, std::move(val));
+  __push_heap(first, hole, top, cmp, static_cast<decltype(val)&&>(val));
 }
 
 template <typename It, typename Compare>
 void pop_heap(It first, It last, Compare cmp) {
   if (last - first > 1) {
     --last;
-    auto val = std::move(*last);
-    *last = std::move(*first);
-    __adjust_heap(first, ptrdiff_t(0), last - first, cmp, std::move(val));
+    auto val = static_cast<typename iterator_traits<It>::value_type&&>(*last);
+    *last = static_cast<decltype(val)&&>(*first);
+    __adjust_heap(first, ptrdiff_t(0), last - first, cmp,
+                  static_cast<decltype(val)&&>(val));
   }
 }
 template <typename It> void pop_heap(It first, It last) {
@@ -67,8 +69,9 @@ template <typename It, typename Compare>
 void make_heap(It first, It last, Compare cmp) {
   ptrdiff_t n = last - first;
   for (ptrdiff_t i = n / 2 - 1; i >= 0; --i) {
-    auto val = std::move(*(first + i));
-    __adjust_heap(first, i, n, cmp, std::move(val));
+    auto val =
+        static_cast<typename iterator_traits<It>::value_type&&>(*(first + i));
+    __adjust_heap(first, i, n, cmp, static_cast<decltype(val)&&>(val));
   }
 }
 template <typename It> void make_heap(It first, It last) {
