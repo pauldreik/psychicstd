@@ -1,5 +1,6 @@
 #include "psyassert.h"
 #include <queue>
+#include <type_traits>
 
 int main() {
   // queue
@@ -16,6 +17,7 @@ int main() {
 
   // priority_queue: max-heap by default
   std::priority_queue<int> pq;
+  static_assert(std::is_same_v<decltype(pq.emplace(4)), void>);
   psyassert(pq.empty());
   pq.push(3);
   pq.push(1);
