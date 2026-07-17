@@ -1,0 +1,18 @@
+#pragma once
+#include <type_traits>
+
+namespace std::detail {
+
+template <typename F, typename... Args>
+constexpr decltype(auto) __invoke(F&& f, Args&&... args) {
+  return static_cast<F&&>(f)(static_cast<Args&&>(args)...);
+}
+template <typename R, typename T, typename Obj, typename... Args>
+constexpr decltype(auto) __invoke(R T::* pm, Obj&& obj, Args&&... args) {
+  if constexpr (is_pointer_v<decay_t<Obj>>)
+    return ((*static_cast<Obj&&>(obj)).*pm)(static_cast<Args&&>(args)...);
+  else
+    return (static_cast<Obj&&>(obj).*pm)(static_cast<Args&&>(args)...);
+}
+
+} // namespace std::detail

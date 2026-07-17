@@ -1,5 +1,6 @@
 #pragma once
 #include <__psychicstd_functors>
+#include <__psychicstd_invoke>
 #include <tuple>
 #include <type_traits>
 #include <utility>
@@ -106,19 +107,6 @@ constexpr T& __bind_arg(reference_wrapper<T> ref, Rest&&...) {
 template <typename Arg, typename... Rest>
 constexpr Arg&& __bind_arg(placeholders::__ph1, Arg&& a, Rest&&...) {
   return static_cast<Arg&&>(a);
-}
-
-// invoke: call f(args...) or (obj.*f)(args...) for member pointers
-template <typename F, typename... Args>
-constexpr decltype(auto) __invoke(F&& f, Args&&... args) {
-  return static_cast<F&&>(f)(static_cast<Args&&>(args)...);
-}
-template <typename R, typename T, typename Obj, typename... Args>
-constexpr decltype(auto) __invoke(R T::* pm, Obj&& obj, Args&&... args) {
-  if constexpr (is_pointer_v<decay_t<Obj>>)
-    return ((*static_cast<Obj&&>(obj)).*pm)(static_cast<Args&&>(args)...);
-  else
-    return (static_cast<Obj&&>(obj).*pm)(static_cast<Args&&>(args)...);
 }
 
 template <typename F, typename... Bound> struct __bind_wrapper {
