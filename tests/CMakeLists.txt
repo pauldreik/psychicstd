@@ -74,6 +74,7 @@ foreach(t ${TESTS})
 
     add_executable(${t}_psychicstd ${t}.cpp)
     target_link_libraries(${t}_psychicstd PRIVATE psychicstd::psychicstd)
+    target_compile_definitions(${t}_psychicstd PRIVATE PSYCHICSTD_TEST_PSYCHICSTD=1)
     target_compile_features(${t}_psychicstd PRIVATE cxx_std_23)
     psychicstd_enable_warnings(${t}_psychicstd)
     add_test(NAME ${t}_psychicstd COMMAND ${t}_psychicstd)
