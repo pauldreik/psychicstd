@@ -30,10 +30,18 @@ def run_once_ms(binary: Path) -> float:
     return (time.perf_counter() - start) * 1000
 
 
-def samples_ms(binary: Path) -> list[float]:
-    for _ in range(WARMUP):
-        run_once_ms(binary)
-    return [round(run_once_ms(binary), 4) for _ in range(N)]
+def paired_samples_ms(
+    system: Path, psychicstd: Path
+) -> tuple[list[float], list[float]]:
+    system_samples = []
+    psychicstd_samples = []
+    for i in range(WARMUP + N):
+        pair = (system, psychicstd) if i % 2 == 0 else (psychicstd, system)
+        measured = {binary: run_once_ms(binary) for binary in pair}
+        if i >= WARMUP:
+            system_samples.append(round(measured[system], 4))
+            psychicstd_samples.append(round(measured[psychicstd], 4))
+    return system_samples, psychicstd_samples
 
 
 def shared_libs(binary: Path) -> list[str]:
@@ -76,8 +84,7 @@ def main() -> None:
             sys.exit(f"error: {b} not found -- build it first (cmake --build build)")
 
     print(f"measuring {N} runs each (after {WARMUP} warmup runs)...")
-    sys_s = samples_ms(system_bin)
-    psy_s = samples_ms(psychicstd_bin)
+    sys_s, psy_s = paired_samples_ms(system_bin, psychicstd_bin)
     sys_ms = statistics.median(sys_s)
     psy_ms = statistics.median(psy_s)
     ratio = sys_ms / psy_ms
