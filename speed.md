@@ -46,7 +46,7 @@ Last updated: 2026-07-07 22:47
 | 🟢 | array | 51.6ms | 21.1ms | 2.4x |
 | 🟢 | all-headers | 48.9ms | 19.1ms | 2.6x |
 | 🟢 | optional | 47.7ms | 24.1ms | 2.0x |
-| 🟢 | numeric | 43.2ms | 18.3ms | 2.4x |
+| 🟢 | bench/numeric | 43.2ms | 18.3ms | 2.4x |
 | 🟢 | numeric | 43.1ms | 17.4ms | 2.5x |
 | 🟢 | any | 36.2ms | 26.2ms | 1.4x |
 | 🟢 | utility | 34.0ms | 17.0ms | 2.0x |
@@ -57,10 +57,10 @@ Last updated: 2026-07-07 22:47
 | 🟢 | type_traits | 20.6ms | 14.8ms | 1.4x |
 | 🟡 | limits | 19.0ms | 17.6ms | 1.1x |
 | 🟡 | typeinfo | 15.4ms | 13.4ms | 1.1x |
-| 🟡 | cstddef | 15.3ms | 15.3ms | 1.0x |
+| 🟡 | bench/cstddef | 15.3ms | 15.3ms | 1.0x |
 | 🟡 | initializer_list | 15.2ms | 14.4ms | 1.1x |
 | 🟡 | new | 14.7ms | 13.8ms | 1.1x |
 | 🟡 | cstddef | 14.1ms | 12.0ms | 1.2x |
-| 🟡 | cstdint | 13.6ms | 12.6ms | 1.1x |
+| 🟡 | bench/cstdint | 13.6ms | 12.6ms | 1.1x |
 | 🟡 | cstdint | 13.6ms | 12.7ms | 1.1x |
 | ⬜ | rapidjson | n/a | n/a | n/a |

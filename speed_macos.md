@@ -2,7 +2,7 @@
 
 Median of 10 compilations per file. Ordered by system STL compile time, slowest first.
 
-🟢 above 1.2x  🟡 0.8x–1.2x  🔴 below 0.8x
+🟢 above 1.2x 🟡 0.8x–1.2x 🔴 below 0.8x
 
 Last updated: 2026-07-16 00:51
 
@@ -63,7 +63,7 @@ Platform: macOS 26 arm64 (Apple M3), Apple clang 21, system STL = libc++.
 | 🟢 | any | 53.8ms | 26.9ms | 2.0x |
 | 🟢 | utility | 37.8ms | 20.3ms | 1.9x |
 | 🟢 | all-headers | 34.3ms | 21.1ms | 1.6x |
-| 🟢 | numeric | 32.9ms | 20.7ms | 1.6x |
+| 🟢 | bench/numeric | 32.9ms | 20.7ms | 1.6x |
 | 🟢 | numeric | 32.0ms | 20.1ms | 1.6x |
 | 🟢 | cmath | 29.9ms | 23.4ms | 1.3x |
 | 🟢 | compare | 27.9ms | 19.6ms | 1.4x |
@@ -73,10 +73,10 @@ Platform: macOS 26 arm64 (Apple M3), Apple clang 21, system STL = libc++.
 | 🟡 | cstdlib | 24.5ms | 24.1ms | 1.0x |
 | 🟡 | cstdlib_order | 23.9ms | 23.1ms | 1.0x |
 | 🟡 | concepts | 21.6ms | 21.0ms | 1.0x |
-| 🟡 | cstddef | 20.1ms | 18.0ms | 1.1x |
+| 🟡 | bench/cstddef | 20.1ms | 18.0ms | 1.1x |
 | 🟡 | ratio | 19.6ms | 20.4ms | 1.0x |
 | 🟡 | limits | 19.4ms | 18.5ms | 1.1x |
 | 🟡 | initializer_list | 18.2ms | 18.2ms | 1.0x |
-| 🟡 | cstdint | 17.9ms | 17.3ms | 1.0x |
+| 🟡 | bench/cstdint | 17.9ms | 17.3ms | 1.0x |
 | 🟡 | cstddef | 17.9ms | 16.5ms | 1.1x |
 | 🟡 | cstdint | 17.6ms | 17.1ms | 1.0x |
