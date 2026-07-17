@@ -1,0 +1,90 @@
+#pragma once
+#include <cstddef>
+#include <iterator>
+#include <type_traits>
+
+namespace std {
+
+// Wrapping T* permits decrementing an rvalue end iterator, unlike a raw
+// pointer. Kept separate so contiguous containers do not include each other.
+template <typename T> struct __vec_iter {
+  using difference_type = ptrdiff_t;
+  using value_type = remove_cv_t<T>;
+  using pointer = T*;
+  using reference = T&;
+  using iterator_category = random_access_iterator_tag;
+  using iterator_concept = contiguous_iterator_tag;
+
+  T* ptr_;
+
+  constexpr __vec_iter() noexcept : ptr_(nullptr) {}
+  constexpr explicit __vec_iter(T* p) noexcept : ptr_(p) {}
+  template <typename U>
+    requires(is_same_v<U, remove_cv_t<T>>)
+  constexpr __vec_iter(const __vec_iter<U>& o) noexcept : ptr_(o.ptr_) {}
+
+  constexpr T& operator*() const noexcept { return *ptr_; }
+  constexpr T* operator->() const noexcept { return ptr_; }
+  constexpr T& operator[](ptrdiff_t n) const noexcept { return ptr_[n]; }
+  constexpr __vec_iter& operator++() noexcept { return ++ptr_, *this; }
+  constexpr __vec_iter operator++(int) noexcept {
+    auto t = *this;
+    return ++ptr_, t;
+  }
+  constexpr __vec_iter& operator--() noexcept { return --ptr_, *this; }
+  constexpr __vec_iter operator--(int) noexcept {
+    auto t = *this;
+    return --ptr_, t;
+  }
+  constexpr __vec_iter& operator+=(ptrdiff_t n) noexcept {
+    return ptr_ += n, *this;
+  }
+  constexpr __vec_iter& operator-=(ptrdiff_t n) noexcept {
+    return ptr_ -= n, *this;
+  }
+  constexpr __vec_iter operator+(ptrdiff_t n) const noexcept {
+    return __vec_iter{ptr_ + n};
+  }
+  constexpr __vec_iter operator-(ptrdiff_t n) const noexcept {
+    return __vec_iter{ptr_ - n};
+  }
+  template <typename U>
+  constexpr ptrdiff_t operator-(const __vec_iter<U>& o) const noexcept {
+    return ptr_ - o.ptr_;
+  }
+  template <typename U>
+  constexpr bool operator==(const __vec_iter<U>& o) const noexcept {
+    return ptr_ == o.ptr_;
+  }
+  template <typename U>
+  constexpr bool operator!=(const __vec_iter<U>& o) const noexcept {
+    return ptr_ != o.ptr_;
+  }
+  template <typename U>
+  constexpr bool operator<(const __vec_iter<U>& o) const noexcept {
+    return ptr_ < o.ptr_;
+  }
+  template <typename U>
+  constexpr bool operator<=(const __vec_iter<U>& o) const noexcept {
+    return ptr_ <= o.ptr_;
+  }
+  template <typename U>
+  constexpr bool operator>(const __vec_iter<U>& o) const noexcept {
+    return ptr_ > o.ptr_;
+  }
+  template <typename U>
+  constexpr bool operator>=(const __vec_iter<U>& o) const noexcept {
+    return ptr_ >= o.ptr_;
+  }
+
+  constexpr operator T*() const noexcept { return ptr_; }
+  constexpr T* base() const noexcept { return ptr_; }
+};
+
+template <typename T>
+constexpr __vec_iter<T> operator+(ptrdiff_t n,
+                                  const __vec_iter<T>& it) noexcept {
+  return __vec_iter<T>{it.ptr_ + n};
+}
+
+} // namespace std

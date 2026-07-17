@@ -1,0 +1,32 @@
+#pragma once
+#include <compare>
+#include <type_traits>
+
+namespace std::__contiguous_detail {
+
+template <typename T>
+concept __ntw = requires(const T& a, const T& b) { a <=> b; };
+template <typename T>
+concept __stw = !__ntw<T> && requires(const T& a, const T& b) {
+  (bool)(a == b);
+  (bool)(a < b);
+};
+
+template <typename T> constexpr auto __cmp_result() {
+  if constexpr (__ntw<T>)
+    return declval<const T&>() <=> declval<const T&>();
+  else
+    return weak_ordering::equivalent;
+}
+template <typename T> using __cmp_t = decltype(__cmp_result<T>());
+
+template <typename T> constexpr __cmp_t<T> __cmp(const T& a, const T& b) {
+  if constexpr (__ntw<T>)
+    return a <=> b;
+  else
+    return a == b  ? weak_ordering::equivalent
+           : a < b ? weak_ordering::less
+                   : weak_ordering::greater;
+}
+
+} // namespace std::__contiguous_detail
