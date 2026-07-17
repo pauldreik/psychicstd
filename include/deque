@@ -9,6 +9,11 @@
 #include <memory>
 #include <type_traits>
 
+#if _PSYCHICSTD_COMPATIBILITY_LEVEL >= _PSYCHICSTD_COMPAT_DROPIN
+// libstdc++ exposes move_backward through <deque>.
+#include <__psychicstd_algobase>
+#endif
+
 namespace std {
 
 // deque implemented as a single contiguous buffer with slack at both ends
