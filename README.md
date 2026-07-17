@@ -97,7 +97,7 @@ These are the goals, in order
 
 - Runtime performance — we don't try to make your program run faster, only to compile faster. With that said, typical unit tests are expected to run decently fast. On the example projects, psychicstd is sometimes **faster** on tests!
 - Compilation speed in release mode
-- Portability beyond Linux and macOS. GCC and Clang are supported on Linux; AppleClang is supported on macOS. There is no Windows or MSVC support.
+- Portability beyond Linux and macOS. GCC and Clang are supported on Linux; AppleClang is supported on macOS 14.4 and newer. There is no Windows or MSVC support.
 - ABI stability or any kind of guarantees
 - Support older C++ standards
 

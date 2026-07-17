@@ -8,6 +8,10 @@ add_library(psychicstd::psychicstd ALIAS psychicstd)
 
 target_compile_features(psychicstd INTERFACE cxx_std_23)
 target_compile_options(psychicstd INTERFACE -nostdinc++ -fvisibility=hidden)
+if(APPLE)
+    # atomic::wait uses os_sync_wait_on_address, introduced in macOS 14.4.
+    target_compile_options(psychicstd INTERFACE -mmacosx-version-min=14.4)
+endif()
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
     function(psychicstd_enable_warnings target)

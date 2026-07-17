@@ -19,10 +19,6 @@ One libcxx test file (the first that passes the system STL) is compiled once wit
 
 🟢 >1.2× 🟡 0.8×–1.2× 🔴 \<0.8×
 
-## Deliberate gaps
-
-- On macOS deployment targets older than 14.4, `atomic::wait` polls with `sched_yield` because `os_sync_wait_on_address` is unavailable. Waiting remains functional but can consume more CPU; notification functions are no-ops because polling waiters observe the atomic value directly.
-
 ## Results
 
 | | header | conformance | system | psychicstd | speedup | lines |

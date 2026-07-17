@@ -87,18 +87,6 @@ endif()
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang$")
     target_compile_options(test_atomic_psychicstd PRIVATE -Wno-atomic-alignment)
 endif()
-if(APPLE)
-    add_executable(test_atomic_macos_fallback test_atomic.cpp)
-    target_link_libraries(test_atomic_macos_fallback PRIVATE psychicstd::psychicstd)
-    target_compile_features(test_atomic_macos_fallback PRIVATE cxx_std_23)
-    target_compile_options(
-        test_atomic_macos_fallback
-        PRIVATE -mmacosx-version-min=13.0 -Wno-atomic-alignment
-    )
-    psychicstd_enable_warnings(test_atomic_macos_fallback)
-    add_test(NAME test_atomic_macos_fallback COMMAND test_atomic_macos_fallback)
-endif()
-
 # Self-containment tests: every header must be usable on its own. Including
 # just that one header (and nothing else) must compile. This catches headers
 # that rely on another header having been included first. The source is

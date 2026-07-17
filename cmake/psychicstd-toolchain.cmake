@@ -36,6 +36,8 @@ set(CMAKE_CXX_FLAGS
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -nostdlib++")
 # C++ ABI runtime: libc++abi on macOS, libsupc++ (+ libatomic) elsewhere.
 if(APPLE)
+    # atomic::wait uses os_sync_wait_on_address, introduced in macOS 14.4.
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mmacosx-version-min=14.4")
     set(CMAKE_CXX_STANDARD_LIBRARIES "${CMAKE_CXX_STANDARD_LIBRARIES} -lc++abi")
 else()
     set(CMAKE_CXX_STANDARD_LIBRARIES "${CMAKE_CXX_STANDARD_LIBRARIES} -lsupc++ -latomic")
