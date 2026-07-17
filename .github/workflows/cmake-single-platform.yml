@@ -20,6 +20,21 @@ jobs:
       - name: Test
         working-directory: ${{github.workspace}}/build
         run: ctest -C ${{env.BUILD_TYPE}} --output-on-failure
+  macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Configure CMake
+        run: >
+          cmake -B ${{github.workspace}}/build_macos
+          -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
+          -DCMAKE_OSX_DEPLOYMENT_TARGET=14.4
+          -DPSYCHICSTD_BUILD_BENCHMARKS=OFF
+      - name: Build
+        run: cmake --build ${{github.workspace}}/build_macos --config ${{env.BUILD_TYPE}}
+      - name: Test
+        working-directory: ${{github.workspace}}/build_macos
+        run: ctest -C ${{env.BUILD_TYPE}} --output-on-failure
   ubsan:
     runs-on: ubuntu-latest
     steps:
