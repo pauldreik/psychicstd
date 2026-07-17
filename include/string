@@ -13,11 +13,10 @@
 #include <version>
 
 #if _PSYCHICSTD_COMPATIBILITY_LEVEL >= _PSYCHICSTD_COMPAT_DROPIN
-// <string> itself does not use these, but libstdc++ exposes the stl_algobase
-// subset of <algorithm> through <string>, so real code relies on the
-// transitive include (e.g. Catch2's std::equal). Keep that subset for drop-in
-// compat; sort/std::function/tuple are not part of libstdc++'s <string>.
-#include <__psychicstd_algobase>
+// libstdc++ exposes equal through <string>; Catch2 relies on that exception.
+#include <__psychicstd_string_algobase>
+// fmt also relies on libstdc++ exposing move and forward through <string>.
+#include <utility>
 // libstdc++ also makes the global ctype functions visible through <string>.
 // Catch2 3.8 relies on unqualified isspace after including only <string>.
 #include <ctype.h>

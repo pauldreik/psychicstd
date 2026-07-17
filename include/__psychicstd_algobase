@@ -1,5 +1,6 @@
 #pragma once
 #include <__psychicstd_config>
+#include <__psychicstd_string_algobase>
 #include <initializer_list>
 #include <iterator>
 #include <type_traits>
@@ -376,46 +377,6 @@ template <typename It> constexpr It rotate(It first, It n_first, It last) {
     ++result;
   }
   return result;
-}
-
-// equal
-template <typename It1, typename It2>
-constexpr bool equal(It1 first1, It1 last1, It2 first2) {
-  for (; first1 != last1; ++first1) {
-    if (!(*first1 == *first2))
-      return false;
-    ++first2;
-  }
-  return true;
-}
-template <typename It1, typename It2, typename BinPred>
-constexpr bool equal(It1 first1, It1 last1, It2 first2, BinPred pred) {
-  for (; first1 != last1; ++first1) {
-    if (!pred(*first1, *first2))
-      return false;
-    ++first2;
-  }
-  return true;
-}
-template <typename It1, typename It2>
-constexpr bool equal(It1 first1, It1 last1, It2 first2, It2 last2) {
-  for (; first1 != last1 && first2 != last2; ++first1) {
-    if (!(*first1 == *first2))
-      return false;
-    ++first2;
-  }
-  return first1 == last1 && first2 == last2;
-}
-
-template <typename It1, typename It2, typename BinPred>
-constexpr bool equal(It1 first1, It1 last1, It2 first2, It2 last2,
-                     BinPred pred) {
-  for (; first1 != last1 && first2 != last2; ++first1) {
-    if (!pred(*first1, *first2))
-      return false;
-    ++first2;
-  }
-  return first1 == last1 && first2 == last2;
 }
 
 // mismatch

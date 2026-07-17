@@ -5,6 +5,14 @@ int main() {
 #if !defined(_PSYCHICSTD_COMPATIBILITY_LEVEL) ||                               \
     _PSYCHICSTD_COMPATIBILITY_LEVEL >= 2
   psyassert(isspace(' '));
+  const char equal_left[] = "same";
+  const char equal_right[] = "same";
+  psyassert(std::equal(equal_left, equal_left + 4, equal_right));
+  int value = 1;
+  int&& moved = std::move(value);
+  int&& forwarded = std::forward<int>(value);
+  psyassert(&moved == &value);
+  psyassert(&forwarded == &value);
 #endif
 
   std::string::allocator_type allocator;
