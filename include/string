@@ -18,6 +18,9 @@
 // transitive include (e.g. Catch2's std::equal). Keep that subset for drop-in
 // compat; sort/std::function/tuple are not part of libstdc++'s <string>.
 #include <__psychicstd_algobase>
+// libstdc++ also makes the global ctype functions visible through <string>.
+// Catch2 3.8 relies on unqualified isspace after including only <string>.
+#include <ctype.h>
 #endif
 
 namespace std {

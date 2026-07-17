@@ -2,6 +2,11 @@
 #include <string>
 
 int main() {
+#if !defined(_PSYCHICSTD_COMPATIBILITY_LEVEL) ||                               \
+    _PSYCHICSTD_COMPATIBILITY_LEVEL >= 2
+  psyassert(isspace(' '));
+#endif
+
   std::string::allocator_type allocator;
   (void)allocator;
 
