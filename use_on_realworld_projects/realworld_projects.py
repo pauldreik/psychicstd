@@ -211,6 +211,64 @@ def _catch2() -> Project:
     )
 
 
+# --- googletest --------------------------------------------------------
+
+
+def _googletest() -> Project:
+    version = "1.16.0"
+    url = f"https://github.com/google/googletest/archive/refs/tags/v{version}.tar.gz"
+    checksum = "78c676fc63881529bf97bf9d45948d905a66833fbfa5318ea2cd7478cb98f399"
+
+    def build(tc: Toolchain) -> dict[str, float]:
+        tarball = RW_DIR / f"googletest-{version}.tar.gz"
+        _fetch(url, tarball, checksum)
+
+        with tempfile.TemporaryDirectory(
+            prefix="rw-googletest-", ignore_cleanup_errors=True
+        ) as work_dir:
+            work = Path(work_dir)
+            with tarfile.open(tarball) as t:
+                t.extractall(work)
+            src = work / f"googletest-{version}"
+            # GoogleTest also builds no-RTTI/no-exception variants of its
+            # tests. psychicstd's current any/memory/locale implementations
+            # require those language features internally.
+            wrapper = _compiler_wrapper(work / "cxx", tc, ("-frtti", "-fexceptions"))
+            env = _env(tc)
+            configure = [
+                "cmake",
+                "-S",
+                ".",
+                "-B",
+                "build",
+                "-GNinja",
+                "-DCMAKE_BUILD_TYPE=" + tc.build_type.capitalize(),
+                "-DCMAKE_CXX_COMPILER=" + str(wrapper),
+                "-DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY",
+                "-Dgtest_build_tests=ON",
+                "-Dgtest_build_samples=OFF",
+                "-DBUILD_GMOCK=OFF",
+                "-DINSTALL_GTEST=OFF",
+            ]
+            jobs = f"-j{os.cpu_count() or 1}"
+            return {
+                "configure": _timed(configure, src, env),
+                "compile": _timed(["cmake", "--build", "build", jobs], src, env),
+                "run tests": _timed(
+                    ["ctest", "--test-dir", "build", "--output-on-failure", jobs],
+                    src,
+                    env,
+                ),
+            }
+
+    return Project(
+        version=version,
+        build=build,
+        comment="Builds GoogleTest's upstream unit tests with GMock and samples "
+        "disabled, then runs the resulting CTest suite.",
+    )
+
+
 # --- cmake -------------------------------------------------------------
 
 
@@ -791,6 +849,7 @@ PROJECTS: dict[str, Project] = {
     "cppcheck": _cppcheck(),
     "eigen": _eigen(),
     "fmt": _fmt(),
+    "googletest": _googletest(),
     "nlohmann": _nlohmann(),
     "rdfind": _rdfind(),
     "simdutf": _simdutf(),
