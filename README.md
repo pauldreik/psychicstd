@@ -29,6 +29,13 @@ projects to compile. The `std::string` header is perhaps the most used header an
 investigate the complementess I counted the number of public member functios to see what
 is missing. It implements **44 of libstdc++'s 45 public `basic_string` method names (98%)**, missing only `copy` and `get_allocator`. See the [`std::string` completeness case study](casestudies/string_completeness/stringcompletenesscasestudy.md) for details. Note that a present method name is not full compliance — see [compliance.md](compliance.md) for behavioral coverage.
 
+Some facilities are omitted deliberately when their practical value does not
+justify the compile-time cost. For example, `<iostream>` provides the commonly
+used narrow streams, but not `wcin`, `wcout`, `wcerr`, or `wclog`. Defining
+those rarely used wide streams made a representative program about 6–7% slower
+to compile even when it did not use them. Such gaps are preferred over making
+every user pay for unused compliance.
+
 ## Why?
 
 Slow compilation is one of the pain points of C++. Modules are supposed to help, but it is not yet ready. Also, even if modules solve the slow parsing of include files problem, standard libraries are typically optimized for runtime performance. Psychichstd does not care about runtime performance - it is all about compilation speed.
