@@ -116,7 +116,8 @@ template <typename T1, typename T2> struct pair {
   using second_type = T2;
   T1 first;
   T2 second;
-  constexpr pair() = default;
+  // Value-initialize scalars, matching std::pair{} for pointer members.
+  constexpr pair() : first(), second() {}
   constexpr pair(const T1& a, const T2& b) : first(a), second(b) {}
   template <typename U1, typename U2>
     requires(is_constructible_v<T1, U1> && is_constructible_v<T2, U2>)
