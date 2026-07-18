@@ -31,4 +31,10 @@ int main() {
   stateful_allocator<int> ta(1);
   const std::list<int, stateful_allocator<int>> tl(ta);
   psyassert(tl.get_allocator() == ta);
+
+  std::list<int> source = {4, 5};
+  l.splice(l.end(), source);
+  psyassert(source.empty());
+  psyassert(l.size() == 5);
+  psyassert(l.back() == 5);
 }

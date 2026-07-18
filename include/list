@@ -383,6 +383,7 @@ public:
           head_ = n;
         tail_ = n;
       }
+      n = next;
     }
     size_ += other.size_;
     other.head_ = other.tail_ = nullptr;
