@@ -1,4 +1,5 @@
 #include "psyassert.h"
+#include <stdexcept>
 #include <string>
 
 int main() {
@@ -19,6 +20,17 @@ int main() {
   (void)allocator;
 
   std::string s = "hello";
+  psyassert(s.at(1) == 'e');
+  const std::string const_s = s;
+  psyassert(const_s.at(4) == 'o');
+  bool at_threw = false;
+  try {
+    (void)s.at(s.size());
+  } catch (const std::out_of_range&) {
+    at_threw = true;
+  }
+  psyassert(at_threw);
+
   std::string source = "assign";
   psyassert(std::string(source, 1, 3) == "ssi");
   psyassert(std::string(source, 4, 99) == "gn");
@@ -42,6 +54,13 @@ int main() {
   psyassert(s == "okh!!el:lo");
   s.replace(0, 2, 3, '-');
   psyassert(s == "---h!!el:lo");
+
+  std::string erased = "abracadabra";
+  psyassert(std::erase(erased, 'a') == 5);
+  psyassert(erased == "brcdbr");
+  psyassert(
+      std::erase_if(erased, [](char c) { return c == 'b' || c == 'd'; }) == 3);
+  psyassert(erased == "rcr");
 
   // string <-> string_view in ?: must pick string_view (requires the
   // string_view ctor to be explicit per [string.cons]; hit by cmake).

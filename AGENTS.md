@@ -47,6 +47,9 @@ useful during the edit-compile-debug cycle.
 
 ## Validation
 
+- Before compiling or running tests in parallel, consider both the available
+  memory and CPU count. On machines with many cores and limited RAM, cap
+  parallelism to preserve at least 1.5 GiB of available memory per active job.
 - Add a focused test in `tests/test_<header>.cpp` for changed public behavior.
   Tests are built both against the system library and psychicstd; both must
   pass.

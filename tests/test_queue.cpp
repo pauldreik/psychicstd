@@ -15,6 +15,13 @@ int main() {
   q.pop();
   psyassert(q.front() == 2);
 
+  std::queue<int> same_size_a;
+  same_size_a.push(1);
+  std::queue<int> same_size_b;
+  same_size_b.push(2);
+  psyassert(same_size_a != same_size_b);
+  psyassert(same_size_a < same_size_b);
+
   // priority_queue: max-heap by default
   std::priority_queue<int> pq;
   static_assert(std::is_same_v<decltype(pq.emplace(4)), void>);

@@ -1,6 +1,7 @@
 #pragma once
 #include <__psychicstd_char_traits>
 #include <__psychicstd_config>
+#include <__psychicstd_except>
 #include <compare>
 #include <cstddef>
 #include <cstdlib>
@@ -150,8 +151,16 @@ public:
   // Element access
   Char& operator[](size_type i) noexcept { return data_[i]; }
   const Char& operator[](size_type i) const noexcept { return data_[i]; }
-  Char& at(size_type i) { return data_[i]; }
-  const Char& at(size_type i) const { return data_[i]; }
+  constexpr Char& at(size_type i) {
+    if (__builtin_expect(i >= size_, false))
+      _PSYCHICSTD_THROW(out_of_range("basic_string::at"));
+    return data_[i];
+  }
+  constexpr const Char& at(size_type i) const {
+    if (__builtin_expect(i >= size_, false))
+      _PSYCHICSTD_THROW(out_of_range("basic_string::at"));
+    return data_[i];
+  }
   Char& front() noexcept { return data_[0]; }
   const Char& front() const noexcept { return data_[0]; }
   Char& back() noexcept { return data_[size_ - 1]; }
@@ -806,6 +815,25 @@ auto operator<=>(const basic_string<C, T, A>& a, const C* b) noexcept {
 template <typename C, typename T, typename A>
 void swap(basic_string<C, T, A>& a, basic_string<C, T, A>& b) noexcept {
   a.swap(b);
+}
+
+template <typename C, typename T, typename A, typename U>
+constexpr typename basic_string<C, T, A>::size_type
+erase(basic_string<C, T, A>& s, const U& value) {
+  return erase_if(s, [&](const C& c) { return c == value; });
+}
+
+template <typename C, typename T, typename A, typename Pred>
+constexpr typename basic_string<C, T, A>::size_type
+erase_if(basic_string<C, T, A>& s, Pred pred) {
+  using size_type = typename basic_string<C, T, A>::size_type;
+  size_type out = 0;
+  const size_type old_size = s.size();
+  for (size_type i = 0; i < old_size; ++i)
+    if (!pred(s[i]))
+      s[out++] = static_cast<C&&>(s[i]);
+  s.resize(out);
+  return old_size - out;
 }
 
 // to_string

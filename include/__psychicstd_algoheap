@@ -8,8 +8,8 @@
 namespace std {
 
 template <typename It, typename Compare>
-void __push_heap(It first, ptrdiff_t hole, ptrdiff_t top, Compare cmp,
-                 typename iterator_traits<It>::value_type val) {
+constexpr void __push_heap(It first, ptrdiff_t hole, ptrdiff_t top, Compare cmp,
+                           typename iterator_traits<It>::value_type val) {
   ptrdiff_t parent = (hole - 1) / 2;
   while (hole > top && cmp(*(first + parent), val)) {
     *(first + hole) = static_cast<decltype(val)&&>(*(first + parent));
@@ -20,7 +20,7 @@ void __push_heap(It first, ptrdiff_t hole, ptrdiff_t top, Compare cmp,
 }
 
 template <typename It, typename Compare>
-void push_heap(It first, It last, Compare cmp) {
+constexpr void push_heap(It first, It last, Compare cmp) {
   if (last - first > 1) {
     auto val =
         static_cast<typename iterator_traits<It>::value_type&&>(*(last - 1));
@@ -28,13 +28,14 @@ void push_heap(It first, It last, Compare cmp) {
                 static_cast<decltype(val)&&>(val));
   }
 }
-template <typename It> void push_heap(It first, It last) {
+template <typename It> constexpr void push_heap(It first, It last) {
   push_heap(first, last, [](const auto& a, const auto& b) { return a < b; });
 }
 
 template <typename It, typename Compare>
-void __adjust_heap(It first, ptrdiff_t hole, ptrdiff_t len, Compare cmp,
-                   typename iterator_traits<It>::value_type val) {
+constexpr void __adjust_heap(It first, ptrdiff_t hole, ptrdiff_t len,
+                             Compare cmp,
+                             typename iterator_traits<It>::value_type val) {
   ptrdiff_t top = hole;
   ptrdiff_t rchild = 2 * hole + 2;
   while (rchild < len) {
@@ -52,7 +53,7 @@ void __adjust_heap(It first, ptrdiff_t hole, ptrdiff_t len, Compare cmp,
 }
 
 template <typename It, typename Compare>
-void pop_heap(It first, It last, Compare cmp) {
+constexpr void pop_heap(It first, It last, Compare cmp) {
   if (last - first > 1) {
     --last;
     auto val = static_cast<typename iterator_traits<It>::value_type&&>(*last);
@@ -61,12 +62,12 @@ void pop_heap(It first, It last, Compare cmp) {
                   static_cast<decltype(val)&&>(val));
   }
 }
-template <typename It> void pop_heap(It first, It last) {
+template <typename It> constexpr void pop_heap(It first, It last) {
   pop_heap(first, last, [](const auto& a, const auto& b) { return a < b; });
 }
 
 template <typename It, typename Compare>
-void make_heap(It first, It last, Compare cmp) {
+constexpr void make_heap(It first, It last, Compare cmp) {
   ptrdiff_t n = last - first;
   for (ptrdiff_t i = n / 2 - 1; i >= 0; --i) {
     auto val =
@@ -74,41 +75,41 @@ void make_heap(It first, It last, Compare cmp) {
     __adjust_heap(first, i, n, cmp, static_cast<decltype(val)&&>(val));
   }
 }
-template <typename It> void make_heap(It first, It last) {
+template <typename It> constexpr void make_heap(It first, It last) {
   make_heap(first, last, [](const auto& a, const auto& b) { return a < b; });
 }
 
 template <typename It, typename Compare>
-void sort_heap(It first, It last, Compare cmp) {
+constexpr void sort_heap(It first, It last, Compare cmp) {
   while (last - first > 1)
     pop_heap(first, last--, cmp);
 }
-template <typename It> void sort_heap(It first, It last) {
+template <typename It> constexpr void sort_heap(It first, It last) {
   sort_heap(first, last, [](const auto& a, const auto& b) { return a < b; });
 }
 
 template <typename It, typename Compare>
-bool is_heap(It first, It last, Compare cmp) {
+constexpr bool is_heap(It first, It last, Compare cmp) {
   ptrdiff_t n = last - first;
   for (ptrdiff_t i = 1; i < n; ++i)
     if (cmp(*(first + (i - 1) / 2), *(first + i)))
       return false;
   return true;
 }
-template <typename It> bool is_heap(It first, It last) {
+template <typename It> constexpr bool is_heap(It first, It last) {
   return is_heap(first, last,
                  [](const auto& a, const auto& b) { return a < b; });
 }
 
 template <typename It, typename Compare>
-It is_heap_until(It first, It last, Compare cmp) {
+constexpr It is_heap_until(It first, It last, Compare cmp) {
   ptrdiff_t n = last - first;
   for (ptrdiff_t i = 1; i < n; ++i)
     if (cmp(*(first + (i - 1) / 2), *(first + i)))
       return first + i;
   return last;
 }
-template <typename It> It is_heap_until(It first, It last) {
+template <typename It> constexpr It is_heap_until(It first, It last) {
   return is_heap_until(first, last,
                        [](const auto& a, const auto& b) { return a < b; });
 }

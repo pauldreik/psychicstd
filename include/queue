@@ -7,6 +7,11 @@
 namespace std {
 
 template <typename T, typename Container = deque<T>> class queue {
+  template <typename U, typename C>
+  friend bool operator==(const queue<U, C>&, const queue<U, C>&);
+  template <typename U, typename C>
+  friend bool operator<(const queue<U, C>&, const queue<U, C>&);
+
 public:
   using value_type = typename Container::value_type;
   using reference = typename Container::reference;
@@ -41,10 +46,7 @@ protected:
 
 template <typename T, typename Container>
 bool operator==(const queue<T, Container>& a, const queue<T, Container>& b) {
-  // Accessing the underlying container is not standard, but we can compare
-  // by iterating.  For simplicity, just compare sizes — full comparison
-  // would need protected member access.  This is adequate for Eigen's usage.
-  return a.size() == b.size();
+  return a.c == b.c;
 }
 template <typename T, typename Container>
 bool operator!=(const queue<T, Container>& a, const queue<T, Container>& b) {
@@ -52,7 +54,7 @@ bool operator!=(const queue<T, Container>& a, const queue<T, Container>& b) {
 }
 template <typename T, typename Container>
 bool operator<(const queue<T, Container>& a, const queue<T, Container>& b) {
-  return a.size() < b.size();
+  return a.c < b.c;
 }
 template <typename T, typename Container>
 bool operator>(const queue<T, Container>& a, const queue<T, Container>& b) {
