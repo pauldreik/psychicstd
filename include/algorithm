@@ -101,11 +101,25 @@ constexpr void sort(It first, It last, Compare cmp) {
 }
 
 template <typename It> constexpr void stable_sort(It first, It last) {
-  sort(first, last);
+  stable_sort(first, last,
+              [](const auto& a, const auto& b) { return a < b; });
 }
 template <typename It, typename Compare>
 constexpr void stable_sort(It first, It last, Compare cmp) {
-  sort(first, last, cmp);
+  // Insertion sort is deliberately used here: it is stable, works with
+  // move-only values, and keeps this header's implementation small.
+  if (first == last)
+    return;
+  for (It current = first + 1; current != last; ++current) {
+    It position = current;
+    while (position != first) {
+      It previous = position - 1;
+      if (!cmp(*position, *previous))
+        break;
+      iter_swap(position, previous);
+      position = previous;
+    }
+  }
 }
 
 // partial_sort (simple: full sort then done)
