@@ -47,6 +47,13 @@ int main() {
     conversion_threw = true;
   }
   psyassert(conversion_threw);
+  conversion_threw = false;
+  try {
+    (void)std::stoull("file.cpp");
+  } catch (const std::invalid_argument&) {
+    conversion_threw = true;
+  }
+  psyassert(conversion_threw);
 
   std::string source = "assign";
   psyassert(std::string(source, 1, 3) == "ssi");

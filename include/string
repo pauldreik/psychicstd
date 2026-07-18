@@ -943,10 +943,15 @@ inline unsigned long stoul(const string& s, size_t* pos = nullptr,
 }
 inline unsigned long long stoull(const string& s, size_t* pos = nullptr,
                                  int base = 10) {
+  errno = 0;
   char* end;
   auto v = ::strtoull(s.c_str(), &end, base);
   if (pos)
     *pos = end - s.c_str();
+  if (end == s.c_str())
+    _PSYCHICSTD_THROW(invalid_argument("stoull"));
+  if (errno == ERANGE)
+    _PSYCHICSTD_THROW(out_of_range("stoull"));
   return v;
 }
 inline float stof(const string& s, size_t* pos = nullptr) {
