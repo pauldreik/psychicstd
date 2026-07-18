@@ -20,6 +20,10 @@ useful during the edit-compile-debug cycle.
   may mirror libstdc++ transitive includes; strict mode must remain
   self-contained.
 - The supported source language is C++20. Do not lower it for dependencies.
+- GCC 12 remains supported, but prioritize compile-time performance on newer
+  compilers, especially GCC 14. It is acceptable to use compiler-version
+  preprocessor branches to make newer GCC versions faster, provided a GCC 12
+  fallback remains available.
 
 ## Toolchains and linking
 
@@ -50,6 +54,10 @@ useful during the edit-compile-debug cycle.
 - Before compiling or running tests in parallel, consider both the available
   memory and CPU count. On machines with many cores and limited RAM, cap
   parallelism to preserve at least 1.5 GiB of available memory per active job.
+- For builds and tests where compile-time measurement is not the purpose,
+  prepend `/usr/lib/ccache/` to `PATH` and enable ccache to speed up repeated
+  compilations. Disable ccache for compile-time benchmarks and performance
+  measurements so cached results do not skew timings.
 - Add a focused test in `tests/test_<header>.cpp` for changed public behavior.
   Tests are built both against the system library and psychicstd; both must
   pass.
