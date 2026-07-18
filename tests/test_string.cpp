@@ -20,6 +20,8 @@ int main() {
   (void)allocator;
 
   std::string s = "hello";
+  psyassert(std::string().compare(0, 4, "test") < 0);
+  psyassert(std::string("test").compare(0, 4, "test") == 0);
   psyassert(s.at(1) == 'e');
   const std::string const_s = s;
   psyassert(const_s.at(4) == 'o');

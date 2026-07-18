@@ -552,48 +552,61 @@ public:
   }
   int compare(const Char* s) const noexcept { return compare(basic_string(s)); }
   int compare(size_type pos1, size_type n1, const Char* s) const {
+    if (pos1 > size_)
+      _PSYCHICSTD_THROW(out_of_range("basic_string::compare"));
+    size_type left = n1 < size_ - pos1 ? n1 : size_ - pos1;
     size_type slen = Traits::length(s);
-    size_type clen = n1 < slen ? n1 : slen;
-    int r = Traits::compare(data_ + pos1, s, clen);
+    size_type clen = left < slen ? left : slen;
+    int r = Traits::compare(data() + pos1, s, clen);
     if (r)
       return r;
-    if (n1 < slen)
+    if (left < slen)
       return -1;
-    if (n1 > slen)
+    if (left > slen)
       return 1;
     return 0;
   }
   int compare(size_type pos1, size_type n1, const basic_string& o) const {
-    size_type clen = n1 < o.size_ ? n1 : o.size_;
-    int r = Traits::compare(data_ + pos1, o.data_, clen);
+    if (pos1 > size_)
+      _PSYCHICSTD_THROW(out_of_range("basic_string::compare"));
+    size_type left = n1 < size_ - pos1 ? n1 : size_ - pos1;
+    size_type clen = left < o.size_ ? left : o.size_;
+    int r = Traits::compare(data() + pos1, o.data(), clen);
     if (r)
       return r;
-    if (n1 < o.size_)
+    if (left < o.size_)
       return -1;
-    if (n1 > o.size_)
+    if (left > o.size_)
       return 1;
     return 0;
   }
   int compare(size_type pos1, size_type n1, const Char* s, size_type n2) const {
-    size_type clen = n1 < n2 ? n1 : n2;
-    int r = Traits::compare(data_ + pos1, s, clen);
+    if (pos1 > size_)
+      _PSYCHICSTD_THROW(out_of_range("basic_string::compare"));
+    size_type left = n1 < size_ - pos1 ? n1 : size_ - pos1;
+    size_type clen = left < n2 ? left : n2;
+    int r = Traits::compare(data() + pos1, s, clen);
     if (r)
       return r;
-    if (n1 < n2)
+    if (left < n2)
       return -1;
-    if (n1 > n2)
+    if (left > n2)
       return 1;
     return 0;
   }
   int compare(size_type pos1, size_type n1, const basic_string& o,
               size_type pos2, size_type n2) const {
-    size_type clen = n1 < n2 ? n1 : n2;
-    int r = Traits::compare(data_ + pos1, o.data_ + pos2, clen);
+    if (pos1 > size_ || pos2 > o.size_)
+      _PSYCHICSTD_THROW(out_of_range("basic_string::compare"));
+    size_type left = n1 < size_ - pos1 ? n1 : size_ - pos1;
+    size_type right = n2 < o.size_ - pos2 ? n2 : o.size_ - pos2;
+    size_type clen = left < right ? left : right;
+    int r = Traits::compare(data() + pos1, o.data() + pos2, clen);
     if (r)
       return r;
-    if (n1 < n2)
+    if (left < right)
       return -1;
-    if (n1 > n2)
+    if (left > right)
       return 1;
     return 0;
   }
