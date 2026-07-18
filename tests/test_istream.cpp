@@ -14,6 +14,10 @@ int main() {
   in >> x;
   psyassert(x == 42);
 
+  std::istringstream hex_input("a");
+  hex_input >> std::hex >> x;
+  psyassert(x == 10);
+
   std::istringstream overflow("-1234567890123456");
   overflow >> x;
   psyassert(x == std::numeric_limits<int>::min());
