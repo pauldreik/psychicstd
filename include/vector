@@ -1,5 +1,7 @@
 #pragma once
 #include <__psychicstd_config>
+#include <__psychicstd_contiguous_compare>
+#include <__psychicstd_contiguous_iterator>
 #include <__psychicstd_except>
 #include <compare>
 #include <cstddef>
@@ -10,106 +12,6 @@
 #include <type_traits>
 
 namespace std {
-
-// Minimal contiguous iterator wrapper.
-// Wrapping T* allows pre/post decrement on rvalues (e.g. --v.end()),
-// which raw pointer rvalues do not support.
-template <typename T> struct __vec_iter {
-  using difference_type = ptrdiff_t;
-  using value_type = remove_cv_t<T>;
-  using pointer = T*;
-  using reference = T&;
-  using iterator_category = random_access_iterator_tag;
-  using iterator_concept = contiguous_iterator_tag;
-
-  T* ptr_;
-
-  constexpr __vec_iter() noexcept : ptr_(nullptr) {}
-  constexpr explicit __vec_iter(T* p) noexcept : ptr_(p) {}
-  // Allow iterator → const_iterator conversion
-  template <typename U>
-    requires(is_same_v<U, remove_cv_t<T>>)
-  constexpr __vec_iter(const __vec_iter<U>& o) noexcept : ptr_(o.ptr_) {}
-
-  constexpr T& operator*() const noexcept { return *ptr_; }
-  constexpr T* operator->() const noexcept { return ptr_; }
-  constexpr T& operator[](ptrdiff_t n) const noexcept { return ptr_[n]; }
-
-  constexpr __vec_iter& operator++() noexcept {
-    ++ptr_;
-    return *this;
-  }
-  constexpr __vec_iter operator++(int) noexcept {
-    auto t = *this;
-    ++ptr_;
-    return t;
-  }
-  constexpr __vec_iter& operator--() noexcept {
-    --ptr_;
-    return *this;
-  }
-  constexpr __vec_iter operator--(int) noexcept {
-    auto t = *this;
-    --ptr_;
-    return t;
-  }
-  constexpr __vec_iter& operator+=(ptrdiff_t n) noexcept {
-    ptr_ += n;
-    return *this;
-  }
-  constexpr __vec_iter& operator-=(ptrdiff_t n) noexcept {
-    ptr_ -= n;
-    return *this;
-  }
-  constexpr __vec_iter operator+(ptrdiff_t n) const noexcept {
-    return __vec_iter{ptr_ + n};
-  }
-  constexpr __vec_iter operator-(ptrdiff_t n) const noexcept {
-    return __vec_iter{ptr_ - n};
-  }
-
-  template <typename U>
-  constexpr ptrdiff_t operator-(const __vec_iter<U>& o) const noexcept {
-    return ptr_ - o.ptr_;
-  }
-  template <typename U>
-  constexpr bool operator==(const __vec_iter<U>& o) const noexcept {
-    return ptr_ == o.ptr_;
-  }
-  template <typename U>
-  constexpr bool operator!=(const __vec_iter<U>& o) const noexcept {
-    return ptr_ != o.ptr_;
-  }
-  template <typename U>
-  constexpr bool operator<(const __vec_iter<U>& o) const noexcept {
-    return ptr_ < o.ptr_;
-  }
-  template <typename U>
-  constexpr bool operator<=(const __vec_iter<U>& o) const noexcept {
-    return ptr_ <= o.ptr_;
-  }
-  template <typename U>
-  constexpr bool operator>(const __vec_iter<U>& o) const noexcept {
-    return ptr_ > o.ptr_;
-  }
-  template <typename U>
-  constexpr bool operator>=(const __vec_iter<U>& o) const noexcept {
-    return ptr_ >= o.ptr_;
-  }
-
-  // Implicit conversion to raw pointer for compatibility with data()/pointer
-  // arithmetic
-  constexpr operator T*() const noexcept { return ptr_; }
-
-  // base(): returns raw pointer (for algorithms that need it)
-  constexpr T* base() const noexcept { return ptr_; }
-};
-
-template <typename T>
-constexpr __vec_iter<T> operator+(ptrdiff_t n,
-                                  const __vec_iter<T>& it) noexcept {
-  return __vec_iter<T>{it.ptr_ + n};
-}
 
 // Uniform constexpr strategy: GCC 12 special-cases std::allocator<T> (in std
 // namespace) so that allocate/deallocate + construct_at/destroy_at are all
@@ -921,43 +823,14 @@ constexpr bool operator>=(const vector<T, A>& a, const vector<T, A>& b) {
   return !(a < b);
 }
 
-namespace __vec_detail {
-// Native three-way: T has operator<=>
-template <typename T>
-concept __ntw = requires(const T& a, const T& b) { a <=> b; };
-// Synth three-way: T only has < and ==
-template <typename T>
-concept __stw = !__ntw<T> && requires(const T& a, const T& b) {
-  (bool)(a == b);
-  (bool)(a < b);
-};
-
-template <typename T> constexpr auto __cmp_result() {
-  if constexpr (__ntw<T>)
-    return declval<const T&>() <=> declval<const T&>();
-  else
-    return weak_ordering::equivalent;
-}
-template <typename T> using __cmp_t = decltype(__cmp_result<T>());
-
-template <typename T> constexpr __cmp_t<T> __cmp(const T& a, const T& b) {
-  if constexpr (__ntw<T>)
-    return a <=> b;
-  else
-    return a == b  ? weak_ordering::equivalent
-           : a < b ? weak_ordering::less
-                   : weak_ordering::greater;
-}
-} // namespace __vec_detail
-
 template <typename T, typename A>
-  requires(__vec_detail::__ntw<T> || __vec_detail::__stw<T>)
+  requires(__contiguous_detail::__ntw<T> || __contiguous_detail::__stw<T>)
 constexpr auto operator<=>(const vector<T, A>& a, const vector<T, A>& b)
-    -> __vec_detail::__cmp_t<T> {
-  using R = __vec_detail::__cmp_t<T>;
+    -> __contiguous_detail::__cmp_t<T> {
+  using R = __contiguous_detail::__cmp_t<T>;
   size_t n = a.size() < b.size() ? a.size() : b.size();
   for (size_t i = 0; i < n; ++i) {
-    R c = __vec_detail::__cmp(a[i], b[i]);
+    R c = __contiguous_detail::__cmp(a[i], b[i]);
     if (c != 0)
       return c;
   }

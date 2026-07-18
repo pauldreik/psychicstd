@@ -1,10 +1,105 @@
 #pragma once
+#include <__psychicstd_abs>
+#include <__psychicstd_config>
+
+// Darwin: the SDK's <stdlib.h> is expensive to preprocess (~5 ms). At STRICT
+// level, declare the exact names std needs instead, mirroring the SDK
+// signatures verbatim (attributes and asm aliases included) so a later direct
+// #include <stdlib.h> merges cleanly. At DROPIN level the real <stdlib.h> is
+// included: libstdc++'s <cstdlib> exposes the POSIX extras (alloca, setenv,
+// realpath, ...) and real-world code relies on that surface (eigen, cmake).
+#if defined(__APPLE__) &&                                                      \
+    _PSYCHICSTD_COMPATIBILITY_LEVEL == _PSYCHICSTD_COMPAT_STRICT
+#define _PSYCHICSTD_CSTDLIB_MIN_DECLS 1
+#endif
+
+#ifdef _PSYCHICSTD_CSTDLIB_MIN_DECLS
+typedef __SIZE_TYPE__ size_t;
+extern "C" {
+void* malloc(size_t) __attribute__((__warn_unused_result__))
+__attribute__((alloc_size(1)));
+void* calloc(size_t, size_t) __attribute__((__warn_unused_result__))
+__attribute__((alloc_size(1, 2)));
+void free(void*);
+void* realloc(void*, size_t) __attribute__((__warn_unused_result__))
+__attribute__((alloc_size(2)));
+void abort(void) __attribute__((__cold__)) __attribute__((__noreturn__));
+int abs(int) __attribute__((__const__));
+int atexit(void (*)(void));
+int at_quick_exit(void (*)(void));
+double atof(const char*);
+int atoi(const char*);
+long atol(const char*);
+long long atoll(const char*);
+void* bsearch(const void*, const void*, size_t, size_t,
+              int (*)(const void*, const void*));
+void exit(int) __attribute__((__noreturn__));
+char* getenv(const char*);
+long labs(long) __attribute__((__const__));
+long long llabs(long long);
+int mblen(const char*, size_t);
+size_t mbstowcs(wchar_t*, const char*, size_t);
+int mbtowc(wchar_t*, const char*, size_t);
+void qsort(void*, size_t, size_t, int (*)(const void*, const void*));
+void quick_exit(int) __attribute__((__noreturn__));
+int rand(void);
+void srand(unsigned);
+double strtod(const char*, char**) __asm("_strtod");
+float strtof(const char*, char**) __asm("_strtof");
+long strtol(const char*, char**, int);
+long double strtold(const char*, char**);
+long long strtoll(const char*, char**, int);
+unsigned long strtoul(const char*, char**, int);
+unsigned long long strtoull(const char*, char**, int);
+int system(const char*) __asm("_system");
+size_t wcstombs(char*, const wchar_t*, size_t);
+int wctomb(char*, wchar_t);
+void _Exit(int) __attribute__((__noreturn__));
+}
+// Macros <cstdlib> must provide, values verbatim from the SDK's <_stdlib.h>.
+// EXIT_*/RAND_MAX are guardless there too; identical token sequences make a
+// later direct #include <stdlib.h> a benign redefinition.
+#define EXIT_FAILURE 1
+#define EXIT_SUCCESS 0
+#define RAND_MAX 0x7fffffff
+#ifndef MB_CUR_MAX
+// C++ linkage on purpose: the SDK declares it outside __BEGIN_DECLS.
+extern int __mb_cur_max;
+#define MB_CUR_MAX __mb_cur_max
+#endif
+#ifndef NULL
+// The SDK's <sys/_types/_null.h> is #ifndef-guarded and expands to __null
+// under GNU C++, so either include order merges cleanly.
+#define NULL __null
+#endif
+#else
 #include <stdlib.h>
+#endif
 
 namespace std {
+#ifdef _PSYCHICSTD_CSTDLIB_MIN_DECLS
+// std-only div family: the SDK's div_t/ldiv_t/lldiv_t are unguarded
+// anonymous-struct typedefs, so redeclaring them at global scope would clash
+// with a later direct #include <stdlib.h>. Define layout-compatible types in
+// std instead ([headers] leaves global-scope declarations unspecified).
+struct div_t {
+  int quot;
+  int rem;
+};
+struct ldiv_t {
+  long quot;
+  long rem;
+};
+struct lldiv_t {
+  long long quot;
+  long long rem;
+};
+inline div_t div(int n, int d) { return {n / d, n % d}; }
+inline ldiv_t ldiv(long n, long d) { return {n / d, n % d}; }
+inline lldiv_t lldiv(long long n, long long d) { return {n / d, n % d}; }
+#endif
 using ::_Exit;
 using ::abort;
-using ::abs;
 using ::at_quick_exit;
 using ::atexit;
 using ::atof;
@@ -13,15 +108,19 @@ using ::atol;
 using ::atoll;
 using ::bsearch;
 using ::calloc;
+#ifndef _PSYCHICSTD_CSTDLIB_MIN_DECLS
 using ::div;
 using ::div_t;
+#endif
 using ::exit;
 using ::free;
 using ::getenv;
+#ifndef _PSYCHICSTD_CSTDLIB_MIN_DECLS
 using ::ldiv;
 using ::ldiv_t;
 using ::lldiv;
 using ::lldiv_t;
+#endif
 using ::malloc;
 using ::mblen;
 using ::mbstowcs;

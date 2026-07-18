@@ -1,6 +1,7 @@
 #pragma once
+#include <__psychicstd_algoheap>
+#include <__psychicstd_functors>
 #include <deque>
-#include <functional>
 #include <vector>
 
 namespace std {
@@ -97,10 +98,9 @@ public:
     c.push_back(static_cast<T&&>(v));
     push_heap(c.begin(), c.end(), comp_);
   }
-  template <typename... Args> decltype(auto) emplace(Args&&... args) {
+  template <typename... Args> void emplace(Args&&... args) {
     c.emplace_back(static_cast<Args&&>(args)...);
     push_heap(c.begin(), c.end(), comp_);
-    return c.back();
   }
   void pop() {
     pop_heap(c.begin(), c.end(), comp_);

@@ -8,6 +8,10 @@ add_library(psychicstd::psychicstd ALIAS psychicstd)
 
 target_compile_features(psychicstd INTERFACE cxx_std_23)
 target_compile_options(psychicstd INTERFACE -nostdinc++ -fvisibility=hidden)
+if(APPLE)
+    # atomic::wait uses os_sync_wait_on_address, introduced in macOS 14.4.
+    target_compile_options(psychicstd INTERFACE -mmacosx-version-min=14.4)
+endif()
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
     function(psychicstd_enable_warnings target)
@@ -49,12 +53,19 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
             "GCC ${CMAKE_CXX_COMPILER_VERSION} is not yet supported; only GCC 12-16 are tested"
         )
     endif()
-elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-    # Clang supports -nostdlib++ which strips libc++/libstdc++ from the default
-    # link set but keeps libc, libm, libgcc_s, libgcc. Add libsupc++ back for
-    # the C++ ABI runtime (operator new/delete, __gxx_personality_v0, RTTI).
+elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang$")
+    # Clang and AppleClang support -nostdlib++ which strips libc++/libstdc++
+    # from the default link set but keeps libc, libm, and the compiler runtime.
     target_link_options(psychicstd INTERFACE -nostdlib++)
-    target_link_libraries(psychicstd INTERFACE -lsupc++ -latomic)
+    if(APPLE)
+        # macOS ships the C++ ABI runtime as libc++abi (operator new/delete,
+        # __gxx_personality_v0, RTTI, __cxa_*). No libsupc++/libatomic there.
+        target_link_libraries(psychicstd INTERFACE -lc++abi)
+    else()
+        # Add libsupc++ back for the C++ ABI runtime (operator new/delete,
+        # __gxx_personality_v0, RTTI).
+        target_link_libraries(psychicstd INTERFACE -lsupc++ -latomic)
+    endif()
 else()
     message(FATAL_ERROR "Unsupported compiler: ${CMAKE_CXX_COMPILER_ID}")
 endif()

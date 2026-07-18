@@ -1,11 +1,14 @@
 #pragma once
+#include <__psychicstd_abs>
 #include <__psychicstd_config>
 #include <math.h>
-#include <stdlib.h>
 
 #if _PSYCHICSTD_COMPATIBILITY_LEVEL >= _PSYCHICSTD_COMPAT_DROPIN
 // libstdc++ exposes numeric_limits through <cmath>; Catch2 relies on it.
 #include <limits>
+// libstdc++'s <cmath> exposes <stdlib.h> via <bits/std_abs.h>; real-world
+// code (eigen, cmake) relies on that transitive surface.
+#include <cstdlib>
 #endif
 
 // C99 defines isnan/isinf/isfinite/isnormal/signbit as macros.
@@ -30,7 +33,6 @@
 #endif
 
 namespace std {
-using ::abs;
 using ::acos;
 using ::acosh;
 using ::asin;
@@ -152,8 +154,7 @@ using ::tgammaf;
 inline float abs(float x) { return ::fabsf(x); }
 inline double abs(double x) { return ::fabs(x); }
 inline long double abs(long double x) { return ::fabsl(x); }
-inline long abs(long x) { return ::labs(x); }
-inline long long abs(long long x) { return ::llabs(x); }
+// integer abs overloads come from <__psychicstd_abs>
 using ::nextafter;
 using ::nextafterf;
 using ::nextafterl;

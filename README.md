@@ -2,7 +2,7 @@
 
 This is a **highly experimental** C++ standard library optimized for compilation speed. It is intended to be used during general C++ development to speed up the edit-compile-debug cycle. It is not at all intended to be used for shipping binaries.
 
-It is not complete. It is not fully compliant. But it is good enough to quickly iterate on code. Here are some real world projects that compile and pass their unit tests with psychicstd. The number in the second column indicates the speedup relative libstdc++ for the compilation phase (1x means same speed, higher is better):
+It is not complete. It is not fully compliant. But it is good enough to quickly iterate on code. Here are some real world projects that compile and pass their unit tests with psychicstd. The number in the second column indicates the speedup relative to the platform standard library for the compilation phase (1x means same speed, higher is better):
 
 | Project | Compile time speedup | comment |
 |-------------------------------------------------------------|-----------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------|
@@ -16,7 +16,7 @@ It is not complete. It is not fully compliant. But it is good enough to quickly 
 | [simdutf](https://github.com/simdutf/simdutf) | [1.19x](use_on_realworld_projects/simdutf_speed_report.md) | Consists mostly of simd intrinsics, no speedup expected. [Strict mode uncovered code relying on transitive includes](https://github.com/simdutf/simdutf/pull/998). |
 | [wordcounter](benchmarks/compile_time/bench_wordcounter.cpp)| [4.8x](speed.md) | [demo program using STL](benchmarks/compile_time/bench_wordcounter.cpp). Counts word occurence in text files. |
 
-Find the scripts validating the build and generating the above number in the [use_on_realworld_projects/](use_on_realworld_projects) directory.
+Find the scripts validating the build and generating the above number in the [use_on_realworld_projects/](use_on_realworld_projects) directory. Platform-wide measurements are available for [Linux](speed.md) and [macOS](speed_macos.md), including separate process-startup results for [Linux](startup.md) and [macOS](startup_macos.md).
 
 There's a second, smaller speedup too: since psychicstd headers are used with `-nostdinc++` and never pull in `libstdc++.so.6`, binaries link against fewer shared libraries. That means less work for the dynamic loader on every process start — a [1.80x faster startup](startup.md) for a trivial program in the measurement above. It's a minor effect on its own, but it's not nothing when it's paid on every one of the hundreds of test binaries `ctest` spawns during the edit-compile-debug cycle.
 
@@ -97,7 +97,7 @@ These are the goals, in order
 
 - Runtime performance — we don't try to make your program run faster, only to compile faster. With that said, typical unit tests are expected to run decently fast. On the example projects, psychicstd is sometimes **faster** on tests!
 - Compilation speed in release mode
-- Portability — Developed on and for gcc/Linux/x86-64. Tested with clang in ci. There is no windows or MSVC support.
+- Portability beyond Linux and macOS. GCC and Clang are supported on Linux; AppleClang is supported on macOS 14.4 and newer. There is no Windows or MSVC support.
 - ABI stability or any kind of guarantees
 - Support older C++ standards
 

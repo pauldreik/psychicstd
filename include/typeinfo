@@ -8,6 +8,35 @@ namespace std {
 class type_info {
 public:
   virtual ~type_info();
+#if defined(__APPLE__) && defined(__aarch64__)
+  // Apple arm64 libc++abi: bit 63 of __name flags a non-unique RTTI name;
+  // the actual C string lives at the pointer with that bit masked off.
+  bool operator==(const type_info& rhs) const noexcept {
+    if (__name == rhs.__name)
+      return true;
+    if (__unique(__name) || __unique(rhs.__name))
+      return false; // unique names at different addresses -> distinct types
+    return __builtin_strcmp(__masked(__name), __masked(rhs.__name)) == 0;
+  }
+  bool operator!=(const type_info& rhs) const noexcept {
+    return !operator==(rhs);
+  }
+  // Inline: macOS libc++abi does not export type_info::before().
+  bool before(const type_info& rhs) const noexcept {
+    if (__unique(__name) || __unique(rhs.__name))
+      return __name < rhs.__name;
+    return __builtin_strcmp(__masked(__name), __masked(rhs.__name)) < 0;
+  }
+  const char* name() const noexcept { return __masked(__name); }
+  size_t hash_code() const noexcept {
+    if (__unique(__name))
+      return reinterpret_cast<size_t>(__name); // unique name: pointer is hash
+    size_t h = 14695981039346656037ull; // non-unique: FNV-1a over the bytes
+    for (const char* p = __masked(__name); *p; ++p)
+      h = (h ^ static_cast<unsigned char>(*p)) * 1099511628211ull;
+    return h;
+  }
+#else
   // Inline: libstdc++ defines this in the header, not in libsupc++.
   // Pointer equality is sufficient when the linker has merged string constants
   // (ELF); strcmp is the fallback for non-merged names.
@@ -25,12 +54,22 @@ public:
   // Inline for the same reason as operator==: relies on merged string
   // constants (ELF) rather than a libsupc++-provided hash.
   size_t hash_code() const noexcept { return reinterpret_cast<size_t>(__name); }
+#endif
 
 protected:
   const char* __name;
   explicit type_info(const char* __n) : __name(__n) {}
 
 private:
+#if defined(__APPLE__) && defined(__aarch64__)
+  static const char* __masked(const char* __p) noexcept {
+    return reinterpret_cast<const char*>(reinterpret_cast<size_t>(__p) &
+                                         ~(size_t(1) << 63));
+  }
+  static bool __unique(const char* __p) noexcept {
+    return !(reinterpret_cast<size_t>(__p) >> 63);
+  }
+#endif
   type_info& operator=(const type_info&) = delete;
   type_info(const type_info&) = delete;
 };

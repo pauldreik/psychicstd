@@ -16,6 +16,8 @@ set(TESTS
     test_concepts
     test_cstddef
     test_cstdint
+    test_cstdlib
+    test_cstdlib_order
     test_deque
     test_exception
     test_filesystem
@@ -37,6 +39,7 @@ set(TESTS
     test_new
     test_numeric
     test_optional
+    test_queue
     test_random
     test_ranges
     test_ratio
@@ -49,10 +52,12 @@ set(TESTS
     test_stop_token
     test_string
     test_string_view
+    test_system_error
     test_thread
     test_tuple
     test_type_traits
     test_typeinfo
+    test_uchar
     test_unordered_map
     test_unordered_set
     test_utility
@@ -69,18 +74,20 @@ foreach(t ${TESTS})
 
     add_executable(${t}_psychicstd ${t}.cpp)
     target_link_libraries(${t}_psychicstd PRIVATE psychicstd::psychicstd)
+    target_compile_definitions(${t}_psychicstd PRIVATE PSYCHICSTD_TEST_PSYCHICSTD=1)
     target_compile_features(${t}_psychicstd PRIVATE cxx_std_23)
     psychicstd_enable_warnings(${t}_psychicstd)
     add_test(NAME ${t}_psychicstd COMMAND ${t}_psychicstd)
 endforeach()
 
 # Generic system atomics can also require GCC's out-of-line atomic runtime.
-target_link_libraries(test_atomic_system PRIVATE atomic)
-target_compile_options(
-    test_atomic_psychicstd
-    PRIVATE $<$<CXX_COMPILER_ID:Clang>:-Wno-atomic-alignment>
-)
-
+# macOS has no libatomic; the compiler runtime covers it.
+if(NOT APPLE)
+    target_link_libraries(test_atomic_system PRIVATE atomic)
+endif()
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang$")
+    target_compile_options(test_atomic_psychicstd PRIVATE -Wno-atomic-alignment)
+endif()
 # Self-containment tests: every header must be usable on its own. Including
 # just that one header (and nothing else) must compile. This catches headers
 # that rely on another header having been included first. The source is
@@ -124,6 +131,8 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
         set(_psychicstd_toolchain_supported ON)
     endif()
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin" AND CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
+    set(_psychicstd_toolchain_supported ON)
 endif()
 
 if(_psychicstd_toolchain_supported)
@@ -154,7 +163,11 @@ if(_psychicstd_toolchain_supported)
 endif()
 
 find_program(_psychicstd_conan_executable conan)
-if(_psychicstd_conan_executable AND _psychicstd_toolchain_supported)
+if(
+    _psychicstd_conan_executable
+    AND CMAKE_SYSTEM_NAME STREQUAL "Linux"
+    AND _psychicstd_toolchain_supported
+)
     add_test(
         NAME conan_project_profile
         COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/conan_project/run.sh ${CMAKE_CXX_COMPILER}

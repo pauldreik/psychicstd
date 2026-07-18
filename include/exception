@@ -4,40 +4,56 @@
 
 namespace std {
 
+// The virtual destructors and what() are deliberately NOT defined inline:
+// their out-of-line definitions live in the C++ ABI runtime (libsupc++ on
+// GCC/Linux, libc++abi on macOS), so the vtable and typeinfo of each class
+// come from the runtime as well. This is required for catch matching: the
+// runtime throws these types itself (operator new -> bad_alloc, dynamic_cast
+// -> bad_cast, ...) using ITS typeinfo, and on platforms where RTTI equality
+// is pointer-based (Apple arm64) a header-local duplicate typeinfo would
+// never match a runtime-thrown exception.
 class exception {
 public:
   exception() noexcept = default;
   exception(const exception&) noexcept = default;
   exception& operator=(const exception&) noexcept = default;
-  virtual ~exception() = default;
-  virtual const char* what() const noexcept { return "std::exception"; }
+  virtual ~exception() noexcept;
+  virtual const char* what() const noexcept;
 };
 
 class bad_exception : public exception {
 public:
-  const char* what() const noexcept override { return "std::bad_exception"; }
+  bad_exception() noexcept = default;
+  ~bad_exception() noexcept override;
+  const char* what() const noexcept override;
 };
 
 class bad_alloc : public exception {
 public:
-  const char* what() const noexcept override { return "std::bad_alloc"; }
+  bad_alloc() noexcept = default;
+  ~bad_alloc() noexcept override;
+  const char* what() const noexcept override;
 };
 
 class bad_array_new_length : public bad_alloc {
 public:
-  const char* what() const noexcept override {
-    return "std::bad_array_new_length";
-  }
+  bad_array_new_length() noexcept = default;
+  ~bad_array_new_length() noexcept override;
+  const char* what() const noexcept override;
 };
 
 class bad_cast : public exception {
 public:
-  const char* what() const noexcept override { return "std::bad_cast"; }
+  bad_cast() noexcept = default;
+  ~bad_cast() noexcept override;
+  const char* what() const noexcept override;
 };
 
 class bad_typeid : public exception {
 public:
-  const char* what() const noexcept override { return "std::bad_typeid"; }
+  bad_typeid() noexcept = default;
+  ~bad_typeid() noexcept override;
+  const char* what() const noexcept override;
 };
 
 [[noreturn]] void terminate() noexcept;
@@ -46,8 +62,21 @@ using terminate_handler = void (*)();
 terminate_handler get_terminate() noexcept;
 terminate_handler set_terminate(terminate_handler) noexcept;
 
+#ifdef __APPLE__
+// libc++abi exports only the __cxa_ entry point; the std:: wrappers live in
+// libc++.dylib, which we do not link.
+extern "C" unsigned int __cxa_uncaught_exceptions() noexcept;
+inline bool uncaught_exception() noexcept {
+  return __cxa_uncaught_exceptions() > 0;
+}
+inline int uncaught_exceptions() noexcept {
+  return static_cast<int>(__cxa_uncaught_exceptions());
+}
+#else
+// libsupc++ defines both.
 bool uncaught_exception() noexcept;
 int uncaught_exceptions() noexcept;
+#endif
 
 // Itanium ABI exception-handling globals — layout is ABI-stable across GCC.
 namespace __cxxabiv1 {

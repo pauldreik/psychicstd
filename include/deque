@@ -1,12 +1,18 @@
 #pragma once
 #include <__psychicstd_config>
+#include <__psychicstd_contiguous_compare>
+#include <__psychicstd_contiguous_iterator>
 #include <__psychicstd_except>
 #include <cstddef>
 #include <initializer_list>
 #include <iterator>
 #include <memory>
 #include <type_traits>
-#include <vector>
+
+#if _PSYCHICSTD_COMPATIBILITY_LEVEL >= _PSYCHICSTD_COMPAT_DROPIN
+// libstdc++ exposes move_backward through <deque>.
+#include <__psychicstd_algobase>
+#endif
 
 namespace std {
 
@@ -26,8 +32,7 @@ public:
   using const_reference = const T&;
   using pointer = T*;
   using const_pointer = const T*;
-  // __vec_iter (from <vector>, already pulled in below) instead of a raw T*:
-  // a raw pointer can't be decremented/incremented as an rvalue (e.g.
+  // A raw pointer cannot be decremented/incremented as an rvalue (e.g.
   // `--v.end()`), which real STL containers support.
   using iterator = __vec_iter<T>;
   using const_iterator = __vec_iter<const T>;
@@ -685,7 +690,7 @@ public:
                       forward_iterator_tag,
                       typename iterator_traits<It>::iterator_category>) {
       // Single-pass iterators can't be traversed twice; buffer first.
-      vector<T> tmp;
+      deque<T> tmp;
       for (; first != last; ++first)
         tmp.push_back(*first);
       return insert(const_iterator{data_ + start_ + idx}, tmp.begin(),
@@ -784,16 +789,14 @@ bool operator>=(const deque<T, A>& a, const deque<T, A>& b) {
   return !(a < b);
 }
 
-// Reuses vector's three-way-comparison helpers (__ntw/__stw/__cmp/__cmp_t) --
-// same logic, no need for a second copy.
 template <typename T, typename A>
-  requires(__vec_detail::__ntw<T> || __vec_detail::__stw<T>)
+  requires(__contiguous_detail::__ntw<T> || __contiguous_detail::__stw<T>)
 auto operator<=>(const deque<T, A>& a, const deque<T, A>& b)
-    -> __vec_detail::__cmp_t<T> {
-  using R = __vec_detail::__cmp_t<T>;
+    -> __contiguous_detail::__cmp_t<T> {
+  using R = __contiguous_detail::__cmp_t<T>;
   size_t n = a.size() < b.size() ? a.size() : b.size();
   for (size_t i = 0; i < n; ++i) {
-    R c = __vec_detail::__cmp(a[i], b[i]);
+    R c = __contiguous_detail::__cmp(a[i], b[i]);
     if (c != 0)
       return c;
   }

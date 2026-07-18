@@ -1,10 +1,24 @@
 #pragma once
 #include <cmath>
 #include <cstdint>
-#include <fcntl.h>
 #include <initializer_list>
 #include <type_traits>
+
+#ifdef __APPLE__
+// Minimal declarations instead of <fcntl.h>/<unistd.h>. Darwin declares
+// these with asm aliases; match them so a later system include is
+// compatible (same pattern as tests/psyassert.h).
+extern "C" int open(const char*, int, ...) __asm("_open");
+extern "C" long read(int, void*, unsigned long) __asm("_read");
+extern "C" int close(int) __asm("_close");
+#define _PSYCHICSTD_O_RDONLY 0x0000
+#define _PSYCHICSTD_O_CLOEXEC 0x01000000
+#else
+#include <fcntl.h>
 #include <unistd.h>
+#define _PSYCHICSTD_O_RDONLY O_RDONLY
+#define _PSYCHICSTD_O_CLOEXEC O_CLOEXEC
+#endif
 #include <vector>
 
 namespace std {
@@ -19,7 +33,8 @@ public:
 
   result_type operator()() {
     result_type val;
-    int fd = ::open("/dev/urandom", O_RDONLY | O_CLOEXEC);
+    int fd =
+        ::open("/dev/urandom", _PSYCHICSTD_O_RDONLY | _PSYCHICSTD_O_CLOEXEC);
     if (fd >= 0) {
       [[maybe_unused]] auto _ = ::read(fd, &val, sizeof(val));
       ::close(fd);
@@ -36,6 +51,9 @@ public:
   static constexpr result_type max() { return ~result_type(0); }
   double entropy() const noexcept { return 32.0; }
 };
+
+#undef _PSYCHICSTD_O_RDONLY
+#undef _PSYCHICSTD_O_CLOEXEC
 
 // linear_congruential_engine (minimal, for minstd_rand)
 template <typename UInt, UInt a, UInt c, UInt m>

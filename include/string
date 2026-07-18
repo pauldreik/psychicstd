@@ -13,10 +13,13 @@
 #include <version>
 
 #if _PSYCHICSTD_COMPATIBILITY_LEVEL >= _PSYCHICSTD_COMPAT_DROPIN
-// <string> itself does not use <algorithm>, but libstdc++ exposes it through
-// <string>, so real code relies on the transitive include (e.g. Catch2's
-// std::equal). Keep it for drop-in compat.
-#include <algorithm>
+// libstdc++ exposes equal through <string>; Catch2 relies on that exception.
+#include <__psychicstd_string_algobase>
+// fmt also relies on libstdc++ exposing move and forward through <string>.
+#include <utility>
+// libstdc++ also makes the global ctype functions visible through <string>.
+// Catch2 3.8 relies on unqualified isspace after including only <string>.
+#include <ctype.h>
 #endif
 
 namespace std {
@@ -90,7 +93,9 @@ public:
     o.cap_ = 0;
   }
 
-  basic_string(basic_string_view<Char> sv)
+  // Explicit per [string.cons]; if implicit, ?: between string and
+  // string_view is ambiguous (both directions convertible; hit by cmake).
+  explicit basic_string(basic_string_view<Char> sv)
       : basic_string(sv.data(), sv.size()) {}
 
   basic_string(initializer_list<Char> il)
@@ -349,6 +354,11 @@ public:
   basic_string& replace(const_iterator first, const_iterator last,
                         const basic_string& o) {
     return replace(first - data_, last - first, o);
+  }
+  basic_string& replace(size_type pos, size_type n1, size_type n2, Char c) {
+    erase(pos, n1);
+    insert(pos, n2, c);
+    return *this;
   }
 
   // Search

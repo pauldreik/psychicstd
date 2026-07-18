@@ -146,6 +146,7 @@ def main() -> None:
     # Collect files to benchmark: local bench_*.cpp + any --bench-file additions
     # Each entry: (Path, display_name, include_key_or_empty)
     bench_files: list[tuple[Path, str, str]] = []
+    tests_dir = REPO_ROOT / "tests"
 
     # Auto-discover real-code fixture dirs (benchmarks/compile_time/<name>/*.cpp)
     # whose name matches a known extra_include key (e.g. rapidjson). These are
@@ -161,11 +162,12 @@ def main() -> None:
     for bench in sorted(BENCH_DIR.glob("bench_*.cpp")):
         name = bench.stem.removeprefix("bench_")
         name = "all-headers" if name == "all" else name
+        if (tests_dir / f"test_{name}.cpp").is_file():
+            name = f"bench/{name}"
         # If the name matches an extra-include key, that key is required
         key = name if name in extra_includes else ""
         bench_files.append((bench, name, key))
 
-    tests_dir = REPO_ROOT / "tests"
     for test in sorted(tests_dir.glob("test_*.cpp")):
         name = test.stem.removeprefix("test_")
         bench_files.append((test, name, ""))
