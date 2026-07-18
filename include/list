@@ -305,27 +305,45 @@ public:
   void sort() {
     if (size_ <= 1)
       return;
-    for (Node* i = head_->next; i; i = i->next) {
-      T key = i->value;
-      Node* j = i->prev;
-      while (j && j->value > key) {
-        j->next->value = j->value;
-        j = j->prev;
+    for (Node* cur = head_->next; cur;) {
+      Node* next = cur->next;
+      Node* pos = head_;
+      while (pos != cur && !(cur->value < pos->value))
+        pos = pos->next;
+      if (pos != cur) {
+        unlink(cur);
+        cur->prev = pos->prev;
+        cur->next = pos;
+        if (pos->prev)
+          pos->prev->next = cur;
+        else
+          head_ = cur;
+        pos->prev = cur;
+        ++size_;
       }
-      (j ? j->next : head_)->value = key;
+      cur = next;
     }
   }
   template <typename Compare> void sort(Compare comp) {
     if (size_ <= 1)
       return;
-    for (Node* i = head_->next; i; i = i->next) {
-      T key = i->value;
-      Node* j = i->prev;
-      while (j && comp(key, j->value)) {
-        j->next->value = j->value;
-        j = j->prev;
+    for (Node* cur = head_->next; cur;) {
+      Node* next = cur->next;
+      Node* pos = head_;
+      while (pos != cur && !comp(cur->value, pos->value))
+        pos = pos->next;
+      if (pos != cur) {
+        unlink(cur);
+        cur->prev = pos->prev;
+        cur->next = pos;
+        if (pos->prev)
+          pos->prev->next = cur;
+        else
+          head_ = cur;
+        pos->prev = cur;
+        ++size_;
       }
-      (j ? j->next : head_)->value = key;
+      cur = next;
     }
   }
   void remove(const T& val) {
