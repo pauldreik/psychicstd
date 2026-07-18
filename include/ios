@@ -191,7 +191,8 @@ public:
   basic_streambuf<Char, Traits>* rdbuf() const noexcept { return buf_; }
   basic_streambuf<Char, Traits>* rdbuf(basic_streambuf<Char, Traits>* sb) {
     auto* old = buf_;
-    buf_ = sb;
+    // Replacing a buffer starts a new input sequence.
+    init(sb);
     return old;
   }
 
