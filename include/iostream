@@ -24,6 +24,13 @@ protected:
   int sync() override { return ::fflush(f_) == 0 ? 0 : -1; }
 };
 
+struct wide_istream : wistream {
+  wide_istream() = default;
+};
+struct wide_ostream : wostream {
+  wide_ostream() = default;
+};
+
 // Use Meyer's singleton to avoid static init order issues
 inline ostream& make_cout() {
   static stdio_streambuf buf(stdout);
@@ -47,6 +54,23 @@ inline istream& make_cin() {
   return s;
 }
 
+inline wostream& make_wcout() {
+  static wide_ostream s;
+  return s;
+}
+inline wostream& make_wcerr() {
+  static wide_ostream s;
+  return s;
+}
+inline wostream& make_wclog() {
+  static wide_ostream s;
+  return s;
+}
+inline wistream& make_wcin() {
+  static wide_istream s;
+  return s;
+}
+
 } // namespace detail
 
 namespace {
@@ -55,6 +79,10 @@ ostream& cout = detail::make_cout();
 ostream& cerr = detail::make_cerr();
 ostream& clog = detail::make_clog();
 istream& cin = detail::make_cin();
+wostream& wcout = detail::make_wcout();
+wostream& wcerr = detail::make_wcerr();
+wostream& wclog = detail::make_wclog();
+wistream& wcin = detail::make_wcin();
 } // namespace
 
 } // namespace std
