@@ -67,8 +67,8 @@ int main() {
 
   std::vector<int> src = {5, 1, 4, 2, 3};
   std::vector<int> dst(3);
-  auto out = std::partial_sort_copy(src.begin(), src.end(), dst.begin(),
-                                    dst.end());
+  auto out =
+      std::partial_sort_copy(src.begin(), src.end(), dst.begin(), dst.end());
   psyassert(out == dst.end());
   psyassert(dst[0] == 1);
   psyassert(dst[1] == 2);

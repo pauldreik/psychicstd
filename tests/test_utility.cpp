@@ -20,8 +20,8 @@ int main() {
 
   static_assert(std::is_same_v<decltype(std::move_if_noexcept(x)), int&&>);
   move_prefers_copy m;
-  static_assert(
-      std::is_same_v<decltype(std::move_if_noexcept(m)), const move_prefers_copy&>);
+  static_assert(std::is_same_v<decltype(std::move_if_noexcept(m)),
+                               const move_prefers_copy&>);
 
   static_assert(std::is_same_v<decltype(std::to_underlying(flavor::plain)),
                                unsigned short>);
