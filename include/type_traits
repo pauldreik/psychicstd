@@ -389,14 +389,19 @@ template <typename B> struct conjunction<B> : B {};
 template <typename B, typename... Bs>
 struct conjunction<B, Bs...>
     : conditional_t<bool(B::value), conjunction<Bs...>, B> {};
+template <typename... Bs>
+inline constexpr bool conjunction_v = conjunction<Bs...>::value;
 
 template <typename... Bs> struct disjunction : false_type {};
 template <typename B> struct disjunction<B> : B {};
 template <typename B, typename... Bs>
 struct disjunction<B, Bs...>
     : conditional_t<bool(B::value), B, disjunction<Bs...>> {};
+template <typename... Bs>
+inline constexpr bool disjunction_v = disjunction<Bs...>::value;
 
 template <typename B> struct negation : bool_constant<!bool(B::value)> {};
+template <typename B> inline constexpr bool negation_v = negation<B>::value;
 
 // make_signed / make_unsigned (minimal, common types only)
 template <typename T> struct make_signed {
