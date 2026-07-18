@@ -101,8 +101,7 @@ constexpr void sort(It first, It last, Compare cmp) {
 }
 
 template <typename It> constexpr void stable_sort(It first, It last) {
-  stable_sort(first, last,
-              [](const auto& a, const auto& b) { return a < b; });
+  stable_sort(first, last, [](const auto& a, const auto& b) { return a < b; });
 }
 template <typename It, typename Compare>
 constexpr void stable_sort(It first, It last, Compare cmp) {

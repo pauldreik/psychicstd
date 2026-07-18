@@ -302,8 +302,8 @@ private:
       ch = Traits::to_char_type(c);
       bool valid_digit = ch >= '0' && ch <= '9';
       if (base == 16)
-        valid_digit = valid_digit || (ch >= 'a' && ch <= 'f') ||
-                      (ch >= 'A' && ch <= 'F');
+        valid_digit =
+            valid_digit || (ch >= 'a' && ch <= 'f') || (ch >= 'A' && ch <= 'F');
       else if (base == 8)
         valid_digit = ch >= '0' && ch <= '7';
       if (!valid_digit)

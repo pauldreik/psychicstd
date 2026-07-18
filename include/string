@@ -2,8 +2,8 @@
 #include <__psychicstd_char_traits>
 #include <__psychicstd_config>
 #include <__psychicstd_except>
-#include <compare>
 #include <cerrno>
+#include <compare>
 #include <cstddef>
 #include <cstdlib>
 #include <cstring>
