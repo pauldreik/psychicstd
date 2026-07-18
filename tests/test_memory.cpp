@@ -151,6 +151,11 @@ static void test_member_init_from_template_prvalue() {
 }
 
 int main() {
+  std::unique_ptr<void, void (*)(void*)> void_unique(nullptr, [](void*) {});
+  std::shared_ptr<void> void_shared;
+  psyassert(void_unique.get() == nullptr);
+  psyassert(void_shared.get() == nullptr);
+
   test_forwarding();
   test_converting_copy_ctor();
   test_converting_ctor_from_prvalue();

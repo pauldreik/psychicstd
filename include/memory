@@ -304,7 +304,11 @@ public:
   unique_ptr(const unique_ptr&) = delete;
   unique_ptr& operator=(const unique_ptr&) = delete;
 
-  T& operator*() const noexcept { return *ptr_; }
+  template <typename U = T>
+    requires(!is_void<U>::value)
+  U& operator*() const noexcept {
+    return *ptr_;
+  }
   T* operator->() const noexcept { return ptr_; }
   T* get() const noexcept { return ptr_; }
   D& get_deleter() noexcept { return del_; }
@@ -571,7 +575,11 @@ public:
     return *this;
   }
 
-  T& operator*() const noexcept { return *ptr_; }
+  template <typename U = T>
+    requires(!is_void<U>::value)
+  U& operator*() const noexcept {
+    return *ptr_;
+  }
   T* operator->() const noexcept { return ptr_; }
   T* get() const noexcept { return ptr_; }
   explicit operator bool() const noexcept { return ptr_ != nullptr; }
