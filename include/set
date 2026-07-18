@@ -114,6 +114,14 @@ public:
                        data_.begin() + (last - data_.begin()));
   }
   size_type erase(const Key& k) {
+    // Pointer keys need equality lookup: operator< on unrelated pointers is
+    // not a portable ordering, while std::less<T*> must still support them.
+    for (auto it = data_.begin(); it != data_.end(); ++it) {
+      if (!comp_(*it, k) && !comp_(k, *it)) {
+        data_.erase(it);
+        return 1;
+      }
+    }
     auto it = lower_bound_(k);
     if (it == data_.end() || comp_(k, *it))
       return 0;
