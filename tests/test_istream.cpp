@@ -23,10 +23,13 @@ int main() {
   invalid_float >> d;
   psyassert(invalid_float.fail());
 
+#if defined(PSYCHICSTD_TEST_PSYCHICSTD)
+  // strtod may report ERANGE for a valid nonzero subnormal.
   std::istringstream smallest_float("4.9406564584124654e-324");
   smallest_float >> d;
   psyassert(!smallest_float.fail());
   psyassert(d > 0);
+#endif
 
   std::istringstream overflow("-1234567890123456");
   overflow >> x;
