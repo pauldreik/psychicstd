@@ -23,6 +23,11 @@ int main() {
   invalid_float >> d;
   psyassert(invalid_float.fail());
 
+  std::istringstream smallest_float("4.9406564584124654e-324");
+  smallest_float >> d;
+  psyassert(!smallest_float.fail());
+  psyassert(d > 0);
+
   std::istringstream overflow("-1234567890123456");
   overflow >> x;
   psyassert(x == std::numeric_limits<int>::min());

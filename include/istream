@@ -377,7 +377,8 @@ private:
     char* end = nullptr;
     errno = 0;
     v = (V)::strtod(buf, &end);
-    if (end == buf || errno == ERANGE)
+    if (end == buf ||
+        (errno == ERANGE && (v == 0 || !__builtin_isfinite(v))))
       this->setstate(ios_base::failbit);
     else if (end < buf + n) {
       for (int i = n - 1; i >= end - buf; --i)
