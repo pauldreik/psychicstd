@@ -233,7 +233,11 @@ def _googletest() -> Project:
             # GoogleTest also builds no-RTTI/no-exception variants of its
             # tests. psychicstd's current any/memory/locale implementations
             # require those language features internally.
-            wrapper = _compiler_wrapper(work / "cxx", tc, ("-frtti", "-fexceptions"))
+            wrapper = _compiler_wrapper(
+                work / "cxx",
+                tc,
+                ("-frtti", "-fexceptions", "-DGTEST_HAS_CXXABI_H_=1"),
+            )
             env = _env(tc)
             configure = [
                 "cmake",
