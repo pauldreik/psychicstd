@@ -43,6 +43,13 @@ int main() {
   s.replace(0, 2, 3, '-');
   psyassert(s == "---h!!el:lo");
 
+  std::string erased = "abracadabra";
+  psyassert(std::erase(erased, 'a') == 5);
+  psyassert(erased == "brcdbr");
+  psyassert(
+      std::erase_if(erased, [](char c) { return c == 'b' || c == 'd'; }) == 3);
+  psyassert(erased == "rcr");
+
   // string <-> string_view in ?: must pick string_view (requires the
   // string_view ctor to be explicit per [string.cons]; hit by cmake).
   std::string_view sv = false ? s : std::string_view("vw");

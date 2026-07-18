@@ -808,6 +808,25 @@ void swap(basic_string<C, T, A>& a, basic_string<C, T, A>& b) noexcept {
   a.swap(b);
 }
 
+template <typename C, typename T, typename A, typename U>
+constexpr typename basic_string<C, T, A>::size_type
+erase(basic_string<C, T, A>& s, const U& value) {
+  return erase_if(s, [&](const C& c) { return c == value; });
+}
+
+template <typename C, typename T, typename A, typename Pred>
+constexpr typename basic_string<C, T, A>::size_type
+erase_if(basic_string<C, T, A>& s, Pred pred) {
+  using size_type = typename basic_string<C, T, A>::size_type;
+  size_type out = 0;
+  const size_type old_size = s.size();
+  for (size_type i = 0; i < old_size; ++i)
+    if (!pred(s[i]))
+      s[out++] = static_cast<C&&>(s[i]);
+  s.resize(out);
+  return old_size - out;
+}
+
 // to_string
 inline string to_string(int v) {
   char b[32];
