@@ -1,4 +1,5 @@
 #include "psyassert.h"
+#include <iomanip>
 #include <iostream>
 #include <sstream>
 
@@ -39,4 +40,8 @@ int main() {
   std::wostringstream wide;
   wide << 42 << L'-' << L"wide";
   psyassert(wide.str() == L"42-wide");
+
+  std::ostringstream point;
+  point << std::fixed << std::setprecision(0) << std::showpoint << 3.0;
+  psyassert(point.str() == "3.");
 }
