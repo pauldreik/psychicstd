@@ -339,29 +339,26 @@ def _cppcheck() -> Project:
                 )
             )
             jobs = f"-j{os.cpu_count() or 1}"
+            make_args = [
+                jobs,
+                "CXX=" + str(wrapper),
+                "CPPFLAGS=" + cppflags,
+                "CXXFLAGS=",
+                "FILESDIR=/usr/local/share/Cppcheck",
+                "LDFLAGS=" + tc.ldflags,
+                "LIBS=" + tc.libs,
+            ]
             return {
-                "compile": _timed(
-                    [
-                        "make",
-                        jobs,
-                        "CXX=" + str(wrapper),
-                        "CPPFLAGS=" + cppflags,
-                        "CXXFLAGS=",
-                        "FILESDIR=/usr/local/share/Cppcheck",
-                        "LDFLAGS=" + tc.ldflags,
-                        "LIBS=" + tc.libs,
-                    ],
-                    src,
-                    env,
-                )
+                "compile": _timed(["make", *make_args], src, env),
+                "run tests": _timed(["make", "test", *make_args], src, env),
             }
 
     return Project(
         version=version,
         build=build,
-        phases=("compile",),
+        phases=("compile", "run tests"),
         comment="the complete native Makefile build is compiled and linked; "
-        "Cppcheck's test suite is not run.",
+        "Cppcheck's own test runner is also attempted.",
     )
 
 
