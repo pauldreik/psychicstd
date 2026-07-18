@@ -120,6 +120,35 @@ constexpr void partial_sort(It first, It middle, It last, Compare cmp) {
   (void)middle;
 }
 
+template <typename In, typename Out>
+constexpr Out partial_sort_copy(In first, In last, Out d_first, Out d_last) {
+  return partial_sort_copy(first, last, d_first, d_last,
+                           [](const auto& a, const auto& b) { return a < b; });
+}
+template <typename In, typename Out, typename Compare>
+constexpr Out partial_sort_copy(In first, In last, Out d_first, Out d_last,
+                                Compare cmp) {
+  if (d_first == d_last)
+    return d_first;
+  Out out = d_first;
+  for (; first != last && out != d_last; ++first) {
+    *out = *first;
+    ++out;
+  }
+  if (out == d_first)
+    return d_first;
+  make_heap(d_first, out, cmp);
+  for (; first != last; ++first) {
+    if (cmp(*first, *d_first)) {
+      pop_heap(d_first, out, cmp);
+      *(out - 1) = *first;
+      push_heap(d_first, out, cmp);
+    }
+  }
+  sort_heap(d_first, out, cmp);
+  return out;
+}
+
 // nth_element
 template <typename It> constexpr void nth_element(It first, It nth, It last) {
   detail::select_nth(first, nth, last,
@@ -317,11 +346,13 @@ bool next_permutation(BidirIt first, BidirIt last, Compare cmp) {
 
 // is_permutation
 template <typename It1, typename It2>
-bool is_permutation(It1 first1, It1 last1, It2 first2) {
+constexpr bool is_permutation(It1 first1, It1 last1, It2 first2) {
   // skip matching prefix
-  for (; first1 != last1; ++first1, ++first2)
+  for (; first1 != last1; ++first1) {
     if (!(*first1 == *first2))
       break;
+    ++first2;
+  }
   if (first1 == last1)
     return true;
   It2 last2 = first2;
@@ -346,10 +377,13 @@ bool is_permutation(It1 first1, It1 last1, It2 first2) {
   return true;
 }
 template <typename It1, typename It2, typename BinaryPredicate>
-bool is_permutation(It1 first1, It1 last1, It2 first2, BinaryPredicate pred) {
-  for (; first1 != last1; ++first1, ++first2)
+constexpr bool is_permutation(It1 first1, It1 last1, It2 first2,
+                              BinaryPredicate pred) {
+  for (; first1 != last1; ++first1) {
     if (!pred(*first1, *first2))
       break;
+    ++first2;
+  }
   if (first1 == last1)
     return true;
   It2 last2 = first2;

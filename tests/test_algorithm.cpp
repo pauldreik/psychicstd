@@ -65,6 +65,15 @@ int main() {
                    [](int x, int y) { return x > y; });
   psyassert(descending[2] == 3);
 
+  std::vector<int> src = {5, 1, 4, 2, 3};
+  std::vector<int> dst(3);
+  auto out = std::partial_sort_copy(src.begin(), src.end(), dst.begin(),
+                                    dst.end());
+  psyassert(out == dst.end());
+  psyassert(dst[0] == 1);
+  psyassert(dst[1] == 2);
+  psyassert(dst[2] == 3);
+
   std::vector<move_only> movable;
   movable.emplace_back(5);
   movable.emplace_back(1);
