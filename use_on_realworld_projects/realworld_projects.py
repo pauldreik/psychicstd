@@ -304,27 +304,6 @@ def _cmake() -> Project:
 
 # --- cppcheck -----------------------------------------------------------
 
-_CPPCHECK_FILES = (
-    "lib/addoninfo.cpp",
-    "lib/analyzerinfo.cpp",
-    "lib/color.cpp",
-    "lib/timer.cpp",
-    "lib/errortypes.cpp",
-    "lib/astutils.cpp",
-    "lib/checkassert.cpp",
-    "lib/checkbool.cpp",
-    "lib/checkcondition.cpp",
-    "lib/checkfunctions.cpp",
-    "lib/tokenize.cpp",
-    "lib/symboldatabase.cpp",
-    "lib/valueflow.cpp",
-    "lib/checkclass.cpp",
-    "lib/checkbufferoverrun.cpp",
-    "cli/cmdlineparser.cpp",
-    "cli/filelister.cpp",
-    "cli/cppcheckexecutor.cpp",
-)
-
 
 def _cppcheck() -> Project:
     version = "2.21.0"
@@ -344,41 +323,45 @@ def _cppcheck() -> Project:
             src = work / f"cppcheck-{version}"
 
             env = _env(tc)
-            cxxflags = [
-                *tc.cxxflags.split(),
-                "-I",
-                str(src / "lib"),
-                "-I",
-                str(src / "externals" / "picojson"),
-                "-I",
-                str(src / "externals" / "simplecpp"),
-                "-I",
-                str(src / "externals" / "tinyxml2"),
-                "-I",
-                str(src / "cli"),
-                "-I",
-                str(src / "frontend"),
-                '-DFILESDIR="/usr/local/share/Cppcheck"',
-                "-DHAVE_EXECINFO_H=1",
-            ]
-
-            compile_ms = 0.0
-            for name in _CPPCHECK_FILES:
-                cpp = src / name
-                obj = work / (Path(name).stem + ".o")
-                cmd = [tc.cxx, *cxxflags, str(cpp), "-c", "-o", str(obj)]
-                compile_ms += _timed(cmd, src, env)
-
-            return {"compile": compile_ms}
+            # The Makefile appends -std=c++11 to CXXFLAGS. Keep psychicstd's
+            # required C++20 flags last with a wrapper, as other recipes do.
+            wrapper = _compiler_wrapper(work / "cxx", tc)
+            cppflags = " ".join(
+                (
+                    "-Ilib",
+                    "-Ifrontend",
+                    "-Icli",
+                    "-isystem externals",
+                    "-isystem externals/picojson",
+                    "-isystem externals/simplecpp",
+                    "-isystem externals/tinyxml2",
+                    "-DHAVE_EXECINFO_H=1",
+                )
+            )
+            jobs = f"-j{os.cpu_count() or 1}"
+            return {
+                "compile": _timed(
+                    [
+                        "make",
+                        jobs,
+                        "CXX=" + str(wrapper),
+                        "CPPFLAGS=" + cppflags,
+                        "CXXFLAGS=",
+                        "FILESDIR=/usr/local/share/Cppcheck",
+                        "LDFLAGS=" + tc.ldflags,
+                        "LIBS=" + tc.libs,
+                    ],
+                    src,
+                    env,
+                )
+            }
 
     return Project(
         version=version,
         build=build,
         phases=("compile",),
-        comment="a fixed subset of cppcheck's source files is compiled "
-        "individually (no link/run step); times are summed. the real binary "
-        "doesn't build: threadexecutor.cpp needs <future> (unimplemented) "
-        "and stacktrace.cpp needs <cxxabi.h> (not shadowed by psychicstd).",
+        comment="the complete native Makefile build is compiled and linked; "
+        "Cppcheck's test suite is not run.",
     )
 
 
