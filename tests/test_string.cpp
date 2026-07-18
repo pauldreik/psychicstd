@@ -1,4 +1,5 @@
 #include "psyassert.h"
+#include <stdexcept>
 #include <string>
 
 int main() {
@@ -19,6 +20,17 @@ int main() {
   (void)allocator;
 
   std::string s = "hello";
+  psyassert(s.at(1) == 'e');
+  const std::string const_s = s;
+  psyassert(const_s.at(4) == 'o');
+  bool at_threw = false;
+  try {
+    (void)s.at(s.size());
+  } catch (const std::out_of_range&) {
+    at_threw = true;
+  }
+  psyassert(at_threw);
+
   std::string source = "assign";
   psyassert(std::string(source, 1, 3) == "ssi");
   psyassert(std::string(source, 4, 99) == "gn");
