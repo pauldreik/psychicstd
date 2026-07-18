@@ -57,7 +57,9 @@ constexpr conditional_t<!is_nothrow_move_constructible_v<T> &&
                              is_copy_constructible_v<T>,
                          const T&, T&&>
 move_if_noexcept(T& x) noexcept {
-  return std::move(x);
+  return static_cast<conditional_t<!is_nothrow_move_constructible_v<T> &&
+                                       is_copy_constructible_v<T>,
+                                   const T&, T&&>>(x);
 }
 
 template <typename E>
