@@ -1,0 +1,102 @@
+#pragma once
+#include <__psychicstd_refcount>
+#include <condition_variable>
+#include <mutex>
+#include <optional>
+#include <thread>
+#include <type_traits>
+
+namespace std {
+
+enum class launch : unsigned { async = 1 };
+
+namespace __future_detail {
+
+template <typename T> struct __state {
+  unsigned references = 1;
+  mutex mutex_;
+  condition_variable condition_;
+  bool ready = false;
+  optional<T> value_;
+
+  void retain() noexcept { __refcount_detail::add(&references); }
+  void release() noexcept {
+    if (__refcount_detail::release(&references))
+      delete this;
+  }
+  void set_value(T&& value) {
+    {
+      lock_guard lock(mutex_);
+      value_.emplace(static_cast<T&&>(value));
+      ready = true;
+    }
+    condition_.notify_all();
+  }
+  void wait() {
+    unique_lock lock(mutex_);
+    condition_.wait(lock, [this] { return ready; });
+  }
+};
+
+} // namespace __future_detail
+
+template <typename T> class future {
+  using state = __future_detail::__state<T>;
+  state* state_ = nullptr;
+
+  explicit future(state* state) noexcept : state_(state) {}
+  template <typename F, typename Arg>
+  friend auto async(launch, F&&, Arg&&)
+      -> future<invoke_result_t<decay_t<F>, decay_t<Arg>>>;
+
+public:
+  future() noexcept = default;
+  future(future&& other) noexcept : state_(other.state_) {
+    other.state_ = nullptr;
+  }
+  future& operator=(future&& other) noexcept {
+    if (this != &other) {
+      if (state_)
+        state_->release();
+      state_ = other.state_;
+      other.state_ = nullptr;
+    }
+    return *this;
+  }
+  future(const future&) = delete;
+  future& operator=(const future&) = delete;
+  ~future() {
+    if (state_)
+      state_->release();
+  }
+
+  bool valid() const noexcept { return state_ != nullptr; }
+  T get() {
+    state_->wait();
+    T result = static_cast<T&&>(state_->value_.value());
+    state_->value_.reset();
+    state_->release();
+    state_ = nullptr;
+    return result;
+  }
+};
+
+template <typename F, typename Arg>
+auto async(launch, F&& function, Arg&& arg)
+    -> future<invoke_result_t<decay_t<F>, decay_t<Arg>>> {
+  using result = invoke_result_t<decay_t<F>, decay_t<Arg>>;
+  using state = __future_detail::__state<result>;
+  auto* shared = new state;
+  future<result> result_future(shared);
+  shared->retain();
+  auto callable = [shared, fn = decay_t<F>(static_cast<F&&>(function)),
+                   arg = decay_t<Arg>(static_cast<Arg&&>(arg))]() mutable {
+    shared->set_value(
+        static_cast<decay_t<F>&&>(fn)(static_cast<decay_t<Arg>&&>(arg)));
+    shared->release();
+  };
+  thread(static_cast<decltype(callable)&&>(callable)).detach();
+  return result_future;
+}
+
+} // namespace std

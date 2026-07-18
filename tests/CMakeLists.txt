@@ -20,6 +20,7 @@ set(TESTS
     test_cstdlib_order
     test_deque
     test_exception
+    test_future
     test_filesystem
     test_forward_list
     test_fstream
