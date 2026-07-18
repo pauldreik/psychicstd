@@ -18,6 +18,11 @@ int main() {
   hex_input >> std::hex >> x;
   psyassert(x == 10);
 
+  std::istringstream invalid_float("invalid");
+  double d = 0;
+  invalid_float >> d;
+  psyassert(invalid_float.fail());
+
   std::istringstream overflow("-1234567890123456");
   overflow >> x;
   psyassert(x == std::numeric_limits<int>::min());

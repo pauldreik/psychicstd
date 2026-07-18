@@ -374,7 +374,16 @@ private:
       this->setstate(ios_base::failbit);
       return *this;
     }
-    v = (V)::strtod(buf, nullptr);
+    char* end = nullptr;
+    errno = 0;
+    v = (V)::strtod(buf, &end);
+    if (end == buf || errno == ERANGE)
+      this->setstate(ios_base::failbit);
+    else if (end < buf + n) {
+      for (int i = n - 1; i >= end - buf; --i)
+        sb->sputbackc((Char)buf[i]);
+      this->clear(this->rdstate() & ~ios_base::eofbit);
+    }
     return *this;
   }
 };
