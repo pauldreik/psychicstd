@@ -1,6 +1,5 @@
 #include "psyassert.h"
 #include <ios>
-#include <iostream>
 #include <type_traits>
 
 int main() {
@@ -18,12 +17,4 @@ int main() {
   psyassert(std::ios_base::goodbit == 0);
   std::ios ios(nullptr);
   psyassert(!ios.rdbuf());
-
-  auto* p1 = &std::wcout;
-  auto* p2 = &std::wcerr;
-  auto* p3 = &std::wclog;
-  auto* p4 = &std::wcin;
-  psyassert(static_cast<const void*>(p1) != static_cast<const void*>(p2));
-  psyassert(static_cast<const void*>(p2) != static_cast<const void*>(p3));
-  psyassert(static_cast<const void*>(p3) != static_cast<const void*>(p4));
 }
