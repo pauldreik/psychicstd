@@ -43,19 +43,21 @@ int main() {
 
   s = "hello";
   psyassert(s.size() == 5);
+  s += s;
+  psyassert(s == "hellohello");
   auto pos = s.insert(s.end() - 2, ':');
   psyassert(pos == s.end() - 3);
-  psyassert(s == "hel:lo");
+  psyassert(s == "hellohel:lo");
   s.insert(s.begin() + 1, 2, '!');
-  psyassert(s == "h!!el:lo");
+  psyassert(s == "h!!ellohel:lo");
   s.insert(0, 2, '?');
-  psyassert(s == "??h!!el:lo");
+  psyassert(s == "??h!!ellohel:lo");
   s.insert(s.cbegin() + 2, 1, '#');
-  psyassert(s == "??#h!!el:lo");
+  psyassert(s == "??#h!!ellohel:lo");
   s.replace(s.begin(), s.begin() + 3, std::string("ok"));
-  psyassert(s == "okh!!el:lo");
+  psyassert(s == "okh!!ellohel:lo");
   s.replace(0, 2, 3, '-');
-  psyassert(s == "---h!!el:lo");
+  psyassert(s == "---h!!ellohel:lo");
 
   std::string erased = "abracadabra";
   psyassert(std::erase(erased, 'a') == 5);

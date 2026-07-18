@@ -258,6 +258,10 @@ public:
     return *this;
   }
   basic_string& append(const basic_string& o) {
+    if (this == &o) {
+      basic_string copy(o);
+      return append(copy.data(), copy.size());
+    }
     return append(o.data(), o.size());
   }
   basic_string& append(const basic_string& o, size_type pos,
