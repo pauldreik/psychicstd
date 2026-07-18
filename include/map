@@ -140,11 +140,11 @@ public:
   allocator_type get_allocator() const noexcept { return alloc_; }
 
   iterator insert(const value_type& v) {
-    auto it = std::__lower_bound(data_.begin(), data_.end(), v.first, comp_);
+    auto it = std::__upper_bound(data_.begin(), data_.end(), v.first, comp_);
     return data_.insert(it, {v.first, v.second});
   }
   iterator insert(value_type&& v) {
-    auto it = std::__lower_bound(data_.begin(), data_.end(), v.first, comp_);
+    auto it = std::__upper_bound(data_.begin(), data_.end(), v.first, comp_);
     return data_.insert(it, static_cast<value_type&&>(v));
   }
   // Hint versions (hint ignored)
