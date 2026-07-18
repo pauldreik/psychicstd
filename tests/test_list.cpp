@@ -37,4 +37,8 @@ int main() {
   psyassert(source.empty());
   psyassert(l.size() == 5);
   psyassert(l.back() == 5);
+
+  auto reverse = l.rbegin();
+  psyassert(*reverse++ == 5);
+  psyassert(*reverse == 4);
 }
