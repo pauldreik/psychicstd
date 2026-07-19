@@ -18,16 +18,6 @@ public:
   const char* what() const noexcept override { return "bad variant access"; }
 };
 
-template <typename T> struct in_place_type_t {
-  explicit in_place_type_t() = default;
-};
-template <typename T> inline constexpr in_place_type_t<T> in_place_type{};
-
-template <size_t I> struct in_place_index_t {
-  explicit in_place_index_t() = default;
-};
-template <size_t I> inline constexpr in_place_index_t<I> in_place_index{};
-
 struct monostate {};
 constexpr bool operator==(monostate, monostate) noexcept { return true; }
 constexpr strong_ordering operator<=>(monostate, monostate) noexcept {
@@ -317,6 +307,21 @@ decltype(auto) visit(Visitor&& vis, V&& v) {
   return __variant::__visit_impl<R>(static_cast<Visitor&&>(vis),
                                     static_cast<V&&>(v),
                                     make_index_sequence<N>{});
+}
+
+template <typename Visitor, typename V1, typename V2>
+decltype(auto) visit(Visitor&& vis, V1&& v1, V2&& v2) {
+  return visit(
+      [&](auto&& value1) -> decltype(auto) {
+        return visit(
+            [&](auto&& value2) -> decltype(auto) {
+              return static_cast<Visitor&&>(vis)(
+                  static_cast<decltype(value1)&&>(value1),
+                  static_cast<decltype(value2)&&>(value2));
+            },
+            static_cast<V2&&>(v2));
+      },
+      static_cast<V1&&>(v1));
 }
 
 template <typename... Ts>

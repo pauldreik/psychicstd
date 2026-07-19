@@ -54,6 +54,7 @@ public:
     write(&c, 1);
     return *this;
   }
+  Char widen(char c) const { return static_cast<Char>(c); }
   basic_ostream& flush() {
     if (this->rdbuf() && this->rdbuf()->pubsync() == -1)
       this->setstate(ios_base::badbit);

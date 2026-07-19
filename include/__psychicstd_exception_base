@@ -1,0 +1,21 @@
+#pragma once
+
+namespace std {
+
+class exception {
+public:
+  exception() noexcept = default;
+  exception(const exception&) noexcept = default;
+  exception& operator=(const exception&) noexcept = default;
+  virtual ~exception() noexcept;
+  virtual const char* what() const noexcept;
+};
+
+class bad_any_cast : public exception {
+public:
+  bad_any_cast() noexcept = default;
+  ~bad_any_cast() noexcept override = default;
+  const char* what() const noexcept override { return "bad any cast"; }
+};
+
+} // namespace std

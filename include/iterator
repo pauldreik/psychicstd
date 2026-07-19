@@ -665,6 +665,32 @@ public:
     ++it_;
     return t;
   }
+  constexpr move_iterator& operator--() {
+    --it_;
+    return *this;
+  }
+  constexpr move_iterator operator--(int) {
+    auto t = *this;
+    --it_;
+    return t;
+  }
+  constexpr move_iterator operator+(difference_type n) const {
+    return move_iterator(it_ + n);
+  }
+  constexpr move_iterator operator-(difference_type n) const {
+    return move_iterator(it_ - n);
+  }
+  constexpr move_iterator& operator+=(difference_type n) {
+    it_ += n;
+    return *this;
+  }
+  constexpr move_iterator& operator-=(difference_type n) {
+    it_ -= n;
+    return *this;
+  }
+  constexpr reference operator[](difference_type n) const {
+    return static_cast<reference>(it_[n]);
+  }
   friend constexpr bool operator==(const move_iterator& a,
                                    const move_iterator& b) {
     return a.it_ == b.it_;
@@ -673,7 +699,18 @@ public:
                                    const move_iterator& b) {
     return a.it_ != b.it_;
   }
+  friend constexpr difference_type operator-(const move_iterator& a,
+                                             const move_iterator& b) {
+    return a.it_ - b.it_;
+  }
 };
+
+template <typename It>
+constexpr move_iterator<It>
+operator+(typename move_iterator<It>::difference_type n,
+          const move_iterator<It>& it) {
+  return it + n;
+}
 
 template <typename It> constexpr move_iterator<It> make_move_iterator(It it) {
   return move_iterator<It>(it);

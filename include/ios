@@ -39,15 +39,16 @@ public:
   static constexpr fmtflags hex = 1 << 2;
   static constexpr fmtflags left = 1 << 3;
   static constexpr fmtflags right = 1 << 4;
-  static constexpr fmtflags fixed = 1 << 5;
-  static constexpr fmtflags scientific = 1 << 6;
-  static constexpr fmtflags boolalpha = 1 << 7;
-  static constexpr fmtflags showbase = 1 << 8;
-  static constexpr fmtflags showpoint = 1 << 9;
-  static constexpr fmtflags showpos = 1 << 10;
-  static constexpr fmtflags skipws = 1 << 11;
-  static constexpr fmtflags uppercase = 1 << 12;
-  static constexpr fmtflags adjustfield = left | right;
+  static constexpr fmtflags internal = 1 << 5;
+  static constexpr fmtflags fixed = 1 << 6;
+  static constexpr fmtflags scientific = 1 << 7;
+  static constexpr fmtflags boolalpha = 1 << 8;
+  static constexpr fmtflags showbase = 1 << 9;
+  static constexpr fmtflags showpoint = 1 << 10;
+  static constexpr fmtflags showpos = 1 << 11;
+  static constexpr fmtflags skipws = 1 << 12;
+  static constexpr fmtflags uppercase = 1 << 13;
+  static constexpr fmtflags adjustfield = left | right | internal;
   static constexpr fmtflags basefield = dec | oct | hex;
   static constexpr fmtflags floatfield = fixed | scientific;
 

@@ -31,6 +31,7 @@ class unordered_set {
   size_t size_ = 0;
   Hash hasher_;
   KeyEqual equal_;
+  Allocator allocator_;
 
   size_t bucket(const Key& k) const { return hasher_(k) % nbuckets_; }
 
@@ -76,6 +77,8 @@ public:
   using hasher = Hash;
   using key_equal = KeyEqual;
   using allocator_type = Allocator;
+  using pointer = typename allocator_traits<Allocator>::pointer;
+  using const_pointer = typename allocator_traits<Allocator>::const_pointer;
   using reference = value_type&;
   using const_reference = const value_type&;
 
@@ -120,9 +123,25 @@ public:
   unordered_set() = default;
   explicit unordered_set(size_t, const Hash& h = Hash(),
                          const KeyEqual& eq = KeyEqual(),
-                         const Allocator& = Allocator())
-      : hasher_(h), equal_(eq) {}
-  explicit unordered_set(const Allocator&) {}
+                         const Allocator& a = Allocator())
+      : hasher_(h), equal_(eq), allocator_(a) {}
+  unordered_set(size_t buckets, const Allocator& a)
+      : unordered_set(buckets, Hash(), KeyEqual(), a) {}
+  unordered_set(size_t buckets, const Hash& h, const Allocator& a)
+      : unordered_set(buckets, h, KeyEqual(), a) {}
+  explicit unordered_set(const Allocator& a) : allocator_(a) {}
+  unordered_set(initializer_list<Key> il, size_t buckets, const Hash& h,
+                const KeyEqual& eq, const Allocator& a)
+      : nbuckets_(buckets ? buckets : 1), buckets_(_alloc(nbuckets_)),
+        hasher_(h), equal_(eq), allocator_(a) {
+    for (const auto& k : il)
+      insert(k);
+  }
+  unordered_set(initializer_list<Key> il, size_t buckets, const Hash& h,
+                const Allocator& a)
+      : unordered_set(il, buckets, h, KeyEqual(), a) {}
+  unordered_set(initializer_list<Key> il, size_t buckets, const Allocator& a)
+      : unordered_set(il, buckets, Hash(), KeyEqual(), a) {}
   unordered_set(initializer_list<Key> il) {
     for (const auto& k : il)
       insert(k);
@@ -131,7 +150,32 @@ public:
     for (; first != last; ++first)
       insert(*first);
   }
+  template <typename It>
+  unordered_set(It first, It last, size_t buckets, const Allocator& a)
+      : unordered_set(buckets, Hash(), KeyEqual(), a) {
+    for (; first != last; ++first)
+      insert(*first);
+  }
+  template <typename It>
+  unordered_set(It first, It last, size_t buckets, const Hash& h,
+                const Allocator& a)
+      : unordered_set(buckets, h, KeyEqual(), a) {
+    for (; first != last; ++first)
+      insert(*first);
+  }
+  template <typename It>
+  unordered_set(It first, It last, size_t buckets, const Hash& h,
+                const KeyEqual& eq, const Allocator& a)
+      : unordered_set(buckets, h, eq, a) {
+    for (; first != last; ++first)
+      insert(*first);
+  }
   unordered_set(const unordered_set& o) { *this = o; }
+  unordered_set(const unordered_set& o, const Allocator& a)
+      : unordered_set(o.nbuckets_, o.hasher_, o.equal_, a) {
+    for (const auto& value : o)
+      insert(value);
+  }
   unordered_set(unordered_set&& o) noexcept { swap_(o); }
   ~unordered_set() {
     destroy();
@@ -178,6 +222,7 @@ public:
   bool empty() const noexcept { return size_ == 0; }
   size_type size() const noexcept { return size_; }
   size_type bucket_count() const noexcept { return nbuckets_; }
+  size_type max_size() const noexcept { return size_type(-1); }
   float load_factor() const noexcept {
     return static_cast<float>(size_) / static_cast<float>(nbuckets_);
   }
@@ -226,6 +271,13 @@ public:
   template <typename... Args> pair<iterator, bool> emplace(Args&&... args) {
     return insert(Key(static_cast<Args&&>(args)...));
   }
+  template <typename... Args>
+  iterator emplace_hint(const_iterator, Args&&... args) {
+    return emplace(static_cast<Args&&>(args)...).first;
+  }
+  hasher hash_function() const { return hasher_; }
+  key_equal key_eq() const { return equal_; }
+  allocator_type get_allocator() const { return allocator_; }
   template <typename It> void insert(It first, It last) {
     for (; first != last; ++first)
       insert(*first);
@@ -237,6 +289,14 @@ public:
       if (equal_(n->key, k))
         return {this, b, n};
     return end();
+  }
+  pair<iterator, iterator> equal_range(const Key& k) const {
+    auto it = find(k);
+    if (it == end())
+      return {it, it};
+    auto next_it = it;
+    ++next_it;
+    return {it, next_it};
   }
 
   size_type count(const Key& k) const { return find(k) != end() ? 1 : 0; }
@@ -258,6 +318,11 @@ public:
       it.node_ = buckets_[it.bucket_];
     return it;
   }
+  iterator erase(const_iterator first, const_iterator last) {
+    while (first != last)
+      first = erase(first);
+    return {this, first.bucket_, const_cast<Node*>(first.node_)};
+  }
 
   size_type erase(const Key& k) {
     size_t b = bucket(k);
@@ -274,7 +339,19 @@ public:
     }
     return 0;
   }
+  void swap(unordered_set& other) noexcept { swap_(other); }
 };
+
+template <typename Key, typename Hash, typename KeyEqual, typename Allocator>
+bool operator==(const unordered_set<Key, Hash, KeyEqual, Allocator>& a,
+                const unordered_set<Key, Hash, KeyEqual, Allocator>& b) {
+  if (a.size() != b.size())
+    return false;
+  for (const auto& value : a)
+    if (b.find(value) == b.end())
+      return false;
+  return true;
+}
 
 // unordered_multiset — node-based chaining (allows duplicates)
 template <typename Key, typename Hash = hash<Key>,

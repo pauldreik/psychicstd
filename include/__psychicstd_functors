@@ -36,8 +36,24 @@ template <> struct greater<void> {
 template <typename T = void> struct less_equal {
   constexpr bool operator()(const T& a, const T& b) const { return a <= b; }
 };
+template <> struct less_equal<void> {
+  template <typename T, typename U>
+  constexpr auto operator()(T&& a, U&& b) const
+      -> decltype(static_cast<T&&>(a) <= static_cast<U&&>(b)) {
+    return static_cast<T&&>(a) <= static_cast<U&&>(b);
+  }
+  using is_transparent = void;
+};
 template <typename T = void> struct greater_equal {
   constexpr bool operator()(const T& a, const T& b) const { return a >= b; }
+};
+template <> struct greater_equal<void> {
+  template <typename T, typename U>
+  constexpr auto operator()(T&& a, U&& b) const
+      -> decltype(static_cast<T&&>(a) >= static_cast<U&&>(b)) {
+    return static_cast<T&&>(a) >= static_cast<U&&>(b);
+  }
+  using is_transparent = void;
 };
 template <typename T = void> struct equal_to {
   constexpr bool operator()(const T& a, const T& b) const { return a == b; }
@@ -52,6 +68,13 @@ template <> struct equal_to<void> {
 };
 template <typename T = void> struct not_equal_to {
   constexpr bool operator()(const T& a, const T& b) const { return a != b; }
+};
+template <> struct not_equal_to<void> {
+  template <typename T, typename U>
+  constexpr auto operator()(T&& a, U&& b) const {
+    return static_cast<T&&>(a) != static_cast<U&&>(b);
+  }
+  using is_transparent = void;
 };
 
 // Arithmetic functors
@@ -76,6 +99,13 @@ template <> struct minus<void> {
 };
 template <typename T = void> struct multiplies {
   constexpr T operator()(const T& a, const T& b) const { return a * b; }
+};
+template <> struct multiplies<void> {
+  template <typename T, typename U>
+  constexpr auto operator()(T&& a, U&& b) const {
+    return static_cast<T&&>(a) * static_cast<U&&>(b);
+  }
+  using is_transparent = void;
 };
 template <typename T = void> struct divides {
   constexpr T operator()(const T& a, const T& b) const { return a / b; }

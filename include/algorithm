@@ -22,7 +22,7 @@ namespace std {
 // constant, which this library trades away for compile speed.
 namespace detail {
 template <typename It, typename Compare>
-void heap_sift(It first, ptrdiff_t root, ptrdiff_t n, Compare cmp) {
+constexpr void heap_sift(It first, ptrdiff_t root, ptrdiff_t n, Compare cmp) {
   for (;;) {
     ptrdiff_t child = 2 * root + 1;
     if (child >= n)
@@ -36,7 +36,7 @@ void heap_sift(It first, ptrdiff_t root, ptrdiff_t n, Compare cmp) {
   }
 }
 template <typename It, typename Compare>
-void heap_sort(It first, It last, Compare cmp) {
+constexpr void heap_sort(It first, It last, Compare cmp) {
   ptrdiff_t n = last - first;
   for (ptrdiff_t start = n / 2; start-- > 0;)
     heap_sift(first, start, n, cmp);
@@ -186,11 +186,86 @@ constexpr It partition(It first, It last, Pred pred) {
   return first;
 }
 
+template <typename In, typename Out1, typename Out2, typename Pred>
+constexpr pair<Out1, Out2> partition_copy(In first, In last, Out1 out_true,
+                                          Out2 out_false, Pred pred) {
+  for (; first != last; ++first) {
+    if (pred(*first))
+      *out_true++ = *first;
+    else
+      *out_false++ = *first;
+  }
+  return {out_true, out_false};
+}
+
+template <typename It, typename Pred>
+constexpr bool is_partitioned(It first, It last, Pred pred) {
+  first = find_if_not(first, last, pred);
+  return all_of(first, last, [&](const auto& value) { return !pred(value); });
+}
+
+template <typename It, typename Pred>
+constexpr It stable_partition(It first, It last, Pred pred) {
+  It boundary = find_if_not(first, last, pred);
+  if (boundary == last)
+    return last;
+  for (It current = boundary; current != last; ++current) {
+    if (!pred(*current))
+      continue;
+    rotate(boundary, current, current + 1);
+    ++boundary;
+  }
+  return boundary;
+}
+
+template <typename It, typename Pred>
+constexpr It partition_point(It first, It last, Pred pred) {
+  auto count = distance(first, last);
+  while (count > 0) {
+    auto step = count / 2;
+    It middle = first;
+    advance(middle, step);
+    if (pred(*middle)) {
+      first = ++middle;
+      count -= step + 1;
+    } else {
+      count = step;
+    }
+  }
+  return first;
+}
+
+template <typename It> constexpr It is_sorted_until(It first, It last) {
+  return is_sorted_until(first, last,
+                         [](const auto& a, const auto& b) { return a < b; });
+}
+template <typename It, typename Compare>
+constexpr It is_sorted_until(It first, It last, Compare cmp) {
+  if (first == last)
+    return last;
+  for (It next = first; ++next != last; first = next)
+    if (cmp(*next, *first))
+      return next;
+  return last;
+}
+
 // merge
 template <typename In1, typename In2, typename Out>
 constexpr Out merge(In1 first1, In1 last1, In2 first2, In2 last2, Out d_first) {
   for (; first1 != last1 && first2 != last2; ++d_first) {
     if (*first2 < *first1)
+      *d_first = *first2++;
+    else
+      *d_first = *first1++;
+  }
+  d_first = copy(first1, last1, d_first);
+  return copy(first2, last2, d_first);
+}
+template <typename In1, typename In2, typename Out, typename Compare>
+constexpr Out merge(In1 first1, In1 last1, In2 first2, In2 last2, Out d_first,
+                    Compare cmp) {
+  for (; first1 != last1 && first2 != last2; ++d_first) {
+    if (cmp(*first2, *first1))
       *d_first = *first2++;
     else
       *d_first = *first1++;
@@ -205,6 +280,17 @@ constexpr bool includes(It1 first1, It1 last1, It2 first2, It2 last2) {
   for (; first2 != last2; ++first2) {
     first1 = lower_bound(first1, last1, *first2);
     if (first1 == last1 || *first2 < *first1)
+      return false;
+    ++first1;
+  }
+  return true;
+}
+template <typename It1, typename It2, typename Compare>
+constexpr bool includes(It1 first1, It1 last1, It2 first2, It2 last2,
+                        Compare cmp) {
+  for (; first2 != last2; ++first2) {
+    first1 = lower_bound(first1, last1, *first2, cmp);
+    if (first1 == last1 || cmp(*first2, *first1))
       return false;
     ++first1;
   }
@@ -250,8 +336,13 @@ constexpr It min_element(It first, It last, Compare cmp) {
       result = first;
   return result;
 }
-template <typename It> pair<It, It> minmax_element(It first, It last) {
+template <typename It>
+constexpr pair<It, It> minmax_element(It first, It last) {
   return {min_element(first, last), max_element(first, last)};
+}
+template <typename It, typename Compare>
+constexpr pair<It, It> minmax_element(It first, It last, Compare cmp) {
+  return {min_element(first, last, cmp), max_element(first, last, cmp)};
 }
 
 // search / search_n
@@ -269,6 +360,111 @@ constexpr It1 search(It1 first1, It1 last1, It2 first2, It2 last2) {
       ++it;
     }
   }
+}
+
+template <typename It1, typename It2, typename Pred>
+constexpr It1 search(It1 first1, It1 last1, It2 first2, It2 last2, Pred pred) {
+  for (;; ++first1) {
+    It1 it = first1;
+    for (It2 it2 = first2;; ++it2) {
+      if (it2 == last2)
+        return first1;
+      if (it == last1)
+        return last1;
+      if (!pred(*it, *it2))
+        break;
+      ++it;
+    }
+  }
+}
+
+template <typename It1, typename It2>
+constexpr It1 find_end(It1 first1, It1 last1, It2 first2, It2 last2) {
+  return find_end(first1, last1, first2, last2,
+                  [](const auto& a, const auto& b) { return a == b; });
+}
+template <typename It1, typename It2, typename Pred>
+constexpr It1 find_end(It1 first1, It1 last1, It2 first2, It2 last2,
+                       Pred pred) {
+  if (first2 == last2)
+    return last1;
+  It1 result = last1;
+  for (; first1 != last1;) {
+    It1 candidate = search(first1, last1, first2, last2, pred);
+    if (candidate == last1)
+      break;
+    result = candidate;
+    first1 = candidate;
+    ++first1;
+  }
+  return result;
+}
+
+template <typename It, typename Size, typename T>
+constexpr It search_n(It first, It last, Size count, const T& value) {
+  return search_n(first, last, count, value,
+                  [](const auto& a, const auto& b) { return a == b; });
+}
+template <typename It, typename Size, typename T, typename Pred>
+constexpr It search_n(It first, It last, Size count, const T& value,
+                      Pred pred) {
+  if (count <= 0)
+    return first;
+  for (; first != last; ++first) {
+    if (!pred(*first, value))
+      continue;
+    It candidate = first;
+    Size matched = 0;
+    for (; candidate != last && matched < count; ++candidate, ++matched)
+      if (!pred(*candidate, value))
+        break;
+    if (matched == count)
+      return first;
+    if (candidate == last)
+      return last;
+  }
+  return last;
+}
+
+template <typename In, typename Out, typename T>
+constexpr Out replace_copy(In first, In last, Out out, const T& old_value,
+                           const T& new_value) {
+  for (; first != last; ++first, ++out)
+    *out = *first == old_value ? new_value : *first;
+  return out;
+}
+template <typename In, typename Out, typename Pred, typename T>
+constexpr Out replace_copy_if(In first, In last, Out out, Pred pred,
+                              const T& new_value) {
+  for (; first != last; ++first, ++out)
+    *out = pred(*first) ? new_value : *first;
+  return out;
+}
+
+template <typename In, typename Out>
+constexpr Out unique_copy(In first, In last, Out out) {
+  return unique_copy(first, last, out,
+                     [](const auto& a, const auto& b) { return a == b; });
+}
+template <typename In, typename Out, typename Pred>
+constexpr Out unique_copy(In first, In last, Out out, Pred pred) {
+  if (first == last)
+    return out;
+  auto value = *first++;
+  *out++ = value;
+  for (; first != last; ++first) {
+    if (pred(value, *first))
+      continue;
+    value = *first;
+    *out++ = value;
+  }
+  return out;
+}
+
+template <typename In, typename Out>
+constexpr Out rotate_copy(In first, In middle, In last, Out out) {
+  out = copy(middle, last, out);
+  return copy(first, middle, out);
 }
 
 // adjacent_find
@@ -313,9 +509,26 @@ constexpr void inplace_merge(It first, It middle, It last) {
     }
   }
 }
+template <typename It, typename Compare>
+constexpr void inplace_merge(It first, It middle, It last, Compare cmp) {
+  if (first == middle || middle == last)
+    return;
+  It first2 = middle;
+  while (first != middle && first2 != last) {
+    if (cmp(*first2, *first)) {
+      rotate(first, first2, first2 + 1);
+      ++first;
+      ++middle;
+      ++first2;
+    } else {
+      ++first;
+    }
+  }
+}
 
 // next_permutation
-template <typename BidirIt> bool next_permutation(BidirIt first, BidirIt last) {
+template <typename BidirIt>
+constexpr bool next_permutation(BidirIt first, BidirIt last) {
   if (first == last || first == --last)
     return false;
   BidirIt it = last;
@@ -336,7 +549,7 @@ template <typename BidirIt> bool next_permutation(BidirIt first, BidirIt last) {
   }
 }
 template <typename BidirIt, typename Compare>
-bool next_permutation(BidirIt first, BidirIt last, Compare cmp) {
+constexpr bool next_permutation(BidirIt first, BidirIt last, Compare cmp) {
   if (first == last || first == --last)
     return false;
   BidirIt it = last;
@@ -355,6 +568,57 @@ bool next_permutation(BidirIt first, BidirIt last, Compare cmp) {
       return false;
     }
   }
+}
+
+template <typename BidirIt>
+constexpr bool prev_permutation(BidirIt first, BidirIt last) {
+  return prev_permutation(first, last,
+                          [](const auto& a, const auto& b) { return a < b; });
+}
+template <typename BidirIt, typename Compare>
+constexpr bool prev_permutation(BidirIt first, BidirIt last, Compare cmp) {
+  if (first == last || first == --last)
+    return false;
+  BidirIt it = last;
+  while (true) {
+    BidirIt it1 = it;
+    if (cmp(*it1, *--it)) {
+      BidirIt it2 = last;
+      while (!cmp(*it2, *it))
+        --it2;
+      swap(*it, *it2);
+      reverse(it1, ++last);
+      return true;
+    }
+    if (it == first) {
+      reverse(first, ++last);
+      return false;
+    }
+  }
+}
+
+template <typename RandomIt, typename URBG>
+void shuffle(RandomIt first, RandomIt last, URBG&& g) {
+  if (first == last)
+    return;
+  for (auto i = last - first; i > 1; --i) {
+    auto offset = static_cast<decltype(i)>(g() % i);
+    iter_swap(first + (i - 1), first + offset);
+  }
+}
+
+template <typename In, typename Out, typename Distance, typename URBG>
+Out sample(In first, In last, Out out, Distance n, URBG&& g) {
+  auto remaining = distance(first, last);
+  if (n <= 0)
+    return out;
+  for (; first != last && n > 0; ++first, --remaining) {
+    if (g() % remaining < n) {
+      *out++ = *first;
+      --n;
+    }
+  }
+  return out;
 }
 
 // is_permutation
@@ -390,18 +654,22 @@ constexpr bool is_permutation(It1 first1, It1 last1, It2 first2) {
   return true;
 }
 template <typename It1, typename It2, typename BinaryPredicate>
-constexpr bool is_permutation(It1 first1, It1 last1, It2 first2,
+constexpr bool is_permutation(It1, It1, It2, It2, BinaryPredicate);
+
+template <typename It1, typename It2>
+constexpr bool is_permutation(It1 first1, It1 last1, It2 first2, It2 last2) {
+  return is_permutation(first1, last1, first2, last2,
+                        [](const auto& a, const auto& b) { return a == b; });
+}
+template <typename It1, typename It2, typename BinaryPredicate>
+constexpr bool is_permutation(It1 first1, It1 last1, It2 first2, It2 last2,
                               BinaryPredicate pred) {
-  for (; first1 != last1; ++first1) {
-    if (!pred(*first1, *first2))
-      break;
-    ++first2;
-  }
+  if (distance(first1, last1) != distance(first2, last2))
+    return false;
+  for (; first1 != last1 && pred(*first1, *first2); ++first1, ++first2)
+    ;
   if (first1 == last1)
     return true;
-  It2 last2 = first2;
-  for (auto it = first1; it != last1; ++it)
-    ++last2;
   for (auto it = first1; it != last1; ++it) {
     bool seen = false;
     for (auto jt = first1; jt != it; ++jt)
@@ -422,7 +690,7 @@ constexpr bool is_permutation(It1 first1, It1 last1, It2 first2,
 
 // set_union / set_intersection / set_difference / set_symmetric_difference
 template <typename It1, typename It2, typename OutIt>
-OutIt set_union(It1 f1, It1 l1, It2 f2, It2 l2, OutIt out) {
+constexpr OutIt set_union(It1 f1, It1 l1, It2 f2, It2 l2, OutIt out) {
   while (f1 != l1 && f2 != l2) {
     if (*f1 < *f2)
       *out++ = *f1++;
@@ -437,7 +705,8 @@ OutIt set_union(It1 f1, It1 l1, It2 f2, It2 l2, OutIt out) {
   return copy(f2, l2, out);
 }
 template <typename It1, typename It2, typename OutIt, typename Compare>
-OutIt set_union(It1 f1, It1 l1, It2 f2, It2 l2, OutIt out, Compare cmp) {
+constexpr OutIt set_union(It1 f1, It1 l1, It2 f2, It2 l2, OutIt out,
+                          Compare cmp) {
   while (f1 != l1 && f2 != l2) {
     if (cmp(*f1, *f2))
       *out++ = *f1++;
@@ -453,7 +722,7 @@ OutIt set_union(It1 f1, It1 l1, It2 f2, It2 l2, OutIt out, Compare cmp) {
 }
 
 template <typename It1, typename It2, typename OutIt>
-OutIt set_intersection(It1 f1, It1 l1, It2 f2, It2 l2, OutIt out) {
+constexpr OutIt set_intersection(It1 f1, It1 l1, It2 f2, It2 l2, OutIt out) {
   while (f1 != l1 && f2 != l2) {
     if (*f1 < *f2)
       ++f1;
@@ -467,7 +736,8 @@ OutIt set_intersection(It1 f1, It1 l1, It2 f2, It2 l2, OutIt out) {
   return out;
 }
 template <typename It1, typename It2, typename OutIt, typename Compare>
-OutIt set_intersection(It1 f1, It1 l1, It2 f2, It2 l2, OutIt out, Compare cmp) {
+constexpr OutIt set_intersection(It1 f1, It1 l1, It2 f2, It2 l2, OutIt out,
+                                 Compare cmp) {
   while (f1 != l1 && f2 != l2) {
     if (cmp(*f1, *f2))
       ++f1;
@@ -482,7 +752,7 @@ OutIt set_intersection(It1 f1, It1 l1, It2 f2, It2 l2, OutIt out, Compare cmp) {
 }
 
 template <typename It1, typename It2, typename OutIt>
-OutIt set_difference(It1 f1, It1 l1, It2 f2, It2 l2, OutIt out) {
+constexpr OutIt set_difference(It1 f1, It1 l1, It2 f2, It2 l2, OutIt out) {
   while (f1 != l1 && f2 != l2) {
     if (*f1 < *f2)
       *out++ = *f1++;
@@ -496,7 +766,8 @@ OutIt set_difference(It1 f1, It1 l1, It2 f2, It2 l2, OutIt out) {
   return copy(f1, l1, out);
 }
 template <typename It1, typename It2, typename OutIt, typename Compare>
-OutIt set_difference(It1 f1, It1 l1, It2 f2, It2 l2, OutIt out, Compare cmp) {
+constexpr OutIt set_difference(It1 f1, It1 l1, It2 f2, It2 l2, OutIt out,
+                               Compare cmp) {
   while (f1 != l1 && f2 != l2) {
     if (cmp(*f1, *f2))
       *out++ = *f1++;
@@ -511,11 +782,28 @@ OutIt set_difference(It1 f1, It1 l1, It2 f2, It2 l2, OutIt out, Compare cmp) {
 }
 
 template <typename It1, typename It2, typename OutIt>
-OutIt set_symmetric_difference(It1 f1, It1 l1, It2 f2, It2 l2, OutIt out) {
+constexpr OutIt set_symmetric_difference(It1 f1, It1 l1, It2 f2, It2 l2,
+                                         OutIt out) {
   while (f1 != l1 && f2 != l2) {
     if (*f1 < *f2)
       *out++ = *f1++;
     else if (*f2 < *f1)
+      *out++ = *f2++;
+    else {
+      ++f1;
+      ++f2;
+    }
+  }
+  out = copy(f1, l1, out);
+  return copy(f2, l2, out);
+}
+template <typename It1, typename It2, typename OutIt, typename Compare>
+constexpr OutIt set_symmetric_difference(It1 f1, It1 l1, It2 f2, It2 l2,
+                                         OutIt out, Compare cmp) {
+  while (f1 != l1 && f2 != l2) {
+    if (cmp(*f1, *f2))
+      *out++ = *f1++;
+    else if (cmp(*f2, *f1))
       *out++ = *f2++;
     else {
       ++f1;

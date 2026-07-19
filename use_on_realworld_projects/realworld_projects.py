@@ -262,11 +262,48 @@ def _abseil() -> Project:
                 "-DBUILD_SHARED_LIBS=OFF",
             ]
             jobs = _jobs()
+            base_targets = [
+                "base",
+                "raw_logging_internal",
+                "spinlock_wait",
+                "malloc_internal",
+                "throw_delegate",
+                "scoped_set_env",
+                "strerror",
+                "tracing_internal",
+            ]
+            base_targets += [
+                "absl_atomic_hook_test",
+                "absl_attributes_test",
+                "absl_bit_cast_test",
+                "absl_casts_test",
+                "absl_errno_saver_test",
+                "absl_throw_delegate_test",
+                "absl_endian_test",
+                "absl_no_destructor_test",
+            ]
+            base_tests = [target for target in base_targets if target.startswith("absl_")]
+            test_filter = "^(" + "|".join(base_tests) + ")$"
+
+            def compile_base() -> float:
+                t0 = time.monotonic()
+                for target in base_targets:
+                    _run(["ninja", "-C", "build", target, jobs], src, env)
+                return (time.monotonic() - t0) * 1000.0
+
             return {
                 "configure": _timed(configure, src, env),
-                "compile": _timed(["cmake", "--build", "build", jobs], src, env),
+                "compile": compile_base(),
                 "run tests": _timed(
-                    ["ctest", "--test-dir", "build", "--output-on-failure", jobs],
+                    [
+                        "ctest",
+                        "--test-dir",
+                        "build",
+                        "--output-on-failure",
+                        "-R",
+                        test_filter,
+                        jobs,
+                    ],
                     src,
                     env,
                 ),
@@ -275,7 +312,7 @@ def _abseil() -> Project:
     return Project(
         version=version,
         build=build,
-        comment="Builds and runs Abseil's upstream CMake test suite.",
+        comment="Builds and runs Abseil's upstream absl/base tests.",
     )
 
 

@@ -130,7 +130,15 @@ template <> class tuple<> {};
 // tuple_size
 template <typename... Ts>
 struct tuple_size<tuple<Ts...>> : integral_constant<size_t, sizeof...(Ts)> {};
-template <typename T> struct tuple_size<const T> : tuple_size<T> {};
+template <typename T>
+  requires requires { tuple_size<T>::value; }
+struct tuple_size<const T> : tuple_size<T> {};
+template <typename T>
+  requires requires { tuple_size<T>::value; }
+struct tuple_size<volatile T> : tuple_size<T> {};
+template <typename T>
+  requires requires { tuple_size<T>::value; }
+struct tuple_size<const volatile T> : tuple_size<T> {};
 template <typename T>
 inline constexpr size_t tuple_size_v = tuple_size<T>::value;
 

@@ -229,6 +229,24 @@ public:
     ++size_;
     return {n, tail_};
   }
+  template <typename... Args>
+  iterator emplace(const_iterator pos, Args&&... args) {
+    Node* n = new Node(static_cast<Args&&>(args)...);
+    Node* cur = const_cast<Node*>(pos.n);
+    if (!cur) {
+      link_back(n);
+      return {n, tail_};
+    }
+    n->next = cur;
+    n->prev = cur->prev;
+    if (cur->prev)
+      cur->prev->next = n;
+    else
+      head_ = n;
+    cur->prev = n;
+    ++size_;
+    return {n, tail_};
+  }
   void clear() {
     Node* n = head_;
     while (n) {
@@ -409,6 +427,12 @@ public:
     size_ += other.size_;
     other.head_ = other.tail_ = nullptr;
     other.size_ = 0;
+  }
+  void splice(const_iterator pos, list& other, const_iterator it) {
+    if (it == other.end())
+      return;
+    const_iterator next_it(it.n->next, other.tail_);
+    splice(pos, other, it, next_it);
   }
   void splice(const_iterator pos, list& other, const_iterator first,
               const_iterator last) {
