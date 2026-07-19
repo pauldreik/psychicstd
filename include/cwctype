@@ -1,0 +1,25 @@
+#pragma once
+#include <wctype.h>
+
+namespace std {
+using ::iswalnum;
+using ::iswalpha;
+using ::iswblank;
+using ::iswcntrl;
+using ::iswctype;
+using ::iswdigit;
+using ::iswgraph;
+using ::iswlower;
+using ::iswprint;
+using ::iswpunct;
+using ::iswspace;
+using ::iswupper;
+using ::iswxdigit;
+using ::towlower;
+using ::towupper;
+using ::wctrans;
+using ::wctrans_t;
+using ::wctype;
+using ::wctype_t;
+using ::wint_t;
+} // namespace std

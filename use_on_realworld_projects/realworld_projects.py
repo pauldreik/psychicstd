@@ -949,8 +949,95 @@ def _simdutf() -> Project:
     )
 
 
+# --- boost asio ----------------------------------------------------------
+
+
+def _boost_asio() -> Project:
+    version = "1.91.0"
+    url = f"https://archives.boost.io/release/{version}/source/boost_1_91_0.tar.gz"
+    checksum = "5734305f40a76c30f951c9abd409a45a2a19fb546efe4162119250bbe4d3a463"
+
+    def build(tc: Toolchain) -> dict[str, float]:
+        # The upstream test Jamfile expects the normal Boost source tree and
+        # its modular dependencies. The build below still selects only Asio's
+        # tests, not the rest of Boost.
+        tarball = RW_DIR / f"boost_{version.replace('.', '_')}.tar.gz"
+        _fetch(url, tarball, checksum)
+
+        with tempfile.TemporaryDirectory(
+            prefix="rw-boost-asio-", ignore_cleanup_errors=True
+        ) as work_dir:
+            work = Path(work_dir)
+            with tarfile.open(tarball) as t:
+                t.extractall(work)
+            src = work / f"boost_{version.replace('.', '_')}"
+
+            env = _env(
+                tc,
+                CXX=tc.cxx,
+                CXXFLAGS=tc.cxxflags,
+            )
+            configure_ms = _timed(["./bootstrap.sh"], src, env)
+            test_dir = src / "libs" / "asio" / "test"
+            # The upstream test Jamfile declares Boost.Regex, Context, and
+            # Chrono as project-wide requirements, so even one Asio test builds
+            # those unrelated libraries. Compile a small set of upstream test
+            # translation units directly to keep this recipe about Asio.
+            asio_tests = ["io_context.cpp", "steady_timer.cpp", "buffer.cpp"]
+            build_dir = work / "asio-test-build"
+            build_dir.mkdir()
+            common = [
+                tc.cxx,
+                *shlex.split(tc.cxxflags),
+                "-I",
+                str(src),
+                "-I",
+                str(src / "libs" / "asio" / "include"),
+                "-DBOOST_ALL_NO_LIB=1",
+                "-DBOOST_ASIO_DISABLE_DEPRECATED_MSG=1",
+                "-DBOOST_NO_AUTO_PTR=1",
+                "-D_GNU_SOURCE=1",
+                "-D_XOPEN_SOURCE=600",
+                "-pthread",
+            ]
+            commands = [
+                [
+                    *common,
+                    str(test_dir / name),
+                    "-o",
+                    str(build_dir / Path(name).stem),
+                    *shlex.split(tc.ldflags),
+                    *shlex.split(tc.libs),
+                ]
+                for name in asio_tests
+            ]
+            t0 = time.monotonic()
+            for command in commands:
+                _run(command, test_dir, env)
+            compile_ms = (time.monotonic() - t0) * 1000.0
+            t0 = time.monotonic()
+            for name in asio_tests:
+                _run([str(build_dir / Path(name).stem)], test_dir, env)
+            run_ms = (time.monotonic() - t0) * 1000.0
+            return {
+                "configure": configure_ms,
+                "compile": compile_ms,
+                "run tests": run_ms,
+            }
+
+    return Project(
+        version=version,
+        build=build,
+        comments={
+            "compile": "Representative upstream Asio tests are compiled and "
+            "linked directly; unrelated Boost libraries are excluded.",
+        },
+    )
+
+
 PROJECTS: dict[str, Project] = {
     "abseil": _abseil(),
+    "boost-asio": _boost_asio(),
     "catch2": _catch2(),
     "cmake": _cmake(),
     "cppcheck": _cppcheck(),
