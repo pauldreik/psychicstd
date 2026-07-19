@@ -68,6 +68,13 @@ template <typename T> struct iterator_traits<const T*> {
   using iterator_concept = contiguous_iterator_tag;
 };
 
+template <typename It>
+using iter_value_t = typename iterator_traits<It>::value_type;
+template <typename It>
+using iter_difference_t = typename iterator_traits<It>::difference_type;
+template <typename It>
+using iter_reference_t = decltype(*__psychicstd_detail::declval<It&>());
+
 template <typename It> class reverse_iterator {
 public:
   using iterator_type = It;
