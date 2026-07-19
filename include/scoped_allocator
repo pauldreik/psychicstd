@@ -1,0 +1,91 @@
+#pragma once
+#include <memory>
+#include <utility>
+
+namespace std {
+
+template <typename OuterAlloc, typename... InnerAllocs>
+class scoped_allocator_adaptor;
+
+namespace __detail {
+template <typename OuterAlloc, typename... InnerAllocs> struct __scoped_inner;
+template <typename OuterAlloc> struct __scoped_inner<OuterAlloc> {
+  using type = OuterAlloc;
+};
+template <typename OuterAlloc, typename InnerAlloc, typename... Rest>
+struct __scoped_inner<OuterAlloc, InnerAlloc, Rest...> {
+  using type = scoped_allocator_adaptor<InnerAlloc, Rest...>;
+};
+} // namespace __detail
+
+template <typename T, typename Alloc, typename = void>
+struct uses_allocator : false_type {};
+template <typename T, typename Alloc>
+struct uses_allocator<T, Alloc, void_t<typename T::allocator_type>>
+    : bool_constant<is_convertible_v<Alloc, typename T::allocator_type>> {};
+template <typename T, typename Alloc>
+inline constexpr bool uses_allocator_v = uses_allocator<T, Alloc>::value;
+
+// A compact scoped allocator adaptor. It provides the allocator propagation
+// and construction hooks needed by standard containers without duplicating
+// allocator storage or allocation logic.
+template <typename OuterAlloc, typename... InnerAllocs>
+class scoped_allocator_adaptor : public OuterAlloc {
+  using inner_type =
+      typename __detail::__scoped_inner<OuterAlloc, InnerAllocs...>::type;
+
+public:
+  using outer_allocator_type = OuterAlloc;
+  using inner_allocator_type = inner_type;
+  using value_type = typename OuterAlloc::value_type;
+  using size_type = typename allocator_traits<OuterAlloc>::size_type;
+  using difference_type =
+      typename allocator_traits<OuterAlloc>::difference_type;
+  using pointer = typename allocator_traits<OuterAlloc>::pointer;
+  using const_pointer = typename allocator_traits<OuterAlloc>::const_pointer;
+
+  template <typename T> struct rebind {
+    using other = scoped_allocator_adaptor<
+        typename allocator_traits<OuterAlloc>::template rebind_alloc<T>,
+        InnerAllocs...>;
+  };
+
+  scoped_allocator_adaptor() = default;
+  explicit scoped_allocator_adaptor(const OuterAlloc& outer)
+      : OuterAlloc(outer) {}
+
+  template <typename... Args> void construct(value_type* p, Args&&... args) {
+    allocator_traits<OuterAlloc>::construct(outer_allocator(), p,
+                                            static_cast<Args&&>(args)...);
+  }
+  template <typename T, typename... Args> void construct(T* p, Args&&... args) {
+    if constexpr (uses_allocator_v<T, inner_allocator_type>) {
+      if constexpr (is_constructible_v<T, allocator_arg_t,
+                                       inner_allocator_type&, Args...>)
+        construct_at(p, allocator_arg, inner_allocator(),
+                     static_cast<Args&&>(args)...);
+      else
+        construct_at(p, static_cast<Args&&>(args)..., inner_allocator());
+    } else {
+      construct_at(p, static_cast<Args&&>(args)...);
+    }
+  }
+
+  template <typename T> void destroy(T* p) { destroy_at(p); }
+  pointer allocate(size_type n) { return outer_allocator().allocate(n); }
+  void deallocate(pointer p, size_type n) {
+    outer_allocator().deallocate(p, n);
+  }
+
+  outer_allocator_type& outer_allocator() noexcept { return *this; }
+  const outer_allocator_type& outer_allocator() const noexcept { return *this; }
+  inner_allocator_type& inner_allocator() noexcept { return inner_; }
+  const inner_allocator_type& inner_allocator() const noexcept {
+    return inner_;
+  }
+
+private:
+  inner_allocator_type inner_{};
+};
+
+} // namespace std

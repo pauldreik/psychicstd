@@ -130,7 +130,15 @@ template <> class tuple<> {};
 // tuple_size
 template <typename... Ts>
 struct tuple_size<tuple<Ts...>> : integral_constant<size_t, sizeof...(Ts)> {};
-template <typename T> struct tuple_size<const T> : tuple_size<T> {};
+template <typename T>
+  requires requires { tuple_size<T>::value; }
+struct tuple_size<const T> : tuple_size<T> {};
+template <typename T>
+  requires requires { tuple_size<T>::value; }
+struct tuple_size<volatile T> : tuple_size<T> {};
+template <typename T>
+  requires requires { tuple_size<T>::value; }
+struct tuple_size<const volatile T> : tuple_size<T> {};
 template <typename T>
 inline constexpr size_t tuple_size_v = tuple_size<T>::value;
 
@@ -294,6 +302,12 @@ constexpr decltype(auto) apply(F&& f, Tuple&& t) {
   return [&]<size_t... Is>(index_sequence<Is...>) -> decltype(auto) {
     return static_cast<F&&>(f)(get<Is>(static_cast<Tuple&&>(t))...);
   }(make_index_sequence<tuple_size_v<remove_reference_t<Tuple>>>{});
+}
+
+template <typename T, typename Tuple> constexpr T make_from_tuple(Tuple&& t) {
+  return apply([]<typename... Args>(
+                   Args&&... args) { return T(static_cast<Args&&>(args)...); },
+               static_cast<Tuple&&>(t));
 }
 
 // pair tuple_element / tuple_size (for structured bindings)

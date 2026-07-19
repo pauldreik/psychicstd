@@ -7,6 +7,16 @@
 
 namespace std {
 
+namespace __detail {
+template <typename Ptr, typename U, typename = void> struct __pointer_rebind {
+  using type = U*;
+};
+template <typename Ptr, typename U>
+struct __pointer_rebind<Ptr, U, void_t<typename Ptr::template rebind<U>>> {
+  using type = typename Ptr::template rebind<U>;
+};
+} // namespace __detail
+
 // addressof: bypass overloaded operator&
 template <typename T> constexpr T* addressof(T& r) noexcept {
   return __builtin_addressof(r);
@@ -17,8 +27,9 @@ template <typename T> const T* addressof(const T&&) = delete;
 template <typename Ptr> struct pointer_traits {
   using pointer = Ptr;
   using element_type = typename Ptr::element_type;
-  using difference_type = typename Ptr::difference_type;
-  template <typename U> using rebind = typename Ptr::template rebind<U>;
+  using difference_type = ptrdiff_t;
+  template <typename U>
+  using rebind = typename __detail::__pointer_rebind<Ptr, U>::type;
   static pointer pointer_to(element_type& r) { return Ptr::pointer_to(r); }
 };
 template <typename T> struct pointer_traits<T*> {
@@ -211,6 +222,13 @@ template <typename Alloc> struct allocator_traits {
 
   [[nodiscard]] static constexpr pointer allocate(Alloc& a, size_type n) {
     return a.allocate(n);
+  }
+  [[nodiscard]] static constexpr pointer allocate(Alloc& a, size_type n,
+                                                  const_void_pointer hint) {
+    if constexpr (requires { a.allocate(n, hint); })
+      return a.allocate(n, hint);
+    else
+      return a.allocate(n);
   }
   static constexpr void deallocate(Alloc& a, pointer p, size_type n) noexcept {
     a.deallocate(p, n);

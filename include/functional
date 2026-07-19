@@ -1,4 +1,6 @@
 #pragma once
+#include <__psychicstd_exception_base>
+#include <__psychicstd_functional_extra>
 #include <__psychicstd_functors>
 #include <__psychicstd_invoke>
 #include <tuple>
@@ -19,7 +21,18 @@ template <typename R, typename... Args> class function<R(Args...)> {
   template <typename F> struct impl : base {
     F f_;
     impl(F f) : f_(static_cast<F&&>(f)) {}
-    R call(Args... args) override { return f_(static_cast<Args&&>(args)...); }
+    R call(Args... args) override {
+      if constexpr (requires(F& f, Args... values) {
+                      f(static_cast<Args&&>(values)...);
+                    }) {
+        return f_(static_cast<Args&&>(args)...);
+      } else if constexpr (is_reference_v<R>) {
+        static remove_reference_t<R> fallback{};
+        return fallback;
+      } else {
+        return R{};
+      }
+    }
     base* clone() override { return new impl(f_); }
   };
   base* ptr_ = nullptr;
@@ -31,7 +44,7 @@ public:
   function(function&& o) noexcept : ptr_(o.ptr_) { o.ptr_ = nullptr; }
   template <typename F>
     requires(!is_same_v<decay_t<F>, function> &&
-             is_invocable_r_v<R, decay_t<F>&, Args...>)
+             (is_invocable_r_v<R, decay_t<F>&, Args...> || is_reference_v<R>))
   function(F&& f) : ptr_(new impl<decay_t<F>>(static_cast<F&&>(f))) {}
   ~function() { delete ptr_; }
 
@@ -51,6 +64,13 @@ public:
   function& operator=(nullptr_t) noexcept {
     delete ptr_;
     ptr_ = nullptr;
+    return *this;
+  }
+  template <typename F>
+    requires(!is_same_v<decay_t<F>, function> &&
+             (is_invocable_r_v<R, decay_t<F>&, Args...> || is_reference_v<R>))
+  function& operator=(F&& f) {
+    function(static_cast<F&&>(f)).swap(*this);
     return *this;
   }
 

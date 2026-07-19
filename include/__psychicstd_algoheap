@@ -3,7 +3,8 @@
 // Heap algorithms, split out of <algorithm> so <queue> (priority_queue) can
 // use them without pulling in all of <algorithm>.
 
-#include <iterator>
+#include <__psychicstd_iterator_core>
+#include <cstddef>
 
 namespace std {
 

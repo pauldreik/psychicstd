@@ -1,9 +1,10 @@
 #pragma once
 #include <__psychicstd_config>
+#include <__psychicstd_minmax>
 #include <__psychicstd_string_algobase>
+#include <__psychicstd_traits_core>
 #include <initializer_list>
 #include <iterator>
-#include <type_traits>
 #include <utility>
 
 namespace std {
@@ -16,21 +17,6 @@ constexpr It2 swap_ranges(It1 first1, It1 last1, It2 first2) {
 }
 
 // min / max / clamp
-template <typename T> constexpr const T& min(const T& a, const T& b) {
-  return b < a ? b : a;
-}
-template <typename T> constexpr const T& max(const T& a, const T& b) {
-  return a < b ? b : a;
-}
-template <typename T, typename Compare>
-constexpr const T& min(const T& a, const T& b, Compare cmp) {
-  return cmp(b, a) ? b : a;
-}
-template <typename T, typename Compare>
-constexpr const T& max(const T& a, const T& b, Compare cmp) {
-  return cmp(a, b) ? b : a;
-}
-
 template <typename T> constexpr T min(initializer_list<T> il) {
   const T* p = il.begin();
   const T* result = p;
@@ -200,7 +186,8 @@ constexpr Out copy_backward(In first, In last, Out d_last) {
 template <typename In, typename Out>
 constexpr Out move(In first, In last, Out d_first) {
   for (; first != last; ++first) {
-    *d_first = static_cast<remove_reference_t<decltype(*first)>&&>(*first);
+    *d_first = static_cast<
+        __psychicstd_detail::remove_reference_t<decltype(*first)>&&>(*first);
     ++d_first;
   }
   return d_first;
@@ -208,7 +195,8 @@ constexpr Out move(In first, In last, Out d_first) {
 template <typename In, typename Out>
 constexpr Out move_backward(In first, In last, Out d_last) {
   while (first != last)
-    *--d_last = static_cast<remove_reference_t<decltype(*first)>&&>(*--last);
+    *--d_last = static_cast<
+        __psychicstd_detail::remove_reference_t<decltype(*first)>&&>(*--last);
   return d_last;
 }
 
@@ -381,17 +369,26 @@ template <typename It> constexpr It rotate(It first, It n_first, It last) {
 
 // mismatch
 template <typename It1, typename It2>
-pair<It1, It2> mismatch(It1 first1, It1 last1, It2 first2) {
+constexpr pair<It1, It2> mismatch(It1 first1, It1 last1, It2 first2) {
   for (; first1 != last1 && *first1 == *first2; ++first1) {
     ++first2;
   }
   return {first1, first2};
 }
 template <typename It1, typename It2>
-pair<It1, It2> mismatch(It1 first1, It1 last1, It2 first2, It2 last2) {
+constexpr pair<It1, It2> mismatch(It1 first1, It1 last1, It2 first2,
+                                  It2 last2) {
   for (; first1 != last1 && first2 != last2 && *first1 == *first2; ++first1) {
     ++first2;
   }
+  return {first1, first2};
+}
+template <typename It1, typename It2, typename Pred>
+constexpr pair<It1, It2> mismatch(It1 first1, It1 last1, It2 first2, It2 last2,
+                                  Pred pred) {
+  for (; first1 != last1 && first2 != last2 && pred(*first1, *first2);
+       ++first1, ++first2)
+    ;
   return {first1, first2};
 }
 
@@ -424,12 +421,13 @@ constexpr bool lexicographical_compare(It1 first1, It1 last1, It2 first2,
 // lower_bound / upper_bound / binary_search / equal_range
 template <typename It, typename T>
 constexpr It lower_bound(It first, It last, const T& value) {
-  auto n = last - first;
+  auto n = distance(first, last);
   while (n > 0) {
     auto half = n / 2;
-    It mid = first + half;
+    It mid = first;
+    advance(mid, half);
     if (*mid < value) {
-      first = mid + 1;
+      first = ++mid;
       n -= half + 1;
     } else
       n = half;
@@ -438,12 +436,13 @@ constexpr It lower_bound(It first, It last, const T& value) {
 }
 template <typename It, typename T, typename Compare>
 constexpr It lower_bound(It first, It last, const T& value, Compare cmp) {
-  auto n = last - first;
+  auto n = distance(first, last);
   while (n > 0) {
     auto half = n / 2;
-    It mid = first + half;
+    It mid = first;
+    advance(mid, half);
     if (cmp(*mid, value)) {
-      first = mid + 1;
+      first = ++mid;
       n -= half + 1;
     } else
       n = half;
@@ -452,12 +451,13 @@ constexpr It lower_bound(It first, It last, const T& value, Compare cmp) {
 }
 template <typename It, typename T>
 constexpr It upper_bound(It first, It last, const T& value) {
-  auto n = last - first;
+  auto n = distance(first, last);
   while (n > 0) {
     auto half = n / 2;
-    It mid = first + half;
+    It mid = first;
+    advance(mid, half);
     if (!(value < *mid)) {
-      first = mid + 1;
+      first = ++mid;
       n -= half + 1;
     } else
       n = half;
@@ -466,12 +466,13 @@ constexpr It upper_bound(It first, It last, const T& value) {
 }
 template <typename It, typename T, typename Compare>
 constexpr It upper_bound(It first, It last, const T& value, Compare cmp) {
-  auto n = last - first;
+  auto n = distance(first, last);
   while (n > 0) {
     auto half = n / 2;
-    It mid = first + half;
+    It mid = first;
+    advance(mid, half);
     if (!cmp(value, *mid)) {
-      first = mid + 1;
+      first = ++mid;
       n -= half + 1;
     } else
       n = half;
@@ -489,11 +490,12 @@ constexpr bool binary_search(It first, It last, const T& value, Compare cmp) {
   return first != last && !cmp(value, *first);
 }
 template <typename It, typename T>
-pair<It, It> equal_range(It first, It last, const T& value) {
+constexpr pair<It, It> equal_range(It first, It last, const T& value) {
   return {lower_bound(first, last, value), upper_bound(first, last, value)};
 }
 template <typename It, typename T, typename Compare>
-pair<It, It> equal_range(It first, It last, const T& value, Compare cmp) {
+constexpr pair<It, It> equal_range(It first, It last, const T& value,
+                                   Compare cmp) {
   return {lower_bound(first, last, value, cmp),
           upper_bound(first, last, value, cmp)};
 }

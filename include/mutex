@@ -70,6 +70,16 @@ private:
   Mutex& m_;
 };
 
+template <typename Mutex> struct scoped_lock {
+  explicit scoped_lock(Mutex& mutex) : mutex_(mutex) { mutex_.lock(); }
+  ~scoped_lock() { mutex_.unlock(); }
+  scoped_lock(const scoped_lock&) = delete;
+  scoped_lock& operator=(const scoped_lock&) = delete;
+
+private:
+  Mutex& mutex_;
+};
+
 struct defer_lock_t {};
 struct try_to_lock_t {};
 struct adopt_lock_t {};

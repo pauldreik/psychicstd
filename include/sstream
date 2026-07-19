@@ -1,6 +1,5 @@
 #pragma once
 #include <cstdlib>
-#include <cstring>
 #include <ios>
 #include <istream>
 #include <locale>
@@ -146,6 +145,15 @@ public:
   basic_ostringstream() : basic_ostream<Char, Traits>(&buf_) {}
   explicit basic_ostringstream(const string_type& s)
       : basic_ostream<Char, Traits>(&buf_), buf_(s) {}
+  basic_ostringstream(basic_ostringstream&& other)
+      : basic_ostream<Char, Traits>(&buf_), buf_(other.buf_.str()) {}
+  basic_ostringstream& operator=(basic_ostringstream&& other) {
+    if (this != &other) {
+      buf_.str(other.buf_.str());
+      this->copyfmt(other);
+    }
+    return *this;
+  }
 
   string_type str() const { return buf_.str(); }
   void str(const string_type& s) { buf_.str(s); }

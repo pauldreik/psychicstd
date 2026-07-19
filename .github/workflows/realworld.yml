@@ -71,6 +71,17 @@ jobs:
         run: >-
           python3 scripts/compare_realworld_performance.py --check-only
           --project googletest --build-type debug
+  abseil:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install ninja
+        run: sudo apt-get install -y ninja-build
+      - name: Build and test Abseil base with psychicstd
+        run: >-
+          python3 scripts/compare_realworld_performance.py --check-only
+          --project abseil --build-type debug
   nlohmann:
     runs-on: ubuntu-latest
     steps:

@@ -5,19 +5,21 @@
 namespace std {
 
 // iota
-template <typename It, typename T> void iota(It first, It last, T value) {
+template <typename It, typename T>
+constexpr void iota(It first, It last, T value) {
   for (; first != last; ++first, ++value)
     *first = value;
 }
 
 // accumulate
-template <typename It, typename T> T accumulate(It first, It last, T init) {
+template <typename It, typename T>
+constexpr T accumulate(It first, It last, T init) {
   for (; first != last; ++first)
     init = static_cast<T&&>(init) + *first;
   return init;
 }
 template <typename It, typename T, typename BinOp>
-T accumulate(It first, It last, T init, BinOp op) {
+constexpr T accumulate(It first, It last, T init, BinOp op) {
   for (; first != last; ++first)
     init = op(static_cast<T&&>(init), *first);
   return init;
@@ -39,15 +41,15 @@ T reduce(It first, It last, T init, BinOp op) {
 
 // inner_product
 template <typename It1, typename It2, typename T>
-T inner_product(It1 first1, It1 last1, It2 first2, T init) {
+constexpr T inner_product(It1 first1, It1 last1, It2 first2, T init) {
   for (; first1 != last1; ++first1, ++first2)
     init = init + (*first1) * (*first2);
   return init;
 }
 template <typename It1, typename It2, typename T, typename BinOp1,
           typename BinOp2>
-T inner_product(It1 first1, It1 last1, It2 first2, T init, BinOp1 op1,
-                BinOp2 op2) {
+constexpr T inner_product(It1 first1, It1 last1, It2 first2, T init, BinOp1 op1,
+                          BinOp2 op2) {
   for (; first1 != last1; ++first1, ++first2)
     init = op1(init, op2(*first1, *first2));
   return init;
@@ -55,7 +57,7 @@ T inner_product(It1 first1, It1 last1, It2 first2, T init, BinOp1 op1,
 
 // partial_sum
 template <typename In, typename Out>
-Out partial_sum(In first, In last, Out d_first) {
+constexpr Out partial_sum(In first, In last, Out d_first) {
   if (first == last)
     return d_first;
   typename iterator_traits<In>::value_type sum = *first;
@@ -66,10 +68,22 @@ Out partial_sum(In first, In last, Out d_first) {
   }
   return ++d_first;
 }
+template <typename In, typename Out, typename BinOp>
+constexpr Out partial_sum(In first, In last, Out d_first, BinOp op) {
+  if (first == last)
+    return d_first;
+  typename iterator_traits<In>::value_type sum = *first;
+  *d_first = sum;
+  while (++first != last) {
+    sum = op(sum, *first);
+    *++d_first = sum;
+  }
+  return ++d_first;
+}
 
 // adjacent_difference
 template <typename In, typename Out>
-Out adjacent_difference(In first, In last, Out d_first) {
+constexpr Out adjacent_difference(In first, In last, Out d_first) {
   if (first == last)
     return d_first;
   typename iterator_traits<In>::value_type prev = *first;
@@ -77,6 +91,19 @@ Out adjacent_difference(In first, In last, Out d_first) {
   while (++first != last) {
     auto val = *first;
     *++d_first = val - prev;
+    prev = static_cast<decltype(val)&&>(val);
+  }
+  return ++d_first;
+}
+template <typename In, typename Out, typename BinOp>
+constexpr Out adjacent_difference(In first, In last, Out d_first, BinOp op) {
+  if (first == last)
+    return d_first;
+  typename iterator_traits<In>::value_type prev = *first;
+  *d_first = prev;
+  while (++first != last) {
+    auto val = *first;
+    *++d_first = op(val, prev);
     prev = static_cast<decltype(val)&&>(val);
   }
   return ++d_first;

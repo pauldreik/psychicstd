@@ -88,6 +88,9 @@ public:
   using storage_type = pair<Key, T>;
   using iterator = typename vector<storage_type>::iterator;
   using const_iterator = typename vector<storage_type>::const_iterator;
+  using reverse_iterator = typename vector<storage_type>::reverse_iterator;
+  using const_reverse_iterator =
+      typename vector<storage_type>::const_reverse_iterator;
 
   struct value_compare {
     Compare comp;
@@ -133,9 +136,14 @@ public:
   const_iterator end() const noexcept { return data_.end(); }
   const_iterator cbegin() const noexcept { return data_.begin(); }
   const_iterator cend() const noexcept { return data_.end(); }
+  reverse_iterator rbegin() noexcept { return data_.rbegin(); }
+  reverse_iterator rend() noexcept { return data_.rend(); }
+  const_reverse_iterator rbegin() const noexcept { return data_.rbegin(); }
+  const_reverse_iterator rend() const noexcept { return data_.rend(); }
   bool empty() const noexcept { return data_.empty(); }
   size_type size() const noexcept { return data_.size(); }
   void clear() noexcept { data_.clear(); }
+  void swap(multimap& other) noexcept { data_.swap(other.data_); }
 
   allocator_type get_allocator() const noexcept { return alloc_; }
 
@@ -160,6 +168,9 @@ public:
     return insert(value_type(static_cast<Args&&>(args)...));
   }
   iterator erase(const_iterator pos) { return data_.erase(pos); }
+  iterator erase(const_iterator first, const_iterator last) {
+    return data_.erase(first, last);
+  }
   size_type erase(const Key& k) {
     auto lo = std::__lower_bound(data_.begin(), data_.end(), k, comp_);
     auto hi = std::__upper_bound(data_.begin(), data_.end(), k, comp_);
@@ -179,6 +190,18 @@ public:
   pair<const_iterator, const_iterator> equal_range(const Key& k) const {
     return {std::__lower_bound(data_.begin(), data_.end(), k, comp_),
             std::__upper_bound(data_.begin(), data_.end(), k, comp_)};
+  }
+  iterator lower_bound(const Key& k) {
+    return std::__lower_bound(data_.begin(), data_.end(), k, comp_);
+  }
+  const_iterator lower_bound(const Key& k) const {
+    return std::__lower_bound(data_.begin(), data_.end(), k, comp_);
+  }
+  iterator upper_bound(const Key& k) {
+    return std::__upper_bound(data_.begin(), data_.end(), k, comp_);
+  }
+  const_iterator upper_bound(const Key& k) const {
+    return std::__upper_bound(data_.begin(), data_.end(), k, comp_);
   }
   iterator find(const Key& k) {
     auto it = std::__lower_bound(data_.begin(), data_.end(), k, comp_);

@@ -138,10 +138,16 @@ public:
     has_ = true;
     return val_;
   }
+  template <typename U> constexpr T& emplace(initializer_list<U> values) {
+    reset();
+    construct_at(ptr(), values);
+    has_ = true;
+    return val_;
+  }
 };
 
-template <typename T>
-constexpr bool operator==(const optional<T>& a, const optional<T>& b) {
+template <typename T, typename U>
+constexpr bool operator==(const optional<T>& a, const optional<U>& b) {
   if (a.has_value() != b.has_value())
     return false;
   return !a.has_value() || *a == *b;
@@ -154,8 +160,8 @@ template <typename T>
 constexpr bool operator==(nullopt_t, const optional<T>& b) noexcept {
   return !b.has_value();
 }
-template <typename T>
-constexpr bool operator!=(const optional<T>& a, const optional<T>& b) {
+template <typename T, typename U>
+constexpr bool operator!=(const optional<T>& a, const optional<U>& b) {
   return !(a == b);
 }
 template <typename T>
@@ -175,20 +181,27 @@ constexpr bool operator>=(const optional<T>& a, const optional<T>& b) {
   return !(a < b);
 }
 
-// Mixed comparisons: optional<T> vs T
+// Mixed comparisons: optional<T> vs a non-optional value.
+template <typename> struct __is_optional : false_type {};
+template <typename U> struct __is_optional<optional<U>> : true_type {};
+
 template <typename T, typename U>
+  requires(!__is_optional<remove_cv_t<remove_reference_t<U>>>::value)
 constexpr bool operator==(const optional<T>& a, const U& b) {
   return a.has_value() && *a == b;
 }
 template <typename T, typename U>
+  requires(!__is_optional<remove_cv_t<remove_reference_t<U>>>::value)
 constexpr bool operator==(const U& a, const optional<T>& b) {
   return b.has_value() && a == *b;
 }
 template <typename T, typename U>
+  requires(!__is_optional<remove_cv_t<remove_reference_t<U>>>::value)
 constexpr bool operator!=(const optional<T>& a, const U& b) {
   return !(a == b);
 }
 template <typename T, typename U>
+  requires(!__is_optional<remove_cv_t<remove_reference_t<U>>>::value)
 constexpr bool operator!=(const U& a, const optional<T>& b) {
   return !(a == b);
 }

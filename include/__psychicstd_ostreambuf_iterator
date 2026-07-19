@@ -1,0 +1,37 @@
+#pragma once
+#include <__psychicstd_iterator_core>
+#include <iosfwd>
+
+namespace std {
+
+template <typename Char, typename Traits = char_traits<Char>>
+class ostreambuf_iterator {
+public:
+  using char_type = Char;
+  using traits_type = Traits;
+  using streambuf_type = basic_streambuf<Char, Traits>;
+  using ostream_type = basic_ostream<Char, Traits>;
+  using iterator_category = output_iterator_tag;
+  using value_type = void;
+  using difference_type = ptrdiff_t;
+  using pointer = void;
+  using reference = void;
+
+  ostreambuf_iterator(ostream_type& os) noexcept : sb_(os.rdbuf()) {}
+  ostreambuf_iterator(streambuf_type* sb) noexcept : sb_(sb) {}
+
+  ostreambuf_iterator& operator=(Char c) {
+    if (sb_ && Traits::eq_int_type(sb_->sputc(c), Traits::eof()))
+      sb_ = nullptr;
+    return *this;
+  }
+  ostreambuf_iterator& operator*() { return *this; }
+  ostreambuf_iterator& operator++() { return *this; }
+  ostreambuf_iterator& operator++(int) { return *this; }
+  bool failed() const noexcept { return sb_ == nullptr; }
+
+private:
+  streambuf_type* sb_;
+};
+
+} // namespace std

@@ -1,5 +1,5 @@
 #pragma once
-#include <exception>
+#include <__psychicstd_exception_base>
 
 namespace std {
 

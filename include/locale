@@ -1,10 +1,10 @@
 #pragma once
 #include <__psychicstd_config>
+#include <__psychicstd_ostreambuf_iterator>
+#include <__psychicstd_traits_core>
 #include <ctime>
 #include <cwchar>
-#include <iterator>
 #include <string>
-#include <type_traits>
 
 namespace std {
 
@@ -178,10 +178,10 @@ protected:
     return noconv;
   }
   virtual int do_encoding() const noexcept {
-    return is_same_v<Intern, E> ? 1 : 0;
+    return __psychicstd_detail::is_same_v<Intern, E> ? 1 : 0;
   }
   virtual bool do_always_noconv() const noexcept {
-    return is_same_v<Intern, E>;
+    return __psychicstd_detail::is_same_v<Intern, E>;
   }
   virtual int do_length(state_type&, const E* from, const E* end,
                         size_t max) const {
@@ -218,7 +218,7 @@ public:
     for (size_t i = 0; i < n; ++i)
       format[i] = first[i];
     char_type text[256]{};
-    if constexpr (is_same_v<char_type, char>)
+    if constexpr (__psychicstd_detail::is_same_v<char_type, char>)
       ::strftime(text, sizeof(text), format, time);
     else
       ::wcsftime(text, sizeof(text) / sizeof(*text), format, time);
@@ -237,13 +237,17 @@ public:
   }
 };
 
-template <typename Facet> struct __default_locale_facet : false_type {};
+template <typename Facet>
+struct __default_locale_facet : __psychicstd_detail::false_type {};
 template <typename Char>
-struct __default_locale_facet<numpunct<Char>> : true_type {};
+struct __default_locale_facet<numpunct<Char>> : __psychicstd_detail::true_type {
+};
 template <typename Intern, typename E, typename S>
-struct __default_locale_facet<codecvt<Intern, E, S>> : true_type {};
+struct __default_locale_facet<codecvt<Intern, E, S>>
+    : __psychicstd_detail::true_type {};
 template <typename Char, typename OutIt>
-struct __default_locale_facet<time_put<Char, OutIt>> : true_type {};
+struct __default_locale_facet<time_put<Char, OutIt>>
+    : __psychicstd_detail::true_type {};
 
 template <typename Facet> bool has_facet(const locale& loc) {
   return loc.template _facet<Facet>() != nullptr ||

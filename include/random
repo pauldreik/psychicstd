@@ -142,6 +142,8 @@ public:
   static constexpr result_type max() { return 0xffffffffU; }
 };
 
+using default_random_engine = mt19937;
+
 // mt19937_64
 class mt19937_64 {
   static constexpr int N = 312, M = 156;

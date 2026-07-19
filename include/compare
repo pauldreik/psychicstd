@@ -1,5 +1,5 @@
 #pragma once
-#include <type_traits>
+#include <__psychicstd_traits_core>
 
 #define __cpp_lib_three_way_comparison 201907L
 
@@ -198,7 +198,8 @@ constexpr bool is_gteq(partial_ordering v) noexcept { return v >= 0; }
 // three_way_comparable concept
 template <typename T, typename U = T>
 concept three_way_comparable =
-    requires(const remove_reference_t<T>& a, const remove_reference_t<U>& b) {
+    requires(const __psychicstd_detail::remove_reference_t<T>& a,
+             const __psychicstd_detail::remove_reference_t<U>& b) {
       a <=> b;
       b <=> a;
     };
@@ -206,7 +207,8 @@ concept three_way_comparable =
 template <typename T, typename U>
 concept three_way_comparable_with =
     three_way_comparable<T> && three_way_comparable<U> &&
-    requires(const remove_reference_t<T>& t, const remove_reference_t<U>& u) {
+    requires(const __psychicstd_detail::remove_reference_t<T>& t,
+             const __psychicstd_detail::remove_reference_t<U>& u) {
       t <=> u;
       u <=> t;
     };
@@ -223,8 +225,9 @@ struct compare_three_way {
 // common_comparison_category
 template <typename T>
 inline constexpr bool __is_comparison_category_v =
-    is_same_v<T, partial_ordering> || is_same_v<T, weak_ordering> ||
-    is_same_v<T, strong_ordering>;
+    __psychicstd_detail::is_same_v<T, partial_ordering> ||
+    __psychicstd_detail::is_same_v<T, weak_ordering> ||
+    __psychicstd_detail::is_same_v<T, strong_ordering>;
 
 template <typename... Ts> struct common_comparison_category {
   using type = void;
@@ -233,17 +236,20 @@ template <> struct common_comparison_category<> {
   using type = strong_ordering;
 };
 template <typename T> struct common_comparison_category<T> {
-  using type = conditional_t<__is_comparison_category_v<T>, T, void>;
+  using type = __psychicstd_detail::conditional_t<__is_comparison_category_v<T>,
+                                                  T, void>;
 };
 template <typename A, typename B> struct common_comparison_category<A, B> {
-  using type = conditional_t<
+  using type = __psychicstd_detail::conditional_t<
       !__is_comparison_category_v<A> || !__is_comparison_category_v<B>, void,
-      conditional_t<is_same_v<A, partial_ordering> ||
-                        is_same_v<B, partial_ordering>,
-                    partial_ordering,
-                    conditional_t<is_same_v<A, weak_ordering> ||
-                                      is_same_v<B, weak_ordering>,
-                                  weak_ordering, strong_ordering>>>;
+      __psychicstd_detail::conditional_t<
+          __psychicstd_detail::is_same_v<A, partial_ordering> ||
+              __psychicstd_detail::is_same_v<B, partial_ordering>,
+          partial_ordering,
+          __psychicstd_detail::conditional_t<
+              __psychicstd_detail::is_same_v<A, weak_ordering> ||
+                  __psychicstd_detail::is_same_v<B, weak_ordering>,
+              weak_ordering, strong_ordering>>>;
 };
 template <typename A, typename B, typename... Rest>
 struct common_comparison_category<A, B, Rest...>
