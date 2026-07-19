@@ -1,5 +1,6 @@
 #pragma once
 #include <__psychicstd_exception_base>
+#include <__psychicstd_functional_extra>
 #include <__psychicstd_functors>
 #include <__psychicstd_invoke>
 #include <tuple>

@@ -1,0 +1,45 @@
+#pragma once
+#include <__psychicstd_functors>
+#include <type_traits>
+
+namespace std {
+
+template <typename F> class not_fn_t {
+  F f_;
+
+public:
+  explicit not_fn_t(F&& f) : f_(static_cast<F&&>(f)) {}
+  template <typename... Args> auto operator()(Args&&... args) & {
+    return !f_(static_cast<Args&&>(args)...);
+  }
+  template <typename... Args> auto operator()(Args&&... args) const& {
+    return !f_(static_cast<Args&&>(args)...);
+  }
+  template <typename... Args> auto operator()(Args&&... args) && {
+    return !static_cast<F&&>(f_)(static_cast<Args&&>(args)...);
+  }
+};
+template <typename F> not_fn_t<decay_t<F>> not_fn(F&& f) {
+  return not_fn_t<decay_t<F>>(static_cast<F&&>(f));
+}
+
+template <typename T> class reference_wrapper {
+  T* ptr_;
+
+public:
+  using type = T;
+  reference_wrapper(T& r) noexcept : ptr_(&r) {}
+  reference_wrapper(T&&) = delete;
+  operator T&() const noexcept { return *ptr_; }
+  T& get() const noexcept { return *ptr_; }
+  template <typename... Args>
+  invoke_result_t<T&, Args...> operator()(Args&&... args) const {
+    return (*ptr_)(static_cast<Args&&>(args)...);
+  }
+};
+template <typename T> reference_wrapper<T> ref(T& r) noexcept { return {r}; }
+template <typename T> reference_wrapper<const T> cref(const T& r) noexcept {
+  return {r};
+}
+
+} // namespace std

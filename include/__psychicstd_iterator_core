@@ -21,7 +21,7 @@ template <typename It, typename = void> struct __ref {};
 template <typename It>
 struct __ref<It, __psychicstd_detail::void_t<
                      decltype(*__psychicstd_detail::declval<It&>())>> {
-  using reference = decltype(*declval<It&>());
+  using reference = decltype(*__psychicstd_detail::declval<It&>());
 };
 template <typename It>
   requires requires { typename It::reference; }

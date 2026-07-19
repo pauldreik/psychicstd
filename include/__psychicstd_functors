@@ -1,10 +1,7 @@
 #pragma once
-// Functor structs, reference_wrapper and scalar hash specializations split out
-// of <functional> so containers can pick them up without the heavier
-// std::function/bind machinery. Mirrors libstdc++, where containers include
-// bits/stl_function.h rather than all of <functional>.
+// Functor structs and scalar hash specializations split out of <functional> so
+// containers can pick them up without the heavier functional machinery.
 #include <cstddef>
-#include <type_traits>
 
 namespace std {
 
@@ -127,46 +124,6 @@ template <typename T = void> struct logical_or {
 template <typename T = void> struct logical_not {
   constexpr bool operator()(const T& a) const { return !a; }
 };
-
-// not_fn (C++17)
-template <typename F> class not_fn_t {
-  F f_;
-
-public:
-  explicit not_fn_t(F&& f) : f_(static_cast<F&&>(f)) {}
-  template <typename... Args> auto operator()(Args&&... args) & {
-    return !f_(static_cast<Args&&>(args)...);
-  }
-  template <typename... Args> auto operator()(Args&&... args) const& {
-    return !f_(static_cast<Args&&>(args)...);
-  }
-  template <typename... Args> auto operator()(Args&&... args) && {
-    return !static_cast<F&&>(f_)(static_cast<Args&&>(args)...);
-  }
-};
-template <typename F> not_fn_t<decay_t<F>> not_fn(F&& f) {
-  return not_fn_t<decay_t<F>>(static_cast<F&&>(f));
-}
-
-// reference_wrapper (minimal)
-template <typename T> class reference_wrapper {
-  T* ptr_;
-
-public:
-  using type = T;
-  reference_wrapper(T& r) noexcept : ptr_(&r) {}
-  reference_wrapper(T&&) = delete;
-  operator T&() const noexcept { return *ptr_; }
-  T& get() const noexcept { return *ptr_; }
-  template <typename... Args>
-  invoke_result_t<T&, Args...> operator()(Args&&... args) const {
-    return (*ptr_)(static_cast<Args&&>(args)...);
-  }
-};
-template <typename T> reference_wrapper<T> ref(T& r) noexcept { return {r}; }
-template <typename T> reference_wrapper<const T> cref(const T& r) noexcept {
-  return {r};
-}
 
 // hash (forward declarations + specializations for common types)
 template <typename T> struct hash;
