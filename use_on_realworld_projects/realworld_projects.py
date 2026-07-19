@@ -230,7 +230,9 @@ def _googletest() -> Project:
             with tarfile.open(tarball) as t:
                 t.extractall(work)
             src = work / f"googletest-{version}"
-            wrapper = _compiler_wrapper(work / "cxx", tc)
+            # Point GoogleTest at psychicstd's ABI declaration without
+            # changing the compiler's RTTI or exception settings.
+            wrapper = _compiler_wrapper(work / "cxx", tc, ("-DGTEST_HAS_CXXABI_H_=1",))
             env = _env(tc)
             configure = [
                 "cmake",
