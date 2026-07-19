@@ -3,7 +3,7 @@
 #include <__psychicstd_algoheap>
 #include <__psychicstd_config>
 #if _PSYCHICSTD_COMPATIBILITY_LEVEL >= _PSYCHICSTD_COMPAT_DROPIN
-#include <__psychicstd_functors> // Preserve transitive std::equal_to.
+#include <__psychicstd_equal_to> // Preserve transitive std::equal_to.
 #endif
 #include <iterator>
 

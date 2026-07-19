@@ -1,4 +1,6 @@
 #pragma once
+#include <__psychicstd_equal_to>
+#include <__psychicstd_hash>
 // Functor structs and scalar hash specializations split out of <functional> so
 // containers can pick them up without the heavier functional machinery.
 #include <cstddef>
@@ -49,17 +51,6 @@ template <> struct greater_equal<void> {
   constexpr auto operator()(T&& a, U&& b) const
       -> decltype(static_cast<T&&>(a) >= static_cast<U&&>(b)) {
     return static_cast<T&&>(a) >= static_cast<U&&>(b);
-  }
-  using is_transparent = void;
-};
-template <typename T = void> struct equal_to {
-  constexpr bool operator()(const T& a, const T& b) const { return a == b; }
-};
-template <> struct equal_to<void> {
-  template <typename T, typename U>
-  constexpr auto operator()(T&& a, U&& b) const
-      -> decltype(static_cast<T&&>(a) == static_cast<U&&>(b)) {
-    return static_cast<T&&>(a) == static_cast<U&&>(b);
   }
   using is_transparent = void;
 };
@@ -123,63 +114,6 @@ template <typename T = void> struct logical_or {
 };
 template <typename T = void> struct logical_not {
   constexpr bool operator()(const T& a) const { return !a; }
-};
-
-// hash (forward declarations + specializations for common types)
-template <typename T> struct hash;
-
-template <> struct hash<bool> {
-  size_t operator()(bool v) const noexcept { return (size_t)v; }
-};
-template <> struct hash<char> {
-  size_t operator()(char v) const noexcept { return (size_t)v; }
-};
-template <> struct hash<signed char> {
-  size_t operator()(signed char v) const noexcept { return (size_t)v; }
-};
-template <> struct hash<unsigned char> {
-  size_t operator()(unsigned char v) const noexcept { return (size_t)v; }
-};
-template <> struct hash<short> {
-  size_t operator()(short v) const noexcept { return (size_t)v; }
-};
-template <> struct hash<unsigned short> {
-  size_t operator()(unsigned short v) const noexcept { return (size_t)v; }
-};
-template <> struct hash<int> {
-  size_t operator()(int v) const noexcept { return (size_t)v; }
-};
-template <> struct hash<unsigned int> {
-  size_t operator()(unsigned int v) const noexcept { return (size_t)v; }
-};
-template <> struct hash<long> {
-  size_t operator()(long v) const noexcept { return (size_t)v; }
-};
-template <> struct hash<unsigned long> {
-  size_t operator()(unsigned long v) const noexcept { return (size_t)v; }
-};
-template <> struct hash<long long> {
-  size_t operator()(long long v) const noexcept { return (size_t)v; }
-};
-template <> struct hash<unsigned long long> {
-  size_t operator()(unsigned long long v) const noexcept { return (size_t)v; }
-};
-template <> struct hash<float> {
-  size_t operator()(float v) const noexcept {
-    size_t h = 0;
-    __builtin_memcpy(&h, &v, sizeof(v));
-    return h;
-  }
-};
-template <> struct hash<double> {
-  size_t operator()(double v) const noexcept {
-    size_t h = 0;
-    __builtin_memcpy(&h, &v, sizeof(v));
-    return h;
-  }
-};
-template <typename T> struct hash<T*> {
-  size_t operator()(T* p) const noexcept { return (size_t)p; }
 };
 
 } // namespace std

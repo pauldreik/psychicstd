@@ -1,8 +1,9 @@
 #pragma once
-#include <__psychicstd_functors>
+#include <__psychicstd_equal_to>
+#include <__psychicstd_hash>
+#include <__psychicstd_iterator_core>
 #include <cstddef>
 #include <initializer_list>
-#include <iterator>
 #include <memory>
 #include <utility>
 

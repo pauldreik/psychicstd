@@ -1,0 +1,62 @@
+#pragma once
+#include <cstddef>
+
+namespace std {
+
+template <typename T> struct hash;
+
+template <> struct hash<bool> {
+  size_t operator()(bool v) const noexcept { return (size_t)v; }
+};
+template <> struct hash<char> {
+  size_t operator()(char v) const noexcept { return (size_t)v; }
+};
+template <> struct hash<signed char> {
+  size_t operator()(signed char v) const noexcept { return (size_t)v; }
+};
+template <> struct hash<unsigned char> {
+  size_t operator()(unsigned char v) const noexcept { return (size_t)v; }
+};
+template <> struct hash<short> {
+  size_t operator()(short v) const noexcept { return (size_t)v; }
+};
+template <> struct hash<unsigned short> {
+  size_t operator()(unsigned short v) const noexcept { return (size_t)v; }
+};
+template <> struct hash<int> {
+  size_t operator()(int v) const noexcept { return (size_t)v; }
+};
+template <> struct hash<unsigned int> {
+  size_t operator()(unsigned int v) const noexcept { return (size_t)v; }
+};
+template <> struct hash<long> {
+  size_t operator()(long v) const noexcept { return (size_t)v; }
+};
+template <> struct hash<unsigned long> {
+  size_t operator()(unsigned long v) const noexcept { return (size_t)v; }
+};
+template <> struct hash<long long> {
+  size_t operator()(long long v) const noexcept { return (size_t)v; }
+};
+template <> struct hash<unsigned long long> {
+  size_t operator()(unsigned long long v) const noexcept { return (size_t)v; }
+};
+template <> struct hash<float> {
+  size_t operator()(float v) const noexcept {
+    size_t h = 0;
+    __builtin_memcpy(&h, &v, sizeof(v));
+    return h;
+  }
+};
+template <> struct hash<double> {
+  size_t operator()(double v) const noexcept {
+    size_t h = 0;
+    __builtin_memcpy(&h, &v, sizeof(v));
+    return h;
+  }
+};
+template <typename T> struct hash<T*> {
+  size_t operator()(T* p) const noexcept { return (size_t)p; }
+};
+
+} // namespace std
