@@ -73,28 +73,28 @@ template <typename T> struct iterator_traits<const T*> {
 };
 
 // C++20 iterator utility aliases
-template <typename I>
-using iter_value_t = typename iterator_traits<I>::value_type;
+template <typename It>
+using iter_value_t = typename iterator_traits<It>::value_type;
 
-template <typename I>
-using iter_difference_t = typename iterator_traits<I>::difference_type;
+template <typename It>
+using iter_difference_t = typename iterator_traits<It>::difference_type;
 
-template <typename I> using iter_reference_t = decltype(*declval<I&>());
+template <typename It> using iter_reference_t = decltype(*declval<It&>());
 
 // iter_rvalue_reference_t — forward declared; defined after ranges::iter_move
 // is available Placeholder until <ranges> provides ranges::iter_move via ADL
 namespace __iter_rr_detail {
-template <typename I>
-constexpr auto __iter_move_impl(I&& i)
+template <typename It>
+constexpr auto __iter_move_impl(It&& i)
     -> decltype(static_cast<decltype(*i)&&>(*i)) {
   return static_cast<decltype(*i)&&>(*i);
 }
 } // namespace __iter_rr_detail
 // iter_rvalue_reference_t: type of "rvalue ref to element" — uses move(*i) as
 // approximation
-template <typename I>
+template <typename It>
 using iter_rvalue_reference_t =
-    decltype(__iter_rr_detail::__iter_move_impl(declval<I&>()));
+    decltype(__iter_rr_detail::__iter_move_impl(declval<It&>()));
 
 // indirectly_readable — simplified: has value_type, dereferenceable
 template <typename In>
@@ -105,10 +105,10 @@ concept indirectly_readable = requires(const remove_cvref_t<In>& i) {
 };
 
 // indirectly_writable — simplified: can write T through I
-template <typename I, typename T>
-concept indirectly_writable = requires(I&& i, T&& t) {
+template <typename It, typename T>
+concept indirectly_writable = requires(It&& i, T&& t) {
   *i = static_cast<T&&>(t);
-  *static_cast<I&&>(i) = static_cast<T&&>(t);
+  *static_cast<It&&>(i) = static_cast<T&&>(t);
 };
 
 // reverse_iterator
