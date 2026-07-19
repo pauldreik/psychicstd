@@ -3,9 +3,8 @@
 namespace std {
 
 template <typename InputIt>
-constexpr InputIt next(InputIt it,
-                      typename iterator_traits<InputIt>::difference_type n =
-                          1) {
+constexpr InputIt
+next(InputIt it, typename iterator_traits<InputIt>::difference_type n = 1) {
   if (n >= 0) {
     while (n-- > 0)
       ++it;

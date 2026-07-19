@@ -1,8 +1,9 @@
 #pragma once
 #include <__psychicstd_except>
+#include <__psychicstd_iterator_core>
+#include <__psychicstd_iterator_next>
 #include <cstddef>
 #include <initializer_list>
-#include <iterator>
 #include <memory>
 #include <tuple>
 #include <utility>
