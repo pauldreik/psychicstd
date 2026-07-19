@@ -1,0 +1,15 @@
+#pragma once
+
+namespace std {
+namespace __refcount_detail {
+
+inline void add(unsigned* refs) noexcept {
+  __atomic_add_fetch(refs, 1, __ATOMIC_RELAXED);
+}
+
+inline bool release(unsigned* refs) noexcept {
+  return __atomic_sub_fetch(refs, 1, __ATOMIC_ACQ_REL) == 0;
+}
+
+} // namespace __refcount_detail
+} // namespace std

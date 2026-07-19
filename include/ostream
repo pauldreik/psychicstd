@@ -341,8 +341,9 @@ private:
       spec = "f";
     else if (this->flags_ & ios_base::scientific)
       spec = "e";
-    __builtin_snprintf(fmt, sizeof(fmt), "%%.%lld%s", (long long)this->prec_,
-                       spec);
+    const char* alternate = this->flags_ & ios_base::showpoint ? "#" : "";
+    __builtin_snprintf(fmt, sizeof(fmt), "%%%s.%lld%s", alternate,
+                       (long long)this->prec_, spec);
     int n = __builtin_snprintf(buf, sizeof(buf), fmt, v);
     if (n > 0)
       num_write(buf, n);
@@ -357,11 +358,9 @@ private:
       spec = "Lf";
     else if (this->flags_ & ios_base::scientific)
       spec = "Le";
-    __builtin_snprintf(fmt, sizeof(fmt), "%%.%lldL%s", (long long)this->prec_,
-                       spec);
-    // Fix the format string - L is part of spec already
-    __builtin_snprintf(fmt, sizeof(fmt), "%%.%lld%s", (long long)this->prec_,
-                       spec);
+    const char* alternate = this->flags_ & ios_base::showpoint ? "#" : "";
+    __builtin_snprintf(fmt, sizeof(fmt), "%%%s.%lld%s", alternate,
+                       (long long)this->prec_, spec);
     int n = __builtin_snprintf(buf, sizeof(buf), fmt, v);
     if (n > 0)
       num_write(buf, n);

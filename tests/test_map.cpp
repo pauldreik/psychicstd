@@ -78,4 +78,10 @@ int main() {
   std::map<int, partially_ordered> partial_a{{1, {-1}}};
   std::map<int, partially_ordered> partial_b{{1, {1}}};
   psyassert((partial_a <=> partial_b) == std::partial_ordering::unordered);
+
+  std::multimap<int, int> multi;
+  multi.emplace(1, 10);
+  multi.emplace(1, 20);
+  psyassert(multi.begin()->second == 10);
+  psyassert(std::next(multi.begin())->second == 20);
 }

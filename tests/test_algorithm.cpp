@@ -14,6 +14,11 @@ struct move_only {
   }
 };
 
+struct stable_value {
+  int key;
+  int order;
+};
+
 constexpr bool constexpr_nth_element() {
   int values[] = {5, 1, 4, 2, 3};
   std::nth_element(values, values + 2, values + 5);
@@ -82,4 +87,14 @@ int main() {
   movable.emplace_back(3);
   std::nth_element(movable.begin(), movable.begin() + 2, movable.end());
   psyassert(movable[2].value == 3);
+
+  std::vector<stable_value> stable = {{1, 0}, {0, 1}, {1, 2}, {0, 3}};
+  std::stable_sort(stable.begin(), stable.end(),
+                   [](const stable_value& a, const stable_value& b) {
+                     return a.key < b.key;
+                   });
+  psyassert(stable[0].order == 1);
+  psyassert(stable[1].order == 3);
+  psyassert(stable[2].order == 0);
+  psyassert(stable[3].order == 2);
 }

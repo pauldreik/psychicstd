@@ -14,4 +14,12 @@ int main() {
   multiple.insert(values, values + 4);
   psyassert(*multiple.begin() == 3);
   psyassert(multiple.count(3) == 2);
+
+  int first = 1;
+  int second = 2;
+  std::set<int*> pointers;
+  pointers.insert(&first);
+  pointers.insert(&second);
+  psyassert(pointers.erase(&first) == 1);
+  psyassert(pointers.count(&first) == 0);
 }

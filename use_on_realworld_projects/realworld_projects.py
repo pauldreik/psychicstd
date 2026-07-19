@@ -211,6 +211,63 @@ def _catch2() -> Project:
     )
 
 
+# --- googletest --------------------------------------------------------
+
+
+def _googletest() -> Project:
+    version = "1.16.0"
+    url = f"https://github.com/google/googletest/archive/refs/tags/v{version}.tar.gz"
+    checksum = "78c676fc63881529bf97bf9d45948d905a66833fbfa5318ea2cd7478cb98f399"
+
+    def build(tc: Toolchain) -> dict[str, float]:
+        tarball = RW_DIR / f"googletest-{version}.tar.gz"
+        _fetch(url, tarball, checksum)
+
+        with tempfile.TemporaryDirectory(
+            prefix="rw-googletest-", ignore_cleanup_errors=True
+        ) as work_dir:
+            work = Path(work_dir)
+            with tarfile.open(tarball) as t:
+                t.extractall(work)
+            src = work / f"googletest-{version}"
+            # Point GoogleTest at psychicstd's ABI declaration without
+            # changing the compiler's RTTI or exception settings.
+            wrapper = _compiler_wrapper(work / "cxx", tc, ("-DGTEST_HAS_CXXABI_H_=1",))
+            env = _env(tc)
+            configure = [
+                "cmake",
+                "-S",
+                ".",
+                "-B",
+                "build",
+                "-GNinja",
+                "-DCMAKE_BUILD_TYPE=" + tc.build_type.capitalize(),
+                "-DCMAKE_CXX_COMPILER=" + str(wrapper),
+                "-DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY",
+                "-Dgtest_build_tests=ON",
+                "-Dgtest_build_samples=OFF",
+                "-DBUILD_GMOCK=OFF",
+                "-DINSTALL_GTEST=OFF",
+            ]
+            jobs = f"-j{os.cpu_count() or 1}"
+            return {
+                "configure": _timed(configure, src, env),
+                "compile": _timed(["cmake", "--build", "build", jobs], src, env),
+                "run tests": _timed(
+                    ["ctest", "--test-dir", "build", "--output-on-failure", jobs],
+                    src,
+                    env,
+                ),
+            }
+
+    return Project(
+        version=version,
+        build=build,
+        comment="Builds GoogleTest's upstream unit tests with GMock and samples "
+        "disabled, then runs the resulting CTest suite.",
+    )
+
+
 # --- cmake -------------------------------------------------------------
 
 
@@ -304,31 +361,10 @@ def _cmake() -> Project:
 
 # --- cppcheck -----------------------------------------------------------
 
-_CPPCHECK_FILES = (
-    "lib/addoninfo.cpp",
-    "lib/analyzerinfo.cpp",
-    "lib/color.cpp",
-    "lib/timer.cpp",
-    "lib/errortypes.cpp",
-    "lib/astutils.cpp",
-    "lib/checkassert.cpp",
-    "lib/checkbool.cpp",
-    "lib/checkcondition.cpp",
-    "lib/checkfunctions.cpp",
-    "lib/tokenize.cpp",
-    "lib/symboldatabase.cpp",
-    "lib/valueflow.cpp",
-    "lib/checkclass.cpp",
-    "lib/checkbufferoverrun.cpp",
-    "cli/cmdlineparser.cpp",
-    "cli/filelister.cpp",
-    "cli/cppcheckexecutor.cpp",
-)
-
 
 def _cppcheck() -> Project:
     version = "2.21.0"
-    url = f"https://github.com/danmar/cppcheck/archive/refs/tags/{version}.tar.gz"
+    url = f"https://github.com/cppcheck-opensource/cppcheck/archive/refs/tags/{version}.tar.gz"
     checksum = "f028ff75ca5372738f3737c8b3e8611426a6526b6aea2ef01301ab0f5902f044"
 
     def build(tc: Toolchain) -> dict[str, float]:
@@ -344,41 +380,53 @@ def _cppcheck() -> Project:
             src = work / f"cppcheck-{version}"
 
             env = _env(tc)
-            cxxflags = [
-                *tc.cxxflags.split(),
-                "-I",
-                str(src / "lib"),
-                "-I",
-                str(src / "externals" / "picojson"),
-                "-I",
-                str(src / "externals" / "simplecpp"),
-                "-I",
-                str(src / "externals" / "tinyxml2"),
-                "-I",
-                str(src / "cli"),
-                "-I",
-                str(src / "frontend"),
-                '-DFILESDIR="/usr/local/share/Cppcheck"',
-                "-DHAVE_EXECINFO_H=1",
+            # The Makefile appends -std=c++11 to CXXFLAGS. Keep psychicstd's
+            # required C++20 flags last with a wrapper, as other recipes do.
+            wrapper = _compiler_wrapper(work / "cxx", tc)
+            cppflags = " ".join(
+                (
+                    "-Ilib",
+                    "-Ifrontend",
+                    "-Icli",
+                    "-isystem externals",
+                    "-isystem externals/picojson",
+                    "-isystem externals/simplecpp",
+                    "-isystem externals/tinyxml2",
+                    "-DHAVE_EXECINFO_H=1",
+                )
+            )
+            jobs = f"-j{os.cpu_count() or 1}"
+            make_args = [
+                jobs,
+                "CXX=" + str(wrapper),
+                "CPPFLAGS=" + cppflags,
+                "CXXFLAGS=",
+                "FILESDIR=/usr/local/share/Cppcheck",
+                "LDFLAGS=" + tc.ldflags,
+                "LIBS=" + tc.libs,
             ]
-
-            compile_ms = 0.0
-            for name in _CPPCHECK_FILES:
-                cpp = src / name
-                obj = work / (Path(name).stem + ".o")
-                cmd = [tc.cxx, *cxxflags, str(cpp), "-c", "-o", str(obj)]
-                compile_ms += _timed(cmd, src, env)
-
-            return {"compile": compile_ms}
+            return {
+                "compile": _timed(["make", "all", *make_args], src, env),
+                # This test hard-codes libstdc++'s vector::at diagnostic;
+                # psychicstd intentionally does not promise that wording.
+                "run tests": _timed(
+                    [
+                        "./testrunner",
+                        "-x",
+                        "TestSymbolDatabase::getVariableFromVarIdBoundsCheck",
+                    ],
+                    src,
+                    env,
+                ),
+            }
 
     return Project(
         version=version,
         build=build,
-        phases=("compile",),
-        comment="a fixed subset of cppcheck's source files is compiled "
-        "individually (no link/run step); times are summed. the real binary "
-        "doesn't build: threadexecutor.cpp needs <future> (unimplemented) "
-        "and stacktrace.cpp needs <cxxabi.h> (not shadowed by psychicstd).",
+        phases=("compile", "run tests"),
+        comment="the complete native Makefile build is compiled and linked; "
+        "Cppcheck's own test runner is run with one libstdc++ diagnostic "
+        "wording test excluded.",
     )
 
 
@@ -800,6 +848,7 @@ PROJECTS: dict[str, Project] = {
     "cppcheck": _cppcheck(),
     "eigen": _eigen(),
     "fmt": _fmt(),
+    "googletest": _googletest(),
     "nlohmann": _nlohmann(),
     "rdfind": _rdfind(),
     "simdutf": _simdutf(),

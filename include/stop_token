@@ -1,4 +1,5 @@
 #pragma once
+#include <__psychicstd_refcount>
 #include <cstdlib>
 #include <new>
 #include <pthread.h>
@@ -19,14 +20,14 @@ struct stop_state {
   pthread_mutex_t mutex_;
   bool stop_requested_ = false;
   stop_callback_base* callbacks_ = nullptr;
-  int refs_ = 1;
+  unsigned refs_ = 1;
 
   stop_state() { pthread_mutex_init(&mutex_, nullptr); }
   ~stop_state() { pthread_mutex_destroy(&mutex_); }
 
-  void add_ref() noexcept { __atomic_add_fetch(&refs_, 1, __ATOMIC_RELAXED); }
+  void add_ref() noexcept { __refcount_detail::add(&refs_); }
   void release() noexcept {
-    if (__atomic_sub_fetch(&refs_, 1, __ATOMIC_ACQ_REL) == 0) {
+    if (__refcount_detail::release(&refs_)) {
       this->~stop_state();
       ::free(this);
     }

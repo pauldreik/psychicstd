@@ -1,4 +1,5 @@
 #pragma once
+#include <cerrno>
 #include <cstdlib>
 #include <ios>
 #include <streambuf>
@@ -286,6 +287,12 @@ private:
       buf[n++] = (char)ch;
       sb->sbumpc();
     }
+    int base = 10;
+    const auto base_flags = this->flags() & ios_base::basefield;
+    if (base_flags == ios_base::oct)
+      base = 8;
+    else if (base_flags == ios_base::hex)
+      base = 16;
     bool got_digit = false;
     while (n < 63) {
       c = sb->sgetc();
@@ -294,7 +301,13 @@ private:
         break;
       }
       ch = Traits::to_char_type(c);
-      if (ch < '0' || ch > '9')
+      bool valid_digit = ch >= '0' && ch <= '9';
+      if (base == 16)
+        valid_digit =
+            valid_digit || (ch >= 'a' && ch <= 'f') || (ch >= 'A' && ch <= 'F');
+      else if (base == 8)
+        valid_digit = ch >= '0' && ch <= '7';
+      if (!valid_digit)
         break;
       buf[n++] = (char)ch;
       got_digit = true;
@@ -308,9 +321,9 @@ private:
     if constexpr (__is_same(V, unsigned long long) ||
                   __is_same(V, unsigned long) || __is_same(V, unsigned int) ||
                   __is_same(V, unsigned short)) {
-      v = (V)::strtoull(buf, nullptr, 10);
+      v = (V)::strtoull(buf, nullptr, base);
     } else {
-      long long parsed = ::strtoll(buf, nullptr, 10);
+      long long parsed = ::strtoll(buf, nullptr, base);
       long long low = 0;
       long long high = 1;
       if constexpr (!__is_same(V, bool)) {
@@ -362,7 +375,16 @@ private:
       this->setstate(ios_base::failbit);
       return *this;
     }
-    v = (V)::strtod(buf, nullptr);
+    char* end = nullptr;
+    errno = 0;
+    v = (V)::strtod(buf, &end);
+    if (end == buf || (errno == ERANGE && (v == 0 || !__builtin_isfinite(v))))
+      this->setstate(ios_base::failbit);
+    else if (end < buf + n) {
+      for (int i = n - 1; i >= end - buf; --i)
+        sb->sputbackc((Char)buf[i]);
+      this->clear(this->rdstate() & ~ios_base::eofbit);
+    }
     return *this;
   }
 };

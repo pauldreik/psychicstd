@@ -20,6 +20,8 @@ int main() {
   (void)allocator;
 
   std::string s = "hello";
+  psyassert(std::string().compare(0, 4, "test") < 0);
+  psyassert(std::string("test").compare(0, 4, "test") == 0);
   psyassert(s.at(1) == 'e');
   const std::string const_s = s;
   psyassert(const_s.at(4) == 'o');
@@ -31,6 +33,56 @@ int main() {
   }
   psyassert(at_threw);
 
+  bool conversion_threw = false;
+  try {
+    (void)std::stoll("");
+  } catch (const std::invalid_argument&) {
+    conversion_threw = true;
+  }
+  psyassert(conversion_threw);
+  conversion_threw = false;
+  try {
+    (void)std::stol("x");
+  } catch (const std::invalid_argument&) {
+    conversion_threw = true;
+  }
+  psyassert(conversion_threw);
+  conversion_threw = false;
+  try {
+    (void)std::stoul("x");
+  } catch (const std::invalid_argument&) {
+    conversion_threw = true;
+  }
+  psyassert(conversion_threw);
+  conversion_threw = false;
+  try {
+    (void)std::stof("x");
+  } catch (const std::invalid_argument&) {
+    conversion_threw = true;
+  }
+  psyassert(conversion_threw);
+  conversion_threw = false;
+  try {
+    (void)std::stod("x");
+  } catch (const std::invalid_argument&) {
+    conversion_threw = true;
+  }
+  psyassert(conversion_threw);
+  conversion_threw = false;
+  try {
+    (void)std::stoi("c");
+  } catch (const std::invalid_argument&) {
+    conversion_threw = true;
+  }
+  psyassert(conversion_threw);
+  conversion_threw = false;
+  try {
+    (void)std::stoull("file.cpp");
+  } catch (const std::invalid_argument&) {
+    conversion_threw = true;
+  }
+  psyassert(conversion_threw);
+
   std::string source = "assign";
   psyassert(std::string(source, 1, 3) == "ssi");
   psyassert(std::string(source, 4, 99) == "gn");
@@ -41,19 +93,21 @@ int main() {
 
   s = "hello";
   psyassert(s.size() == 5);
+  s += s;
+  psyassert(s == "hellohello");
   auto pos = s.insert(s.end() - 2, ':');
   psyassert(pos == s.end() - 3);
-  psyassert(s == "hel:lo");
+  psyassert(s == "hellohel:lo");
   s.insert(s.begin() + 1, 2, '!');
-  psyassert(s == "h!!el:lo");
+  psyassert(s == "h!!ellohel:lo");
   s.insert(0, 2, '?');
-  psyassert(s == "??h!!el:lo");
+  psyassert(s == "??h!!ellohel:lo");
   s.insert(s.cbegin() + 2, 1, '#');
-  psyassert(s == "??#h!!el:lo");
+  psyassert(s == "??#h!!ellohel:lo");
   s.replace(s.begin(), s.begin() + 3, std::string("ok"));
-  psyassert(s == "okh!!el:lo");
+  psyassert(s == "okh!!ellohel:lo");
   s.replace(0, 2, 3, '-');
-  psyassert(s == "---h!!el:lo");
+  psyassert(s == "---h!!ellohel:lo");
 
   std::string erased = "abracadabra";
   psyassert(std::erase(erased, 'a') == 5);

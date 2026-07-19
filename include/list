@@ -60,7 +60,8 @@ public:
     using pointer = T*;
     using reference = T&;
     Node* n;
-    iterator(Node* n = nullptr) : n(n) {}
+    Node* tail;
+    iterator(Node* n = nullptr, Node* tail = nullptr) : n(n), tail(tail) {}
     T& operator*() const { return n->value; }
     T* operator->() const { return &n->value; }
     iterator& operator++() {
@@ -73,7 +74,7 @@ public:
       return t;
     }
     iterator& operator--() {
-      n = n->prev;
+      n = n ? n->prev : tail;
       return *this;
     }
     bool operator==(const iterator& o) const { return n == o.n; }
@@ -86,8 +87,10 @@ public:
     using pointer = const T*;
     using reference = const T&;
     const Node* n;
-    const_iterator(const Node* n = nullptr) : n(n) {}
-    const_iterator(iterator it) : n(it.n) {}
+    const Node* tail;
+    const_iterator(const Node* n = nullptr, const Node* tail = nullptr)
+        : n(n), tail(tail) {}
+    const_iterator(iterator it) : n(it.n), tail(it.tail) {}
     const T& operator*() const { return n->value; }
     const T* operator->() const { return &n->value; }
     const_iterator& operator++() {
@@ -100,7 +103,7 @@ public:
       return t;
     }
     const_iterator& operator--() {
-      n = n->prev;
+      n = n ? n->prev : tail;
       return *this;
     }
     const_iterator operator--(int) {
@@ -159,10 +162,10 @@ public:
     return *this;
   }
 
-  iterator begin() { return {head_}; }
-  iterator end() { return {nullptr}; }
-  const_iterator begin() const { return {head_}; }
-  const_iterator end() const { return {nullptr}; }
+  iterator begin() { return {head_, tail_}; }
+  iterator end() { return {nullptr, tail_}; }
+  const_iterator begin() const { return {head_, tail_}; }
+  const_iterator end() const { return {nullptr, tail_}; }
   const_iterator cbegin() const { return begin(); }
   const_iterator cend() const { return end(); }
 
@@ -212,7 +215,7 @@ public:
   template <typename... Args> iterator emplace_back(Args&&... args) {
     Node* n = new Node(static_cast<Args&&>(args)...);
     link_back(n);
-    return {n};
+    return {n, tail_};
   }
   template <typename... Args> iterator emplace_front(Args&&... args) {
     Node* n = new Node(static_cast<Args&&>(args)...);
@@ -224,7 +227,7 @@ public:
       tail_ = n;
     head_ = n;
     ++size_;
-    return {n};
+    return {n, tail_};
   }
   void clear() {
     Node* n = head_;
@@ -241,19 +244,19 @@ public:
     Node* next = n->next;
     unlink(n);
     delete n;
-    return {next};
+    return {next, tail_};
   }
   iterator erase(const_iterator it) {
     Node* n = const_cast<Node*>(it.n);
     Node* next = n->next;
     unlink(n);
     delete n;
-    return {next};
+    return {next, tail_};
   }
   iterator erase(const_iterator first, const_iterator last) {
     while (first != last)
       first = erase(first);
-    return iterator{const_cast<Node*>(last.n)};
+    return iterator{const_cast<Node*>(last.n), tail_};
   }
   iterator insert(const_iterator pos, const T& v) {
     return insert(iterator{const_cast<Node*>(pos.n)}, v);
@@ -261,7 +264,7 @@ public:
   iterator insert(iterator pos, const T& v) {
     if (!pos.n) {
       push_back(v);
-      return {tail_};
+      return {tail_, tail_};
     }
     Node* n = new Node(v);
     Node* cur = pos.n;
@@ -273,7 +276,7 @@ public:
       head_ = n;
     cur->prev = n;
     ++size_;
-    return {n};
+    return {n, tail_};
   }
   template <typename It>
   iterator insert(const_iterator pos, It first, It last) {
@@ -297,32 +300,50 @@ public:
       }
       ++size_;
     }
-    return {pos.n ? const_cast<Node*>(pos.n) : tail_};
+    return {pos.n ? const_cast<Node*>(pos.n) : tail_, tail_};
   }
   void sort() {
     if (size_ <= 1)
       return;
-    for (Node* i = head_->next; i; i = i->next) {
-      T key = i->value;
-      Node* j = i->prev;
-      while (j && j->value > key) {
-        j->next->value = j->value;
-        j = j->prev;
+    for (Node* cur = head_->next; cur;) {
+      Node* next = cur->next;
+      Node* pos = head_;
+      while (pos != cur && !(cur->value < pos->value))
+        pos = pos->next;
+      if (pos != cur) {
+        unlink(cur);
+        cur->prev = pos->prev;
+        cur->next = pos;
+        if (pos->prev)
+          pos->prev->next = cur;
+        else
+          head_ = cur;
+        pos->prev = cur;
+        ++size_;
       }
-      (j ? j->next : head_)->value = key;
+      cur = next;
     }
   }
   template <typename Compare> void sort(Compare comp) {
     if (size_ <= 1)
       return;
-    for (Node* i = head_->next; i; i = i->next) {
-      T key = i->value;
-      Node* j = i->prev;
-      while (j && comp(key, j->value)) {
-        j->next->value = j->value;
-        j = j->prev;
+    for (Node* cur = head_->next; cur;) {
+      Node* next = cur->next;
+      Node* pos = head_;
+      while (pos != cur && !comp(cur->value, pos->value))
+        pos = pos->next;
+      if (pos != cur) {
+        unlink(cur);
+        cur->prev = pos->prev;
+        cur->next = pos;
+        if (pos->prev)
+          pos->prev->next = cur;
+        else
+          head_ = cur;
+        pos->prev = cur;
+        ++size_;
       }
-      (j ? j->next : head_)->value = key;
+      cur = next;
     }
   }
   void remove(const T& val) {
@@ -383,6 +404,7 @@ public:
           head_ = n;
         tail_ = n;
       }
+      n = next;
     }
     size_ += other.size_;
     other.head_ = other.tail_ = nullptr;

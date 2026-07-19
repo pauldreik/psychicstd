@@ -2,6 +2,7 @@
 #include <__psychicstd_char_traits>
 #include <__psychicstd_config>
 #include <__psychicstd_except>
+#include <cerrno>
 #include <compare>
 #include <cstddef>
 #include <cstdlib>
@@ -258,6 +259,10 @@ public:
     return *this;
   }
   basic_string& append(const basic_string& o) {
+    if (this == &o) {
+      basic_string copy(o);
+      return append(copy.data(), copy.size());
+    }
     return append(o.data(), o.size());
   }
   basic_string& append(const basic_string& o, size_type pos,
@@ -552,48 +557,61 @@ public:
   }
   int compare(const Char* s) const noexcept { return compare(basic_string(s)); }
   int compare(size_type pos1, size_type n1, const Char* s) const {
+    if (pos1 > size_)
+      _PSYCHICSTD_THROW(out_of_range("basic_string::compare"));
+    size_type left = n1 < size_ - pos1 ? n1 : size_ - pos1;
     size_type slen = Traits::length(s);
-    size_type clen = n1 < slen ? n1 : slen;
-    int r = Traits::compare(data_ + pos1, s, clen);
+    size_type clen = left < slen ? left : slen;
+    int r = Traits::compare(data() + pos1, s, clen);
     if (r)
       return r;
-    if (n1 < slen)
+    if (left < slen)
       return -1;
-    if (n1 > slen)
+    if (left > slen)
       return 1;
     return 0;
   }
   int compare(size_type pos1, size_type n1, const basic_string& o) const {
-    size_type clen = n1 < o.size_ ? n1 : o.size_;
-    int r = Traits::compare(data_ + pos1, o.data_, clen);
+    if (pos1 > size_)
+      _PSYCHICSTD_THROW(out_of_range("basic_string::compare"));
+    size_type left = n1 < size_ - pos1 ? n1 : size_ - pos1;
+    size_type clen = left < o.size_ ? left : o.size_;
+    int r = Traits::compare(data() + pos1, o.data(), clen);
     if (r)
       return r;
-    if (n1 < o.size_)
+    if (left < o.size_)
       return -1;
-    if (n1 > o.size_)
+    if (left > o.size_)
       return 1;
     return 0;
   }
   int compare(size_type pos1, size_type n1, const Char* s, size_type n2) const {
-    size_type clen = n1 < n2 ? n1 : n2;
-    int r = Traits::compare(data_ + pos1, s, clen);
+    if (pos1 > size_)
+      _PSYCHICSTD_THROW(out_of_range("basic_string::compare"));
+    size_type left = n1 < size_ - pos1 ? n1 : size_ - pos1;
+    size_type clen = left < n2 ? left : n2;
+    int r = Traits::compare(data() + pos1, s, clen);
     if (r)
       return r;
-    if (n1 < n2)
+    if (left < n2)
       return -1;
-    if (n1 > n2)
+    if (left > n2)
       return 1;
     return 0;
   }
   int compare(size_type pos1, size_type n1, const basic_string& o,
               size_type pos2, size_type n2) const {
-    size_type clen = n1 < n2 ? n1 : n2;
-    int r = Traits::compare(data_ + pos1, o.data_ + pos2, clen);
+    if (pos1 > size_ || pos2 > o.size_)
+      _PSYCHICSTD_THROW(out_of_range("basic_string::compare"));
+    size_type left = n1 < size_ - pos1 ? n1 : size_ - pos1;
+    size_type right = n2 < o.size_ - pos2 ? n2 : o.size_ - pos2;
+    size_type clen = left < right ? left : right;
+    int r = Traits::compare(data() + pos1, o.data() + pos2, clen);
     if (r)
       return r;
-    if (n1 < n2)
+    if (left < right)
       return -1;
-    if (n1 > n2)
+    if (left > right)
       return 1;
     return 0;
   }
@@ -885,54 +903,89 @@ inline string to_string(long double v) {
 
 // sto* — string to arithmetic conversions
 inline int stoi(const string& s, size_t* pos = nullptr, int base = 10) {
+  errno = 0;
   char* end;
   auto v = ::strtol(s.c_str(), &end, base);
   if (pos)
     *pos = end - s.c_str();
+  if (end == s.c_str())
+    _PSYCHICSTD_THROW(invalid_argument("stoi"));
+  if (errno == ERANGE)
+    _PSYCHICSTD_THROW(out_of_range("stoi"));
   return (int)v;
 }
 inline long stol(const string& s, size_t* pos = nullptr, int base = 10) {
+  errno = 0;
   char* end;
   auto v = ::strtol(s.c_str(), &end, base);
   if (pos)
     *pos = end - s.c_str();
+  if (end == s.c_str())
+    _PSYCHICSTD_THROW(invalid_argument("stol"));
+  if (errno == ERANGE)
+    _PSYCHICSTD_THROW(out_of_range("stol"));
   return v;
 }
 inline long long stoll(const string& s, size_t* pos = nullptr, int base = 10) {
+  errno = 0;
   char* end;
   auto v = ::strtoll(s.c_str(), &end, base);
   if (pos)
     *pos = end - s.c_str();
+  if (end == s.c_str())
+    _PSYCHICSTD_THROW(invalid_argument("stoll"));
+  if (errno == ERANGE)
+    _PSYCHICSTD_THROW(out_of_range("stoll"));
   return v;
 }
 inline unsigned long stoul(const string& s, size_t* pos = nullptr,
                            int base = 10) {
+  errno = 0;
   char* end;
   auto v = ::strtoul(s.c_str(), &end, base);
   if (pos)
     *pos = end - s.c_str();
+  if (end == s.c_str())
+    _PSYCHICSTD_THROW(invalid_argument("stoul"));
+  if (errno == ERANGE)
+    _PSYCHICSTD_THROW(out_of_range("stoul"));
   return v;
 }
 inline unsigned long long stoull(const string& s, size_t* pos = nullptr,
                                  int base = 10) {
+  errno = 0;
   char* end;
   auto v = ::strtoull(s.c_str(), &end, base);
   if (pos)
     *pos = end - s.c_str();
+  if (end == s.c_str())
+    _PSYCHICSTD_THROW(invalid_argument("stoull"));
+  if (errno == ERANGE)
+    _PSYCHICSTD_THROW(out_of_range("stoull"));
   return v;
 }
 inline float stof(const string& s, size_t* pos = nullptr) {
+  errno = 0;
   char* end;
   auto v = ::strtof(s.c_str(), &end);
   if (pos)
     *pos = end - s.c_str();
+  if (end == s.c_str())
+    _PSYCHICSTD_THROW(invalid_argument("stof"));
+  if (errno == ERANGE)
+    _PSYCHICSTD_THROW(out_of_range("stof"));
   return v;
 }
 inline double stod(const string& s, size_t* pos = nullptr) {
+  errno = 0;
   char* end;
   auto v = ::strtod(s.c_str(), &end);
   if (pos)
     *pos = end - s.c_str();
+  if (end == s.c_str())
+    _PSYCHICSTD_THROW(invalid_argument("stod"));
+  if (errno == ERANGE)
+    _PSYCHICSTD_THROW(out_of_range("stod"));
   return v;
 }
 inline long double stold(const string& s, size_t* pos = nullptr) {

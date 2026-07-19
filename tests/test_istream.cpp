@@ -14,6 +14,23 @@ int main() {
   in >> x;
   psyassert(x == 42);
 
+  std::istringstream hex_input("a");
+  hex_input >> std::hex >> x;
+  psyassert(x == 10);
+
+  std::istringstream invalid_float("invalid");
+  double d = 0;
+  invalid_float >> d;
+  psyassert(invalid_float.fail());
+
+#if defined(PSYCHICSTD_TEST_PSYCHICSTD)
+  // strtod may report ERANGE for a valid nonzero subnormal.
+  std::istringstream smallest_float("4.9406564584124654e-324");
+  smallest_float >> d;
+  psyassert(!smallest_float.fail());
+  psyassert(d > 0);
+#endif
+
   std::istringstream overflow("-1234567890123456");
   overflow >> x;
   psyassert(x == std::numeric_limits<int>::min());
