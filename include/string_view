@@ -1,6 +1,7 @@
 #pragma once
 #include <__psychicstd_config>
 #include <__psychicstd_except>
+#include <__psychicstd_minmax>
 #include <compare>
 #include <cstddef>
 #include <cstring>
@@ -9,7 +10,9 @@
 #include <type_traits>
 namespace std {
 
-template <typename Char> struct basic_string_view {
+template <typename Char, typename Traits = char_traits<Char>>
+struct basic_string_view {
+  using traits_type = Traits;
   using value_type = Char;
   using pointer = const Char*;
   using const_pointer = const Char*;
@@ -267,15 +270,16 @@ private:
   size_type size_;
 };
 
-template <typename C>
-constexpr bool operator==(basic_string_view<C> a,
-                          type_identity_t<basic_string_view<C>> b) noexcept {
+template <typename C, typename T>
+constexpr bool operator==(basic_string_view<C, T> a,
+                          type_identity_t<basic_string_view<C, T>> b) noexcept {
   return a.size() == b.size() &&
          (a.size() == 0 || __builtin_memcmp(a.data(), b.data(), a.size()) == 0);
 }
-template <typename C>
-constexpr auto operator<=>(basic_string_view<C> a,
-                           type_identity_t<basic_string_view<C>> b) noexcept {
+template <typename C, typename T>
+constexpr auto
+operator<=>(basic_string_view<C, T> a,
+            type_identity_t<basic_string_view<C, T>> b) noexcept {
   return a.compare(b) <=> 0;
 }
 
@@ -300,9 +304,10 @@ constexpr string_view operator""sv(const char* s, size_t n) noexcept {
 } // namespace string_view_literals
 } // namespace literals
 
-template <typename Char, typename Traits>
-basic_ostream<Char, Traits>& operator<<(basic_ostream<Char, Traits>& os,
-                                        basic_string_view<Char> sv) {
+template <typename Char, typename StreamTraits, typename StringTraits>
+basic_ostream<Char, StreamTraits>&
+operator<<(basic_ostream<Char, StreamTraits>& os,
+           basic_string_view<Char, StringTraits> sv) {
   return os.__put(sv.data(), (streamsize)sv.size());
 }
 

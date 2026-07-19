@@ -296,6 +296,12 @@ constexpr decltype(auto) apply(F&& f, Tuple&& t) {
   }(make_index_sequence<tuple_size_v<remove_reference_t<Tuple>>>{});
 }
 
+template <typename T, typename Tuple> constexpr T make_from_tuple(Tuple&& t) {
+  return apply([]<typename... Args>(
+                   Args&&... args) { return T(static_cast<Args&&>(args)...); },
+               static_cast<Tuple&&>(t));
+}
+
 // pair tuple_element / tuple_size (for structured bindings)
 template <typename T1, typename T2>
 struct tuple_size<pair<T1, T2>> : integral_constant<size_t, 2> {};

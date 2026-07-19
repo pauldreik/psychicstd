@@ -21,6 +21,10 @@ inline constexpr void operator delete(void*, void*) noexcept {}
 inline constexpr void operator delete[](void*, void*) noexcept {}
 
 namespace std {
+template <typename T> constexpr T* launder(T* p) noexcept {
+  return __builtin_launder(p);
+}
+
 struct nothrow_t {
   explicit nothrow_t() = default;
 };

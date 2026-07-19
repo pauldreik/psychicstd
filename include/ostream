@@ -21,6 +21,17 @@ public:
   virtual ~basic_ostream() = default;
   basic_ostream(const basic_ostream&) = delete;
   basic_ostream& operator=(const basic_ostream&) = delete;
+  basic_ostream(basic_ostream&& other) noexcept : basic_ios<Char, Traits>() {
+    this->init(other.rdbuf());
+    this->copyfmt(other);
+  }
+  basic_ostream& operator=(basic_ostream&& other) noexcept {
+    if (this != &other) {
+      this->rdbuf(other.rdbuf());
+      this->copyfmt(other);
+    }
+    return *this;
+  }
 
   class sentry {
   public:

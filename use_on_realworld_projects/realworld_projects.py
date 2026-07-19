@@ -117,6 +117,17 @@ def _env(tc: Toolchain, **extra: str) -> dict[str, str]:
     return env
 
 
+def _jobs() -> str:
+    """Cap parallel builds so each active compiler gets about 1.5 GiB."""
+    available = (
+        os.sysconf("SC_PAGE_SIZE") * os.sysconf("SC_AVPHYS_PAGES")
+        if hasattr(os, "sysconf")
+        else 0
+    )
+    memory_jobs = available // (1536 * 1024 * 1024) if available else 1
+    return f"-j{max(1, min(os.cpu_count() or 1, memory_jobs))}"
+
+
 def _compiler_wrapper(
     path: Path, tc: Toolchain, extra_cxxflags: tuple[str, ...] = ()
 ) -> Path:
@@ -184,7 +195,7 @@ def _catch2() -> Project:
                 "-DCATCH_ENABLE_WERROR=OFF",
                 "-DBUILD_SHARED_LIBS=OFF",
             ]
-            jobs = f"-j{os.cpu_count() or 1}"
+            jobs = _jobs()
             return {
                 "configure": _timed(configure, src, env),
                 "compile": _timed(["cmake", "--build", "build", jobs], src, env),
@@ -208,6 +219,63 @@ def _catch2() -> Project:
         build=build,
         phases=("compile", "run tests"),
         comments={"run tests": "the approval tests are ignored"},
+    )
+
+
+# --- abseil ------------------------------------------------------------
+
+
+def _abseil() -> Project:
+    version = "20260107.1"
+    url = f"https://github.com/abseil/abseil-cpp/archive/refs/tags/{version}.tar.gz"
+    checksum = "4314e2a7cbac89cac25a2f2322870f343d81579756ceff7f431803c2c9090195"
+
+    def build(tc: Toolchain) -> dict[str, float]:
+        tarball = RW_DIR / f"abseil-cpp-{version}.tar.gz"
+        _fetch(url, tarball, checksum)
+
+        with tempfile.TemporaryDirectory(
+            prefix="rw-abseil-", ignore_cleanup_errors=True
+        ) as work_dir:
+            work = Path(work_dir)
+            with tarfile.open(tarball) as t:
+                t.extractall(work)
+            src = work / f"abseil-cpp-{version}"
+
+            env = _env(tc)
+            configure = [
+                "cmake",
+                "-S",
+                ".",
+                "-B",
+                "build",
+                "-GNinja",
+                "-DCMAKE_BUILD_TYPE=" + tc.build_type.capitalize(),
+                "-DCMAKE_CXX_COMPILER=" + tc.cxx,
+                "-DCMAKE_CXX_FLAGS=" + tc.cxxflags,
+                "-DCMAKE_EXE_LINKER_FLAGS=" + tc.ldflags,
+                "-DCMAKE_CXX_STANDARD_LIBRARIES=" + tc.libs,
+                "-DCMAKE_CXX_STANDARD=20",
+                "-DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY",
+                "-DABSL_BUILD_TESTING=ON",
+                "-DABSL_USE_GOOGLETEST_HEAD=ON",
+                "-DBUILD_SHARED_LIBS=OFF",
+            ]
+            jobs = _jobs()
+            return {
+                "configure": _timed(configure, src, env),
+                "compile": _timed(["cmake", "--build", "build", jobs], src, env),
+                "run tests": _timed(
+                    ["ctest", "--test-dir", "build", "--output-on-failure", jobs],
+                    src,
+                    env,
+                ),
+            }
+
+    return Project(
+        version=version,
+        build=build,
+        comment="Builds and runs Abseil's upstream CMake test suite.",
     )
 
 
@@ -843,6 +911,7 @@ def _simdutf() -> Project:
 
 
 PROJECTS: dict[str, Project] = {
+    "abseil": _abseil(),
     "catch2": _catch2(),
     "cmake": _cmake(),
     "cppcheck": _cppcheck(),

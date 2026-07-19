@@ -1,5 +1,6 @@
 #pragma once
 #include <__psychicstd_config>
+#include <__psychicstd_minmax>
 #include <__psychicstd_string_algobase>
 #include <initializer_list>
 #include <iterator>
@@ -16,21 +17,6 @@ constexpr It2 swap_ranges(It1 first1, It1 last1, It2 first2) {
 }
 
 // min / max / clamp
-template <typename T> constexpr const T& min(const T& a, const T& b) {
-  return b < a ? b : a;
-}
-template <typename T> constexpr const T& max(const T& a, const T& b) {
-  return a < b ? b : a;
-}
-template <typename T, typename Compare>
-constexpr const T& min(const T& a, const T& b, Compare cmp) {
-  return cmp(b, a) ? b : a;
-}
-template <typename T, typename Compare>
-constexpr const T& max(const T& a, const T& b, Compare cmp) {
-  return cmp(a, b) ? b : a;
-}
-
 template <typename T> constexpr T min(initializer_list<T> il) {
   const T* p = il.begin();
   const T* result = p;
