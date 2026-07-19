@@ -10,17 +10,17 @@ Builds and runs Abseil's upstream absl/base tests.
 
 | step | system (s) | psychicstd (s) | speedup | comment |
 | --- | ---: | ---: | ---: | --- |
-| configure | 2.06 | 2.09 | 🟡 0.99x [0.92x, 1.09x] | |
-| compile | 20.15 | 8.81 | 🟢 2.29x [2.22x, 2.35x] | |
-| run tests | 0.44 | 0.36 | 🟢 1.21x [1.17x, 1.25x] | |
+| configure | 2.63 | 2.41 | 🟢 1.09x [1.04x, 1.20x] | |
+| compile | 15.33 | 7.14 | 🟢 2.15x [2.11x, 2.37x] | |
+| run tests | 0.26 | 0.25 | 🟢 1.04x [1.01x, 1.11x] | |
 
 ### Release
 
 | step | system (s) | psychicstd (s) | speedup | comment |
 | --- | ---: | ---: | ---: | --- |
-| configure | 2.13 | 2.33 | 🟡 0.92x [0.89x, 1.13x] | |
-| compile | 24.48 | 17.40 | 🟢 1.41x [1.39x, 1.42x] | |
-| run tests | 0.10 | 0.10 | 🟢 1.09x [1.04x, 1.15x] | |
+| configure | 2.45 | 2.45 | 🟡 1.00x [0.90x, 1.55x] | |
+| compile | 19.67 | 14.23 | 🟢 1.38x [1.31x, 1.41x] | |
+| run tests | 0.09 | 0.08 | 🟡 1.07x [0.99x, 1.16x] | |
 
 ______________________________________________________________________
 
