@@ -39,6 +39,7 @@ class any {
     static void move(any& src, any& dst) noexcept {
       // move
       new (&dst.buf_) T(static_cast<T&&>(*ptr(src)));
+      ptr(src)->~T();
       dst.vt_ = src.vt_;
       src.vt_ = nullptr;
     }
