@@ -1,6 +1,7 @@
 #pragma once
 #include <__psychicstd_equal_to>
 #include <__psychicstd_hash>
+#include <__psychicstd_ordering>
 // Functor structs and scalar hash specializations split out of <functional> so
 // containers can pick them up without the heavier functional machinery.
 #include <cstddef>
@@ -8,30 +9,6 @@
 namespace std {
 
 // Comparison functors
-template <typename T = void> struct less {
-  constexpr bool operator()(const T& a, const T& b) const { return a < b; }
-};
-template <> struct less<void> {
-  template <typename T, typename U>
-  constexpr auto operator()(T&& a, U&& b) const
-      -> decltype(static_cast<T&&>(a) < static_cast<U&&>(b)) {
-    return static_cast<T&&>(a) < static_cast<U&&>(b);
-  }
-  using is_transparent = void;
-};
-
-template <typename T = void> struct greater {
-  constexpr bool operator()(const T& a, const T& b) const { return a > b; }
-};
-template <> struct greater<void> {
-  template <typename T, typename U>
-  constexpr auto operator()(T&& a, U&& b) const
-      -> decltype(static_cast<T&&>(a) > static_cast<U&&>(b)) {
-    return static_cast<T&&>(a) > static_cast<U&&>(b);
-  }
-  using is_transparent = void;
-};
-
 template <typename T = void> struct less_equal {
   constexpr bool operator()(const T& a, const T& b) const { return a <= b; }
 };

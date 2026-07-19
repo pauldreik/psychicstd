@@ -3,9 +3,9 @@
 #include <__psychicstd_contiguous_compare>
 #include <__psychicstd_contiguous_iterator>
 #include <__psychicstd_except>
+#include <__psychicstd_iterator_core>
 #include <cstddef>
 #include <initializer_list>
-#include <iterator>
 #include <memory>
 #include <type_traits>
 
