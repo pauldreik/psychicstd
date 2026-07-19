@@ -1,18 +1,12 @@
 #pragma once
+#include <__psychicstd_exception_base>
 #include <__psychicstd_functors>
 #include <__psychicstd_invoke>
-#include <exception>
 #include <tuple>
 #include <type_traits>
 #include <utility>
 
 namespace std {
-
-class bad_function_call : public exception {
-public:
-  bad_function_call() noexcept = default;
-  const char* what() const noexcept override { return "bad function call"; }
-};
 
 // function<R(Args...)> — type-erased callable
 template <typename> class function;
