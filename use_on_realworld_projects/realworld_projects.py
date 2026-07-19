@@ -307,7 +307,7 @@ def _cmake() -> Project:
 
 def _cppcheck() -> Project:
     version = "2.21.0"
-    url = f"https://github.com/danmar/cppcheck/archive/refs/tags/{version}.tar.gz"
+    url = f"https://github.com/cppcheck-opensource/cppcheck/archive/refs/tags/{version}.tar.gz"
     checksum = "f028ff75ca5372738f3737c8b3e8611426a6526b6aea2ef01301ab0f5902f044"
 
     def build(tc: Toolchain) -> dict[str, float]:
