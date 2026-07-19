@@ -1,4 +1,5 @@
 #pragma once
+#include <__psychicstd_iterator_core>
 #include <cstddef>
 #include <initializer_list>
 #include <iosfwd>
@@ -6,83 +7,11 @@
 
 namespace std {
 
-struct input_iterator_tag {};
-struct output_iterator_tag {};
-struct forward_iterator_tag : input_iterator_tag {};
-struct bidirectional_iterator_tag : forward_iterator_tag {};
-struct random_access_iterator_tag : bidirectional_iterator_tag {};
-struct contiguous_iterator_tag : random_access_iterator_tag {};
-
-namespace __it_detail {
-// C++20 iterators may omit pointer, reference, value_type, iterator_category
-template <typename It, typename = void> struct __ptr {};
-template <typename It> struct __ptr<It, void_t<typename It::pointer>> {
-  using pointer = typename It::pointer;
-};
-
-template <typename It, typename = void> struct __ref {};
-template <typename It> struct __ref<It, void_t<decltype(*declval<It&>())>> {
-  using reference = decltype(*declval<It&>());
-};
-template <typename It>
-  requires requires { typename It::reference; }
-struct __ref<It, void_t<typename It::reference>> {
-  using reference = typename It::reference;
-};
-
-template <typename It, typename = void> struct __vt {};
-template <typename It> struct __vt<It, void_t<typename It::value_type>> {
-  using value_type = typename It::value_type;
-};
-
-template <typename It, typename = void> struct __dt {};
-template <typename It> struct __dt<It, void_t<typename It::difference_type>> {
-  using difference_type = typename It::difference_type;
-};
-
-template <typename It, typename = void> struct __ic {};
-template <typename It> struct __ic<It, void_t<typename It::iterator_category>> {
-  using iterator_category = typename It::iterator_category;
-};
-} // namespace __it_detail
-
-template <typename It>
-struct iterator_traits : __it_detail::__vt<It>,
-                         __it_detail::__dt<It>,
-                         __it_detail::__ptr<It>,
-                         __it_detail::__ref<It>,
-                         __it_detail::__ic<It> {};
-
-// Specialization for raw pointers
-template <typename T> struct iterator_traits<T*> {
-  using difference_type = ptrdiff_t;
-  using value_type = T;
-  using pointer = T*;
-  using reference = T&;
-  using iterator_category = random_access_iterator_tag;
-  using iterator_concept = contiguous_iterator_tag;
-};
-
-template <typename T> struct iterator_traits<const T*> {
-  using difference_type = ptrdiff_t;
-  using value_type = T;
-  using pointer = const T*;
-  using reference = const T&;
-  using iterator_category = random_access_iterator_tag;
-  using iterator_concept = contiguous_iterator_tag;
-};
-
-// C++20 iterator utility aliases
 template <typename It>
 using iter_value_t = typename iterator_traits<It>::value_type;
-
 template <typename It>
 using iter_difference_t = typename iterator_traits<It>::difference_type;
-
 template <typename It> using iter_reference_t = decltype(*declval<It&>());
-
-// iter_rvalue_reference_t — forward declared; defined after ranges::iter_move
-// is available Placeholder until <ranges> provides ranges::iter_move via ADL
 namespace __iter_rr_detail {
 template <typename It>
 constexpr auto __iter_move_impl(It&& i)
@@ -90,143 +19,20 @@ constexpr auto __iter_move_impl(It&& i)
   return static_cast<decltype(*i)&&>(*i);
 }
 } // namespace __iter_rr_detail
-// iter_rvalue_reference_t: type of "rvalue ref to element" — uses move(*i) as
-// approximation
 template <typename It>
 using iter_rvalue_reference_t =
     decltype(__iter_rr_detail::__iter_move_impl(declval<It&>()));
-
-// indirectly_readable — simplified: has value_type, dereferenceable
 template <typename In>
 concept indirectly_readable = requires(const remove_cvref_t<In>& i) {
   typename iter_value_t<remove_cvref_t<In>>;
   typename iter_reference_t<remove_cvref_t<In>>;
   { *i };
 };
-
-// indirectly_writable — simplified: can write T through I
 template <typename It, typename T>
 concept indirectly_writable = requires(It&& i, T&& t) {
   *i = static_cast<T&&>(t);
   *static_cast<It&&>(i) = static_cast<T&&>(t);
 };
-
-// reverse_iterator
-template <typename It> class reverse_iterator {
-public:
-  using iterator_type = It;
-  using difference_type = typename iterator_traits<It>::difference_type;
-  using value_type = typename iterator_traits<It>::value_type;
-  using pointer = typename iterator_traits<It>::pointer;
-  using reference = typename iterator_traits<It>::reference;
-  using iterator_category = typename iterator_traits<It>::iterator_category;
-
-  constexpr reverse_iterator() = default;
-  constexpr explicit reverse_iterator(It it) : current_(it) {}
-  template <typename U>
-  constexpr reverse_iterator(const reverse_iterator<U>& o)
-      : current_(o.base()) {}
-
-  constexpr It base() const { return current_; }
-  constexpr reference operator*() const {
-    It tmp = current_;
-    return *--tmp;
-  }
-  constexpr pointer operator->() const { return addressof(operator*()); }
-  constexpr reference operator[](difference_type n) const {
-    return *(*this + n);
-  }
-
-  constexpr reverse_iterator& operator++() {
-    --current_;
-    return *this;
-  }
-  constexpr reverse_iterator operator++(int) {
-    auto t = *this;
-    --current_;
-    return t;
-  }
-  constexpr reverse_iterator& operator--() {
-    ++current_;
-    return *this;
-  }
-  constexpr reverse_iterator operator--(int) {
-    auto t = *this;
-    ++current_;
-    return t;
-  }
-
-  constexpr reverse_iterator operator+(difference_type n) const {
-    return reverse_iterator(current_ - n);
-  }
-  constexpr reverse_iterator operator-(difference_type n) const {
-    return reverse_iterator(current_ + n);
-  }
-  constexpr reverse_iterator& operator+=(difference_type n) {
-    current_ -= n;
-    return *this;
-  }
-  constexpr reverse_iterator& operator-=(difference_type n) {
-    current_ += n;
-    return *this;
-  }
-
-private:
-  It current_;
-
-  // addressof helper (avoid pulling in <memory>)
-  template <typename T> static T* addressof(T& r) noexcept {
-    return __builtin_addressof(r);
-  }
-};
-
-template <typename It>
-constexpr reverse_iterator<It>
-operator+(typename reverse_iterator<It>::difference_type n,
-          const reverse_iterator<It>& it) {
-  return it + n;
-}
-
-template <typename It1, typename It2>
-constexpr bool operator==(const reverse_iterator<It1>& a,
-                          const reverse_iterator<It2>& b) {
-  return a.base() == b.base();
-}
-template <typename It1, typename It2>
-constexpr bool operator!=(const reverse_iterator<It1>& a,
-                          const reverse_iterator<It2>& b) {
-  return a.base() != b.base();
-}
-template <typename It1, typename It2>
-constexpr bool operator<(const reverse_iterator<It1>& a,
-                         const reverse_iterator<It2>& b) {
-  return b.base() < a.base();
-}
-template <typename It1, typename It2>
-constexpr bool operator<=(const reverse_iterator<It1>& a,
-                          const reverse_iterator<It2>& b) {
-  return !(b < a);
-}
-template <typename It1, typename It2>
-constexpr bool operator>(const reverse_iterator<It1>& a,
-                         const reverse_iterator<It2>& b) {
-  return b < a;
-}
-template <typename It1, typename It2>
-constexpr bool operator>=(const reverse_iterator<It1>& a,
-                          const reverse_iterator<It2>& b) {
-  return !(a < b);
-}
-template <typename It1, typename It2>
-constexpr auto operator-(const reverse_iterator<It1>& a,
-                         const reverse_iterator<It2>& b) {
-  return b.base() - a.base();
-}
-
-template <typename It>
-constexpr reverse_iterator<It> make_reverse_iterator(It it) {
-  return reverse_iterator<It>(it);
-}
 
 // distance / advance / next / prev
 template <typename InputIt>
