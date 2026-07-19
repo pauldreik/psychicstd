@@ -15,6 +15,16 @@ struct value {
   }
 };
 
+struct tracked {
+  static int live;
+  tracked() { ++live; }
+  tracked(const tracked&) { ++live; }
+  tracked(tracked&&) noexcept { ++live; }
+  ~tracked() { --live; }
+};
+
+int tracked::live = 0;
+
 int main() {
   std::any a = 42;
   psyassert(std::any_cast<int>(a) == 42);
@@ -30,4 +40,12 @@ int main() {
 
   value moved = std::any_cast<value>(static_cast<std::any&&>(d));
   psyassert(moved.n == 7);
+
+  {
+    std::any source = tracked{};
+    std::any target;
+    target = static_cast<std::any&&>(source);
+    psyassert(tracked::live == 1);
+  }
+  psyassert(tracked::live == 0);
 }
