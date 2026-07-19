@@ -1,4 +1,5 @@
 #pragma once
+#include <__psychicstd_begin_end>
 #include <cstddef>
 
 // Layout must exactly match GCC/Clang's internal representation.
