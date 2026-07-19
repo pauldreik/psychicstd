@@ -1,5 +1,6 @@
 #pragma once
 #include <__psychicstd_iterator_core>
+#include <__psychicstd_iterator_next>
 #include <__psychicstd_ostreambuf_iterator>
 #include <cstddef>
 #include <initializer_list>
@@ -70,13 +71,6 @@ constexpr void advance(InputIt& it, Distance n) {
     while (n-- > 0)
       ++it;
   }
-}
-
-template <typename InputIt>
-constexpr InputIt
-next(InputIt it, typename iterator_traits<InputIt>::difference_type n = 1) {
-  advance(it, n);
-  return it;
 }
 
 template <typename BidirIt>
