@@ -1,6 +1,6 @@
 #pragma once
+#include <__psychicstd_traits_core>
 #include <compare>
-#include <type_traits>
 
 namespace std::__contiguous_detail {
 
@@ -14,7 +14,8 @@ concept __stw = !__ntw<T> && requires(const T& a, const T& b) {
 
 template <typename T> constexpr auto __cmp_result() {
   if constexpr (__ntw<T>)
-    return declval<const T&>() <=> declval<const T&>();
+    return __psychicstd_detail::declval<const T&>() <=>
+           __psychicstd_detail::declval<const T&>();
   else
     return weak_ordering::equivalent;
 }

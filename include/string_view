@@ -2,10 +2,10 @@
 #include <__psychicstd_config>
 #include <__psychicstd_except>
 #include <__psychicstd_iterator_core>
+#include <__psychicstd_traits_core>
 #include <compare>
 #include <cstddef>
 #include <iosfwd>
-#include <type_traits>
 namespace std {
 
 template <typename Char, typename Traits = char_traits<Char>>
@@ -36,7 +36,7 @@ private:
   static constexpr size_type _length(const Char* s) noexcept {
     if (!s)
       return 0;
-    if constexpr (is_same_v<Char, char>) {
+    if constexpr (__psychicstd_detail::is_same_v<Char, char>) {
       return __builtin_strlen(s);
     } else {
       size_type n = 0;
@@ -269,15 +269,16 @@ private:
 };
 
 template <typename C, typename T>
-constexpr bool operator==(basic_string_view<C, T> a,
-                          type_identity_t<basic_string_view<C, T>> b) noexcept {
+constexpr bool operator==(
+    basic_string_view<C, T> a,
+    __psychicstd_detail::type_identity_t<basic_string_view<C, T>> b) noexcept {
   return a.size() == b.size() &&
          (a.size() == 0 || __builtin_memcmp(a.data(), b.data(), a.size()) == 0);
 }
 template <typename C, typename T>
-constexpr auto
-operator<=>(basic_string_view<C, T> a,
-            type_identity_t<basic_string_view<C, T>> b) noexcept {
+constexpr auto operator<=>(
+    basic_string_view<C, T> a,
+    __psychicstd_detail::type_identity_t<basic_string_view<C, T>> b) noexcept {
   return a.compare(b) <=> 0;
 }
 

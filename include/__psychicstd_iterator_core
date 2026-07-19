@@ -1,6 +1,6 @@
 #pragma once
+#include <__psychicstd_traits_core>
 #include <cstddef>
-#include <type_traits>
 
 namespace std {
 
@@ -13,28 +13,34 @@ struct contiguous_iterator_tag : random_access_iterator_tag {};
 
 namespace __it_detail {
 template <typename It, typename = void> struct __ptr {};
-template <typename It> struct __ptr<It, void_t<typename It::pointer>> {
+template <typename It>
+struct __ptr<It, __psychicstd_detail::void_t<typename It::pointer>> {
   using pointer = typename It::pointer;
 };
 template <typename It, typename = void> struct __ref {};
-template <typename It> struct __ref<It, void_t<decltype(*declval<It&>())>> {
+template <typename It>
+struct __ref<It, __psychicstd_detail::void_t<
+                     decltype(*__psychicstd_detail::declval<It&>())>> {
   using reference = decltype(*declval<It&>());
 };
 template <typename It>
   requires requires { typename It::reference; }
-struct __ref<It, void_t<typename It::reference>> {
+struct __ref<It, __psychicstd_detail::void_t<typename It::reference>> {
   using reference = typename It::reference;
 };
 template <typename It, typename = void> struct __vt {};
-template <typename It> struct __vt<It, void_t<typename It::value_type>> {
+template <typename It>
+struct __vt<It, __psychicstd_detail::void_t<typename It::value_type>> {
   using value_type = typename It::value_type;
 };
 template <typename It, typename = void> struct __dt {};
-template <typename It> struct __dt<It, void_t<typename It::difference_type>> {
+template <typename It>
+struct __dt<It, __psychicstd_detail::void_t<typename It::difference_type>> {
   using difference_type = typename It::difference_type;
 };
 template <typename It, typename = void> struct __ic {};
-template <typename It> struct __ic<It, void_t<typename It::iterator_category>> {
+template <typename It>
+struct __ic<It, __psychicstd_detail::void_t<typename It::iterator_category>> {
   using iterator_category = typename It::iterator_category;
 };
 } // namespace __it_detail
