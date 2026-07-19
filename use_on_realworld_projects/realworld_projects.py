@@ -282,7 +282,9 @@ def _abseil() -> Project:
                 "absl_endian_test",
                 "absl_no_destructor_test",
             ]
-            base_tests = [target for target in base_targets if target.startswith("absl_")]
+            base_tests = [
+                target for target in base_targets if target.startswith("absl_")
+            ]
             test_filter = "^(" + "|".join(base_tests) + ")$"
 
             def compile_base() -> float:
