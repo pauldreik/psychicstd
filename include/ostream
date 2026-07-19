@@ -1,6 +1,5 @@
 #pragma once
 #include <cstdio>
-#include <exception>
 #include <ios>
 #include <streambuf>
 #include <type_traits>

@@ -1,6 +1,6 @@
 #pragma once
+#include <__psychicstd_iterator_core>
 #include <compare>
-#include <iterator>
 #include <type_traits>
 
 // Minimal <concepts> stub

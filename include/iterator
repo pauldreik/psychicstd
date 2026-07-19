@@ -9,11 +9,6 @@
 
 namespace std {
 
-template <typename It>
-using iter_value_t = typename iterator_traits<It>::value_type;
-template <typename It>
-using iter_difference_t = typename iterator_traits<It>::difference_type;
-template <typename It> using iter_reference_t = decltype(*declval<It&>());
 namespace __iter_rr_detail {
 template <typename It>
 constexpr auto __iter_move_impl(It&& i)

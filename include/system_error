@@ -1,7 +1,6 @@
 #pragma once
 #include <__psychicstd_except>
 #include <cstdio>
-#include <exception>
 #include <string.h> // strerror_r
 #include <string>
 

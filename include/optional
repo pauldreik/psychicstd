@@ -1,6 +1,6 @@
 #pragma once
 #include <__psychicstd_config>
-#include <exception>
+#include <__psychicstd_exception_base>
 #include <initializer_list>
 #include <memory>
 #include <type_traits>
