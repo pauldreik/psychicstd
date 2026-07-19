@@ -2,15 +2,12 @@
 #include <__psychicstd_algobase>
 #include <__psychicstd_algoheap>
 #include <__psychicstd_config>
-#include <initializer_list>
+#if _PSYCHICSTD_COMPATIBILITY_LEVEL >= _PSYCHICSTD_COMPAT_DROPIN
+#include <__psychicstd_functors> // Preserve transitive std::equal_to.
+#endif
 #include <iterator>
-#include <type_traits>
-#include <utility>
 
 #if _PSYCHICSTD_COMPATIBILITY_LEVEL >= _PSYCHICSTD_COMPAT_DROPIN
-// Preserve the include surface real-world libstdc++ code sees through its
-// broader header graph. Catch2 relies on equal_to being available here.
-#include <functional>
 #include <tuple>
 #endif
 
