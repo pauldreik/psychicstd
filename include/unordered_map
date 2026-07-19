@@ -38,6 +38,9 @@ class unordered_map {
   Allocator allocator_{};
 
   size_t bucket(const Key& k) const { return hasher_(k) % nbuckets_; }
+  template <typename K> size_t bucket(const K& k) const {
+    return hasher_(k) % nbuckets_;
+  }
 
   void destroy() {
     for (size_t i = 0; i < nbuckets_; ++i) {
@@ -289,12 +292,56 @@ public:
         return {this, b, n};
     return end();
   }
+  template <typename K>
+    requires requires {
+      typename Hash::is_transparent;
+      typename KeyEqual::is_transparent;
+    }
+  iterator find(const K& k) {
+    size_t b = bucket(k);
+    for (Node* n = buckets_[b]; n; n = n->next)
+      if (eq_(n->kv.first, k))
+        return {this, b, n};
+    return end();
+  }
+  template <typename K>
+    requires requires {
+      typename Hash::is_transparent;
+      typename KeyEqual::is_transparent;
+    }
+  const_iterator find(const K& k) const {
+    size_t b = bucket(k);
+    for (Node* n = buckets_[b]; n; n = n->next)
+      if (eq_(n->kv.first, k))
+        return {this, b, n};
+    return end();
+  }
   pair<iterator, iterator> equal_range(const Key& k) {
     auto it = find(k);
     return it == end() ? pair<iterator, iterator>{it, it}
                        : pair<iterator, iterator>{it, next(it)};
   }
   pair<const_iterator, const_iterator> equal_range(const Key& k) const {
+    auto it = find(k);
+    return it == end() ? pair<const_iterator, const_iterator>{it, it}
+                       : pair<const_iterator, const_iterator>{it, next(it)};
+  }
+  template <typename K>
+    requires requires {
+      typename Hash::is_transparent;
+      typename KeyEqual::is_transparent;
+    }
+  pair<iterator, iterator> equal_range(const K& k) {
+    auto it = find(k);
+    return it == end() ? pair<iterator, iterator>{it, it}
+                       : pair<iterator, iterator>{it, next(it)};
+  }
+  template <typename K>
+    requires requires {
+      typename Hash::is_transparent;
+      typename KeyEqual::is_transparent;
+    }
+  pair<const_iterator, const_iterator> equal_range(const K& k) const {
     auto it = find(k);
     return it == end() ? pair<const_iterator, const_iterator>{it, it}
                        : pair<const_iterator, const_iterator>{it, next(it)};
@@ -339,6 +386,14 @@ public:
     return it->second;
   }
   size_type count(const Key& k) const { return find(k) != end() ? 1 : 0; }
+  template <typename K>
+    requires requires {
+      typename Hash::is_transparent;
+      typename KeyEqual::is_transparent;
+    }
+  size_type count(const K& k) const {
+    return find(k) != end() ? 1 : 0;
+  }
 
   pair<iterator, bool> insert(const value_type& kv) {
     size_t b = bucket(kv.first);
