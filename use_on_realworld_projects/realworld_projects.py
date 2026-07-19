@@ -230,14 +230,7 @@ def _googletest() -> Project:
             with tarfile.open(tarball) as t:
                 t.extractall(work)
             src = work / f"googletest-{version}"
-            # GoogleTest also builds no-RTTI/no-exception variants of its
-            # tests. psychicstd's current any/memory/locale implementations
-            # require those language features internally.
-            wrapper = _compiler_wrapper(
-                work / "cxx",
-                tc,
-                ("-frtti", "-fexceptions", "-DGTEST_HAS_CXXABI_H_=1"),
-            )
+            wrapper = _compiler_wrapper(work / "cxx", tc)
             env = _env(tc)
             configure = [
                 "cmake",
