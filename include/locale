@@ -1,4 +1,5 @@
 #pragma once
+#include <__psychicstd_config>
 #include <ctime>
 #include <cwchar>
 #include <iterator>
@@ -63,9 +64,13 @@ public:
   bool operator!=(const locale& o) const noexcept { return rep_ != o.rep_; }
 
   template <typename F> const F* _facet() const {
+#if _PSYCHICSTD_HAS_RTTI
     for (_node* node = rep_ ? rep_->head : nullptr; node; node = node->next)
       if (const auto* facet = dynamic_cast<const F*>(node->value))
         return facet;
+#else
+    (void)sizeof(F);
+#endif
     return nullptr;
   }
 

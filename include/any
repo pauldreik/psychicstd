@@ -42,7 +42,13 @@ class any {
       dst.vt_ = src.vt_;
       src.vt_ = nullptr;
     }
-    static constexpr VTable make() { return {destroy, copy, move, &typeid(T)}; }
+    static constexpr VTable make() {
+#if _PSYCHICSTD_HAS_RTTI
+      return {destroy, copy, move, &typeid(T)};
+#else
+      return {destroy, copy, move, nullptr};
+#endif
+    }
   };
 
   template <typename T> struct Ops<T, false> {
@@ -61,7 +67,13 @@ class any {
       src.heap_ = nullptr;
       src.vt_ = nullptr;
     }
-    static constexpr VTable make() { return {destroy, copy, move, &typeid(T)}; }
+    static constexpr VTable make() {
+#if _PSYCHICSTD_HAS_RTTI
+      return {destroy, copy, move, &typeid(T)};
+#else
+      return {destroy, copy, move, nullptr};
+#endif
+    }
   };
 
   const VTable* vt_ = nullptr;
@@ -130,7 +142,11 @@ public:
   }
 
   const type_info& type() const noexcept {
+#if _PSYCHICSTD_HAS_RTTI
     return vt_ ? *vt_->ti : typeid(void);
+#else
+    __builtin_abort();
+#endif
   }
 };
 
@@ -144,8 +160,13 @@ inline void swap(any& a, any& b) noexcept {
 }
 
 template <typename T> T* any_cast(any* a) noexcept {
+#if _PSYCHICSTD_HAS_RTTI
   if (!a || !a->vt_ || a->vt_->ti != &typeid(T))
     return nullptr;
+#else
+  (void)a;
+  return nullptr;
+#endif
   if constexpr (any::is_small<T>)
     return reinterpret_cast<T*>(&a->buf_);
   else

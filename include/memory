@@ -1,4 +1,5 @@
 #pragma once
+#include <__psychicstd_config>
 #include <cstddef>
 #include <new>
 #include <type_traits>
@@ -461,7 +462,12 @@ template <typename U, typename D> struct __sp_ctrl_del : __sp_ctrl {
   __sp_ctrl_del(U* p, E&& d) : obj(p), del(static_cast<E&&>(d)) {}
   void destroy() noexcept override { del(obj); }
   void* get_deleter(const type_info& type) noexcept override {
+#if _PSYCHICSTD_HAS_RTTI
     return type == typeid(D) ? addressof(del) : nullptr;
+#else
+    (void)type;
+    return nullptr;
+#endif
   }
 };
 } // namespace __detail
@@ -612,9 +618,14 @@ public:
 
 template <typename D, typename T>
 D* get_deleter(const shared_ptr<T>& value) noexcept {
+#if _PSYCHICSTD_HAS_RTTI
   if (!value.ctrl_)
     return nullptr;
   return static_cast<D*>(value.ctrl_->get_deleter(typeid(D)));
+#else
+  (void)value;
+  return nullptr;
+#endif
 }
 
 template <typename T, typename U>

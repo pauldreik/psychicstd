@@ -26,6 +26,13 @@
 #define _PSYCHICSTD_COMPATIBILITY_LEVEL _PSYCHICSTD_COMPAT_DROPIN
 #endif
 
+// RTTI capability (honors -fno-rtti).
+#if defined(__GXX_RTTI) || defined(_CPPRTTI)
+#define _PSYCHICSTD_HAS_RTTI 1
+#else
+#define _PSYCHICSTD_HAS_RTTI 0
+#endif
+
 // Exception support (honors -fno-exceptions)
 #if defined(__cpp_exceptions)
 #define _PSYCHICSTD_THROW(x) throw x
