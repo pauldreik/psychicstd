@@ -42,6 +42,34 @@ int main() {
   psyassert(conversion_threw);
   conversion_threw = false;
   try {
+    (void)std::stol("x");
+  } catch (const std::invalid_argument&) {
+    conversion_threw = true;
+  }
+  psyassert(conversion_threw);
+  conversion_threw = false;
+  try {
+    (void)std::stoul("x");
+  } catch (const std::invalid_argument&) {
+    conversion_threw = true;
+  }
+  psyassert(conversion_threw);
+  conversion_threw = false;
+  try {
+    (void)std::stof("x");
+  } catch (const std::invalid_argument&) {
+    conversion_threw = true;
+  }
+  psyassert(conversion_threw);
+  conversion_threw = false;
+  try {
+    (void)std::stod("x");
+  } catch (const std::invalid_argument&) {
+    conversion_threw = true;
+  }
+  psyassert(conversion_threw);
+  conversion_threw = false;
+  try {
     (void)std::stoi("c");
   } catch (const std::invalid_argument&) {
     conversion_threw = true;

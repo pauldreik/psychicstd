@@ -915,10 +915,15 @@ inline int stoi(const string& s, size_t* pos = nullptr, int base = 10) {
   return (int)v;
 }
 inline long stol(const string& s, size_t* pos = nullptr, int base = 10) {
+  errno = 0;
   char* end;
   auto v = ::strtol(s.c_str(), &end, base);
   if (pos)
     *pos = end - s.c_str();
+  if (end == s.c_str())
+    _PSYCHICSTD_THROW(invalid_argument("stol"));
+  if (errno == ERANGE)
+    _PSYCHICSTD_THROW(out_of_range("stol"));
   return v;
 }
 inline long long stoll(const string& s, size_t* pos = nullptr, int base = 10) {
@@ -935,10 +940,15 @@ inline long long stoll(const string& s, size_t* pos = nullptr, int base = 10) {
 }
 inline unsigned long stoul(const string& s, size_t* pos = nullptr,
                            int base = 10) {
+  errno = 0;
   char* end;
   auto v = ::strtoul(s.c_str(), &end, base);
   if (pos)
     *pos = end - s.c_str();
+  if (end == s.c_str())
+    _PSYCHICSTD_THROW(invalid_argument("stoul"));
+  if (errno == ERANGE)
+    _PSYCHICSTD_THROW(out_of_range("stoul"));
   return v;
 }
 inline unsigned long long stoull(const string& s, size_t* pos = nullptr,
@@ -955,17 +965,27 @@ inline unsigned long long stoull(const string& s, size_t* pos = nullptr,
   return v;
 }
 inline float stof(const string& s, size_t* pos = nullptr) {
+  errno = 0;
   char* end;
   auto v = ::strtof(s.c_str(), &end);
   if (pos)
     *pos = end - s.c_str();
+  if (end == s.c_str())
+    _PSYCHICSTD_THROW(invalid_argument("stof"));
+  if (errno == ERANGE)
+    _PSYCHICSTD_THROW(out_of_range("stof"));
   return v;
 }
 inline double stod(const string& s, size_t* pos = nullptr) {
+  errno = 0;
   char* end;
   auto v = ::strtod(s.c_str(), &end);
   if (pos)
     *pos = end - s.c_str();
+  if (end == s.c_str())
+    _PSYCHICSTD_THROW(invalid_argument("stod"));
+  if (errno == ERANGE)
+    _PSYCHICSTD_THROW(out_of_range("stod"));
   return v;
 }
 inline long double stold(const string& s, size_t* pos = nullptr) {
