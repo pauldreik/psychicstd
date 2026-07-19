@@ -6,15 +6,37 @@
 
 namespace std {
 
+class error_code;
+class error_condition;
+
+struct __error_enum_false {
+  using value_type = bool;
+  using type = __error_enum_false;
+  static constexpr bool value = false;
+  constexpr operator bool() const noexcept { return value; }
+};
+template <typename T> struct is_error_code_enum : __error_enum_false {};
+template <typename T> struct is_error_condition_enum : __error_enum_false {};
+template <typename T>
+inline constexpr bool is_error_code_enum_v = is_error_code_enum<T>::value;
+template <typename T>
+inline constexpr bool is_error_condition_enum_v =
+    is_error_condition_enum<T>::value;
+
 class error_category {
 public:
   virtual ~error_category() = default;
   virtual const char* name() const noexcept = 0;
   virtual string message(int ev) const = 0;
+  virtual error_condition default_error_condition(int ev) const noexcept;
+  virtual bool equivalent(int code,
+                          const error_condition& condition) const noexcept;
+  virtual bool equivalent(const error_code& code, int condition) const noexcept;
   bool operator==(const error_category& o) const noexcept { return this == &o; }
   bool operator!=(const error_category& o) const noexcept {
     return !(*this == o);
   }
+  bool operator<(const error_category& o) const noexcept { return this < &o; }
 };
 
 namespace __detail {
@@ -52,6 +74,28 @@ inline const error_category& generic_category() noexcept {
   return c;
 }
 
+class error_condition {
+  int val_ = 0;
+  const error_category* cat_ = &generic_category();
+
+public:
+  error_condition() = default;
+  error_condition(int v, const error_category& c) : val_(v), cat_(&c) {}
+  int value() const noexcept { return val_; }
+  const error_category& category() const noexcept { return *cat_; }
+  string message() const { return cat_->message(val_); }
+  explicit operator bool() const noexcept { return val_ != 0; }
+
+  friend bool operator==(const error_condition& a,
+                         const error_condition& b) noexcept {
+    return a.val_ == b.val_ && a.cat_ == b.cat_;
+  }
+  friend bool operator!=(const error_condition& a,
+                         const error_condition& b) noexcept {
+    return !(a == b);
+  }
+};
+
 class error_code {
   int val_ = 0;
   const error_category* cat_ = &system_category();
@@ -67,7 +111,52 @@ public:
   friend bool operator==(const error_code& a, const error_code& b) noexcept {
     return a.val_ == b.val_ && a.cat_ == b.cat_;
   }
+  friend bool operator!=(const error_code& a, const error_code& b) noexcept {
+    return !(a == b);
+  }
 };
+
+inline bool operator<(const error_code& a, const error_code& b) noexcept {
+  if (a.category() < b.category())
+    return true;
+  if (b.category() < a.category())
+    return false;
+  return a.value() < b.value();
+}
+
+inline error_condition
+error_category::default_error_condition(int ev) const noexcept {
+  return error_condition(ev, *this);
+}
+
+inline bool
+error_category::equivalent(int code,
+                           const error_condition& condition) const noexcept {
+  return default_error_condition(code) == condition;
+}
+
+inline bool error_category::equivalent(const error_code& code,
+                                       int condition) const noexcept {
+  return *this == code.category() && code.value() == condition;
+}
+
+inline bool operator==(const error_code& code,
+                       const error_condition& condition) noexcept {
+  return code.category().equivalent(code.value(), condition) ||
+         condition.category().equivalent(code, condition.value());
+}
+inline bool operator==(const error_condition& condition,
+                       const error_code& code) noexcept {
+  return code == condition;
+}
+inline bool operator!=(const error_code& code,
+                       const error_condition& condition) noexcept {
+  return !(code == condition);
+}
+inline bool operator!=(const error_condition& condition,
+                       const error_code& code) noexcept {
+  return !(code == condition);
+}
 
 class system_error : public runtime_error {
   error_code ec_;
@@ -101,5 +190,16 @@ public:
 inline error_code make_error_code(int e) noexcept {
   return error_code(e, generic_category());
 }
+
+inline error_condition make_error_condition(int e) noexcept {
+  return error_condition(e, generic_category());
+}
+
+template <> struct hash<error_code> {
+  size_t operator()(const error_code& ec) const noexcept {
+    return static_cast<size_t>(ec.value()) ^
+           (reinterpret_cast<size_t>(&ec.category()) >> 4);
+  }
+};
 
 } // namespace std

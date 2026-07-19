@@ -15,6 +15,7 @@
 
 #if _PSYCHICSTD_COMPATIBILITY_LEVEL >= _PSYCHICSTD_COMPAT_DROPIN
 // libstdc++ exposes equal through <string>; Catch2 relies on that exception.
+#include <__psychicstd_minmax>
 #include <__psychicstd_string_algobase>
 // fmt also relies on libstdc++ exposing move and forward through <string>.
 #include <utility>

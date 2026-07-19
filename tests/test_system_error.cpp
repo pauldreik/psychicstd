@@ -35,4 +35,9 @@ int main() {
   psyassert(caught);
 
   psyassert(std::system_error(ec, "test").code() == ec);
+
+  std::error_condition condition(EDOM, std::generic_category());
+  psyassert(condition.value() == EDOM);
+  psyassert(condition.category() == std::generic_category());
+  psyassert(ec == condition);
 }

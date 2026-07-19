@@ -133,6 +133,7 @@ template <typename F, typename... Bound> struct __bind_wrapper {
   F f_;
   tuple<Bound...> bound_;
   template <typename F2, typename... B2>
+    requires(!is_same_v<decay_t<F2>, __bind_wrapper>)
   constexpr __bind_wrapper(F2&& f, B2&&... b)
       : f_(static_cast<F2&&>(f)), bound_(static_cast<B2&&>(b)...) {}
   template <typename... Args>
