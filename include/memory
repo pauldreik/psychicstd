@@ -675,7 +675,9 @@ public:
   T* operator->() const noexcept { return ptr_; }
   T* get() const noexcept { return ptr_; }
   explicit operator bool() const noexcept { return ptr_ != nullptr; }
-  long use_count() const noexcept { return ctrl_ ? ctrl_->count : 0; }
+  long use_count() const noexcept {
+    return ctrl_ ? __atomic_load_n(&ctrl_->count, __ATOMIC_RELAXED) : 0;
+  }
   bool unique() const noexcept { return use_count() == 1; }
 
   void reset() noexcept {

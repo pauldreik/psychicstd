@@ -1159,10 +1159,16 @@ def _opencv() -> Project:
     version = "4.13.0"
     url = f"https://github.com/opencv/opencv/archive/refs/tags/{version}.tar.gz"
     checksum = "1d40ca017ea51c533cf9fd5cbde5b5fe7ae248291ddf2af99d4c17cf8e13017d"
+    extra_url = (
+        f"https://github.com/opencv/opencv_extra/archive/refs/tags/{version}.tar.gz"
+    )
+    extra_checksum = "73eda44b867b898c3266db6b0c31c1641a7b6ca6e46914c43508e780a7d56d66"
 
     def build(tc: Toolchain) -> dict[str, float]:
         tarball = RW_DIR / f"opencv-{version}.tar.gz"
         _fetch(url, tarball, checksum)
+        extra_tarball = RW_DIR / f"opencv_extra-{version}.tar.gz"
+        _fetch(extra_url, extra_tarball, extra_checksum)
 
         with tempfile.TemporaryDirectory(
             prefix="rw-opencv-", ignore_cleanup_errors=True
@@ -1170,9 +1176,12 @@ def _opencv() -> Project:
             work = Path(work_dir)
             with tarfile.open(tarball) as t:
                 t.extractall(work)
+            with tarfile.open(extra_tarball) as t:
+                t.extractall(work)
             src = work / f"opencv-{version}"
+            test_data = work / f"opencv_extra-{version}" / "testdata"
 
-            env = _env(tc)
+            env = _env(tc, OPENCV_TEST_DATA_PATH=str(test_data))
             # OpenCV enables a large collection of optional codecs, language
             # bindings, and hardware backends by default. They are unrelated
             # to the standard-library-heavy core and make this recipe depend
@@ -1213,7 +1222,8 @@ def _opencv() -> Project:
                 "-DWITH_OPENEXR=OFF",
                 "-DBUILD_OPENEXR=OFF",
                 "-DWITH_JPEG=OFF",
-                "-DWITH_PNG=OFF",
+                # The imgproc unit tests use PNG regression fixtures.
+                "-DWITH_PNG=ON",
                 "-DWITH_TIFF=OFF",
                 "-DWITH_WEBP=OFF",
                 "-DWITH_OPENJPEG=OFF",
