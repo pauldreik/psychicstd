@@ -197,8 +197,16 @@ constexpr pair<Out1, Out2> partition_copy(In first, In last, Out1 out_true,
 
 template <typename It, typename Pred>
 constexpr bool is_partitioned(It first, It last, Pred pred) {
-  first = find_if_not(first, last, pred);
-  return all_of(first, last, [&](const auto& value) { return !pred(value); });
+  bool seen_false = false;
+  for (; first != last; ++first) {
+    if (pred(*first)) {
+      if (seen_false)
+        return false;
+    } else {
+      seen_false = true;
+    }
+  }
+  return true;
 }
 
 template <typename It, typename Pred>
@@ -335,11 +343,22 @@ constexpr It min_element(It first, It last, Compare cmp) {
 }
 template <typename It>
 constexpr pair<It, It> minmax_element(It first, It last) {
-  return {min_element(first, last), max_element(first, last)};
+  return minmax_element(first, last,
+                        [](const auto& a, const auto& b) { return a < b; });
 }
 template <typename It, typename Compare>
 constexpr pair<It, It> minmax_element(It first, It last, Compare cmp) {
-  return {min_element(first, last, cmp), max_element(first, last, cmp)};
+  if (first == last)
+    return {last, last};
+  It min = first;
+  It max = first;
+  for (++first; first != last; ++first) {
+    if (cmp(*first, *min))
+      min = first;
+    if (!cmp(*first, *max))
+      max = first;
+  }
+  return {min, max};
 }
 
 // search / search_n

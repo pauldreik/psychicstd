@@ -29,6 +29,24 @@ constexpr bool constexpr_nth_element() {
 static_assert(constexpr_nth_element());
 
 int main() {
+  {
+    int values[] = {1, 2, 3, 4};
+    int calls = 0;
+    auto pred = [&](int value) {
+      ++calls;
+      return value % 2 != 0;
+    };
+    psyassert(!std::is_partitioned(values, values + 4, pred));
+    psyassert(calls <= 4);
+  }
+
+  {
+    int values[] = {4, 2, 2, 1, 4};
+    auto result = std::minmax_element(values, values + 5);
+    psyassert(result.first == values + 3);
+    psyassert(result.second == values + 4);
+  }
+
   std::vector<int> v = {3, 1, 2};
   std::sort(v.begin(), v.end());
   psyassert(v[0] == 1);
