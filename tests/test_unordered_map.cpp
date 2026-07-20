@@ -14,4 +14,11 @@ int main() {
   m[1] = 42;
   psyassert(m[1] == 42);
   psyassert(m.find(1) != m.cend());
+
+  std::unordered_multimap<int, int> mm;
+  mm.emplace(1, 10);
+  mm.emplace(1, 20);
+  auto range = mm.equal_range(1);
+  psyassert(range.first != range.second);
+  psyassert(range.first->first == 1);
 }

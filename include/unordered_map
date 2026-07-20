@@ -754,6 +754,35 @@ public:
     return n;
   }
 
+  iterator find(const Key& k) {
+    size_t b = bucket(k);
+    for (Node* n = buckets_[b]; n; n = n->next)
+      if (eq_(n->kv.first, k))
+        return {this, b, n};
+    return end();
+  }
+  const_iterator find(const Key& k) const {
+    size_t b = bucket(k);
+    for (Node* n = buckets_[b]; n; n = n->next)
+      if (eq_(n->kv.first, k))
+        return {this, b, n};
+    return end();
+  }
+  pair<iterator, iterator> equal_range(const Key& k) {
+    auto it = find(k);
+    auto last = it;
+    if (last != end())
+      ++last;
+    return {it, last};
+  }
+  pair<const_iterator, const_iterator> equal_range(const Key& k) const {
+    auto it = find(k);
+    auto last = it;
+    if (last != end())
+      ++last;
+    return {it, last};
+  }
+
   void clear() { destroy(); }
 };
 
