@@ -111,6 +111,17 @@ jobs:
         with:
           name: nlohmann-speed-report
           path: use_on_realworld_projects/nlohmann_speed_report.md
+  opencv:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install Ninja
+        run: sudo apt-get install -y ninja-build
+      - name: Build and test OpenCV with psychicstd
+        run: >-
+          python3 scripts/compare_realworld_performance.py --check-only
+          --project opencv --build-type debug
   rapidjson:
     runs-on: ubuntu-latest
     timeout-minutes: 15

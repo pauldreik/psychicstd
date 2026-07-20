@@ -1144,6 +1144,105 @@ def _boost_asio() -> Project:
     )
 
 
+# --- opencv --------------------------------------------------------------
+
+
+def _opencv() -> Project:
+    version = "4.13.0"
+    url = f"https://github.com/opencv/opencv/archive/refs/tags/{version}.tar.gz"
+    checksum = "1d40ca017ea51c533cf9fd5cbde5b5fe7ae248291ddf2af99d4c17cf8e13017d"
+
+    def build(tc: Toolchain) -> dict[str, float]:
+        tarball = RW_DIR / f"opencv-{version}.tar.gz"
+        _fetch(url, tarball, checksum)
+
+        with tempfile.TemporaryDirectory(
+            prefix="rw-opencv-", ignore_cleanup_errors=True
+        ) as work_dir:
+            work = Path(work_dir)
+            with tarfile.open(tarball) as t:
+                t.extractall(work)
+            src = work / f"opencv-{version}"
+
+            env = _env(tc)
+            # OpenCV enables a large collection of optional codecs, language
+            # bindings, and hardware backends by default. They are unrelated
+            # to the standard-library-heavy core and make this recipe depend
+            # on whichever packages happen to be installed on the runner.
+            configure = [
+                "cmake",
+                "-S",
+                ".",
+                "-B",
+                "build",
+                "-GNinja",
+                "-DCMAKE_BUILD_TYPE=" + tc.build_type.capitalize(),
+                "-DCMAKE_CXX_COMPILER=" + tc.cxx,
+                "-DCMAKE_CXX_FLAGS=" + tc.cxxflags,
+                "-DCMAKE_EXE_LINKER_FLAGS=" + tc.ldflags,
+                "-DCMAKE_CXX_STANDARD_LIBRARIES=" + tc.libs,
+                "-DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY",
+                "-DCMAKE_CXX_STANDARD=20",
+                # The test support module owns the generated test targets;
+                # without it BUILD_TESTS=ON leaves only the aggregate target.
+                "-DBUILD_LIST=core,imgproc,ts",
+                "-DBUILD_TESTS=ON",
+                "-DBUILD_PERF_TESTS=OFF",
+                "-DBUILD_EXAMPLES=OFF",
+                "-DBUILD_opencv_apps=OFF",
+                "-DBUILD_opencv_gapi=OFF",
+                "-DBUILD_opencv_python3=OFF",
+                "-DBUILD_JAVA=OFF",
+                "-DWITH_IPP=OFF",
+                "-DWITH_OPENCL=OFF",
+                "-DWITH_OPENGL=OFF",
+                "-DWITH_TBB=OFF",
+                "-DWITH_GTK=OFF",
+                "-DWITH_QT=OFF",
+                "-DWITH_FFMPEG=OFF",
+                "-DWITH_GSTREAMER=OFF",
+                "-DWITH_V4L=OFF",
+            ]
+            jobs = _jobs()
+            return {
+                "configure": _timed(configure, src, env),
+                "compile": _timed(
+                    [
+                        "cmake",
+                        "--build",
+                        "build",
+                        "--target",
+                        "opencv_test_core",
+                        "opencv_test_imgproc",
+                        jobs,
+                    ],
+                    src,
+                    env,
+                ),
+                "run tests": _timed(
+                    [
+                        "ctest",
+                        "--test-dir",
+                        "build",
+                        "--output-on-failure",
+                        "-R",
+                        r"^opencv_test_(core|imgproc)$",
+                        jobs,
+                    ],
+                    src,
+                    env,
+                ),
+            }
+
+    return Project(
+        version=version,
+        build=build,
+        comment="Builds OpenCV's core and imgproc modules and runs their "
+        "upstream tests; optional codecs, bindings, and hardware backends "
+        "are disabled.",
+    )
+
+
 PROJECTS: dict[str, Project] = {
     "abseil": _abseil(),
     "boost-asio": _boost_asio(),
@@ -1154,6 +1253,7 @@ PROJECTS: dict[str, Project] = {
     "fmt": _fmt(),
     "googletest": _googletest(),
     "nlohmann": _nlohmann(),
+    "opencv": _opencv(),
     "rapidjson": _rapidjson(),
     "rdfind": _rdfind(),
     "simdutf": _simdutf(),
