@@ -1210,6 +1210,13 @@ def _opencv() -> Project:
                 "-DWITH_FFMPEG=OFF",
                 "-DWITH_GSTREAMER=OFF",
                 "-DWITH_V4L=OFF",
+                "-DWITH_OPENEXR=OFF",
+                "-DBUILD_OPENEXR=OFF",
+                "-DWITH_JPEG=OFF",
+                "-DWITH_PNG=OFF",
+                "-DWITH_TIFF=OFF",
+                "-DWITH_WEBP=OFF",
+                "-DWITH_OPENJPEG=OFF",
             ]
             jobs = _jobs()
             return {
