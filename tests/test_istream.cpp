@@ -1,5 +1,6 @@
 #include "psyassert.h"
 #include <limits>
+#include <string>
 #include <sstream>
 
 int main() {
@@ -13,6 +14,10 @@ int main() {
   int x = 0;
   in >> x;
   psyassert(x == 42);
+
+  std::string temporary_value;
+  std::istringstream("temporary") >> temporary_value;
+  psyassert(temporary_value == "temporary");
 
   std::istringstream hex_input("a");
   hex_input >> std::hex >> x;

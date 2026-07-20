@@ -1080,6 +1080,14 @@ basic_istream<Char, Traits>& operator>>(basic_istream<Char, Traits>& is,
 }
 
 template <typename Char, typename Traits, typename Alloc>
+basic_istream<Char, Traits>&& operator>>(
+    basic_istream<Char, Traits>&& is,
+    basic_string<Char, Traits, Alloc>& s) {
+  is >> s;
+  return static_cast<basic_istream<Char, Traits>&&>(is);
+}
+
+template <typename Char, typename Traits, typename Alloc>
 basic_istream<Char, Traits>& getline(basic_istream<Char, Traits>& is,
                                      basic_string<Char, Traits, Alloc>& s,
                                      Char delim = Char('\n')) {
