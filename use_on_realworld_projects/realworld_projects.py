@@ -796,6 +796,115 @@ def _nlohmann() -> Project:
     )
 
 
+# --- rapidjson ---------------------------------------------------------
+
+
+def _rapidjson() -> Project:
+    commit = "24b5e7a8b27f42fa16b96fc70aade9106cf7102f"
+    version = f"master-{commit[:12]}"
+    url = f"https://github.com/Tencent/rapidjson/archive/{commit}.tar.gz"
+    checksum = "2d2601a82d2d3b7e143a3c8d43ef616671391034bc46891a9816b79cf2d3e7a8"
+    gtest_version = "1.8.0"
+    gtest_url = (
+        "https://github.com/google/googletest/archive/refs/tags/"
+        f"release-{gtest_version}.tar.gz"
+    )
+    gtest_checksum = "58a6f4277ca2bc8565222b3bbd58a177609e9c488e8a72649359ba51450db7d8"
+
+    def build(tc: Toolchain) -> dict[str, float]:
+        tarball = RW_DIR / f"rapidjson-{commit}.tar.gz"
+        _fetch(url, tarball, checksum)
+        gtest_tarball = RW_DIR / f"googletest-release-{gtest_version}.tar.gz"
+        _fetch(gtest_url, gtest_tarball, gtest_checksum)
+
+        with tempfile.TemporaryDirectory(
+            prefix="rw-rapidjson-", ignore_cleanup_errors=True
+        ) as work_dir:
+            work = Path(work_dir)
+            with tarfile.open(tarball) as t:
+                t.extractall(work)
+            with tarfile.open(gtest_tarball) as t:
+                t.extractall(work)
+            src = work / f"rapidjson-{commit}"
+            gtest_source = work / f"googletest-release-{gtest_version}" / "googletest"
+
+            env = _env(tc)
+            # GoogleTest 1.8.0 triggers this warning in modern GCC; RapidJSON
+            # applies -Werror globally to its bundled test dependencies.
+            cxxflags = tc.cxxflags + (
+                " -Wno-error=maybe-uninitialized"
+                " -Wno-error=sign-conversion -Wno-error=sign-compare"
+            )
+            if "clang" not in tc.cxx.lower():
+                # GCC 12 diagnoses RapidJSON's realloc wrapper at -O3 as an
+                # impossibly large allocation; its tests intentionally pass
+                # the allocation through that wrapper.
+                cxxflags += (
+                    " -Wno-error=alloc-size-larger-than= -Wno-error=array-bounds"
+                )
+            configure = [
+                "cmake",
+                "-S",
+                ".",
+                "-B",
+                "build",
+                "-GNinja",
+                "-DCMAKE_BUILD_TYPE=" + tc.build_type.capitalize(),
+                "-DCMAKE_CXX_COMPILER=" + tc.cxx,
+                "-DCMAKE_CXX_FLAGS=" + cxxflags,
+                "-DCMAKE_EXE_LINKER_FLAGS=" + tc.ldflags,
+                "-DCMAKE_CXX_STANDARD_LIBRARIES=" + tc.libs,
+                "-DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY",
+                "-DCMAKE_POLICY_VERSION_MINIMUM=3.5",
+                "-DGTEST_SOURCE_DIR=" + str(gtest_source),
+                "-DCMAKE_CXX_STANDARD=20",
+                "-DRAPIDJSON_BUILD_CXX11=OFF",
+                "-DRAPIDJSON_BUILD_CXX20=ON",
+                "-DRAPIDJSON_BUILD_DOC=OFF",
+                "-DRAPIDJSON_BUILD_EXAMPLES=ON",
+                "-DRAPIDJSON_BUILD_TESTS=ON",
+                "-DRAPIDJSON_ENABLE_INSTRUMENTATION_OPT=OFF",
+            ]
+            jobs = _jobs()
+            return {
+                "configure": _timed(configure, src, env),
+                "compile": _timed(
+                    [
+                        "cmake",
+                        "--build",
+                        "build",
+                        "--target",
+                        "examples",
+                        "archivertest",
+                        "unittest",
+                        jobs,
+                    ],
+                    src,
+                    env,
+                ),
+                "run example": _timed(
+                    [
+                        str(src / "build" / "bin" / "simpledom"),
+                    ],
+                    src,
+                    env,
+                ),
+                "run tests": _timed(
+                    [str(src / "build" / "bin" / "unittest")],
+                    src,
+                    env,
+                ),
+            }
+
+    return Project(
+        version=version,
+        build=build,
+        phases=("configure", "compile", "run example", "run tests"),
+        comment="RapidJSON's examples, archivertest, and unit tests are built; "
+        "simpledom and unittest are run.",
+    )
+
+
 # --- rdfind ---------------------------------------------------------------
 
 
@@ -1045,6 +1154,7 @@ PROJECTS: dict[str, Project] = {
     "fmt": _fmt(),
     "googletest": _googletest(),
     "nlohmann": _nlohmann(),
+    "rapidjson": _rapidjson(),
     "rdfind": _rdfind(),
     "simdutf": _simdutf(),
 }

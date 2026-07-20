@@ -79,7 +79,7 @@ def main() -> None:
         action="append",
         default=[],
         metavar="name:path",
-        help="Extra include path for a named key (e.g. rapidjson:/path/to/include)",
+        help="Extra include path for a named key (e.g. thirdparty:/path/to/include)",
     )
     parser.add_argument(
         "--bench-file",
@@ -149,7 +149,7 @@ def main() -> None:
     tests_dir = REPO_ROOT / "tests"
 
     # Auto-discover real-code fixture dirs (benchmarks/compile_time/<name>/*.cpp)
-    # whose name matches a known extra_include key (e.g. rapidjson). These are
+    # whose name matches a known extra_include key (e.g. thirdparty). These are
     # snippets of real third-party code used purely as compile-speed inputs.
     for group in sorted(BENCH_DIR.iterdir()):
         if not group.is_dir() or group.name == "third_party":

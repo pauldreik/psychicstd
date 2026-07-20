@@ -63,4 +63,3 @@ Last updated: 2026-07-07 22:47
 | 🟡 | cstddef | 14.1ms | 12.0ms | 1.2x |
 | 🟡 | bench/cstdint | 13.6ms | 12.6ms | 1.1x |
 | 🟡 | cstdint | 13.6ms | 12.7ms | 1.1x |
-| ⬜ | rapidjson | n/a | n/a | n/a |

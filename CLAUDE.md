@@ -57,8 +57,8 @@ Run these before committing. Each script uses the config files in the repo root:
 
 1. **The library itself** — `tests/`: unit tests (each header compiled twice, `test_*_system` and `test_*_psychicstd`, both must pass to verify behavioral equivalence), a `self_contained_*` test per header (each header must compile on its own), and `tests/external_project/` (simulates an independent CMake project consuming psychicstd via injected flags). No third-party code, no network — this is the fast default build.
 1. **Standards compliance** — `tools/compliance.py`: runs the libc++ test suite against psychicstd.
-1. **Compilation speed** — `benchmarks/compile_time/` (uses rapidjson snippets as real-code input) and the `casestudies/`.
-1. **Real-world** — `use_on_realworld_projects/`: shell scripts that clone, build, and run actual third-party projects (Catch2, cppcheck, eigen, fmt, nlohmann json, rdfind) with psychicstd.
+1. **Compilation speed** — `benchmarks/compile_time/` and the `casestudies/`.
+1. **Real-world** — `use_on_realworld_projects/`: recipes that clone, build, and run actual third-party projects (Catch2, cppcheck, eigen, fmt, nlohmann json, RapidJSON, rdfind) with psychicstd.
 
 **Key implementation notes:**
 
@@ -92,4 +92,4 @@ make
 | Option | Default | Effect |
 |---|---|---|
 | `PSYCHICSTD_BUILD_TESTS` | ON | Unit tests + self-containment tests |
-| `PSYCHICSTD_BUILD_BENCHMARKS` | ON | Compile-time benchmarks (fetches rapidjson) |
+| `PSYCHICSTD_BUILD_BENCHMARKS` | ON | Compile-time benchmarks |

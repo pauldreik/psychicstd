@@ -78,24 +78,6 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS On)
 option(PSYCHICSTD_BUILD_TESTS "Build tests" ON)
 option(PSYCHICSTD_BUILD_BENCHMARKS "Build compile-time benchmarks" ON)
 
-# rapidjson is used only as a real-code input for the compile-time benchmarks,
-# so fetch it only when benchmarks are enabled. Real-world third-party coverage
-# (Catch2, fmt, eigen, ...) lives in use_on_realworld_projects/, which clones and
-# builds the actual projects rather than vendoring them into this build.
-if(PSYCHICSTD_BUILD_BENCHMARKS)
-    include(FetchContent)
-    FetchContent_Declare(
-        rapidjson
-        GIT_REPOSITORY https://github.com/Tencent/rapidjson.git
-        GIT_TAG master
-        GIT_SHALLOW TRUE
-    )
-    set(RAPIDJSON_BUILD_DOC OFF CACHE BOOL "" FORCE)
-    set(RAPIDJSON_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
-    set(RAPIDJSON_BUILD_TESTS OFF CACHE BOOL "" FORCE)
-    FetchContent_MakeAvailable(rapidjson)
-endif()
-
 if(PSYCHICSTD_BUILD_TESTS)
     enable_testing()
     add_subdirectory(tests)
