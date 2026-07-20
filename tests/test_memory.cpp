@@ -120,6 +120,17 @@ static void test_const_pointer_cast() {
   psyassert(cast.use_count() == 3);
 }
 
+struct SelfShared : std::enable_shared_from_this<SelfShared> {
+  std::shared_ptr<SelfShared> self() { return shared_from_this(); }
+};
+
+static void test_enable_shared_from_this() {
+  auto owner = std::make_shared<SelfShared>();
+  auto self = owner->self();
+  psyassert(self.get() == owner.get());
+  psyassert(owner.use_count() == 2);
+}
+
 static void test_shared_ptr_from_unique_ptr() {
   int deletes = 0;
   std::unique_ptr<Derived, CountingDeleter> unique(new Derived, {&deletes});
@@ -205,6 +216,7 @@ int main() {
   test_converting_copy_ctor();
   test_converting_ctor_from_prvalue();
   test_const_pointer_cast();
+  test_enable_shared_from_this();
   test_shared_ptr_from_unique_ptr();
   test_shared_ptr_custom_deleter();
   test_member_init_from_template_prvalue();

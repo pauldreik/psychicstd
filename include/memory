@@ -510,13 +510,41 @@ template <typename T, typename Alloc> struct __sp_alloc_del {
     allocator_traits<Alloc>::deallocate(alloc, allocation, 1);
   }
 };
+struct __esft_tag {};
 } // namespace __detail
+
+template <typename T> class shared_ptr;
+
+template <typename T> class enable_shared_from_this {
+  mutable __detail::__sp_ctrl* ctrl_ = nullptr;
+  mutable T* ptr_ = nullptr;
+
+  template <typename U> friend class shared_ptr;
+
+  void __accept(__detail::__sp_ctrl* ctrl, T* ptr) const noexcept {
+    if (!ctrl_)
+      ctrl_ = ctrl, ptr_ = ptr;
+  }
+
+protected:
+  constexpr enable_shared_from_this() noexcept = default;
+  enable_shared_from_this(const enable_shared_from_this&) noexcept {}
+  enable_shared_from_this& operator=(const enable_shared_from_this&) noexcept {
+    return *this;
+  }
+  ~enable_shared_from_this() = default;
+
+public:
+  shared_ptr<T> shared_from_this();
+  shared_ptr<const T> shared_from_this() const;
+};
 
 // shared_ptr — non-atomic reference counting (thread-unsafe by design)
 template <typename T> class shared_ptr {
   // Allow shared_ptr<U> to read our private members directly.  Required by
   // the converting constructors and the aliasing constructor below.
   template <typename U> friend class shared_ptr;
+  template <typename U> friend class enable_shared_from_this;
   template <typename D, typename U>
   friend D* get_deleter(const shared_ptr<U>&) noexcept;
 
@@ -536,6 +564,17 @@ template <typename T> class shared_ptr {
     }
   }
 
+  template <typename U> void init_esft(U* p) noexcept {
+    using V = remove_cv_t<U>;
+    if constexpr (is_base_of_v<enable_shared_from_this<V>, V>)
+      static_cast<enable_shared_from_this<V>*>(p)->__accept(ctrl_, p);
+  }
+
+  shared_ptr(__detail::__sp_ctrl* ctrl, T* ptr, __detail::__esft_tag) noexcept
+      : ptr_(ptr), ctrl_(ctrl) {
+    inc();
+  }
+
 public:
   using element_type = T;
 
@@ -544,10 +583,14 @@ public:
 
   template <typename U>
   explicit shared_ptr(U* p)
-      : ptr_(p), ctrl_(new __detail::__sp_ctrl_impl<U>(p)) {}
+      : ptr_(p), ctrl_(new __detail::__sp_ctrl_impl<U>(p)) {
+    init_esft(p);
+  }
   template <typename U, typename D>
   shared_ptr(U* p, D d)
-      : ptr_(p), ctrl_(new __detail::__sp_ctrl_del<U, D>(p, d)) {}
+      : ptr_(p), ctrl_(new __detail::__sp_ctrl_del<U, D>(p, d)) {
+    init_esft(p);
+  }
 
   shared_ptr(const shared_ptr& o) noexcept : ptr_(o.ptr_), ctrl_(o.ctrl_) {
     inc();
@@ -579,6 +622,7 @@ public:
       ctrl_ = new __detail::__sp_ctrl_del<U, D>(
           owned, static_cast<D&&>(o.get_deleter()));
       ptr_ = owned;
+      init_esft(owned);
       o.release();
     }
   }
@@ -655,6 +699,16 @@ public:
     return ctrl_ < o.ctrl_;
   }
 };
+
+template <typename T>
+shared_ptr<T> enable_shared_from_this<T>::shared_from_this() {
+  return shared_ptr<T>(ctrl_, ptr_, {});
+}
+
+template <typename T>
+shared_ptr<const T> enable_shared_from_this<T>::shared_from_this() const {
+  return shared_ptr<const T>(ctrl_, ptr_, {});
+}
 
 template <typename D, typename T>
 D* get_deleter(const shared_ptr<T>& value) noexcept {
