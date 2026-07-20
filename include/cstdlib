@@ -77,6 +77,11 @@ extern int __mb_cur_max;
 #endif
 
 namespace std {
+#if _PSYCHICSTD_COMPATIBILITY_LEVEL >= _PSYCHICSTD_COMPAT_DROPIN
+// Reuse libc's int overload: a separate std::abs(int) makes unqualified
+// calls ambiguous when clients also bring their own abs overloads into scope.
+using ::abs;
+#endif
 #ifdef _PSYCHICSTD_CSTDLIB_MIN_DECLS
 // std-only div family: the SDK's div_t/ldiv_t/lldiv_t are unguarded
 // anonymous-struct typedefs, so redeclaring them at global scope would clash
