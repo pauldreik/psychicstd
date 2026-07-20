@@ -77,7 +77,8 @@ extern int __mb_cur_max;
 #endif
 
 namespace std {
-#if _PSYCHICSTD_COMPATIBILITY_LEVEL >= _PSYCHICSTD_COMPAT_DROPIN
+#if _PSYCHICSTD_COMPATIBILITY_LEVEL >= _PSYCHICSTD_COMPAT_DROPIN &&            \
+    !defined(__clang__)
 // Reuse libc's int overload: a separate std::abs(int) makes unqualified
 // calls ambiguous when clients also bring their own abs overloads into scope.
 using ::abs;
