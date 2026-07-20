@@ -190,6 +190,8 @@ class basic_fstream : public basic_istream<Char, Traits>,
                       public basic_ostream<Char, Traits> {
 public:
   using string_type = basic_string<Char, Traits>;
+  using char_type = Char;
+  using traits_type = Traits;
   using off_type = typename Traits::off_type;
 
   using basic_istream<Char, Traits>::bad;
