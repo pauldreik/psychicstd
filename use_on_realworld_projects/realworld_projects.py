@@ -1221,8 +1221,8 @@ def _opencv() -> Project:
                 "-DWITH_V4L=OFF",
                 "-DWITH_OPENEXR=OFF",
                 "-DBUILD_OPENEXR=OFF",
-                "-DWITH_JPEG=OFF",
-                # The imgproc unit tests use PNG regression fixtures.
+                # The imgproc unit tests use JPEG and PNG regression fixtures.
+                "-DWITH_JPEG=ON",
                 "-DWITH_PNG=ON",
                 "-DWITH_TIFF=OFF",
                 "-DWITH_WEBP=OFF",
