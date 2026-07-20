@@ -17,6 +17,45 @@ public:
   constexpr void real(T r) noexcept { re_ = r; }
   constexpr void imag(T i) noexcept { im_ = i; }
 
+  constexpr complex& operator+=(const complex& o) noexcept {
+    re_ += o.re_;
+    im_ += o.im_;
+    return *this;
+  }
+  constexpr complex& operator-=(const complex& o) noexcept {
+    re_ -= o.re_;
+    im_ -= o.im_;
+    return *this;
+  }
+  constexpr complex& operator*=(const complex& o) noexcept {
+    T r = re_ * o.re_ - im_ * o.im_;
+    im_ = re_ * o.im_ + im_ * o.re_;
+    re_ = r;
+    return *this;
+  }
+  constexpr complex& operator/=(const complex& o) noexcept {
+    *this = *this / o;
+    return *this;
+  }
+  constexpr complex& operator+=(T x) noexcept {
+    re_ += x;
+    return *this;
+  }
+  constexpr complex& operator-=(T x) noexcept {
+    re_ -= x;
+    return *this;
+  }
+  constexpr complex& operator*=(T x) noexcept {
+    re_ *= x;
+    im_ *= x;
+    return *this;
+  }
+  constexpr complex& operator/=(T x) noexcept {
+    re_ /= x;
+    im_ /= x;
+    return *this;
+  }
+
 private:
   T re_, im_;
 };
