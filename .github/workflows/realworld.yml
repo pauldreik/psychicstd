@@ -111,6 +111,17 @@ jobs:
         with:
           name: nlohmann-speed-report
           path: use_on_realworld_projects/nlohmann_speed_report.md
+  rapidjson:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install ninja
+        run: sudo apt-get install -y ninja-build
+      - name: Build and run RapidJSON examples with psychicstd
+        run: >-
+          python3 scripts/compare_realworld_performance.py --check-only
+          --project rapidjson --build-type debug
   fmt:
     runs-on: ubuntu-latest
     steps:
