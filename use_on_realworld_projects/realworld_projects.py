@@ -119,11 +119,19 @@ def _env(tc: Toolchain, **extra: str) -> dict[str, str]:
 
 def _jobs() -> str:
     """Cap parallel builds so each active compiler gets about 1.5 GiB."""
-    available = (
-        os.sysconf("SC_PAGE_SIZE") * os.sysconf("SC_AVPHYS_PAGES")
-        if hasattr(os, "sysconf")
-        else 0
-    )
+    # SC_AVPHYS_PAGES excludes reclaimable cache and substantially
+    # under-reports usable memory on Linux. MemAvailable is the kernel's
+    # estimate of memory available without swapping.
+    available = 0
+    try:
+        for line in Path("/proc/meminfo").read_text().splitlines():
+            if line.startswith("MemAvailable:"):
+                available = int(line.split()[1]) * 1024
+                break
+    except (OSError, ValueError):
+        pass
+    if not available and hasattr(os, "sysconf"):
+        available = os.sysconf("SC_PAGE_SIZE") * os.sysconf("SC_AVPHYS_PAGES")
     memory_jobs = available // (1536 * 1024 * 1024) if available else 1
     return f"-j{max(1, min(os.cpu_count() or 1, memory_jobs))}"
 
