@@ -1,7 +1,7 @@
 #include "psyassert.h"
 #include <limits>
-#include <string>
 #include <sstream>
+#include <string>
 
 int main() {
   std::istream null_stream(nullptr);
