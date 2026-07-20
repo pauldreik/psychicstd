@@ -18,6 +18,30 @@ struct Forwarded {
   explicit Forwarded(int&&) : kind(2) {}
 };
 
+template <typename T> struct counting_allocator {
+  using value_type = T;
+  int* allocations;
+
+  explicit counting_allocator(int* count) : allocations(count) {}
+  template <typename U>
+  counting_allocator(const counting_allocator<U>& other)
+      : allocations(other.allocations) {}
+
+  T* allocate(std::size_t n) {
+    ++*allocations;
+    return std::allocator<T>{}.allocate(n);
+  }
+  void deallocate(T* p, std::size_t n) {
+    --*allocations;
+    std::allocator<T>{}.deallocate(p, n);
+  }
+};
+
+struct Allocated {
+  int value;
+  explicit Allocated(int v) : value(v) {}
+};
+
 struct CountingDeleter {
   int* count;
   void operator()(Derived* ptr) const {
@@ -49,6 +73,17 @@ static void test_forwarding() {
   // not the variadic single-object one (cmake regression).
   auto arr = std::make_unique<char[]>(16);
   psyassert(arr[0] == 0 && arr[15] == 0);
+}
+
+static void test_allocate_shared() {
+  int allocations = 0;
+  {
+    auto value = std::allocate_shared<Allocated>(
+        counting_allocator<void>(&allocations), 42);
+    psyassert(value->value == 42);
+    psyassert(allocations == 1);
+  }
+  psyassert(allocations == 0);
 }
 
 static void test_converting_copy_ctor() {
@@ -157,6 +192,7 @@ int main() {
   psyassert(void_shared.get() == nullptr);
 
   test_forwarding();
+  test_allocate_shared();
   test_converting_copy_ctor();
   test_converting_ctor_from_prvalue();
   test_shared_ptr_from_unique_ptr();
