@@ -718,6 +718,10 @@ shared_ptr<T> static_pointer_cast(const shared_ptr<U>& p) noexcept {
   return shared_ptr<T>(p, static_cast<T*>(p.get()));
 }
 template <typename T, typename U>
+shared_ptr<T> const_pointer_cast(const shared_ptr<U>& p) noexcept {
+  return shared_ptr<T>(p, const_cast<T*>(p.get()));
+}
+template <typename T, typename U>
 shared_ptr<T> dynamic_pointer_cast(const shared_ptr<U>& p) noexcept {
   T* q = dynamic_cast<T*>(p.get());
   return q ? shared_ptr<T>(p, q) : shared_ptr<T>();

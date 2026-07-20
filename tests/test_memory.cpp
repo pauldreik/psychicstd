@@ -111,6 +111,15 @@ static void test_converting_ctor_from_prvalue() {
   psyassert(b2->x == 42);
 }
 
+static void test_const_pointer_cast() {
+  auto mutable_ptr = std::make_shared<int>(42);
+  std::shared_ptr<const int> const_ptr = mutable_ptr;
+  auto cast = std::const_pointer_cast<int>(const_ptr);
+  *cast = 7;
+  psyassert(*mutable_ptr == 7);
+  psyassert(cast.use_count() == 3);
+}
+
 static void test_shared_ptr_from_unique_ptr() {
   int deletes = 0;
   std::unique_ptr<Derived, CountingDeleter> unique(new Derived, {&deletes});
@@ -195,6 +204,7 @@ int main() {
   test_allocate_shared();
   test_converting_copy_ctor();
   test_converting_ctor_from_prvalue();
+  test_const_pointer_cast();
   test_shared_ptr_from_unique_ptr();
   test_shared_ptr_custom_deleter();
   test_member_init_from_template_prvalue();
