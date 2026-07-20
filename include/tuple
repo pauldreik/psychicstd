@@ -69,6 +69,14 @@ public:
     return *this;
   }
 
+  template <typename U1, typename U2>
+    requires(sizeof...(Ts) == 2)
+  tuple& operator=(pair<U1, U2>&& p) {
+    get<0>(*this) = static_cast<U1&&>(p.first);
+    get<1>(*this) = static_cast<U2&&>(p.second);
+    return *this;
+  }
+
   // Non-template constructor: allows {} to initialise individual element
   // types. Takes const Ts& (not Ts&&) per [tuple.cnstr]; with Ts&& an rvalue
   // argument needing a conversion (e.g. string literal -> const char*) ties
@@ -108,6 +116,15 @@ public:
   tuple& operator=(const tuple<Us...>& other) {
     [&]<size_t... Is>(index_sequence<Is...>) {
       ((get<Is>(*this) = get<Is>(other)), ...);
+    }(make_index_sequence<sizeof...(Ts)>{});
+    return *this;
+  }
+
+  template <typename... Us>
+    requires(sizeof...(Us) == sizeof...(Ts))
+  tuple& operator=(tuple<Us...>&& other) {
+    [&]<size_t... Is>(index_sequence<Is...>) {
+      ((get<Is>(*this) = get<Is>(static_cast<tuple<Us...>&&>(other))), ...);
     }(make_index_sequence<sizeof...(Ts)>{});
     return *this;
   }
