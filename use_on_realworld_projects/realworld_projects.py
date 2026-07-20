@@ -885,8 +885,8 @@ def _rapidjson() -> Project:
         build=build,
         phases=("configure", "compile", "run example"),
         comment="RapidJSON's examples and archivertest are built; simpledom is run. "
-        "The upstream unit tests currently require std::string allocator "
-        "construction not yet supported by psychicstd.",
+        "The upstream unit tests still have unrelated stream and warning blockers "
+        "in psychicstd.",
     )
 
 

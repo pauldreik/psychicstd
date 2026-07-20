@@ -17,7 +17,10 @@ int main() {
 #endif
 
   std::string::allocator_type allocator;
-  (void)allocator;
+  std::string allocated(allocator);
+  allocated = "allocator";
+  psyassert(allocated == "allocator");
+  psyassert(allocated.get_allocator() == allocator);
 
   std::string s = "hello";
   psyassert(std::string().compare(0, 4, "test") < 0);

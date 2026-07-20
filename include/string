@@ -60,6 +60,9 @@ public:
   // Constructors
   basic_string() noexcept : data_(nullptr), size_(0), cap_(0) {}
 
+  explicit basic_string(const allocator_type& a) noexcept
+      : data_(nullptr), size_(0), cap_(0), alloc_(a) {}
+
   basic_string(const Char* s) : basic_string(s, s ? Traits::length(s) : 0) {}
 
   basic_string(const Char* s, size_type n) : size_(n), cap_(n) {
@@ -77,6 +80,14 @@ public:
 
   basic_string(const basic_string& o) : basic_string(o.data_, o.size_) {}
 
+  basic_string(const basic_string& o, const allocator_type& a)
+      : data_(nullptr), size_(o.size_), cap_(o.size_), alloc_(a) {
+    data_ = alloc(size_ + 1);
+    if (size_)
+      Traits::copy(data_, o.data_, size_);
+    data_[size_] = 0;
+  }
+
   basic_string(const basic_string& o, size_type pos, size_type count = npos) {
     const size_type start = pos < o.size_ ? pos : o.size_;
     const size_type available = o.size_ - start;
@@ -89,7 +100,7 @@ public:
   }
 
   basic_string(basic_string&& o) noexcept
-      : data_(o.data_), size_(o.size_), cap_(o.cap_) {
+      : data_(o.data_), size_(o.size_), cap_(o.cap_), alloc_(o.alloc_) {
     o.data_ = nullptr;
     o.size_ = 0;
     o.cap_ = 0;
@@ -113,6 +124,8 @@ public:
   }
 
   ~basic_string() { dealloc(data_); }
+
+  allocator_type get_allocator() const noexcept { return alloc_; }
 
   basic_string& operator=(const basic_string& o) {
     if (this != &o) {
@@ -632,9 +645,15 @@ private:
   Char* data_;
   size_type size_;
   size_type cap_;
+  allocator_type alloc_{};
 
-  static Char* alloc(size_type n) { return (Char*)::malloc(n * sizeof(Char)); }
-  static void dealloc(Char* p) { ::free(p); }
+  Char* alloc(size_type n) {
+    return allocator_traits<allocator_type>::allocate(alloc_, n);
+  }
+  void dealloc(Char* p) {
+    if (p)
+      allocator_traits<allocator_type>::deallocate(alloc_, p, cap_ + 1);
+  }
 
   static Char* empty_str() {
     static Char z = 0;
