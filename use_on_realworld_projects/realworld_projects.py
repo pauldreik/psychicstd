@@ -831,7 +831,17 @@ def _rapidjson() -> Project:
             env = _env(tc)
             # GoogleTest 1.8.0 triggers this warning in modern GCC; RapidJSON
             # applies -Werror globally to its bundled test dependencies.
-            cxxflags = tc.cxxflags + " -Wno-error=maybe-uninitialized"
+            cxxflags = tc.cxxflags + (
+                " -Wno-error=maybe-uninitialized"
+                " -Wno-error=sign-conversion -Wno-error=sign-compare"
+            )
+            if "clang" not in tc.cxx.lower():
+                # GCC 12 diagnoses RapidJSON's realloc wrapper at -O3 as an
+                # impossibly large allocation; its tests intentionally pass
+                # the allocation through that wrapper.
+                cxxflags += (
+                    " -Wno-error=alloc-size-larger-than= -Wno-error=array-bounds"
+                )
             configure = [
                 "cmake",
                 "-S",
@@ -866,6 +876,7 @@ def _rapidjson() -> Project:
                         "--target",
                         "examples",
                         "archivertest",
+                        "unittest",
                         jobs,
                     ],
                     src,
@@ -878,15 +889,19 @@ def _rapidjson() -> Project:
                     src,
                     env,
                 ),
+                "run tests": _timed(
+                    [str(src / "build" / "bin" / "unittest")],
+                    src,
+                    env,
+                ),
             }
 
     return Project(
         version=version,
         build=build,
-        phases=("configure", "compile", "run example"),
-        comment="RapidJSON's examples and archivertest are built; simpledom is run. "
-        "The upstream unit tests still have unrelated stream and warning blockers "
-        "in psychicstd.",
+        phases=("configure", "compile", "run example", "run tests"),
+        comment="RapidJSON's examples, archivertest, and unit tests are built; "
+        "simpledom and unittest are run.",
     )
 
 
