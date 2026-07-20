@@ -154,6 +154,7 @@ using ::tgammaf;
 inline float abs(float x) { return ::fabsf(x); }
 inline double abs(double x) { return ::fabs(x); }
 inline long double abs(long double x) { return ::fabsl(x); }
+inline float sqrt(float x) { return ::sqrtf(x); }
 // integer abs overloads come from <__psychicstd_abs>
 using ::nextafter;
 using ::nextafterf;
