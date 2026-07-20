@@ -539,7 +539,8 @@ public:
   shared_ptr<const T> shared_from_this() const;
 };
 
-// shared_ptr — non-atomic reference counting (thread-unsafe by design)
+// shared_ptr — the control-block count is atomic; individual pointer objects
+// still must not be concurrently mutated.
 template <typename T> class shared_ptr {
   // Allow shared_ptr<U> to read our private members directly.  Required by
   // the converting constructors and the aliasing constructor below.
@@ -553,12 +554,13 @@ template <typename T> class shared_ptr {
 
   void inc() noexcept {
     if (ctrl_)
-      ++ctrl_->count;
+      __atomic_add_fetch(&ctrl_->count, 1, __ATOMIC_RELAXED);
   }
   void dec() noexcept {
-    if (ctrl_ && --ctrl_->count == 0) {
-      ctrl_->destroy();
-      delete ctrl_;
+    auto* ctrl = ctrl_;
+    if (ctrl && __atomic_sub_fetch(&ctrl->count, 1, __ATOMIC_ACQ_REL) == 0) {
+      ctrl->destroy();
+      delete ctrl;
       ctrl_ = nullptr;
       ptr_ = nullptr;
     }

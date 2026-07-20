@@ -1,6 +1,7 @@
 #include "psyassert.h"
 #include <memory>
 #include <string>
+#include <thread>
 #include <utility>
 #include <vector>
 
@@ -163,6 +164,15 @@ static void test_shared_ptr_custom_deleter() {
   psyassert(deletes == 1);
 }
 
+static void test_shared_ptr_concurrent_destruction() {
+  auto owner = std::make_shared<int>(42);
+  std::thread first([copy = owner] {});
+  std::thread second([copy = owner] {});
+  first.join();
+  second.join();
+  psyassert(*owner == 42);
+}
+
 // Bug: at -O2 the old converting constructor used reinterpret_cast to read
 // ctrl_ from a shared_ptr<U>, which is strict-aliasing UB.  GCC exploited
 // the UB such that the control block was freed before m_ref could share it,
@@ -219,5 +229,6 @@ int main() {
   test_enable_shared_from_this();
   test_shared_ptr_from_unique_ptr();
   test_shared_ptr_custom_deleter();
+  test_shared_ptr_concurrent_destruction();
   test_member_init_from_template_prvalue();
 }
