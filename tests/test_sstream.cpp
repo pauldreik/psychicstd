@@ -30,6 +30,9 @@ int main() {
   std::ostringstream overwrite("abcd");
   overwrite << 12;
   psyassert(overwrite.str() == "12cd");
+  std::ostringstream at_end("abcd", std::ios::ate);
+  at_end << 12;
+  psyassert(at_end.str() == "abcd12");
   overwrite.str("wxyz");
   overwrite << 'q';
   psyassert(overwrite.str() == "qxyz");
