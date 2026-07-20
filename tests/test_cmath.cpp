@@ -9,4 +9,5 @@ int main() {
   psyassert(std::fpclassify(0) == FP_ZERO);
   static_assert(std::is_same_v<decltype(std::sqrt(1.0F)), float>);
   static_assert(std::is_same_v<decltype(std::sqrt(1)), double>);
+  static_assert(std::is_same_v<decltype(std::sqrt(1.0L)), long double>);
 }
