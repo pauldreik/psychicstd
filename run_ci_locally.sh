@@ -152,8 +152,8 @@ else
 fi
 
 # Strict compatibility level: our headers must be self-contained (include only
-# what they use). Benchmarks are off so no third-party code (rapidjson) is
-# fetched -- this job is purely about the library itself.
+# what they use). Benchmarks are off so no third-party code is fetched -- this
+# job is purely about the library itself.
 run "strict compat" build_strict \
   -DCMAKE_BUILD_TYPE=Debug \
   -DPSYCHICSTD_BUILD_BENCHMARKS=OFF \

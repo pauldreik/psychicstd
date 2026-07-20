@@ -86,18 +86,6 @@ def main() -> int:
         print(f"Checking out {args.ref} into a temporary worktree ...", file=sys.stderr)
         sh(["git", "worktree", "add", "--quiet", "--detach", str(worktree), args.ref])
 
-        # rapidjson is used as a real-code benchmark input; a configure fetches it.
-        subprocess.run(
-            ["cmake", "-B", "build"],
-            cwd=repo,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-        )
-        rapidjson = repo / "build" / "_deps" / "rapidjson-src" / "include"
-        extra = (
-            ["--extra-include", f"rapidjson:{rapidjson}"] if rapidjson.is_dir() else []
-        )
-
         def bench(include_dir, out, label):
             print(f"Benchmarking {label} ...", file=sys.stderr)
             # run_bench progress goes to our stderr; only the diff reaches stdout.
@@ -109,7 +97,6 @@ def main() -> int:
                     str(include_dir),
                     "--json",
                     str(out),
-                    *extra,
                 ],
                 cwd=repo,
                 stdout=sys.stderr,

@@ -31,16 +31,9 @@ Platform: macOS 26 arm64 (Apple M3), Apple clang 21, system STL = libc++.
 | 🟢 | span | 174.4ms | 31.8ms | 5.5x |
 | 🟢 | complex | 173.0ms | 23.2ms | 7.5x |
 | 🟢 | istream | 170.2ms | 51.6ms | 3.3x |
-| 🟢 | rj/write | 164.7ms | 96.7ms | 1.7x |
-| 🟢 | rj/dom | 161.1ms | 93.0ms | 1.7x |
 | 🟢 | random | 160.9ms | 38.1ms | 4.2x |
-| 🟢 | rapidjson/write | 156.6ms | 93.1ms | 1.7x |
 | 🟢 | variant | 156.2ms | 46.1ms | 3.4x |
 | 🟢 | map | 151.2ms | 48.9ms | 3.1x |
-| 🟢 | rapidjson/dom | 150.9ms | 88.0ms | 1.7x |
-| 🟢 | rj/parse | 146.7ms | 79.4ms | 1.8x |
-| 🟢 | rapidjson/parse | 138.1ms | 75.3ms | 1.8x |
-| 🟢 | rapidjson | 137.2ms | 72.0ms | 1.9x |
 | 🟢 | deque | 133.5ms | 33.1ms | 4.0x |
 | 🟢 | functional | 124.7ms | 27.3ms | 4.6x |
 | 🟢 | ios | 122.9ms | 39.0ms | 3.1x |
