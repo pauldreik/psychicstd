@@ -2,6 +2,7 @@
 #include <iomanip>
 #include <iostream>
 #include <sstream>
+#include <utility>
 
 class available_buffer : public std::streambuf {
 public:
@@ -40,6 +41,11 @@ int main() {
   std::wostringstream wide;
   wide << 42 << L'-' << L"wide";
   psyassert(wide.str() == L"42-wide");
+
+  std::wostringstream empty_wide;
+  std::swap(wide, empty_wide);
+  psyassert(empty_wide.str() == L"42-wide");
+  psyassert(wide.str().empty());
 
   std::ostringstream point;
   point << std::fixed << std::setprecision(0) << std::showpoint << 3.0;

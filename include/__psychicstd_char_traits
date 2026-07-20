@@ -23,6 +23,8 @@ template <typename Char> struct char_traits {
   }
   static constexpr char_type* copy(char_type* dst, const char_type* src,
                                    size_t n) noexcept {
+    if (!n)
+      return dst;
     return (char_type*)__builtin_memcpy(dst, src, n * sizeof(char_type));
   }
   static constexpr char_type* move(char_type* dst, const char_type* src,

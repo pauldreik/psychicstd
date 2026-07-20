@@ -21,6 +21,18 @@ struct Wrapper {
   Wrapper(Tracker&& x) : t(static_cast<Tracker&&>(x)) {}
 };
 
+struct AssignmentCategory {
+  int category = 0;
+  AssignmentCategory& operator=(const int&) {
+    category = 1;
+    return *this;
+  }
+  AssignmentCategory& operator=(int&&) {
+    category = 2;
+    return *this;
+  }
+};
+
 std::tuple<const char*, int, bool> make_result(const char* p, int n) {
   return {p, n, false};
 }
@@ -72,6 +84,17 @@ int main() {
     std::tuple<Wrapper> dst(std::move(src));
     psyassert(std::get<0>(dst).t.moves == 1);
     psyassert(std::get<0>(dst).t.copies == 0);
+  }
+
+  {
+    std::tuple<AssignmentCategory> dst;
+    dst = std::tuple<int>{42};
+    psyassert(std::get<0>(dst).category == 2);
+
+    std::tuple<AssignmentCategory, AssignmentCategory> pair_dst;
+    pair_dst = std::pair<int, int>{1, 2};
+    psyassert(std::get<0>(pair_dst).category == 2);
+    psyassert(std::get<1>(pair_dst).category == 2);
   }
 
   {

@@ -500,6 +500,16 @@ template <typename U, typename D> struct __sp_ctrl_del : __sp_ctrl {
 #endif
   }
 };
+
+template <typename T, typename Alloc> struct __sp_alloc_del {
+  Alloc alloc;
+  typename allocator_traits<Alloc>::pointer allocation;
+
+  void operator()(T* p) noexcept {
+    allocator_traits<Alloc>::destroy(alloc, p);
+    allocator_traits<Alloc>::deallocate(alloc, allocation, 1);
+  }
+};
 } // namespace __detail
 
 // shared_ptr — non-atomic reference counting (thread-unsafe by design)
@@ -682,8 +692,25 @@ shared_ptr<T> make_shared(Args&&... args) {
 }
 
 template <typename T, typename Alloc, typename... Args>
-shared_ptr<T> allocate_shared(const Alloc&, Args&&... args) {
-  return make_shared<T>(static_cast<Args&&>(args)...);
+shared_ptr<T> allocate_shared(const Alloc& alloc, Args&&... args) {
+  using object_alloc =
+      typename allocator_traits<Alloc>::template rebind_alloc<T>;
+  object_alloc object_allocator(alloc);
+  using object_pointer = typename allocator_traits<object_alloc>::pointer;
+  object_pointer allocation =
+      allocator_traits<object_alloc>::allocate(object_allocator, 1);
+  T* object = to_address(allocation);
+  _PSYCHICSTD_TRY {
+    allocator_traits<object_alloc>::construct(object_allocator, object,
+                                              static_cast<Args&&>(args)...);
+  }
+  _PSYCHICSTD_CATCH(...) {
+    allocator_traits<object_alloc>::deallocate(object_allocator, allocation, 1);
+    _PSYCHICSTD_RETHROW;
+  }
+  return shared_ptr<T>(
+      object, __detail::__sp_alloc_del<T, object_alloc>{
+                  static_cast<object_alloc&&>(object_allocator), allocation});
 }
 
 template <typename T, typename U>
