@@ -25,6 +25,10 @@ public:
 };
 
 int main() {
+  std::streambuf::pos_type position = 0;
+  std::streambuf::off_type offset = 0;
+  psyassert(position == offset);
+
   available_buffer available;
   psyassert(available.in_avail() == 42);
   char storage[4];
