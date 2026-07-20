@@ -378,6 +378,15 @@ public:
     insert(pos, o);
     return *this;
   }
+  basic_string& replace(size_type pos, size_type n1, const Char* s,
+                        size_type n2) {
+    erase(pos, n1);
+    insert(pos, s, n2);
+    return *this;
+  }
+  basic_string& replace(size_type pos, size_type n, const Char* s) {
+    return replace(pos, n, s, Traits::length(s));
+  }
   basic_string& replace(const_iterator first, const_iterator last,
                         const basic_string& o) {
     return replace(first - data_, last - first, o);
