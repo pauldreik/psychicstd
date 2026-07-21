@@ -187,6 +187,7 @@ def main() -> int:
     else:
         projects = sorted(args.projects)
     build_types = cr.BUILD_TYPES if args.build_type == "both" else (args.build_type,)
+    parallelism = rw.detect_parallelism()
 
     if args.check_only:
         if args.output:
@@ -203,6 +204,7 @@ def main() -> int:
                     build_type,
                     REPO / "include",
                     args.enable_ccache,
+                    parallelism.jobs,
                 )
         return 0
 
@@ -217,6 +219,7 @@ def main() -> int:
                 args.reps,
                 REPO / "include",
                 args.enable_ccache,
+                parallelism.jobs,
             )
 
     ver = cr.compiler_version(args.compiler) or "unknown"
@@ -237,6 +240,10 @@ def main() -> int:
         f"{GREEN} the whole CI is above 1x (reliably faster) · {RED} the whole "
         f"CI is below 1x (reliably slower) · {YELLOW} the CI straddles 1x (not "
         "distinguishable from run-to-run noise).\n",
+        f"Parallelism: **{parallelism.jobs} jobs** "
+        f"({parallelism.logical_cpus} logical CPUs available; the memory "
+        f"estimate permits {parallelism.memory_jobs} jobs at 1.5 GiB/job). "
+        f"ccache was {'enabled' if args.enable_ccache else 'disabled'}.\n",
     ]
     if args.enable_ccache:
         lines.append(

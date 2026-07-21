@@ -63,14 +63,27 @@ def compiler_version(cxx: str) -> str | None:
         return None
 
 
-def sys_tc(compiler: str, build_type: str, enable_ccache: bool = False) -> rw.Toolchain:
+def sys_tc(
+    compiler: str,
+    build_type: str,
+    enable_ccache: bool = False,
+    jobs: int | None = None,
+) -> rw.Toolchain:
     return rw.Toolchain(
-        compiler, "-std=c++20", build_type=build_type, enable_ccache=enable_ccache
+        compiler,
+        "-std=c++20",
+        build_type=build_type,
+        enable_ccache=enable_ccache,
+        jobs=jobs if jobs is not None else rw.detect_parallelism().jobs,
     )
 
 
 def psy_tc(
-    compiler: str, include: Path, build_type: str, enable_ccache: bool = False
+    compiler: str,
+    include: Path,
+    build_type: str,
+    enable_ccache: bool = False,
+    jobs: int | None = None,
 ) -> rw.Toolchain:
     return rw.Toolchain(
         compiler,
@@ -79,6 +92,7 @@ def psy_tc(
         PSY_LIBS,
         build_type=build_type,
         enable_ccache=enable_ccache,
+        jobs=jobs if jobs is not None else rw.detect_parallelism().jobs,
     )
 
 
@@ -108,6 +122,7 @@ def measure_project(
     reps: int,
     include: Path,
     enable_ccache: bool = False,
+    jobs: int | None = None,
 ) -> dict[str, dict[str, list[float]]]:
     """Build `project` `reps` times under the system toolchain and psychicstd
     (headers from `include`); return {"system"|"psychicstd": {phase: [ms, ...]}}.
@@ -117,8 +132,8 @@ def measure_project(
     working tree's absolute speedup rather than a main-vs-PR regression diff.
     """
     variants = {
-        "system": sys_tc(compiler, build_type, enable_ccache),
-        "psychicstd": psy_tc(compiler, include, build_type, enable_ccache),
+        "system": sys_tc(compiler, build_type, enable_ccache, jobs),
+        "psychicstd": psy_tc(compiler, include, build_type, enable_ccache, jobs),
     }
     return _build_matrix(variants, rw.PROJECTS[project].build, reps, project)
 
@@ -129,13 +144,14 @@ def check_project(
     build_type: str,
     include: Path,
     enable_ccache: bool = False,
+    jobs: int | None = None,
 ) -> None:
     """Run a single psychicstd build of `project` and fail on build errors.
 
     This is a lightweight compile/build check, not a performance measurement.
     """
     variants = {
-        "psychicstd": psy_tc(compiler, include, build_type, enable_ccache),
+        "psychicstd": psy_tc(compiler, include, build_type, enable_ccache, jobs),
     }
     _build_matrix(variants, rw.PROJECTS[project].build, 1, project)
 
@@ -189,6 +205,7 @@ def main() -> int:
     args = ap.parse_args()
 
     build = rw.PROJECTS[args.project].build
+    jobs = rw.detect_parallelism().jobs
 
     with tempfile.TemporaryDirectory(
         prefix="psychicstd-rw-", ignore_cleanup_errors=True
@@ -204,19 +221,24 @@ def main() -> int:
             # Measure system twice (base/head) so its drift is a real noise proxy.
             variants = {
                 "system_base": sys_tc(
-                    args.compiler, args.build_type, args.enable_ccache
+                    args.compiler, args.build_type, args.enable_ccache, jobs
                 ),
                 "ref": psy_tc(
                     args.compiler,
                     worktree / "include",
                     args.build_type,
                     args.enable_ccache,
+                    jobs,
                 ),
                 "system_head": sys_tc(
-                    args.compiler, args.build_type, args.enable_ccache
+                    args.compiler, args.build_type, args.enable_ccache, jobs
                 ),
                 "head": psy_tc(
-                    args.compiler, REPO / "include", args.build_type, args.enable_ccache
+                    args.compiler,
+                    REPO / "include",
+                    args.build_type,
+                    args.enable_ccache,
+                    jobs,
                 ),
             }
             samples = _build_matrix(variants, build, args.reps, args.project)
