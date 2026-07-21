@@ -21,6 +21,7 @@ Usage:
 """
 
 import argparse
+import os
 import random
 import statistics
 import subprocess
@@ -173,6 +174,9 @@ def main() -> int:
         help="print known project names, one per line, and exit",
     )
     args = ap.parse_args()
+
+    if not args.enable_ccache:
+        os.environ["CCACHE_DISABLE"] = "1"
 
     if args.list:
         print("\n".join(sorted(rw.PROJECTS)))
