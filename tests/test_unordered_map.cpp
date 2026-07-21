@@ -17,8 +17,20 @@ int main() {
 
   std::unordered_multimap<int, int> mm;
   mm.emplace(1, 10);
+  mm.emplace(17, 99); // Same initial bucket, but not an equivalent key.
   mm.emplace(1, 20);
   auto range = mm.equal_range(1);
-  psyassert(range.first != range.second);
-  psyassert(range.first->first == 1);
+  int matches = 0;
+  for (auto it = range.first; it != range.second; ++it) {
+    psyassert(it->first == 1);
+    ++matches;
+  }
+  psyassert(matches == 2);
+
+  const auto& const_mm = mm;
+  auto const_range = const_mm.equal_range(1);
+  matches = 0;
+  for (auto it = const_range.first; it != const_range.second; ++it)
+    ++matches;
+  psyassert(matches == 2);
 }

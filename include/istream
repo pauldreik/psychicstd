@@ -271,8 +271,11 @@ private:
     if (!(this->flags() & ios_base::boolalpha)) {
       int value = 0;
       extract_int(value);
-      if (!this->fail())
+      if (!this->fail()) {
         v = value != 0;
+        if (value != 0 && value != 1)
+          this->setstate(ios_base::failbit);
+      }
       return *this;
     }
 

@@ -476,10 +476,29 @@ unique_ptr<T> make_unique(size_t n)
 namespace __detail {
 struct __sp_ctrl {
   long count = 1;
+  // One implicit weak reference keeps the control block alive while strong
+  // owners exist. Explicit weak users add to this count.
+  long weak_count = 1;
   virtual void destroy() noexcept = 0;
   virtual void* get_deleter(const type_info&) noexcept { return nullptr; }
   virtual ~__sp_ctrl() = default;
 };
+inline void __sp_weak_add(__sp_ctrl* ctrl) noexcept {
+  __atomic_add_fetch(&ctrl->weak_count, 1, __ATOMIC_RELAXED);
+}
+inline void __sp_weak_release(__sp_ctrl* ctrl) noexcept {
+  if (__atomic_sub_fetch(&ctrl->weak_count, 1, __ATOMIC_ACQ_REL) == 0)
+    delete ctrl;
+}
+inline bool __sp_strong_add_if_live(__sp_ctrl* ctrl) noexcept {
+  long count = __atomic_load_n(&ctrl->count, __ATOMIC_RELAXED);
+  while (count != 0) {
+    if (__atomic_compare_exchange_n(&ctrl->count, &count, count + 1, true,
+                                    __ATOMIC_RELAXED, __ATOMIC_RELAXED))
+      return true;
+  }
+  return false;
+}
 template <typename U> struct __sp_ctrl_impl : __sp_ctrl {
   U* obj;
   explicit __sp_ctrl_impl(U* p) : obj(p) {}
@@ -515,6 +534,11 @@ struct __esft_tag {};
 
 template <typename T> class shared_ptr;
 
+class bad_weak_ptr : public exception {
+public:
+  const char* what() const noexcept override { return "bad_weak_ptr"; }
+};
+
 template <typename T> class enable_shared_from_this {
   mutable __detail::__sp_ctrl* ctrl_ = nullptr;
   mutable T* ptr_ = nullptr;
@@ -522,8 +546,12 @@ template <typename T> class enable_shared_from_this {
   template <typename U> friend class shared_ptr;
 
   void __accept(__detail::__sp_ctrl* ctrl, T* ptr) const noexcept {
-    if (!ctrl_)
+    if (!ctrl_ || __atomic_load_n(&ctrl_->count, __ATOMIC_RELAXED) == 0) {
+      if (ctrl_)
+        __detail::__sp_weak_release(ctrl_);
       ctrl_ = ctrl, ptr_ = ptr;
+      __detail::__sp_weak_add(ctrl_);
+    }
   }
 
 protected:
@@ -532,7 +560,10 @@ protected:
   enable_shared_from_this& operator=(const enable_shared_from_this&) noexcept {
     return *this;
   }
-  ~enable_shared_from_this() = default;
+  ~enable_shared_from_this() {
+    if (ctrl_)
+      __detail::__sp_weak_release(ctrl_);
+  }
 
 public:
   shared_ptr<T> shared_from_this();
@@ -560,7 +591,7 @@ template <typename T> class shared_ptr {
     auto* ctrl = ctrl_;
     if (ctrl && __atomic_sub_fetch(&ctrl->count, 1, __ATOMIC_ACQ_REL) == 0) {
       ctrl->destroy();
-      delete ctrl;
+      __detail::__sp_weak_release(ctrl);
       ctrl_ = nullptr;
       ptr_ = nullptr;
     }
@@ -572,9 +603,13 @@ template <typename T> class shared_ptr {
       static_cast<enable_shared_from_this<V>*>(p)->__accept(ctrl_, p);
   }
 
-  shared_ptr(__detail::__sp_ctrl* ctrl, T* ptr, __detail::__esft_tag) noexcept
+  shared_ptr(__detail::__sp_ctrl* ctrl, T* ptr, __detail::__esft_tag)
       : ptr_(ptr), ctrl_(ctrl) {
-    inc();
+    if (!ctrl_ || !__detail::__sp_strong_add_if_live(ctrl_)) {
+      ptr_ = nullptr;
+      ctrl_ = nullptr;
+      _PSYCHICSTD_THROW(bad_weak_ptr{});
+    }
   }
 
 public:

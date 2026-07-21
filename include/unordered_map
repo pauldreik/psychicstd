@@ -560,6 +560,28 @@ class unordered_multimap {
 
   size_t bucket(const Key& k) const { return hasher_(k) % nbuckets_; }
 
+  Node* _equivalent_tail(size_t b, const Key& key) {
+    for (Node* p = buckets_[b]; p; p = p->next) {
+      if (eq_(p->kv.first, key)) {
+        while (p->next && eq_(p->next->kv.first, key))
+          p = p->next;
+        return p;
+      }
+    }
+    return nullptr;
+  }
+
+  void _link_node(size_t b, Node* n, Node* after) noexcept {
+    if (after) {
+      n->next = after->next;
+      after->next = n;
+    } else {
+      n->next = buckets_[b];
+      buckets_[b] = n;
+    }
+    ++size_;
+  }
+
   void destroy() {
     for (size_t i = 0; i < nbuckets_; ++i) {
       Node* n = buckets_[i];
@@ -719,19 +741,17 @@ public:
   iterator insert(const value_type& kv) {
     _maybe_rehash();
     size_t b = bucket(kv.first);
+    Node* after = _equivalent_tail(b, kv.first);
     Node* n = new Node(kv);
-    n->next = buckets_[b];
-    buckets_[b] = n;
-    ++size_;
+    _link_node(b, n, after);
     return {this, b, n};
   }
   iterator insert(value_type&& kv) {
     _maybe_rehash();
     size_t b = bucket(kv.first);
+    Node* after = _equivalent_tail(b, kv.first);
     Node* n = new Node(static_cast<value_type&&>(kv));
-    n->next = buckets_[b];
-    buckets_[b] = n;
-    ++size_;
+    _link_node(b, n, after);
     return {this, b, n};
   }
   iterator insert(const_iterator, const value_type& kv) { return insert(kv); }
@@ -771,14 +791,14 @@ public:
   pair<iterator, iterator> equal_range(const Key& k) {
     auto it = find(k);
     auto last = it;
-    if (last != end())
+    while (last != end() && eq_(last->first, k))
       ++last;
     return {it, last};
   }
   pair<const_iterator, const_iterator> equal_range(const Key& k) const {
     auto it = find(k);
     auto last = it;
-    if (last != end())
+    while (last != end() && eq_(last->first, k))
       ++last;
     return {it, last};
   }

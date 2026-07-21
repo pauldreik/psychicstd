@@ -60,4 +60,15 @@ int main() {
   bool second = true;
   booleans >> std::boolalpha >> first >> second;
   psyassert(first == true && second == false);
+
+  std::istringstream numeric_booleans("0 1");
+  numeric_booleans >> first >> second;
+  psyassert(!numeric_booleans.fail());
+  psyassert(first == false && second == true);
+
+  std::istringstream invalid_boolean("2");
+  bool invalid = false;
+  invalid_boolean >> invalid;
+  psyassert(invalid);
+  psyassert(invalid_boolean.fail());
 }

@@ -130,6 +130,30 @@ static void test_enable_shared_from_this() {
   auto self = owner->self();
   psyassert(self.get() == owner.get());
   psyassert(owner.use_count() == 2);
+
+  SelfShared unowned;
+  bool threw = false;
+  try {
+    (void)unowned.self();
+  } catch (const std::bad_weak_ptr&) {
+    threw = true;
+  }
+  psyassert(threw);
+
+  struct keep_alive {
+    void operator()(SelfShared*) const {}
+  };
+  SelfShared rebound;
+  {
+    std::shared_ptr<SelfShared> first(&rebound, keep_alive{});
+    psyassert(rebound.self().use_count() == 2);
+  }
+  {
+    std::shared_ptr<SelfShared> second(&rebound, keep_alive{});
+    auto rebound_self = rebound.self();
+    psyassert(rebound_self.get() == &rebound);
+    psyassert(second.use_count() == 2);
+  }
 }
 
 static void test_shared_ptr_from_unique_ptr() {

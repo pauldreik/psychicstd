@@ -181,6 +181,8 @@ using ::nextafter;
 inline long double nextafter(long double x, long double y) {
   return ::nextafterl(x, y);
 }
+using ::nextafterf;
+using ::nextafterl;
 using ::nexttoward;
 using ::nexttowardf;
 using ::nexttowardl;

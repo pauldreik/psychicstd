@@ -16,5 +16,8 @@ int main() {
   static_assert(std::is_same_v<decltype(std::sqrt(1)), double>);
   static_assert(std::is_same_v<decltype(std::sqrt(1.0L)), long double>);
   static_assert(std::is_same_v<decltype(std::nextafter(1.0F, 2.0F)), float>);
+  static_assert(std::is_same_v<decltype(std::nextafterf(1.0F, 2.0F)), float>);
+  static_assert(
+      std::is_same_v<decltype(std::nextafterl(1.0L, 2.0L)), long double>);
   psyassert(std::nextafter(500.0F, 499.0F) < 500.0F);
 }
