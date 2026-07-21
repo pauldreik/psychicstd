@@ -121,7 +121,7 @@ jobs:
       - name: Build and test OpenCV with psychicstd
         run: >-
           python3 scripts/compare_realworld_performance.py --check-only
-          --project opencv --build-type debug
+          --project opencv --build-type release
   rapidjson:
     runs-on: ubuntu-latest
     timeout-minutes: 15
