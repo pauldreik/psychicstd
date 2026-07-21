@@ -78,25 +78,35 @@ struct __cxa_eh_globals {
   unsigned int uncaughtExceptions;
 };
 extern "C" __cxa_eh_globals* __cxa_get_globals() noexcept;
+extern "C" void* __cxa_get_exception_ptr(void*) noexcept;
 extern "C" [[noreturn]] void __cxa_rethrow();
 } // namespace __cxxabiv1
 
-// exception_ptr — opaque pointer to an exception
+// Keep the ABI name and layout used by libsupc++'s exception_ptr support.
+// Its out-of-line operations maintain the exception's reference count and
+// rethrow the saved primary exception correctly.
+namespace __exception_ptr {
+class exception_ptr;
+}
+__exception_ptr::exception_ptr current_exception() noexcept;
+[[noreturn]] void rethrow_exception(__exception_ptr::exception_ptr);
+
+namespace __exception_ptr {
 class exception_ptr {
   void* ptr_ = nullptr;
 
-  explicit exception_ptr(void* p) noexcept : ptr_(p) {}
-  friend exception_ptr current_exception() noexcept;
+  explicit exception_ptr(void* p) noexcept;
+  void _M_addref() noexcept;
+  void _M_release() noexcept;
+  friend exception_ptr std::current_exception() noexcept;
+  friend void std::rethrow_exception(exception_ptr);
 
 public:
-  exception_ptr() noexcept = default;
-  exception_ptr(nullptr_t) noexcept {}
-  exception_ptr(const exception_ptr& o) noexcept : ptr_(o.ptr_) {}
-  exception_ptr& operator=(const exception_ptr& o) noexcept {
-    ptr_ = o.ptr_;
-    return *this;
-  }
-  ~exception_ptr() {}
+  exception_ptr() noexcept;
+  exception_ptr(nullptr_t) noexcept : ptr_(nullptr) {}
+  exception_ptr(const exception_ptr&) noexcept;
+  exception_ptr& operator=(const exception_ptr&) noexcept;
+  ~exception_ptr() noexcept;
   explicit operator bool() const noexcept { return ptr_ != nullptr; }
   friend bool operator==(const exception_ptr& a,
                          const exception_ptr& b) noexcept {
@@ -107,20 +117,13 @@ public:
     return !(a == b);
   }
 };
+} // namespace __exception_ptr
 
-// Returns non-null when called from within a catch block (active exception).
-// Uses the Itanium ABI globals rather than __cxa_current_primary_exception
-// (the latter is in libstdc++, not libsupc++).
-inline exception_ptr current_exception() noexcept {
-  auto* g = __cxxabiv1::__cxa_get_globals();
-  return exception_ptr(g ? static_cast<void*>(g->caughtExceptions) : nullptr);
-}
+using __exception_ptr::exception_ptr;
 
-[[noreturn]] inline void rethrow_exception(exception_ptr p) {
-  // __cxa_rethrow() rethrows the exception currently being handled.
-  (void)p;
-  __cxxabiv1::__cxa_rethrow();
-}
+// The declarations above have libsupc++'s ABI names. Its implementations use
+// the saved primary exception, unlike __cxa_rethrow(), which only works while
+// handling the current exception.
 
 template <typename E>
 exception_ptr make_exception_ptr([[maybe_unused]] E e) noexcept {

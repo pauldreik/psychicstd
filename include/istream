@@ -191,7 +191,7 @@ public:
     return *this;
   }
 
-  basic_istream& operator>>(bool& v) { return extract_int(v); }
+  basic_istream& operator>>(bool& v) { return extract_bool(v); }
   basic_istream& operator>>(short& v) { return extract_int(v); }
   basic_istream& operator>>(int& v) { return extract_int(v); }
   basic_istream& operator>>(long& v) { return extract_int(v); }
@@ -266,6 +266,42 @@ protected:
 
 private:
   streamsize gcount_ = 0;
+
+  basic_istream& extract_bool(bool& v) {
+    if (!(this->flags() & ios_base::boolalpha)) {
+      int value = 0;
+      extract_int(value);
+      if (!this->fail())
+        v = value != 0;
+      return *this;
+    }
+
+    sentry s(*this);
+    if (!s) {
+      this->setstate(ios_base::failbit);
+      return *this;
+    }
+    auto* sb = this->rdbuf();
+    const char* word = nullptr;
+    if (sb->sgetc() == Traits::to_int_type('t'))
+      word = "true";
+    else if (sb->sgetc() == Traits::to_int_type('f'))
+      word = "false";
+    else {
+      this->setstate(ios_base::failbit);
+      return *this;
+    }
+    for (const char* p = word; *p; ++p) {
+      int_type c = sb->sbumpc();
+      if (Traits::eq_int_type(c, Traits::eof()) ||
+          Traits::to_char_type(c) != *p) {
+        this->setstate(ios_base::failbit);
+        return *this;
+      }
+    }
+    v = word[0] == 't';
+    return *this;
+  }
 
   template <typename V> basic_istream& extract_int(V& v) {
     sentry s(*this);

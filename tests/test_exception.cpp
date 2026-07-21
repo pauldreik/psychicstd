@@ -51,4 +51,20 @@ int main() {
   } catch (...) {
   }
   psyassert(caught_banl);
+
+  std::exception_ptr saved;
+  try {
+    throw 42;
+  } catch (...) {
+    saved = std::current_exception();
+  }
+  psyassert(saved);
+  bool caught_saved = false;
+  try {
+    std::rethrow_exception(saved);
+  } catch (int value) {
+    caught_saved = value == 42;
+  } catch (...) {
+  }
+  psyassert(caught_saved);
 }

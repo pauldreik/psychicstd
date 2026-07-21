@@ -54,4 +54,10 @@ int main() {
   std::ostringstream point;
   point << std::fixed << std::setprecision(0) << std::showpoint << 3.0;
   psyassert(point.str() == "3.");
+
+  std::istringstream booleans("true false");
+  bool first = false;
+  bool second = true;
+  booleans >> std::boolalpha >> first >> second;
+  psyassert(first == true && second == false);
 }

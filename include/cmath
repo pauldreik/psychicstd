@@ -176,9 +176,11 @@ constexpr double sqrt(T x) {
 }
 #endif
 // integer abs overloads come from <__psychicstd_abs>
-using ::nextafter;
-using ::nextafterf;
-using ::nextafterl;
+inline float nextafter(float x, float y) { return ::nextafterf(x, y); }
+inline double nextafter(double x, double y) { return ::nextafter(x, y); }
+inline long double nextafter(long double x, long double y) {
+  return ::nextafterl(x, y);
+}
 using ::nexttoward;
 using ::nexttowardf;
 using ::nexttowardl;
