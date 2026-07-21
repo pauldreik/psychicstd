@@ -455,11 +455,11 @@ public:
         value_type(static_cast<Key&&>(key), T(static_cast<Args&&>(args)...)));
   }
   template <typename... Args>
-  iterator try_emplace(const_iterator hint, const Key& key, Args&&... args) {
+  iterator try_emplace(const_iterator, const Key& key, Args&&... args) {
     return try_emplace(key, static_cast<Args&&>(args)...).first;
   }
   template <typename... Args>
-  iterator try_emplace(const_iterator hint, Key&& key, Args&&... args) {
+  iterator try_emplace(const_iterator, Key&& key, Args&&... args) {
     return try_emplace(static_cast<Key&&>(key), static_cast<Args&&>(args)...)
         .first;
   }
@@ -484,11 +484,11 @@ public:
             true};
   }
   template <typename M>
-  iterator insert_or_assign(const_iterator hint, const Key& key, M&& obj) {
+  iterator insert_or_assign(const_iterator, const Key& key, M&& obj) {
     return insert_or_assign(key, static_cast<M&&>(obj)).first;
   }
   template <typename M>
-  iterator insert_or_assign(const_iterator hint, Key&& key, M&& obj) {
+  iterator insert_or_assign(const_iterator, Key&& key, M&& obj) {
     return insert_or_assign(static_cast<Key&&>(key), static_cast<M&&>(obj))
         .first;
   }
