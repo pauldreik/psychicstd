@@ -12,11 +12,13 @@ perf diff, but per phase.
 
 Usage:
   scripts/compare_realworld.py [project] [--ref REF] [--compiler CXX]
-      [--build-type {debug,release}] [--reps N]
+      [--build-type {debug,release}]
+      [--reps N | --time-budget DURATION] [--max-reps N]
 """
 
 import argparse
 import json
+import re
 import subprocess
 import sys
 import tempfile
@@ -51,6 +53,29 @@ else:
 # Selectable from the outside; each project's recipe translates this into its own
 # build system's convention (CMAKE_BUILD_TYPE, an -O flag, ...) -- see Toolchain.
 BUILD_TYPES = ("debug", "release")
+
+
+def _duration(value: str) -> float:
+    match = re.fullmatch(r"([0-9]+(?:\.[0-9]+)?)([smh]?)", value)
+    if not match:
+        raise argparse.ArgumentTypeError("use seconds or a suffix such as 5m or 1.5h")
+    seconds = (
+        float(match.group(1)) * {"": 1, "s": 1, "m": 60, "h": 3600}[match.group(2)]
+    )
+    if seconds <= 0:
+        raise argparse.ArgumentTypeError("duration must be positive")
+    return seconds
+
+
+def _budget_repetitions(
+    project: str, build_type: str, budget: float, max_reps: int, jobs: int
+) -> tuple[int, float]:
+    # A diff repetition builds system/main, psychicstd/main, system/PR, and
+    # psychicstd/PR. Scale the calibration for the runner's parallelism; setup
+    # time outside the recipe is deliberately ignored.
+    spec = rw.PROJECTS[project]
+    cost = 4 * spec.expected_seconds[build_type] * spec.expected_jobs / jobs
+    return max(1, min(max_reps, int(budget // cost))), cost
 
 
 def compiler_version(cxx: str) -> str | None:
@@ -193,8 +218,21 @@ def main() -> int:
         default="debug",
         help="build type, translated per-project (default: debug)",
     )
+    repetitions = ap.add_mutually_exclusive_group()
+    repetitions.add_argument(
+        "--reps", type=int, help="fixed build repetitions (default: 3)"
+    )
+    repetitions.add_argument(
+        "--time-budget",
+        type=_duration,
+        metavar="DURATION",
+        help="choose repetitions for an estimated duration, e.g. 5m",
+    )
     ap.add_argument(
-        "--reps", type=int, default=3, help="build repetitions (default: 3)"
+        "--max-reps",
+        type=int,
+        default=5,
+        help="maximum repetitions with --time-budget (default: 5)",
     )
     ap.add_argument(
         "--enable-ccache",
@@ -203,9 +241,33 @@ def main() -> int:
         "for debugging the script/recipes, not for real measurements)",
     )
     args = ap.parse_args()
+    if args.reps is not None and args.reps <= 0:
+        ap.error("--reps must be positive")
+    if args.max_reps <= 0:
+        ap.error("--max-reps must be positive")
+
+    parallelism = rw.detect_parallelism()
+    if args.time_budget is not None:
+        reps, repetition_cost = _budget_repetitions(
+            args.project,
+            args.build_type,
+            args.time_budget,
+            args.max_reps,
+            parallelism.jobs,
+        )
+        expected_jobs = rw.PROJECTS[args.project].expected_jobs
+        estimate = reps * repetition_cost
+        print(
+            f"Benchmark plan: {reps} repetition(s), approximately "
+            f"{estimate:.0f}s of the {args.time_budget:.0f}s budget "
+            f"({parallelism.jobs} jobs; calibrated at {expected_jobs})",
+            file=sys.stderr,
+        )
+    else:
+        reps = args.reps if args.reps is not None else 3
 
     build = rw.PROJECTS[args.project].build
-    jobs = rw.detect_parallelism().jobs
+    jobs = parallelism.jobs
 
     with tempfile.TemporaryDirectory(
         prefix="psychicstd-rw-", ignore_cleanup_errors=True
@@ -241,7 +303,7 @@ def main() -> int:
                     jobs,
                 ),
             }
-            samples = _build_matrix(variants, build, args.reps, args.project)
+            samples = _build_matrix(variants, build, reps, args.project)
         finally:
             subprocess.run(
                 ["git", "worktree", "remove", "--force", str(worktree)],
