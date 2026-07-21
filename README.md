@@ -14,7 +14,7 @@ It is not complete. It is not fully compliant. But it is good enough to quickly 
 | [fmt](https://github.com/fmtlib/fmt) | [1.70x](use_on_realworld_projects/fmt_speed_report.md) | Full build and test suite pass in both drop-in and strict psychicstd mode. |
 | [googletest](https://github.com/google/googletest) | [1.68x](use_on_realworld_projects/googletest_speed_report.md) | |
 | [nlohmann json](https://json.nlohmann.me/) | [1.97x](use_on_realworld_projects/nlohmann_speed_report.md) | Uncovered a reliance on implementation-specific behaviour, fixed in [PR #5236](https://github.com/nlohmann/json/pull/5236). |
-| [OpenCV](https://opencv.org/) | pending | Builds the core and imgproc modules and their tests. |
+| [OpenCV](https://opencv.org/) | [1.70x](use_on_realworld_projects/opencv_speed_report.md) | Builds the core and imgproc modules and their tests. |
 | [rapidjson](https://github.com/Tencent/rapidjson/) | [1.78x](use_on_realworld_projects/rapidjson_speed_report.md) | Allocator support in std::string is missing |
 | [rdfind](https://rdfind.pauldreik.se/) | [3.80x](use_on_realworld_projects/rdfind_speed_report.md) | Runs in psychic strict mode, see "Compatibility levels" further down this document. Strict mode uncovered code relying on transitive includes. |
 | [simdutf](https://github.com/simdutf/simdutf) | [1.19x](use_on_realworld_projects/simdutf_speed_report.md) | Consists mostly of simd intrinsics, no speedup expected. [Strict mode uncovered code relying on transitive includes](https://github.com/simdutf/simdutf/pull/998). |
