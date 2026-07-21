@@ -1186,6 +1186,8 @@ def _opencv() -> Project:
             # bindings, and hardware backends by default. They are unrelated
             # to the standard-library-heavy core and make this recipe depend
             # on whichever packages happen to be installed on the runner.
+            # Its SIMD emulator tests also type-pun through incompatible
+            # pointers, which GCC 13 misoptimizes at -O3 with strict aliasing.
             configure = [
                 "cmake",
                 "-S",
@@ -1195,7 +1197,7 @@ def _opencv() -> Project:
                 "-GNinja",
                 "-DCMAKE_BUILD_TYPE=" + tc.build_type.capitalize(),
                 "-DCMAKE_CXX_COMPILER=" + tc.cxx,
-                "-DCMAKE_CXX_FLAGS=" + tc.cxxflags,
+                "-DCMAKE_CXX_FLAGS=" + tc.cxxflags + " -fno-strict-aliasing",
                 "-DCMAKE_EXE_LINKER_FLAGS=" + tc.ldflags,
                 "-DCMAKE_CXX_STANDARD_LIBRARIES=" + tc.libs,
                 "-DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY",
