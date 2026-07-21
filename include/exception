@@ -80,6 +80,12 @@ struct __cxa_eh_globals {
 extern "C" __cxa_eh_globals* __cxa_get_globals() noexcept;
 extern "C" void* __cxa_get_exception_ptr(void*) noexcept;
 extern "C" [[noreturn]] void __cxa_rethrow();
+#ifdef __APPLE__
+extern "C" void* __cxa_current_primary_exception() noexcept;
+extern "C" void __cxa_increment_exception_refcount(void*) noexcept;
+extern "C" void __cxa_decrement_exception_refcount(void*) noexcept;
+extern "C" void __cxa_rethrow_primary_exception(void*);
+#endif
 } // namespace __cxxabiv1
 
 // Keep the ABI name and layout used by libsupc++'s exception_ptr support.
@@ -95,18 +101,43 @@ namespace __exception_ptr {
 class exception_ptr {
   void* ptr_ = nullptr;
 
+#ifdef __APPLE__
+  explicit exception_ptr(void* p) noexcept : ptr_(p) {}
+#else
   explicit exception_ptr(void* p) noexcept;
   void _M_addref() noexcept;
   void _M_release() noexcept;
+#endif
   friend exception_ptr std::current_exception() noexcept;
   friend void std::rethrow_exception(exception_ptr);
 
 public:
+#ifdef __APPLE__
+  exception_ptr() noexcept = default;
+  exception_ptr(nullptr_t) noexcept {}
+  exception_ptr(const exception_ptr& other) noexcept : ptr_(other.ptr_) {
+    if (ptr_)
+      __cxxabiv1::__cxa_increment_exception_refcount(ptr_);
+  }
+  exception_ptr& operator=(const exception_ptr& other) noexcept {
+    if (other.ptr_)
+      __cxxabiv1::__cxa_increment_exception_refcount(other.ptr_);
+    if (ptr_)
+      __cxxabiv1::__cxa_decrement_exception_refcount(ptr_);
+    ptr_ = other.ptr_;
+    return *this;
+  }
+  ~exception_ptr() noexcept {
+    if (ptr_)
+      __cxxabiv1::__cxa_decrement_exception_refcount(ptr_);
+  }
+#else
   exception_ptr() noexcept;
   exception_ptr(nullptr_t) noexcept : ptr_(nullptr) {}
   exception_ptr(const exception_ptr&) noexcept;
   exception_ptr& operator=(const exception_ptr&) noexcept;
   ~exception_ptr() noexcept;
+#endif
   explicit operator bool() const noexcept { return ptr_ != nullptr; }
   friend bool operator==(const exception_ptr& a,
                          const exception_ptr& b) noexcept {
@@ -121,9 +152,20 @@ public:
 
 using __exception_ptr::exception_ptr;
 
+#ifdef __APPLE__
+inline exception_ptr current_exception() noexcept {
+  return exception_ptr(__cxxabiv1::__cxa_current_primary_exception());
+}
+
+[[noreturn]] inline void rethrow_exception(exception_ptr p) {
+  __cxxabiv1::__cxa_rethrow_primary_exception(p.ptr_);
+  terminate();
+}
+#else
 // The declarations above have libsupc++'s ABI names. Its implementations use
 // the saved primary exception, unlike __cxa_rethrow(), which only works while
 // handling the current exception.
+#endif
 
 template <typename E>
 exception_ptr make_exception_ptr([[maybe_unused]] E e) noexcept {

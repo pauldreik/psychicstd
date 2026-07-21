@@ -2,6 +2,11 @@
 #include <cmath>
 #include <type_traits>
 
+// Catch2 imports std::nextafter into a scope where the C declaration is
+// already visible. The double overload must be that same function.
+using std::nextafter;
+static_assert(std::is_same_v<decltype(nextafter(1.0, 2.0)), double>);
+
 int main() {
   psyassert(std::fpclassify(0.0) == FP_ZERO);
   psyassert(std::fpclassify(1.0F) == FP_NORMAL);
