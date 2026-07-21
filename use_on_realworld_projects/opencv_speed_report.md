@@ -10,10 +10,18 @@ Builds OpenCV's core and imgproc modules and runs their upstream tests; optional
 
 | step | system (s) | psychicstd (s) | speedup | comment |
 | --- | ---: | ---: | ---: | --- |
-| configure | 17.49 | 17.33 | 🟡 1.01x | |
-| compile | 33.06 | 19.40 | 🟡 1.70x | |
-| run tests | 499.98 | 493.39 | 🟡 1.01x | |
+| configure | 17.42 | 17.62 | 🟡 0.99x | |
+| compile | 33.36 | 19.63 | 🟡 1.70x | |
+| run tests | 497.74 | 493.45 | 🟡 1.01x | |
+
+### Release
+
+| step | system (s) | psychicstd (s) | speedup | comment |
+| --- | ---: | ---: | ---: | --- |
+| configure | 18.00 | 17.58 | 🟡 1.02x | |
+| compile | 58.73 | 48.35 | 🟡 1.21x | |
+| run tests | 117.94 | 117.77 | 🟡 1.00x | |
 
 ______________________________________________________________________
 
-Reproduce this on your machine: `scripts/compare_realworld_performance.py --compiler c++ --build-type debug --reps 1`
+Reproduce this on your machine: `scripts/compare_realworld_performance.py --compiler c++ --build-type both --reps 1`
