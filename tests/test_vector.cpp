@@ -16,6 +16,21 @@ struct value {
   }
 };
 
+struct resize_value {
+  static inline int moves = 0;
+  int n = 0;
+
+  resize_value() = default;
+  resize_value(const resize_value&) = default;
+  resize_value& operator=(const resize_value&) = default;
+  resize_value(resize_value&& other) noexcept : n(other.n) { ++moves; }
+  resize_value& operator=(resize_value&& other) noexcept {
+    n = other.n;
+    ++moves;
+    return *this;
+  }
+};
+
 int main() {
   std::vector<char> zeroes(32);
   for (char c : zeroes)
@@ -46,4 +61,23 @@ int main() {
   std::vector<value> other;
   other.swap(moved);
   psyassert(other.size() == 4);
+
+  std::vector<resize_value> resized;
+  for (int i = 0; i < 128; ++i) {
+    resized.resize(resized.size() + 1);
+    resized.back().n = i;
+  }
+  psyassert(resize_value::moves < 512);
+  for (int i = 0; i < 128; ++i)
+    psyassert(resized[i].n == i);
+
+  resize_value::moves = 0;
+  resize_value fill;
+  fill.n = 42;
+  std::vector<resize_value> resized_with_value;
+  for (int i = 0; i < 128; ++i)
+    resized_with_value.resize(resized_with_value.size() + 1, fill);
+  psyassert(resize_value::moves < 512);
+  for (const auto& item : resized_with_value)
+    psyassert(item.n == 42);
 }

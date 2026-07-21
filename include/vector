@@ -112,11 +112,14 @@ private:
         _destroy(data_ + i);
   }
 
-  constexpr void _grow() {
-    if (size_ < cap_)
+  constexpr void _grow_to(size_type needed) {
+    if (needed <= cap_)
       return;
-    reserve(cap_ ? cap_ * 2 : 4);
+    size_type next = cap_ ? cap_ * 2 : 4;
+    reserve(next < needed ? needed : next);
   }
+
+  constexpr void _grow() { _grow_to(size_ + 1); }
 
   // Shift elements [idx, size_) right by n positions.
   // Slots [size_, cap_) are raw; slots [0, size_) are live objects.
@@ -712,7 +715,7 @@ public:
 
   constexpr void resize(size_type n) {
     if (n > size_) {
-      reserve(n);
+      _grow_to(n);
       _default_fill(data_ + size_, n - size_);
       size_ = n;
     } else {
@@ -723,7 +726,7 @@ public:
   }
   constexpr void resize(size_type n, const T& val) {
     if (n > size_) {
-      reserve(n);
+      _grow_to(n);
       _value_fill(data_ + size_, n - size_, val);
     } else {
       for (size_type i = n; i < size_; ++i)
