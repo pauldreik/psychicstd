@@ -188,8 +188,15 @@ def main() -> None:
     if base_ver and head_ver and base_ver != head_ver:
         compiler = f"PR: {head_ver} / main: {base_ver}"
 
+    head_reps = head.get("__meta__", {}).get("repetitions")
+    base_reps = base.get("__meta__", {}).get("repetitions")
+
     lines: list[str] = [f"## {args.title}\n"]
     lines.append(f"Compiler: `{compiler}`.\n")
+    if base_reps == head_reps and isinstance(head_reps, int):
+        lines.append(f"Repetitions: **{head_reps}** per configuration.\n")
+    elif isinstance(base_reps, int) and isinstance(head_reps, int):
+        lines.append(f"Repetitions: main **{base_reps}**, PR **{head_reps}**.\n")
     lines.append(
         f"{args.what}, main vs this PR (same runner). "
         f"{GREEN} faster · {RED} slower · {YELLOW} within noise. A change is colored only "
