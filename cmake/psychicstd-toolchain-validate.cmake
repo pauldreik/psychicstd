@@ -31,6 +31,7 @@ if(NOT _psychicstd_in_try_compile AND NOT TARGET _psychicstd_runtime)
         _psychicstd_runtime
         STATIC
         "${PSYCHICSTD_ROOT}/src/iostream.cpp"
+        "${PSYCHICSTD_ROOT}/src/sstream_instantiations.cpp"
         "${PSYCHICSTD_ROOT}/src/stdexcept.cpp"
         "${PSYCHICSTD_ROOT}/src/string.cpp"
         "${PSYCHICSTD_ROOT}/src/string_instantiations.cpp"

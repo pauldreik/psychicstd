@@ -7,6 +7,7 @@ add_library(
     psychicstd
     STATIC
     src/iostream.cpp
+    src/sstream_instantiations.cpp
     src/stdexcept.cpp
     src/string.cpp
     src/string_instantiations.cpp

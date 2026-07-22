@@ -69,6 +69,7 @@ def _runtime_library(compiler: str, include: Path) -> str:
         source_dir / name
         for name in (
             "iostream.cpp",
+            "sstream_instantiations.cpp",
             "stdexcept.cpp",
             "system_error.cpp",
             "string.cpp",

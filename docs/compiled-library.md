@@ -166,3 +166,31 @@ all test phases are flat or faster:
 The 22,111-byte linked-text increase in the focused probe is accepted because
 psychicstd prioritizes development compile speed, the instantiation remains a
 separately extracted archive member, and no measured project regresses.
+
+### Narrow stringstream explicit instantiation
+
+This follow-up compares against `44c6463`. It tests the four narrow
+specializations from `<sstream>` in another dedicated PIC archive object, with
+`extern template` declarations only when exceptions are enabled. The same
+three-repetition GCC 14 Debug policy and real-project gate apply.
+
+The focused exercised probe improves from 0.26 to 0.25 s. Its caller object
+falls from 135,384 to 101,656 bytes and code generation falls from 40 to 30 ms.
+The header grows from 9,123 to 9,624 bytes, the GCC 14 Debug instantiation
+object is 171,880 bytes, and linked text grows from 158,465 to 164,201 bytes.
+This smaller 3.6% text cost is provisional pending the real-project gate.
+
+The real-project gate keeps the slice. Three projects improve by 3.5-4.7%; the
+only slower median is rdfind at 2.3%, below the 3% rejection threshold and with
+a confidence interval spanning -4.1% to +8.5%:
+
+| Project and phase | Baseline | Explicit instantiation | Change | System drift |
+| --- | ---: | ---: | ---: | ---: |
+| rdfind compile | 224.1 ms | 229.3 ms | +2.3% | +0.6% |
+| fmt compile | 5,050.2 ms | 4,814.5 ms | -4.7% | +2.2% |
+| Catch2 compile | 2,891.0 ms | 2,788.4 ms | -3.5% | +1.9% |
+| Eigen compile | 11,129.2 ms | 10,685.6 ms | -4.0% | +0.3% |
+
+All associated test phases remain within noise. The focused code-generation
+reduction, modest linked-size cost, and three corroborating project gains make
+this a keep.
