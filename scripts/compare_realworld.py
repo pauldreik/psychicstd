@@ -68,8 +68,17 @@ def _runtime_library(compiler: str, include: Path) -> str:
     sources = [
         source_dir / name
         for name in (
+            "cerr.cpp",
+            "cin.cpp",
+            "clog.cpp",
+            "cout.cpp",
+            "ios.cpp",
+            "istream.cpp",
             "iostream.cpp",
+            "iostream_macos.cpp",
+            "ostream.cpp",
             "sstream_instantiations.cpp",
+            "stdio_streambuf.cpp",
             "stdexcept.cpp",
             "system_error.cpp",
             "string.cpp",

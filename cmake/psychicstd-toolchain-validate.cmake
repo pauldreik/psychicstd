@@ -30,8 +30,15 @@ if(NOT _psychicstd_in_try_compile AND NOT TARGET _psychicstd_runtime)
     add_library(
         _psychicstd_runtime
         STATIC
-        "${PSYCHICSTD_ROOT}/src/iostream.cpp"
+        "${PSYCHICSTD_ROOT}/src/cerr.cpp"
+        "${PSYCHICSTD_ROOT}/src/cin.cpp"
+        "${PSYCHICSTD_ROOT}/src/clog.cpp"
+        "${PSYCHICSTD_ROOT}/src/cout.cpp"
+        "${PSYCHICSTD_ROOT}/src/ios.cpp"
+        "${PSYCHICSTD_ROOT}/src/istream.cpp"
+        "${PSYCHICSTD_ROOT}/src/ostream.cpp"
         "${PSYCHICSTD_ROOT}/src/sstream_instantiations.cpp"
+        "${PSYCHICSTD_ROOT}/src/stdio_streambuf.cpp"
         "${PSYCHICSTD_ROOT}/src/stdexcept.cpp"
         "${PSYCHICSTD_ROOT}/src/string.cpp"
         "${PSYCHICSTD_ROOT}/src/string_instantiations.cpp"

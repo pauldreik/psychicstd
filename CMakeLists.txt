@@ -6,8 +6,15 @@ file(WRITE "${CMAKE_BINARY_DIR}/.gitignore" "*\n")
 add_library(
     psychicstd
     STATIC
-    src/iostream.cpp
+    src/cerr.cpp
+    src/cin.cpp
+    src/clog.cpp
+    src/cout.cpp
+    src/ios.cpp
+    src/istream.cpp
+    src/ostream.cpp
     src/sstream_instantiations.cpp
+    src/stdio_streambuf.cpp
     src/stdexcept.cpp
     src/string.cpp
     src/string_instantiations.cpp

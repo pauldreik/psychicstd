@@ -194,3 +194,42 @@ a confidence interval spanning -4.1% to +8.5%:
 All associated test phases remain within noise. The focused code-generation
 reduction, modest linked-size cost, and three corroborating project gains make
 this a keep.
+
+### Iostream archive splitting
+
+This follow-up compares against `36459d3`. It splits the original monolithic
+`iostream.cpp` into `ios.cpp`, narrow stream instantiation objects, and one PIC
+archive member for each standard stream. The benchmark policy remains GCC 14
+Debug, ccache disabled, and three repetitions. The intended gain is linked
+size: a consumer which names only `cout` should no longer extract `cin`,
+`cerr`, or `clog` and their backing buffers. Compile-time and real-project
+results remain subject to the same regression gate.
+
+The public headers and generated caller text are unchanged: the `cout` and
+`cin` probes remain 87 and 98 bytes of object text respectively. Splitting the
+archive reduces a `cout`-only executable from 153,089 to 134,614 bytes of text
+(-12.1%) and a `cin`-only executable from 153,153 to 138,225 bytes (-9.7%). The
+GCC 14 Debug archive grows from 816,194 to 1,171,040 bytes because the separate
+translation units repeat debug and template metadata. That installed-library
+cost is accepted provisionally because it does not enter the consumer and the
+project prioritizes the edit-link-debug result.
+
+The three-repetition real-project gate passes. All compile medians are flat or
+faster and every compile and test phase remains statistically within noise:
+
+| Project and phase | Baseline | Split archive | Change | System drift |
+| --- | ---: | ---: | ---: | ---: |
+| rdfind compile | 232.9 ms | 222.9 ms | -4.3% | +2.7% |
+| fmt compile | 5,269.7 ms | 5,225.5 ms | -0.8% | +2.3% |
+| Catch2 compile | 2,915.5 ms | 2,882.2 ms | -1.1% | +0.6% |
+| Eigen compile | 10,804.7 ms | 10,789.1 ms | -0.1% | +2.0% |
+
+The focused linked-size reduction and absence of a real-project regression
+make this a keep.
+
+The common stdio buffer implementation lives in its own archive member so its
+code and debug information are not repeated four times. Validation covers
+GCC and Clang behavior tests, strict and `-fno-exceptions` consumers, focused
+ASan and UBSan runs, all four external toolchain configurations, a complete
+GCC 14 `-fno-exceptions` archive, and a shared-library consumer of the PIC
+archive.
