@@ -46,8 +46,8 @@ public:
   using difference_type = ptrdiff_t;
   using reference = Char&;
   using const_reference = const Char&;
-  using pointer = Char*;
-  using const_pointer = const Char*;
+  using pointer = typename allocator_traits<Alloc>::pointer;
+  using const_pointer = typename allocator_traits<Alloc>::const_pointer;
   using iterator = Char*;
   using const_iterator = const Char*;
   using reverse_iterator = std::reverse_iterator<iterator>;
@@ -58,48 +58,89 @@ public:
   static constexpr size_type npos = size_type(-1);
 
   // Constructors
-  basic_string() noexcept : data_(nullptr), size_(0), cap_(0) {}
+  constexpr basic_string() noexcept : data_(nullptr), size_(0), cap_(0) {}
 
-  explicit basic_string(const allocator_type& a) noexcept
+  constexpr explicit basic_string(const allocator_type& a) noexcept
       : data_(nullptr), size_(0), cap_(0), alloc_(a) {}
 
-  basic_string(const Char* s) : basic_string(s, s ? Traits::length(s) : 0) {}
+  constexpr basic_string(const Char* s)
+      : basic_string(s, s ? Traits::length(s) : 0) {}
 
-  basic_string(const Char* s, size_type n) : size_(n), cap_(n) {
+  constexpr basic_string(const Char* s, size_type n) : size_(n), cap_(n) {
     data_ = alloc(n + 1);
     Traits::copy(data_, s, n);
-    data_[n] = 0;
+    data_[n] = Char();
   }
 
-  basic_string(size_type n, Char c) : size_(n), cap_(n) {
+  constexpr basic_string(const Char* s, const allocator_type& a)
+      : basic_string(s, Traits::length(s), a) {}
+
+  constexpr basic_string(const Char* s, size_type n, const allocator_type& a)
+      : size_(n), cap_(n), alloc_(a) {
+    data_ = alloc(n + 1);
+    Traits::copy(data_, s, n);
+    data_[n] = Char();
+  }
+
+  constexpr basic_string(size_type n, Char c) : size_(n), cap_(n) {
     data_ = alloc(n + 1);
     for (size_type i = 0; i < n; ++i)
       data_[i] = c;
-    data_[n] = 0;
+    data_[n] = Char();
   }
 
-  basic_string(const basic_string& o) : basic_string(o.data_, o.size_) {}
+  constexpr basic_string(size_type n, Char c, const allocator_type& a)
+      : size_(n), cap_(n), alloc_(a) {
+    data_ = alloc(n + 1);
+    for (size_type i = 0; i < n; ++i)
+      data_[i] = c;
+    data_[n] = Char();
+  }
 
-  basic_string(const basic_string& o, const allocator_type& a)
+  constexpr basic_string(const basic_string& o)
+      : basic_string(o, allocator_traits<allocator_type>::
+                            select_on_container_copy_construction(o.alloc_)) {}
+
+  constexpr basic_string(const basic_string& o, const allocator_type& a)
       : data_(nullptr), size_(o.size_), cap_(o.size_), alloc_(a) {
     data_ = alloc(size_ + 1);
     if (size_)
       Traits::copy(data_, o.data_, size_);
-    data_[size_] = 0;
+    data_[size_] = Char();
   }
 
-  basic_string(const basic_string& o, size_type pos, size_type count = npos) {
-    const size_type start = pos < o.size_ ? pos : o.size_;
-    const size_type available = o.size_ - start;
+  constexpr basic_string(const basic_string& o, size_type pos,
+                         size_type count = npos) {
+    if (pos > o.size_)
+      _PSYCHICSTD_THROW(out_of_range("basic_string::basic_string"));
+    const size_type available = o.size_ - pos;
     size_ = count < available ? count : available;
     cap_ = size_;
     data_ = alloc(size_ + 1);
     if (size_)
-      Traits::copy(data_, o.data_ + start, size_);
-    data_[size_] = 0;
+      Traits::copy(data_, o.data_ + pos, size_);
+    data_[size_] = Char();
   }
 
-  basic_string(basic_string&& o) noexcept
+  constexpr basic_string(const basic_string& o, size_type pos,
+                         const allocator_type& a)
+      : basic_string(o, pos, npos, a) {}
+
+  constexpr basic_string(const basic_string& o, size_type pos, size_type count,
+                         const allocator_type& a)
+      : alloc_(a) {
+    if (pos > o.size_)
+      _PSYCHICSTD_THROW(out_of_range("basic_string::basic_string"));
+    const size_type available = o.size_ - pos;
+    size_ = count < available ? count : available;
+    cap_ = size_;
+    data_ = alloc(size_ + 1);
+    if (size_)
+      Traits::copy(data_, o.data_ + pos, size_);
+    data_[size_] = Char();
+  }
+
+  constexpr basic_string(basic_string&& o) noexcept
       : data_(o.data_), size_(o.size_), cap_(o.cap_), alloc_(o.alloc_) {
     o.data_ = nullptr;
     o.size_ = 0;
@@ -108,63 +149,101 @@ public:
 
   // Explicit per [string.cons]; if implicit, ?: between string and
   // string_view is ambiguous (both directions convertible; hit by cmake).
-  explicit basic_string(basic_string_view<Char> sv)
-      : basic_string(sv.data(), sv.size()) {}
+  template <typename T>
+    requires(is_convertible_v<const T&, basic_string_view<Char>>)
+  constexpr explicit basic_string(const T& value)
+      : basic_string(basic_string_view<Char>(value).data(),
+                     basic_string_view<Char>(value).size()) {}
 
-  basic_string(initializer_list<Char> il)
+  template <typename T>
+    requires(is_convertible_v<const T&, basic_string_view<Char>>)
+  constexpr basic_string(const T& value, const allocator_type& a)
+      : basic_string(basic_string_view<Char>(value).data(),
+                     basic_string_view<Char>(value).size(), a) {}
+
+  constexpr basic_string(initializer_list<Char> il)
       : basic_string(il.begin(), il.size()) {}
 
+  constexpr basic_string(initializer_list<Char> il, const allocator_type& a)
+      : basic_string(il.begin(), il.size(), a) {}
+
   template <typename It>
-    requires(!is_integral_v<It>)
-  basic_string(It first, It last) {
+    requires(!is_integral_v<It> &&
+             requires(It it) {
+               *it;
+               ++it;
+             })
+  constexpr basic_string(It first, It last) {
     size_ = cap_ = 0;
     data_ = nullptr;
     for (auto it = first; it != last; ++it)
       push_back(*it);
   }
 
-  ~basic_string() { dealloc(data_); }
+  template <typename It>
+    requires(!is_integral_v<It> &&
+             requires(It it) {
+               *it;
+               ++it;
+             })
+  constexpr basic_string(It first, It last, const allocator_type& a)
+      : data_(nullptr), size_(0), cap_(0), alloc_(a) {
+    for (; first != last; ++first)
+      push_back(*first);
+  }
 
-  allocator_type get_allocator() const noexcept { return alloc_; }
+  constexpr ~basic_string() { dealloc(data_); }
 
-  basic_string& operator=(const basic_string& o) {
-    if (this != &o) {
+  constexpr allocator_type get_allocator() const noexcept { return alloc_; }
+
+  constexpr basic_string& operator=(const basic_string& o) {
+    if (this != std::addressof(o)) {
       basic_string tmp(o);
       swap(tmp);
     }
     return *this;
   }
-  basic_string& operator=(basic_string&& o) noexcept {
+  constexpr basic_string& operator=(basic_string&& o) noexcept {
     swap(o);
     return *this;
   }
-  basic_string& operator=(const Char* s) { return *this = basic_string(s); }
-  basic_string& operator=(Char c) { return *this = basic_string(1, c); }
-  basic_string& operator=(basic_string_view<Char> sv) {
-    return *this = basic_string(sv);
+  constexpr basic_string& operator=(const Char* s) {
+    return *this = basic_string(s);
   }
-  basic_string& assign(const basic_string& o) { return *this = o; }
-  basic_string& assign(const basic_string& o, size_type pos,
-                       size_type count = npos) {
+  constexpr basic_string& operator=(Char c) {
+    return *this = basic_string(1, c);
+  }
+  template <typename T>
+    requires(is_convertible_v<const T&, basic_string_view<Char>>)
+  constexpr basic_string& operator=(const T& value) {
+    return *this = basic_string(basic_string_view<Char>(value));
+  }
+  constexpr basic_string& assign(const basic_string& o) { return *this = o; }
+  constexpr basic_string& assign(const basic_string& o, size_type pos,
+                                 size_type count = npos) {
+    if (pos > o.size_)
+      _PSYCHICSTD_THROW(out_of_range("basic_string::assign"));
     size_type len = count < o.size_ - pos ? count : o.size_ - pos;
     return *this = basic_string(o.data_ + pos, len);
   }
-  basic_string& assign(const Char* s) { return *this = s; }
-  basic_string& assign(const Char* s, size_type n) {
+  constexpr basic_string& assign(const Char* s) { return *this = s; }
+  constexpr basic_string& assign(const Char* s, size_type n) {
     return *this = basic_string(s, n);
   }
-  basic_string& assign(size_type n, Char c) {
+  constexpr basic_string& assign(size_type n, Char c) {
     return *this = basic_string(n, c);
   }
   template <typename It>
     requires(!is_integral_v<It>)
-  basic_string& assign(It first, It last) {
+  constexpr basic_string& assign(It first, It last) {
     return *this = basic_string(first, last);
   }
 
   // Element access
-  Char& operator[](size_type i) noexcept { return data_[i]; }
-  const Char& operator[](size_type i) const noexcept { return data_[i]; }
+  constexpr Char& operator[](size_type i) noexcept { return data()[i]; }
+  constexpr const Char& operator[](size_type i) const noexcept {
+    return data()[i];
+  }
   constexpr Char& at(size_type i) {
     if (__builtin_expect(i >= size_, false))
       _PSYCHICSTD_THROW(out_of_range("basic_string::at"));
@@ -175,23 +254,32 @@ public:
       _PSYCHICSTD_THROW(out_of_range("basic_string::at"));
     return data_[i];
   }
-  Char& front() noexcept { return data_[0]; }
-  const Char& front() const noexcept { return data_[0]; }
-  Char& back() noexcept { return data_[size_ - 1]; }
-  const Char& back() const noexcept { return data_[size_ - 1]; }
-  Char* data() noexcept { return data_ ? data_ : empty_str(); }
-  const Char* data() const noexcept { return data_ ? data_ : empty_str(); }
-  const Char* c_str() const noexcept { return data(); }
-  operator basic_string_view<Char>() const noexcept { return {data(), size_}; }
+  constexpr Char& front() noexcept { return data_[0]; }
+  constexpr const Char& front() const noexcept { return data_[0]; }
+  constexpr Char& back() noexcept { return data_[size_ - 1]; }
+  constexpr const Char& back() const noexcept { return data_[size_ - 1]; }
+  constexpr Char* data() noexcept { return data_ ? data_ : empty_str(); }
+  constexpr const Char* data() const noexcept {
+    return data_ ? data_ : empty_str();
+  }
+  constexpr const Char* c_str() const noexcept { return data(); }
+  constexpr operator basic_string_view<Char>() const noexcept {
+    return {data(), size_};
+  }
 
   // Capacity
-  size_type size() const noexcept { return size_; }
-  size_type length() const noexcept { return size_; }
-  size_type capacity() const noexcept { return cap_; }
-  bool empty() const noexcept { return size_ == 0; }
-  size_type max_size() const noexcept { return size_type(-1) / sizeof(Char); }
+  constexpr size_type size() const noexcept { return size_; }
+  constexpr size_type length() const noexcept { return size_; }
+  constexpr size_type capacity() const noexcept { return cap_; }
+  constexpr bool empty() const noexcept { return size_ == 0; }
+  constexpr size_type max_size() const noexcept {
+    const size_type n = allocator_traits<allocator_type>::max_size(alloc_);
+    return n ? n - 1 : 0;
+  }
 
-  void reserve(size_type n) {
+  constexpr void reserve(size_type n) {
+    if (n > max_size())
+      _PSYCHICSTD_THROW(length_error("basic_string::reserve"));
     if (n <= cap_)
       return;
     Char* p = alloc(n + 1);
@@ -204,7 +292,7 @@ public:
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wstringop-overflow"
 #endif
-      p[0] = 0;
+      p[0] = Char();
 #ifndef __clang__
 #pragma GCC diagnostic pop
 #endif
@@ -213,10 +301,12 @@ public:
     cap_ = n;
   }
 
-  void resize(size_type n, Char c = Char()) {
+  constexpr void reserve() { shrink_to_fit(); }
+
+  constexpr void resize(size_type n, Char c = Char()) {
     if (n < size_) {
       size_ = n;
-      data_[n] = 0;
+      data_[n] = Char();
     } else {
       reserve(n);
       while (size_ < n)
@@ -224,40 +314,53 @@ public:
     }
   }
 
-  void clear() noexcept {
+  constexpr void clear() noexcept {
     size_ = 0;
     if (data_)
-      data_[0] = 0;
+      data_[0] = Char();
   }
-  void shrink_to_fit() {}
+  constexpr void shrink_to_fit() {}
 
   // Iterators
-  iterator begin() noexcept { return data(); }
-  iterator end() noexcept { return data() + size_; }
-  const_iterator begin() const noexcept { return data(); }
-  const_iterator end() const noexcept { return data() + size_; }
-  const_iterator cbegin() const noexcept { return begin(); }
-  const_iterator cend() const noexcept { return end(); }
-  reverse_iterator rbegin() noexcept { return reverse_iterator(end()); }
-  reverse_iterator rend() noexcept { return reverse_iterator(begin()); }
-  const_reverse_iterator rbegin() const noexcept {
+  constexpr iterator begin() noexcept { return data(); }
+  constexpr iterator end() noexcept { return data() + size_; }
+  constexpr const_iterator begin() const noexcept { return data(); }
+  constexpr const_iterator end() const noexcept { return data() + size_; }
+  constexpr const_iterator cbegin() const noexcept { return begin(); }
+  constexpr const_iterator cend() const noexcept { return end(); }
+  constexpr reverse_iterator rbegin() noexcept {
+    return reverse_iterator(end());
+  }
+  constexpr reverse_iterator rend() noexcept {
+    return reverse_iterator(begin());
+  }
+  constexpr const_reverse_iterator rbegin() const noexcept {
     return const_reverse_iterator(end());
   }
-  const_reverse_iterator rend() const noexcept {
+  constexpr const_reverse_iterator rend() const noexcept {
     return const_reverse_iterator(begin());
   }
-  const_reverse_iterator crbegin() const noexcept {
+  constexpr const_reverse_iterator crbegin() const noexcept {
     return const_reverse_iterator(end());
   }
-  const_reverse_iterator crend() const noexcept {
+  constexpr const_reverse_iterator crend() const noexcept {
     return const_reverse_iterator(begin());
   }
 
   // Modifiers
-  basic_string& append(const Char* s, size_type n) {
+  constexpr basic_string& append(const Char* s, size_type n) {
     if (!n)
       return *this;
+    size_type offset = npos;
+    if (data_)
+      for (size_type i = 0; i <= size_; ++i)
+        if (s == data_ + i) {
+          offset = i;
+          break;
+        }
     grow(size_ + n);
+    if (offset != npos)
+      s = data_ + offset;
     Traits::copy(data_ + size_, s, n);
     size_ += n;
     // GCC false positive: grow(size_ + n) with n > 0 ensures data_ has room.
@@ -265,65 +368,94 @@ public:
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wstringop-overflow"
 #endif
-    data_[size_] = 0;
+    data_[size_] = Char();
 #ifndef __clang__
 #pragma GCC diagnostic pop
 #endif
     return *this;
   }
-  basic_string& append(const basic_string& o) {
-    if (this == &o) {
+  constexpr basic_string& append(const basic_string& o) {
+    if (this == std::addressof(o)) {
       basic_string copy(o);
       return append(copy.data(), copy.size());
     }
     return append(o.data(), o.size());
   }
-  basic_string& append(const basic_string& o, size_type pos,
-                       size_type count = npos) {
+  constexpr basic_string& append(const basic_string& o, size_type pos,
+                                 size_type count = npos) {
+    if (pos > o.size_)
+      _PSYCHICSTD_THROW(out_of_range("basic_string::append"));
     size_type len = count < o.size_ - pos ? count : o.size_ - pos;
     return append(o.data_ + pos, len);
   }
-  basic_string& append(const Char* s) { return append(s, Traits::length(s)); }
-  basic_string& append(size_type n, Char c) {
+  constexpr basic_string& append(const Char* s) {
+    return append(s, Traits::length(s));
+  }
+  constexpr basic_string& append(size_type n, Char c) {
     while (n--)
       push_back(c);
     return *this;
   }
-  basic_string& append(basic_string_view<Char> sv) {
+  template <typename T>
+    requires(is_convertible_v<const T&, basic_string_view<Char>>)
+  constexpr basic_string& append(const T& value) {
+    basic_string_view<Char> sv(value);
     return append(sv.data(), sv.size());
   }
-  template <typename It> basic_string& append(It first, It last) {
+  constexpr basic_string& append(initializer_list<Char> il) {
+    return append(il.begin(), il.size());
+  }
+  template <typename It> constexpr basic_string& append(It first, It last) {
     for (; first != last; ++first)
       push_back(static_cast<Char>(*first));
     return *this;
   }
 
-  basic_string& operator+=(const basic_string& o) { return append(o); }
-  basic_string& operator+=(const Char* s) { return append(s); }
-  basic_string& operator+=(Char c) {
+  constexpr basic_string& operator+=(const basic_string& o) {
+    return append(o);
+  }
+  constexpr basic_string& operator+=(const Char* s) { return append(s); }
+  constexpr basic_string& operator+=(Char c) {
     push_back(c);
     return *this;
   }
-  basic_string& operator+=(basic_string_view<Char> sv) { return append(sv); }
+  constexpr basic_string& operator+=(initializer_list<Char> il) {
+    return append(il);
+  }
+  template <typename T>
+    requires(is_convertible_v<const T&, basic_string_view<Char>>)
+  constexpr basic_string& operator+=(const T& value) {
+    return append(basic_string_view<Char>(value));
+  }
 
-  void push_back(Char c) {
+  constexpr void push_back(Char c) {
     grow(size_ + 1);
     data_[size_++] = c;
-    data_[size_] = 0;
+    data_[size_] = Char();
   }
-  void pop_back() noexcept {
+  constexpr void pop_back() noexcept {
     if (size_)
-      data_[--size_] = 0;
+      data_[--size_] = Char();
   }
 
-  basic_string& insert(size_type pos, const Char* s, size_type n) {
+  constexpr basic_string& insert(size_type pos, const Char* s, size_type n) {
+    if (pos > size_)
+      _PSYCHICSTD_THROW(out_of_range("basic_string::insert"));
+    if (data_)
+      for (size_type i = 0; i <= size_; ++i)
+        if (s == data_ + i) {
+          basic_string copy(s, n, alloc_);
+          return insert(pos, copy.data(), copy.size());
+        }
     grow(size_ + n);
     Traits::move(data_ + pos + n, data_ + pos, size_ - pos + 1);
     Traits::copy(data_ + pos, s, n);
     size_ += n;
     return *this;
   }
-  basic_string& insert(size_type pos, size_type n, Char c) {
+  constexpr basic_string& insert(size_type pos, size_type n, Char c) {
+    if (pos > size_)
+      _PSYCHICSTD_THROW(out_of_range("basic_string::insert"));
     grow(size_ + n);
     Traits::move(data_ + pos + n, data_ + pos, size_ - pos + 1);
     for (size_type i = 0; i < n; ++i)
@@ -334,77 +466,88 @@ public:
   template <typename It>
     requires(is_same_v<remove_cvref_t<It>, iterator> ||
              is_same_v<remove_cvref_t<It>, const_iterator>)
-  iterator insert(It pos, Char c) {
-    size_type idx = pos - data_;
+  constexpr iterator insert(It pos, Char c) {
+    size_type idx = pos - begin();
     insert(idx, 1, c);
     return data_ + idx;
   }
   template <typename It>
     requires(is_same_v<remove_cvref_t<It>, iterator> ||
              is_same_v<remove_cvref_t<It>, const_iterator>)
-  iterator insert(It pos, size_type n, Char c) {
-    size_type idx = pos - data_;
+  constexpr iterator insert(It pos, size_type n, Char c) {
+    size_type idx = pos - begin();
     insert(idx, n, c);
     return data_ + idx;
   }
-  basic_string& insert(size_type pos, const basic_string& o) {
+  constexpr basic_string& insert(size_type pos, const basic_string& o) {
     return insert(pos, o.data(), o.size());
   }
-  basic_string& insert(size_type pos, const Char* s) {
+  constexpr basic_string& insert(size_type pos, const Char* s) {
     return insert(pos, s, Traits::length(s));
   }
 
-  basic_string& erase(size_type pos = 0, size_type n = npos) {
+  constexpr basic_string& erase(size_type pos = 0, size_type n = npos) {
+    if (pos > size_)
+      _PSYCHICSTD_THROW(out_of_range("basic_string::erase"));
     if (n > size_ - pos)
       n = size_ - pos;
     Traits::move(data_ + pos, data_ + pos + n, size_ - pos - n + 1);
     size_ -= n;
     return *this;
   }
-  iterator erase(const_iterator pos) {
-    size_type idx = pos - data_;
+  constexpr iterator erase(const_iterator pos) {
+    size_type idx = pos - begin();
     erase(idx, 1);
     return data_ + idx;
   }
-  iterator erase(const_iterator first, const_iterator last) {
-    size_type pos = first - data_;
+  constexpr iterator erase(const_iterator first, const_iterator last) {
+    size_type pos = first - begin();
     size_type n = last - first;
     erase(pos, n);
     return data_ + pos;
   }
 
-  basic_string& replace(size_type pos, size_type n, const basic_string& o) {
+  constexpr basic_string& replace(size_type pos, size_type n,
+                                  const basic_string& o) {
+    if (pos > size_)
+      _PSYCHICSTD_THROW(out_of_range("basic_string::replace"));
     erase(pos, n);
     insert(pos, o);
     return *this;
   }
-  basic_string& replace(size_type pos, size_type n1, const Char* s,
-                        size_type n2) {
+  constexpr basic_string& replace(size_type pos, size_type n1, const Char* s,
+                                  size_type n2) {
+    if (pos > size_)
+      _PSYCHICSTD_THROW(out_of_range("basic_string::replace"));
     erase(pos, n1);
     insert(pos, s, n2);
     return *this;
   }
-  basic_string& replace(size_type pos, size_type n, const Char* s) {
+  constexpr basic_string& replace(size_type pos, size_type n, const Char* s) {
     return replace(pos, n, s, Traits::length(s));
   }
-  basic_string& replace(const_iterator first, const_iterator last,
-                        const basic_string& o) {
-    return replace(first - data_, last - first, o);
+  constexpr basic_string& replace(const_iterator first, const_iterator last,
+                                  const basic_string& o) {
+    return replace(first - begin(), last - first, o);
   }
-  basic_string& replace(size_type pos, size_type n1, size_type n2, Char c) {
+  constexpr basic_string& replace(size_type pos, size_type n1, size_type n2,
+                                  Char c) {
+    if (pos > size_)
+      _PSYCHICSTD_THROW(out_of_range("basic_string::replace"));
     erase(pos, n1);
     insert(pos, n2, c);
     return *this;
   }
 
   // Search
-  size_type find(Char c, size_type pos = 0) const noexcept {
+  constexpr size_type find(Char c, size_type pos = 0) const noexcept {
     for (size_type i = pos; i < size_; ++i)
       if (Traits::eq(data_[i], c))
         return i;
     return npos;
   }
-  size_type find(const Char* s, size_type pos, size_type n) const noexcept {
+  constexpr size_type find(const Char* s, size_type pos,
+                           size_type n) const noexcept {
     if (n == 0)
       return pos <= size_ ? pos : npos;
     if (n > size_)
@@ -414,24 +557,27 @@ public:
         return i;
     return npos;
   }
-  size_type find(const Char* s, size_type pos = 0) const noexcept {
+  constexpr size_type find(const Char* s, size_type pos = 0) const noexcept {
     return find(s, pos, Traits::length(s));
   }
-  size_type find(const basic_string& o, size_type pos = 0) const noexcept {
+  constexpr size_type find(const basic_string& o,
+                           size_type pos = 0) const noexcept {
     return find(o.data(), pos, o.size());
   }
 
-  size_type rfind(Char c, size_type pos = npos) const noexcept {
-    size_type i = (pos < size_ ? pos : size_);
+  constexpr size_type rfind(Char c, size_type pos = npos) const noexcept {
+    size_type i = pos < size_ ? pos + 1 : size_;
     while (i-- > 0)
       if (Traits::eq(data_[i], c))
         return i;
     return npos;
   }
-  size_type rfind(const Char* s, size_type pos = npos) const noexcept {
+  constexpr size_type rfind(const Char* s,
+                            size_type pos = npos) const noexcept {
     return rfind(s, pos, Traits::length(s));
   }
-  size_type rfind(const Char* s, size_type pos, size_type n) const noexcept {
+  constexpr size_type rfind(const Char* s, size_type pos,
+                            size_type n) const noexcept {
     if (n == 0)
       return pos < size_ ? pos : size_;
     if (n > size_)
@@ -442,52 +588,56 @@ public:
         return i;
     return npos;
   }
-  size_type rfind(const basic_string& o, size_type pos = npos) const noexcept {
+  constexpr size_type rfind(const basic_string& o,
+                            size_type pos = npos) const noexcept {
     return rfind(o.data(), pos, o.size());
   }
 
   // find_first_of / find_last_of / find_first_not_of / find_last_not_of
-  size_type find_first_of(const Char* s, size_type pos,
-                          size_type n) const noexcept {
+  constexpr size_type find_first_of(const Char* s, size_type pos,
+                                    size_type n) const noexcept {
     for (size_type i = pos; i < size_; ++i)
       for (size_type j = 0; j < n; ++j)
         if (Traits::eq(data_[i], s[j]))
           return i;
     return npos;
   }
-  size_type find_first_of(Char c, size_type pos = 0) const noexcept {
+  constexpr size_type find_first_of(Char c, size_type pos = 0) const noexcept {
     return find(c, pos);
   }
-  size_type find_first_of(const Char* s, size_type pos = 0) const noexcept {
+  constexpr size_type find_first_of(const Char* s,
+                                    size_type pos = 0) const noexcept {
     return find_first_of(s, pos, Traits::length(s));
   }
-  size_type find_first_of(const basic_string& o,
-                          size_type pos = 0) const noexcept {
+  constexpr size_type find_first_of(const basic_string& o,
+                                    size_type pos = 0) const noexcept {
     return find_first_of(o.data(), pos, o.size());
   }
 
-  size_type find_last_of(const Char* s, size_type pos,
-                         size_type n) const noexcept {
-    size_type i = (pos < size_ ? pos : size_);
+  constexpr size_type find_last_of(const Char* s, size_type pos,
+                                   size_type n) const noexcept {
+    size_type i = pos < size_ ? pos + 1 : size_;
     while (i-- > 0)
       for (size_type j = 0; j < n; ++j)
         if (Traits::eq(data_[i], s[j]))
           return i;
     return npos;
   }
-  size_type find_last_of(Char c, size_type pos = npos) const noexcept {
+  constexpr size_type find_last_of(Char c,
+                                   size_type pos = npos) const noexcept {
     return rfind(c, pos);
   }
-  size_type find_last_of(const Char* s, size_type pos = npos) const noexcept {
+  constexpr size_type find_last_of(const Char* s,
+                                   size_type pos = npos) const noexcept {
     return find_last_of(s, pos, Traits::length(s));
   }
-  size_type find_last_of(const basic_string& o,
-                         size_type pos = npos) const noexcept {
+  constexpr size_type find_last_of(const basic_string& o,
+                                   size_type pos = npos) const noexcept {
     return find_last_of(o.data(), pos, o.size());
   }
 
-  size_type find_first_not_of(const Char* s, size_type pos,
-                              size_type n) const noexcept {
+  constexpr size_type find_first_not_of(const Char* s, size_type pos,
+                                        size_type n) const noexcept {
     for (size_type i = pos; i < size_; ++i) {
       bool found = false;
       for (size_type j = 0; j < n; ++j)
@@ -500,23 +650,25 @@ public:
     }
     return npos;
   }
-  size_type find_first_not_of(Char c, size_type pos = 0) const noexcept {
+  constexpr size_type find_first_not_of(Char c,
+                                        size_type pos = 0) const noexcept {
     for (size_type i = pos; i < size_; ++i)
       if (!Traits::eq(data_[i], c))
         return i;
     return npos;
   }
-  size_type find_first_not_of(const Char* s, size_type pos = 0) const noexcept {
+  constexpr size_type find_first_not_of(const Char* s,
+                                        size_type pos = 0) const noexcept {
     return find_first_not_of(s, pos, Traits::length(s));
   }
-  size_type find_first_not_of(const basic_string& o,
-                              size_type pos = 0) const noexcept {
+  constexpr size_type find_first_not_of(const basic_string& o,
+                                        size_type pos = 0) const noexcept {
     return find_first_not_of(o.data(), pos, o.size());
   }
 
-  size_type find_last_not_of(const Char* s, size_type pos,
-                             size_type n) const noexcept {
-    size_type i = (pos < size_ ? pos : size_);
+  constexpr size_type find_last_not_of(const Char* s, size_type pos,
+                                       size_type n) const noexcept {
+    size_type i = pos < size_ ? pos + 1 : size_;
     while (i-- > 0) {
       bool found = false;
       for (size_type j = 0; j < n; ++j)
@@ -529,44 +681,60 @@ public:
     }
     return npos;
   }
-  size_type find_last_not_of(Char c, size_type pos = npos) const noexcept {
-    size_type i = (pos < size_ ? pos : size_);
+  constexpr size_type find_last_not_of(Char c,
+                                       size_type pos = npos) const noexcept {
+    size_type i = pos < size_ ? pos + 1 : size_;
     while (i-- > 0)
       if (!Traits::eq(data_[i], c))
         return i;
     return npos;
   }
-  size_type find_last_not_of(const Char* s,
-                             size_type pos = npos) const noexcept {
+  constexpr size_type find_last_not_of(const Char* s,
+                                       size_type pos = npos) const noexcept {
     return find_last_not_of(s, pos, Traits::length(s));
   }
-  size_type find_last_not_of(const basic_string& o,
-                             size_type pos = npos) const noexcept {
+  constexpr size_type find_last_not_of(const basic_string& o,
+                                       size_type pos = npos) const noexcept {
     return find_last_not_of(o.data(), pos, o.size());
   }
 
-  bool starts_with(basic_string_view<Char> sv) const noexcept {
+  constexpr bool starts_with(basic_string_view<Char> sv) const noexcept {
     return size_ >= sv.size() &&
            Traits::compare(data_, sv.data(), sv.size()) == 0;
   }
-  bool ends_with(basic_string_view<Char> sv) const noexcept {
+  constexpr bool starts_with(Char c) const noexcept {
+    return !empty() && Traits::eq(front(), c);
+  }
+  constexpr bool ends_with(basic_string_view<Char> sv) const noexcept {
     return size_ >= sv.size() && Traits::compare(data_ + size_ - sv.size(),
                                                  sv.data(), sv.size()) == 0;
   }
-  bool contains(basic_string_view<Char> sv) const noexcept {
+  constexpr bool ends_with(Char c) const noexcept {
+    return !empty() && Traits::eq(back(), c);
+  }
+  constexpr bool contains(basic_string_view<Char> sv) const noexcept {
     return find(sv.data(), 0, sv.size()) != npos;
   }
 
   // Substring
-  basic_string substr(size_type pos = 0, size_type n = npos) const {
+  constexpr basic_string substr(size_type pos = 0, size_type n = npos) const {
     if (pos > size_)
-      pos = size_;
+      _PSYCHICSTD_THROW(out_of_range("basic_string::substr"));
     if (n > size_ - pos)
       n = size_ - pos;
     return basic_string(data_ + pos, n);
   }
 
-  int compare(const basic_string& o) const noexcept {
+  constexpr size_type copy(Char* destination, size_type count,
+                           size_type pos = 0) const {
+    if (pos > size_)
+      _PSYCHICSTD_THROW(out_of_range("basic_string::copy"));
+    const size_type n = count < size_ - pos ? count : size_ - pos;
+    Traits::copy(destination, data() + pos, n);
+    return n;
+  }
+
+  constexpr int compare(const basic_string& o) const noexcept {
     size_type n = size_ < o.size_ ? size_ : o.size_;
     int r = Traits::compare(data(), o.data(), n);
     if (r)
@@ -577,8 +745,15 @@ public:
       return 1;
     return 0;
   }
-  int compare(const Char* s) const noexcept { return compare(basic_string(s)); }
-  int compare(size_type pos1, size_type n1, const Char* s) const {
+  constexpr int compare(const Char* s) const noexcept {
+    const size_type right = Traits::length(s);
+    const size_type n = size_ < right ? size_ : right;
+    const int r = Traits::compare(data(), s, n);
+    if (r)
+      return r;
+    return size_ < right ? -1 : size_ > right ? 1 : 0;
+  }
+  constexpr int compare(size_type pos1, size_type n1, const Char* s) const {
     if (pos1 > size_)
       _PSYCHICSTD_THROW(out_of_range("basic_string::compare"));
     size_type left = n1 < size_ - pos1 ? n1 : size_ - pos1;
@@ -593,7 +768,8 @@ public:
       return 1;
     return 0;
   }
-  int compare(size_type pos1, size_type n1, const basic_string& o) const {
+  constexpr int compare(size_type pos1, size_type n1,
+                        const basic_string& o) const {
     if (pos1 > size_)
       _PSYCHICSTD_THROW(out_of_range("basic_string::compare"));
     size_type left = n1 < size_ - pos1 ? n1 : size_ - pos1;
@@ -607,7 +783,8 @@ public:
       return 1;
     return 0;
   }
-  int compare(size_type pos1, size_type n1, const Char* s, size_type n2) const {
+  constexpr int compare(size_type pos1, size_type n1, const Char* s,
+                        size_type n2) const {
     if (pos1 > size_)
       _PSYCHICSTD_THROW(out_of_range("basic_string::compare"));
     size_type left = n1 < size_ - pos1 ? n1 : size_ - pos1;
@@ -621,8 +798,8 @@ public:
       return 1;
     return 0;
   }
-  int compare(size_type pos1, size_type n1, const basic_string& o,
-              size_type pos2, size_type n2) const {
+  constexpr int compare(size_type pos1, size_type n1, const basic_string& o,
+                        size_type pos2, size_type n2) const {
     if (pos1 > size_ || pos2 > o.size_)
       _PSYCHICSTD_THROW(out_of_range("basic_string::compare"));
     size_type left = n1 < size_ - pos1 ? n1 : size_ - pos1;
@@ -638,7 +815,7 @@ public:
     return 0;
   }
 
-  void swap(basic_string& o) noexcept {
+  constexpr void swap(basic_string& o) noexcept {
     Char* td = data_;
     size_type ts = size_;
     size_type tc = cap_;
@@ -655,34 +832,49 @@ private:
   size_type size_;
   size_type cap_;
   allocator_type alloc_{};
+  Char empty_{};
 
-  Char* alloc(size_type n) {
-    return allocator_traits<allocator_type>::allocate(alloc_, n);
+  constexpr Char* alloc(size_type n) {
+    Char* p =
+        std::to_address(allocator_traits<allocator_type>::allocate(alloc_, n));
+    if (__builtin_is_constant_evaluated())
+      for (size_type i = 0; i < n; ++i)
+        std::construct_at(p + i);
+    return p;
   }
-  void dealloc(Char* p) {
-    if (p)
-      allocator_traits<allocator_type>::deallocate(alloc_, p, cap_ + 1);
+  constexpr void dealloc(Char* p) {
+    if (p) {
+      if (__builtin_is_constant_evaluated())
+        for (size_type i = 0; i <= cap_; ++i)
+          std::destroy_at(p + i);
+      allocator_traits<allocator_type>::deallocate(
+          alloc_, pointer_traits<pointer>::pointer_to(*p), cap_ + 1);
+    }
   }
 
-  static Char* empty_str() {
-    static Char z = 0;
-    return &z;
+  constexpr Char* empty_str() noexcept { return std::addressof(empty_); }
+  constexpr const Char* empty_str() const noexcept {
+    return std::addressof(empty_);
   }
 
-  void grow(size_type needed) {
+  constexpr void grow(size_type needed) {
     if (needed <= cap_)
       return;
+    if (needed > max_size())
+      _PSYCHICSTD_THROW(length_error("basic_string::grow"));
     size_type new_cap = cap_ ? cap_ * 2 : 16;
     if (new_cap < needed)
       new_cap = needed;
+    if (new_cap > max_size())
+      new_cap = max_size();
     reserve(new_cap);
   }
 };
 
 // Concatenation
 template <typename C, typename T, typename A>
-basic_string<C, T, A> operator+(const basic_string<C, T, A>& a,
-                                const basic_string<C, T, A>& b) {
+constexpr basic_string<C, T, A> operator+(const basic_string<C, T, A>& a,
+                                          const basic_string<C, T, A>& b) {
   basic_string<C, T, A> r;
   r.reserve(a.size() + b.size());
   r.append(a);
@@ -690,34 +882,37 @@ basic_string<C, T, A> operator+(const basic_string<C, T, A>& a,
   return r;
 }
 template <typename C, typename T, typename A>
-basic_string<C, T, A> operator+(const basic_string<C, T, A>& a, const C* b) {
+constexpr basic_string<C, T, A> operator+(const basic_string<C, T, A>& a,
+                                          const C* b) {
   basic_string<C, T, A> r;
   r.append(a);
   r.append(b);
   return r;
 }
 template <typename C, typename T, typename A>
-basic_string<C, T, A> operator+(const C* a, const basic_string<C, T, A>& b) {
+constexpr basic_string<C, T, A> operator+(const C* a,
+                                          const basic_string<C, T, A>& b) {
   basic_string<C, T, A> r;
   r.append(a);
   r.append(b);
   return r;
 }
 template <typename C, typename T, typename A>
-basic_string<C, T, A> operator+(basic_string<C, T, A>&& a,
-                                const basic_string<C, T, A>& b) {
+constexpr basic_string<C, T, A> operator+(basic_string<C, T, A>&& a,
+                                          const basic_string<C, T, A>& b) {
   a.append(b);
   // move
   return static_cast<basic_string<C, T, A>&&>(a);
 }
 template <typename C, typename T, typename A>
-basic_string<C, T, A> operator+(basic_string<C, T, A>&& a, const C* b) {
+constexpr basic_string<C, T, A> operator+(basic_string<C, T, A>&& a,
+                                          const C* b) {
   a.append(b);
   // move
   return static_cast<basic_string<C, T, A>&&>(a);
 }
 template <typename C, typename T, typename A>
-basic_string<C, T, A> operator+(const basic_string<C, T, A>& a, C c) {
+constexpr basic_string<C, T, A> operator+(const basic_string<C, T, A>& a, C c) {
   basic_string<C, T, A> r;
   r.reserve(a.size() + 1);
   r.append(a);
@@ -725,13 +920,13 @@ basic_string<C, T, A> operator+(const basic_string<C, T, A>& a, C c) {
   return r;
 }
 template <typename C, typename T, typename A>
-basic_string<C, T, A> operator+(basic_string<C, T, A>&& a, C c) {
+constexpr basic_string<C, T, A> operator+(basic_string<C, T, A>&& a, C c) {
   a.push_back(c);
   // move
   return static_cast<basic_string<C, T, A>&&>(a);
 }
 template <typename C, typename T, typename A>
-basic_string<C, T, A> operator+(C c, const basic_string<C, T, A>& b) {
+constexpr basic_string<C, T, A> operator+(C c, const basic_string<C, T, A>& b) {
   basic_string<C, T, A> r;
   r.push_back(c);
   r.append(b);
@@ -740,118 +935,120 @@ basic_string<C, T, A> operator+(C c, const basic_string<C, T, A>& b) {
 
 // Comparison — use string_view for all combinations
 template <typename C, typename T, typename A>
-bool operator==(const basic_string<C, T, A>& a,
-                const basic_string<C, T, A>& b) noexcept {
+constexpr bool operator==(const basic_string<C, T, A>& a,
+                          const basic_string<C, T, A>& b) noexcept {
   return a.size() == b.size() && T::compare(a.data(), b.data(), a.size()) == 0;
 }
 template <typename C, typename T, typename A>
-bool operator==(const basic_string<C, T, A>& a, const C* b) noexcept {
-  return a == basic_string<C, T, A>(b);
+constexpr bool operator==(const basic_string<C, T, A>& a, const C* b) noexcept {
+  const size_t n = T::length(b);
+  return a.size() == n && T::compare(a.data(), b, n) == 0;
 }
 template <typename C, typename T, typename A>
-bool operator==(const C* a, const basic_string<C, T, A>& b) noexcept {
+constexpr bool operator==(const C* a, const basic_string<C, T, A>& b) noexcept {
   return b == a;
 }
 template <typename C, typename T, typename A>
-bool operator==(const basic_string<C, T, A>& a,
-                basic_string_view<C> b) noexcept {
+constexpr bool operator==(const basic_string<C, T, A>& a,
+                          basic_string_view<C> b) noexcept {
   return a.size() == b.size() && T::compare(a.data(), b.data(), a.size()) == 0;
 }
 template <typename C, typename T, typename A>
-bool operator==(basic_string_view<C> a,
-                const basic_string<C, T, A>& b) noexcept {
+constexpr bool operator==(basic_string_view<C> a,
+                          const basic_string<C, T, A>& b) noexcept {
   return b == a;
 }
 template <typename C, typename T, typename A>
-bool operator<(const basic_string<C, T, A>& a,
-               basic_string_view<C> b) noexcept {
+constexpr bool operator<(const basic_string<C, T, A>& a,
+                         basic_string_view<C> b) noexcept {
   return T::compare(a.data(), b.data(),
                     a.size() < b.size() ? a.size() : b.size()) < 0 ||
          (a.size() < b.size() && T::compare(a.data(), b.data(), a.size()) == 0);
 }
 template <typename C, typename T, typename A>
-bool operator<(basic_string_view<C> a,
-               const basic_string<C, T, A>& b) noexcept {
+constexpr bool operator<(basic_string_view<C> a,
+                         const basic_string<C, T, A>& b) noexcept {
   return b > basic_string<C, T, A>(a.data(), a.size());
 }
 
 template <typename C, typename T, typename A>
-bool operator!=(const basic_string<C, T, A>& a,
-                const basic_string<C, T, A>& b) noexcept {
+constexpr bool operator!=(const basic_string<C, T, A>& a,
+                          const basic_string<C, T, A>& b) noexcept {
   return !(a == b);
 }
 template <typename C, typename T, typename A>
-bool operator!=(const basic_string<C, T, A>& a, const C* b) noexcept {
+constexpr bool operator!=(const basic_string<C, T, A>& a, const C* b) noexcept {
   return !(a == b);
 }
 template <typename C, typename T, typename A>
-bool operator!=(const C* a, const basic_string<C, T, A>& b) noexcept {
+constexpr bool operator!=(const C* a, const basic_string<C, T, A>& b) noexcept {
   return !(a == b);
 }
 
 template <typename C, typename T, typename A>
-bool operator<(const basic_string<C, T, A>& a,
-               const basic_string<C, T, A>& b) noexcept {
+constexpr bool operator<(const basic_string<C, T, A>& a,
+                         const basic_string<C, T, A>& b) noexcept {
   return a.compare(b) < 0;
 }
 template <typename C, typename T, typename A>
-bool operator<(const basic_string<C, T, A>& a, const C* b) noexcept {
+constexpr bool operator<(const basic_string<C, T, A>& a, const C* b) noexcept {
   return a.compare(b) < 0;
 }
 template <typename C, typename T, typename A>
-bool operator<(const C* a, const basic_string<C, T, A>& b) noexcept {
+constexpr bool operator<(const C* a, const basic_string<C, T, A>& b) noexcept {
   return b.compare(a) > 0;
 }
 template <typename C, typename T, typename A>
-bool operator<=(const basic_string<C, T, A>& a,
-                const basic_string<C, T, A>& b) noexcept {
+constexpr bool operator<=(const basic_string<C, T, A>& a,
+                          const basic_string<C, T, A>& b) noexcept {
   return a.compare(b) <= 0;
 }
 template <typename C, typename T, typename A>
-bool operator<=(const basic_string<C, T, A>& a, const C* b) noexcept {
+constexpr bool operator<=(const basic_string<C, T, A>& a, const C* b) noexcept {
   return a.compare(b) <= 0;
 }
 template <typename C, typename T, typename A>
-bool operator<=(const C* a, const basic_string<C, T, A>& b) noexcept {
+constexpr bool operator<=(const C* a, const basic_string<C, T, A>& b) noexcept {
   return b.compare(a) >= 0;
 }
 template <typename C, typename T, typename A>
-bool operator>(const basic_string<C, T, A>& a,
-               const basic_string<C, T, A>& b) noexcept {
+constexpr bool operator>(const basic_string<C, T, A>& a,
+                         const basic_string<C, T, A>& b) noexcept {
   return a.compare(b) > 0;
 }
 template <typename C, typename T, typename A>
-bool operator>(const basic_string<C, T, A>& a, const C* b) noexcept {
+constexpr bool operator>(const basic_string<C, T, A>& a, const C* b) noexcept {
   return a.compare(b) > 0;
 }
 template <typename C, typename T, typename A>
-bool operator>(const C* a, const basic_string<C, T, A>& b) noexcept {
+constexpr bool operator>(const C* a, const basic_string<C, T, A>& b) noexcept {
   return b.compare(a) < 0;
 }
 template <typename C, typename T, typename A>
-bool operator>=(const basic_string<C, T, A>& a,
-                const basic_string<C, T, A>& b) noexcept {
+constexpr bool operator>=(const basic_string<C, T, A>& a,
+                          const basic_string<C, T, A>& b) noexcept {
   return a.compare(b) >= 0;
 }
 template <typename C, typename T, typename A>
-bool operator>=(const basic_string<C, T, A>& a, const C* b) noexcept {
+constexpr bool operator>=(const basic_string<C, T, A>& a, const C* b) noexcept {
   return a.compare(b) >= 0;
 }
 template <typename C, typename T, typename A>
-bool operator>=(const C* a, const basic_string<C, T, A>& b) noexcept {
+constexpr bool operator>=(const C* a, const basic_string<C, T, A>& b) noexcept {
   return b.compare(a) <= 0;
 }
 
 template <typename C, typename T, typename A>
-auto operator<=>(const basic_string<C, T, A>& a,
-                 const basic_string<C, T, A>& b) noexcept {
+constexpr auto operator<=>(const basic_string<C, T, A>& a,
+                           const basic_string<C, T, A>& b) noexcept {
   int r = a.compare(b);
   return r < 0   ? strong_ordering::less
          : r > 0 ? strong_ordering::greater
                  : strong_ordering::equal;
 }
 template <typename C, typename T, typename A>
-auto operator<=>(const basic_string<C, T, A>& a, const C* b) noexcept {
+constexpr auto operator<=>(const basic_string<C, T, A>& a,
+                           const C* b) noexcept {
   int r = a.compare(b);
   return r < 0   ? strong_ordering::less
          : r > 0 ? strong_ordering::greater
@@ -859,7 +1056,8 @@ auto operator<=>(const basic_string<C, T, A>& a, const C* b) noexcept {
 }
 
 template <typename C, typename T, typename A>
-void swap(basic_string<C, T, A>& a, basic_string<C, T, A>& b) noexcept {
+constexpr void swap(basic_string<C, T, A>& a,
+                    basic_string<C, T, A>& b) noexcept {
   a.swap(b);
 }
 

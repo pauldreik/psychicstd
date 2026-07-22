@@ -25,10 +25,25 @@ template <typename Char> struct char_traits {
                                    size_t n) noexcept {
     if (!n)
       return dst;
+    if (__builtin_is_constant_evaluated()) {
+      for (size_t i = 0; i < n; ++i)
+        dst[i] = src[i];
+      return dst;
+    }
     return (char_type*)__builtin_memcpy(dst, src, n * sizeof(char_type));
   }
   static constexpr char_type* move(char_type* dst, const char_type* src,
                                    size_t n) noexcept {
+    if (__builtin_is_constant_evaluated()) {
+      if (dst < src) {
+        for (size_t i = 0; i < n; ++i)
+          dst[i] = src[i];
+      } else if (dst > src) {
+        for (size_t i = n; i-- > 0;)
+          dst[i] = src[i];
+      }
+      return dst;
+    }
     return (char_type*)__builtin_memmove(dst, src, n * sizeof(char_type));
   }
   static constexpr const char_type* find(const char_type* s, size_t n,
@@ -89,10 +104,12 @@ template <> struct char_traits<char> {
 #pragma GCC diagnostic ignored "-Wrestrict"
 #endif
   static constexpr char* copy(char* d, const char* s, size_t n) noexcept {
-    if (n) {
-      return (char*)__builtin_memcpy(d, s, n);
+    if (__builtin_is_constant_evaluated()) {
+      for (size_t i = 0; i < n; ++i)
+        d[i] = s[i];
+      return d;
     }
-    return d;
+    return n ? (char*)__builtin_memcpy(d, s, n) : d;
   }
 #ifndef __clang__
 #pragma GCC diagnostic pop
@@ -102,6 +119,16 @@ template <> struct char_traits<char> {
 #pragma GCC diagnostic ignored "-Wrestrict"
 #endif
   static constexpr char* move(char* d, const char* s, size_t n) noexcept {
+    if (__builtin_is_constant_evaluated()) {
+      if (d < s) {
+        for (size_t i = 0; i < n; ++i)
+          d[i] = s[i];
+      } else if (d > s) {
+        for (size_t i = n; i-- > 0;)
+          d[i] = s[i];
+      }
+      return d;
+    }
     return (char*)__builtin_memmove(d, s, n);
   }
 #ifndef __clang__
