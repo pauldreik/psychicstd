@@ -20,6 +20,17 @@ inline void* align(size_t alignment, size_t size, void*& ptr,
 }
 
 namespace __detail {
+template <typename Ptr, typename = void> struct __pointer_element;
+template <template <typename, typename...> class Ptr, typename T,
+          typename... Args>
+struct __pointer_element<Ptr<T, Args...>, void> {
+  using type = T;
+};
+template <typename Ptr>
+struct __pointer_element<Ptr, void_t<typename Ptr::element_type>> {
+  using type = typename Ptr::element_type;
+};
+
 template <typename Ptr, typename U, typename = void> struct __pointer_rebind {
   using type = U*;
 };
@@ -38,11 +49,13 @@ template <typename T> const T* addressof(const T&&) = delete;
 // pointer_traits
 template <typename Ptr> struct pointer_traits {
   using pointer = Ptr;
-  using element_type = typename Ptr::element_type;
+  using element_type = typename __detail::__pointer_element<Ptr>::type;
   using difference_type = ptrdiff_t;
   template <typename U>
   using rebind = typename __detail::__pointer_rebind<Ptr, U>::type;
-  static pointer pointer_to(element_type& r) { return Ptr::pointer_to(r); }
+  static constexpr pointer pointer_to(element_type& r) {
+    return Ptr::pointer_to(r);
+  }
 };
 template <typename T> struct pointer_traits<T*> {
   using pointer = T*;

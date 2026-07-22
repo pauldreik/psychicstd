@@ -2,6 +2,17 @@
 #include <stdexcept>
 #include <string>
 
+constexpr bool test_constexpr_string() {
+  std::string s = "ab";
+  s.append(s.data(), s.size());
+  char copied[3]{};
+  const auto copied_size = s.copy(copied, 2, 1);
+  return s == "abab" && copied_size == 2 && copied[0] == 'b' &&
+         copied[1] == 'a' && s.starts_with('a') && s.ends_with('b');
+}
+
+static_assert(test_constexpr_string());
+
 int main() {
 #if defined(PSYCHICSTD_TEST_PSYCHICSTD) &&                                     \
     _PSYCHICSTD_COMPATIBILITY_LEVEL >= _PSYCHICSTD_COMPAT_DROPIN
@@ -35,6 +46,30 @@ int main() {
     at_threw = true;
   }
   psyassert(at_threw);
+
+  bool range_threw = false;
+  try {
+    (void)s.substr(s.size() + 1);
+  } catch (const std::out_of_range&) {
+    range_threw = true;
+  }
+  psyassert(range_threw);
+
+  range_threw = false;
+  try {
+    s.erase(s.size() + 1);
+  } catch (const std::out_of_range&) {
+    range_threw = true;
+  }
+  psyassert(range_threw);
+
+  range_threw = false;
+  try {
+    s.append(s, s.size() + 1);
+  } catch (const std::out_of_range&) {
+    range_threw = true;
+  }
+  psyassert(range_threw);
 
   bool conversion_threw = false;
   try {
