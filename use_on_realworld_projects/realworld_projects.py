@@ -875,13 +875,13 @@ def _rapidjson() -> Project:
             # GoogleTest 1.8.0 triggers this warning in modern GCC; RapidJSON
             # applies -Werror globally to its bundled test dependencies.
             cxxflags = tc.cxxflags + (
-                " -Wno-error=maybe-uninitialized"
                 " -Wno-error=sign-conversion -Wno-error=sign-compare"
             )
             if "clang" not in tc.cxx.lower():
                 # Modern GCC emits false positives for RapidJSON's allocation
                 # wrappers at -O3; upstream enables -Werror for its tests.
                 cxxflags += (
+                    " -Wno-error=maybe-uninitialized"
                     " -Wno-error=alloc-size-larger-than= -Wno-error=array-bounds"
                     " -Wno-error=stringop-overflow"
                 )
