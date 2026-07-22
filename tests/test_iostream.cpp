@@ -24,7 +24,13 @@ public:
   ~derived_output() override = default;
 };
 
+bool iostream_was_ready_during_static_initialization();
+std::ostream* iostream_cout_from_other_translation_unit();
+
 int main() {
+  psyassert(iostream_was_ready_during_static_initialization());
+  psyassert(iostream_cout_from_other_translation_unit() == &std::cout);
+
   std::streambuf::pos_type position = 0;
   std::streambuf::off_type offset = 0;
   psyassert(position == offset);

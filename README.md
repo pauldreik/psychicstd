@@ -56,8 +56,11 @@ An AI can mostly guide itself trying to get the library through all the tests. A
 
 ## How does it work?
 
-Psychicstd is used by passing `-nostdinc++ -I/path/to/psychicstd/include` to the compiler. That causes the compiler to pick up vector,
-string and other headers from psychicstd instead of the standard library that comes with gcc (libstdc++).
+Psychicstd uses `-nostdinc++ -I/path/to/psychicstd/include` so the compiler
+picks up vector, string and other headers from psychicstd instead of
+libstdc++. A small static library supplies the standard iostream objects and
+the commonly used narrow-stream template instantiations. The CMake target and
+toolchain overlay both link it automatically.
 
 The standard library uses `std::` namespace just like the real standard. You should not have to do any changes to your program.
 
@@ -66,6 +69,10 @@ The standard library uses `std::` namespace just like the real standard. You sho
 Compile time for these headers is dominated by the compiler *frontend*, in two parts: **parsing declarations** and **instantiating templates**. psychicstd wins by having far less of both. Raw byte count, number of include files, and backend code generation are all second-order. Precompiled headers help by caching that same frontend work — but they attack the same bottleneck, so psychicstd without a PCH is roughly as fast as libstdc++ with one, and still wins when both use PCH. The [case studies](casestudies/) measure each of these effects.
 
 A concrete example is that `std::sort` has a very short and simple implementation to minimize compile time. It is still O(Nlog(N)) but not as fast as other standard libraries **in release mode**. In debug mode, it can however even be faster!
+
+The [compiled-library experiment](docs/compiled-library.md) measures the
+compile-time effect and linked-size tradeoff of moving the narrow iostream
+implementation out of headers.
 
 ## Compatibility levels
 
@@ -130,6 +137,21 @@ Unit tests should pass. The compliance test need not, getting 100% compliance is
 No changes to your source code are needed. You inject compile and link flags
 at configure time; your project's own build files stay untouched.
 
+The CMake toolchain described below is the recommended integration. If you
+inject the flags manually, first build the static library with the same
+compiler as the consuming project:
+
+```bash
+cmake -S /path/to/psychicstd -B /path/to/psychicstd/build-runtime \
+    -DCMAKE_CXX_COMPILER=g++-14 \
+    -DPSYCHICSTD_BUILD_TESTS=OFF \
+    -DPSYCHICSTD_BUILD_BENCHMARKS=OFF
+cmake --build /path/to/psychicstd/build-runtime --target psychicstd
+```
+
+The manual examples below call that output
+`/path/to/psychicstd/build-runtime/libpsychicstd.a`.
+
 ### CMake / GCC 12
 
 GCC 12 lacks `-nostdlib++`, so you need `-nodefaultlibs` and all the
@@ -141,7 +163,7 @@ cmake -S . -B build-with-psychic \
     -DCMAKE_CXX_COMPILER_WORKS=1 \
     -DCMAKE_CXX_FLAGS="-nostdinc++ -fvisibility=hidden -isystem /path/to/psychicstd/include" \
     -DCMAKE_EXE_LINKER_FLAGS="-nodefaultlibs" \
-    -DCMAKE_CXX_STANDARD_LIBRARIES="-lsupc++ -latomic -lm -lc -lgcc_s -lgcc"
+    -DCMAKE_CXX_STANDARD_LIBRARIES="/path/to/psychicstd/build-runtime/libpsychicstd.a -lsupc++ -latomic -lm -lc -lgcc_s -lgcc"
 ```
 
 `CMAKE_CXX_COMPILER_WORKS=1` skips the compiler detection link test (the test
@@ -159,7 +181,7 @@ cmake -S . -B build-with-psychic \
     -DCMAKE_CXX_STANDARD=20 \
     -DCMAKE_CXX_FLAGS="-nostdinc++ -fvisibility=hidden -isystem /path/to/psychicstd/include" \
     -DCMAKE_EXE_LINKER_FLAGS="-nostdlib++" \
-    -DCMAKE_CXX_STANDARD_LIBRARIES="-lsupc++ -latomic"
+    -DCMAKE_CXX_STANDARD_LIBRARIES="/path/to/psychicstd/build-runtime/libpsychicstd.a -lsupc++ -latomic"
 ```
 
 No `CMAKE_CXX_COMPILER_WORKS` needed — libc is still linked by default.
@@ -172,7 +194,7 @@ cmake -S . -B build-with-psychic \
     -DCMAKE_CXX_COMPILER=clang++ \
     -DCMAKE_CXX_FLAGS="-nostdinc++ -fvisibility=hidden -isystem /path/to/psychicstd/include" \
     -DCMAKE_EXE_LINKER_FLAGS="-nostdlib++" \
-    -DCMAKE_CXX_STANDARD_LIBRARIES="-lsupc++ -latomic"
+    -DCMAKE_CXX_STANDARD_LIBRARIES="/path/to/psychicstd/build-runtime/libpsychicstd.a -lsupc++ -latomic"
 ```
 
 ### CMake toolchain file
@@ -189,6 +211,8 @@ cmake -S . -B build-with-psychic \
 ```
 
 The toolchain is designed to compose with user flags and sanitizer settings.
+It adds a private static-library target to the consuming build, so no separate
+psychicstd build step is needed.
 If you already have a generated toolchain file, include the psychicstd one
 after it from a small wrapper toolchain file.
 
@@ -243,7 +267,7 @@ plain `make` then works without extra flags:
 ./configure \
     CXXFLAGS="-std=c++20 -nostdinc++ -isystem /path/to/psychicstd/include" \
     LDFLAGS="-nodefaultlibs" \
-    LIBS="-lsupc++ -latomic -lm -lc -lgcc_s -lgcc"
+    LIBS="/path/to/psychicstd/build-runtime/libpsychicstd.a -lsupc++ -latomic -lm -lc -lgcc_s -lgcc"
 make
 ```
 

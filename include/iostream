@@ -1,60 +1,12 @@
 #pragma once
-#include <cstdio>
 #include <istream>
 #include <ostream>
 
 namespace std {
 
-namespace detail {
-
-struct stdio_streambuf : basic_streambuf<char, char_traits<char>> {
-  FILE* f_;
-  explicit stdio_streambuf(FILE* f) : f_(f) {}
-
-protected:
-  streamsize xsputn(const char* s, streamsize n) override {
-    return (streamsize)::fwrite(s, 1, (size_t)n, f_);
-  }
-  int_type overflow(int_type c) override {
-    if (c == traits_type::eof())
-      return traits_type::eof();
-    char ch = traits_type::to_char_type(c);
-    return ::fwrite(&ch, 1, 1, f_) == 1 ? c : traits_type::eof();
-  }
-  int sync() override { return ::fflush(f_) == 0 ? 0 : -1; }
-};
-
-// Use Meyer's singleton to avoid static init order issues
-inline ostream& make_cout() {
-  static stdio_streambuf buf(stdout);
-  static ostream s(&buf);
-  return s;
-}
-inline ostream& make_cerr() {
-  static stdio_streambuf buf(stderr);
-  static ostream s(&buf);
-  return s;
-}
-inline ostream& make_clog() {
-  static stdio_streambuf buf(stderr);
-  static ostream s(&buf);
-  return s;
-}
-
-inline istream& make_cin() {
-  static detail::stdio_streambuf buf(stdin);
-  static istream s(&buf);
-  return s;
-}
-
-} // namespace detail
-
-namespace {
-// Anonymous namespace: each TU gets its own reference to the singleton
-ostream& cout = detail::make_cout();
-ostream& cerr = detail::make_cerr();
-ostream& clog = detail::make_clog();
-istream& cin = detail::make_cin();
-} // namespace
+extern istream cin;
+extern ostream cout;
+extern ostream cerr;
+extern ostream clog;
 
 } // namespace std

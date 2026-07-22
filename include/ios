@@ -19,14 +19,10 @@ public:
 
   class failure : public system_error {
   public:
-    explicit failure(const string& message)
-        : system_error(error_code(1, generic_category()), message) {}
-    explicit failure(const char* message)
-        : system_error(error_code(1, generic_category()), message) {}
-    failure(const string& message, const error_code& code)
-        : system_error(code, message) {}
-    failure(const char* message, const error_code& code)
-        : system_error(code, message) {}
+    explicit failure(const string& message);
+    explicit failure(const char* message);
+    failure(const string& message, const error_code& code);
+    failure(const char* message, const error_code& code);
   };
 
   using fmtflags = unsigned;
@@ -133,8 +129,14 @@ public:
 
 protected:
   [[noreturn, gnu::cold, gnu::noinline]] static void _throw_failure() {
-    _PSYCHICSTD_THROW(failure("basic_ios::clear"));
+#if defined(__cpp_exceptions)
+    _throw_failure_with_exceptions();
+#else
+    __builtin_abort();
+#endif
   }
+
+  [[noreturn, gnu::cold]] static void _throw_failure_with_exceptions();
 
   ios_base()
       : flags_(dec | skipws), width_(0), prec_(6), state_(goodbit), fill_(' ') {
