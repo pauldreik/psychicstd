@@ -253,6 +253,7 @@ def _side(
     psy_key: str,
     cxx_ver: str | None,
     phases: tuple[str, ...],
+    reps: int,
 ) -> dict:
     d = {
         p: {
@@ -261,7 +262,7 @@ def _side(
         }
         for p in phases
     }
-    d["__meta__"] = {"compiler_version": cxx_ver}
+    d["__meta__"] = {"compiler_version": cxx_ver, "repetitions": reps}
     return d
 
 
@@ -383,10 +384,10 @@ def main() -> int:
         base_json = tmp / "base.json"
         head_json = tmp / "head.json"
         base_json.write_text(
-            json.dumps(_side(samples, "system_base", "ref", ver, phases))
+            json.dumps(_side(samples, "system_base", "ref", ver, phases, reps))
         )
         head_json.write_text(
-            json.dumps(_side(samples, "system_head", "head", ver, phases))
+            json.dumps(_side(samples, "system_head", "head", ver, phases, reps))
         )
 
         subprocess.run(
@@ -403,7 +404,7 @@ def main() -> int:
                 f"{args.project} build time with psychicstd",
                 "--reproduce",
                 f"scripts/compare_realworld.py {args.project} "
-                f"--build-type {args.build_type} --reps {args.reps}"
+                f"--build-type {args.build_type} --reps {reps}"
                 + (" --enable-ccache" if args.enable_ccache else ""),
             ],
             check=True,
