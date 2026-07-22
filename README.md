@@ -6,17 +6,17 @@ It is not complete. It is not fully compliant. But it is good enough to quickly 
 
 | Project | Compile time speedup | comment |
 |-------------------------------------------------------------|-----------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------|
-| [Boost.Asio](https://www.boost.org/libs/asio/) | [2.16x](use_on_realworld_projects/boost-asio_speed_report.md) | |
-| [catch2](https://github.com/catchorg/Catch2) | [3.58x](use_on_realworld_projects/catch2_speed_report.md) | |
-| [cmake](https://cmake.org/) | [3.28x](use_on_realworld_projects/cmake_speed_report.md) | Uses a compiler wrapper to build. |
-| [cppcheck](https://github.com/cppcheck-opensource/cppcheck) | [2.04x](use_on_realworld_projects/cppcheck_speed_report.md)| |
-| [eigen](https://gitlab.com/libeigen/eigen) | [1.93x](use_on_realworld_projects/eigen_speed_report.md) | |
-| [fmt](https://github.com/fmtlib/fmt) | [1.65x](use_on_realworld_projects/fmt_speed_report.md) | |
+| [Boost.Asio](https://www.boost.org/libs/asio/) | [2.15x](use_on_realworld_projects/boost-asio_speed_report.md) | |
+| [catch2](https://github.com/catchorg/Catch2) | [3.63x](use_on_realworld_projects/catch2_speed_report.md) | |
+| [cmake](https://cmake.org/) | [3.26x](use_on_realworld_projects/cmake_speed_report.md) | Uses a compiler wrapper to build. |
+| [cppcheck](https://github.com/cppcheck-opensource/cppcheck) | [2.07x](use_on_realworld_projects/cppcheck_speed_report.md)| |
+| [eigen](https://gitlab.com/libeigen/eigen) | [1.90x](use_on_realworld_projects/eigen_speed_report.md) | |
+| [fmt](https://github.com/fmtlib/fmt) | [1.67x](use_on_realworld_projects/fmt_speed_report.md) | |
 | [googletest](https://github.com/google/googletest) | [1.58x](use_on_realworld_projects/googletest_speed_report.md) | |
-| [nlohmann json](https://json.nlohmann.me/) | [2.09x](use_on_realworld_projects/nlohmann_speed_report.md) | Uncovered a reliance on implementation-specific behaviour, fixed in [PR #5236](https://github.com/nlohmann/json/pull/5236). |
-| [OpenCV](https://opencv.org/) | [1.75x](use_on_realworld_projects/opencv_speed_report.md) | Builds the core and imgproc modules and their tests. |
+| [nlohmann json](https://json.nlohmann.me/) | [2.05x](use_on_realworld_projects/nlohmann_speed_report.md) | Uncovered a reliance on implementation-specific behaviour, fixed in [PR #5236](https://github.com/nlohmann/json/pull/5236). |
+| [OpenCV](https://opencv.org/) | [1.83x](use_on_realworld_projects/opencv_speed_report.md) | Builds the core and imgproc modules and their tests. |
 | [rapidjson](https://github.com/Tencent/rapidjson/) | [1.26x](use_on_realworld_projects/rapidjson_speed_report.md) | Not using much of the standard library, little speedup expected. |
-| [rdfind](https://rdfind.pauldreik.se/) | [4.07x](use_on_realworld_projects/rdfind_speed_report.md) | Runs in psychic strict mode, see "Compatibility levels" further down this document. Strict mode uncovered code relying on transitive includes. |
+| [rdfind](https://rdfind.pauldreik.se/) | [4.16x](use_on_realworld_projects/rdfind_speed_report.md) | Runs in psychic strict mode, see "Compatibility levels" further down this document. Strict mode uncovered code relying on transitive includes. |
 | [simdutf](https://github.com/simdutf/simdutf) | [1.64x](use_on_realworld_projects/simdutf_speed_report.md) | Mostly SIMD intrinsics. [Strict mode uncovered missing includes](https://github.com/simdutf/simdutf/pull/998); the pinned test suite currently runs in drop-in mode because a helper omits `<cstdlib>`. |
 | [wordcounter](benchmarks/compile_time/bench_wordcounter.cpp)| [4.0x](speed.md) | [demo program using STL](benchmarks/compile_time/bench_wordcounter.cpp). Counts word occurrences in text files. |
 
