@@ -58,8 +58,6 @@ def detect_parallelism() -> Parallelism:
     if not available and hasattr(os, "sysconf"):
         available = os.sysconf("SC_PAGE_SIZE") * os.sysconf("SC_AVPHYS_PAGES")
     logical_cpus = os.cpu_count() or 1
-    if logical_cpus >8:
-        logical_cpus = 8
     memory_jobs = available // (1536 * 1024 * 1024) if available else 1
     return Parallelism(
         logical_cpus,
