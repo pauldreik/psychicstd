@@ -45,6 +45,9 @@ template <typename T> struct fancy_allocator {
   using value_type = T;
   using pointer = fancy_pointer<T>;
   using const_pointer = fancy_pointer<const T>;
+
+  [[nodiscard]] pointer allocate(std::size_t);
+  void deallocate(pointer, std::size_t);
 };
 
 using fancy_vector = std::vector<int, fancy_allocator<int>>;
