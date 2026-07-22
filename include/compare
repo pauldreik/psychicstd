@@ -196,12 +196,12 @@ constexpr bool is_lteq(partial_ordering v) noexcept { return v <= 0; }
 constexpr bool is_gteq(partial_ordering v) noexcept { return v >= 0; }
 
 // three_way_comparable concept
-template <typename T, typename U = T>
+template <typename T, typename Cat = partial_ordering>
 concept three_way_comparable =
     requires(const __psychicstd_detail::remove_reference_t<T>& a,
-             const __psychicstd_detail::remove_reference_t<U>& b) {
-      a <=> b;
-      b <=> a;
+             const __psychicstd_detail::remove_reference_t<T>& b) {
+      static_cast<Cat>(a <=> b);
+      static_cast<Cat>(b <=> a);
     };
 
 template <typename T, typename U>
