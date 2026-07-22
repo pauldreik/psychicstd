@@ -5,6 +5,9 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+permissions:
+  contents: read
+  pull-requests: write
 jobs:
   format:
     runs-on: ubuntu-latest
@@ -48,6 +51,40 @@ jobs:
         with:
           name: formatting-patch
           path: formatting.patch
+      - name: Prepare formatting diff comment
+        if: >-
+          github.event_name == 'pull_request' &&
+          steps.diff.outputs.has_diff == 'true'
+        run: |
+          {
+            echo 'The formatting check found changes:'
+            echo
+            echo '````diff'
+            cat formatting.patch
+            echo '````'
+            echo
+            echo 'Apply the downloadable `formatting-patch` artifact with:'
+            echo
+            echo '```console'
+            echo 'git apply formatting.patch'
+            echo '```'
+          } > formatting-comment.md
+      - name: Post formatting diff as PR comment
+        if: >-
+          github.event_name == 'pull_request' &&
+          steps.diff.outputs.has_diff == 'true'
+        uses: marocchino/sticky-pull-request-comment@v3
+        with:
+          header: formatting
+          path: formatting-comment.md
+      - name: Remove resolved formatting comment
+        if: >-
+          github.event_name == 'pull_request' &&
+          steps.diff.outputs.has_diff != 'true'
+        uses: marocchino/sticky-pull-request-comment@v3
+        with:
+          header: formatting
+          delete: true
       - name: Fail if unformatted code found
         if: steps.diff.outputs.has_diff == 'true'
         run: |-

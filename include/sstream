@@ -143,8 +143,9 @@ public:
   using string_type = basic_string<Char, Traits, Alloc>;
 
   basic_ostringstream() : basic_ostream<Char, Traits>(&buf_) {}
-  explicit basic_ostringstream(const string_type& s)
-      : basic_ostream<Char, Traits>(&buf_), buf_(s) {}
+  explicit basic_ostringstream(const string_type& s,
+                               ios_base::openmode which = ios_base::out)
+      : basic_ostream<Char, Traits>(&buf_), buf_(s, which) {}
   basic_ostringstream(basic_ostringstream&& other)
       : basic_ostream<Char, Traits>(&buf_), buf_(other.buf_.str()) {}
   basic_ostringstream& operator=(basic_ostringstream&& other) {

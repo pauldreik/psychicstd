@@ -455,11 +455,11 @@ public:
         value_type(static_cast<Key&&>(key), T(static_cast<Args&&>(args)...)));
   }
   template <typename... Args>
-  iterator try_emplace(const_iterator hint, const Key& key, Args&&... args) {
+  iterator try_emplace(const_iterator, const Key& key, Args&&... args) {
     return try_emplace(key, static_cast<Args&&>(args)...).first;
   }
   template <typename... Args>
-  iterator try_emplace(const_iterator hint, Key&& key, Args&&... args) {
+  iterator try_emplace(const_iterator, Key&& key, Args&&... args) {
     return try_emplace(static_cast<Key&&>(key), static_cast<Args&&>(args)...)
         .first;
   }
@@ -484,11 +484,11 @@ public:
             true};
   }
   template <typename M>
-  iterator insert_or_assign(const_iterator hint, const Key& key, M&& obj) {
+  iterator insert_or_assign(const_iterator, const Key& key, M&& obj) {
     return insert_or_assign(key, static_cast<M&&>(obj)).first;
   }
   template <typename M>
-  iterator insert_or_assign(const_iterator hint, Key&& key, M&& obj) {
+  iterator insert_or_assign(const_iterator, Key&& key, M&& obj) {
     return insert_or_assign(static_cast<Key&&>(key), static_cast<M&&>(obj))
         .first;
   }
@@ -559,6 +559,28 @@ class unordered_multimap {
   KeyEqual eq_{};
 
   size_t bucket(const Key& k) const { return hasher_(k) % nbuckets_; }
+
+  Node* _equivalent_tail(size_t b, const Key& key) {
+    for (Node* p = buckets_[b]; p; p = p->next) {
+      if (eq_(p->kv.first, key)) {
+        while (p->next && eq_(p->next->kv.first, key))
+          p = p->next;
+        return p;
+      }
+    }
+    return nullptr;
+  }
+
+  void _link_node(size_t b, Node* n, Node* after) noexcept {
+    if (after) {
+      n->next = after->next;
+      after->next = n;
+    } else {
+      n->next = buckets_[b];
+      buckets_[b] = n;
+    }
+    ++size_;
+  }
 
   void destroy() {
     for (size_t i = 0; i < nbuckets_; ++i) {
@@ -719,19 +741,17 @@ public:
   iterator insert(const value_type& kv) {
     _maybe_rehash();
     size_t b = bucket(kv.first);
+    Node* after = _equivalent_tail(b, kv.first);
     Node* n = new Node(kv);
-    n->next = buckets_[b];
-    buckets_[b] = n;
-    ++size_;
+    _link_node(b, n, after);
     return {this, b, n};
   }
   iterator insert(value_type&& kv) {
     _maybe_rehash();
     size_t b = bucket(kv.first);
+    Node* after = _equivalent_tail(b, kv.first);
     Node* n = new Node(static_cast<value_type&&>(kv));
-    n->next = buckets_[b];
-    buckets_[b] = n;
-    ++size_;
+    _link_node(b, n, after);
     return {this, b, n};
   }
   iterator insert(const_iterator, const value_type& kv) { return insert(kv); }
@@ -752,6 +772,35 @@ public:
       if (eq_(p->kv.first, k))
         ++n;
     return n;
+  }
+
+  iterator find(const Key& k) {
+    size_t b = bucket(k);
+    for (Node* n = buckets_[b]; n; n = n->next)
+      if (eq_(n->kv.first, k))
+        return {this, b, n};
+    return end();
+  }
+  const_iterator find(const Key& k) const {
+    size_t b = bucket(k);
+    for (Node* n = buckets_[b]; n; n = n->next)
+      if (eq_(n->kv.first, k))
+        return {this, b, n};
+    return end();
+  }
+  pair<iterator, iterator> equal_range(const Key& k) {
+    auto it = find(k);
+    auto last = it;
+    while (last != end() && eq_(last->first, k))
+      ++last;
+    return {it, last};
+  }
+  pair<const_iterator, const_iterator> equal_range(const Key& k) const {
+    auto it = find(k);
+    auto last = it;
+    while (last != end() && eq_(last->first, k))
+      ++last;
+    return {it, last};
   }
 
   void clear() { destroy(); }

@@ -25,6 +25,10 @@ public:
 };
 
 int main() {
+  std::streambuf::pos_type position = 0;
+  std::streambuf::off_type offset = 0;
+  psyassert(position == offset);
+
   available_buffer available;
   psyassert(available.in_avail() == 42);
   char storage[4];
@@ -50,4 +54,21 @@ int main() {
   std::ostringstream point;
   point << std::fixed << std::setprecision(0) << std::showpoint << 3.0;
   psyassert(point.str() == "3.");
+
+  std::istringstream booleans("true false");
+  bool first = false;
+  bool second = true;
+  booleans >> std::boolalpha >> first >> second;
+  psyassert(first == true && second == false);
+
+  std::istringstream numeric_booleans("0 1");
+  numeric_booleans >> first >> second;
+  psyassert(!numeric_booleans.fail());
+  psyassert(first == false && second == true);
+
+  std::istringstream invalid_boolean("2");
+  bool invalid = false;
+  invalid_boolean >> invalid;
+  psyassert(invalid);
+  psyassert(invalid_boolean.fail());
 }

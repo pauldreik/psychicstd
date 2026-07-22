@@ -12,11 +12,13 @@ perf diff, but per phase.
 
 Usage:
   scripts/compare_realworld.py [project] [--ref REF] [--compiler CXX]
-      [--build-type {debug,release}] [--reps N]
+      [--build-type {debug,release}]
+      [--reps N | --time-budget DURATION] [--max-reps N]
 """
 
 import argparse
 import json
+import re
 import subprocess
 import sys
 import tempfile
@@ -53,6 +55,29 @@ else:
 BUILD_TYPES = ("debug", "release")
 
 
+def _duration(value: str) -> float:
+    match = re.fullmatch(r"([0-9]+(?:\.[0-9]+)?)([smh]?)", value)
+    if not match:
+        raise argparse.ArgumentTypeError("use seconds or a suffix such as 5m or 1.5h")
+    seconds = (
+        float(match.group(1)) * {"": 1, "s": 1, "m": 60, "h": 3600}[match.group(2)]
+    )
+    if seconds <= 0:
+        raise argparse.ArgumentTypeError("duration must be positive")
+    return seconds
+
+
+def _budget_repetitions(
+    project: str, build_type: str, budget: float, max_reps: int, jobs: int
+) -> tuple[int, float]:
+    # A diff repetition builds system/main, psychicstd/main, system/PR, and
+    # psychicstd/PR. Scale the calibration for the runner's parallelism; setup
+    # time outside the recipe is deliberately ignored.
+    spec = rw.PROJECTS[project]
+    cost = 4 * spec.expected_seconds[build_type] * spec.expected_jobs / jobs
+    return max(1, min(max_reps, int(budget // cost))), cost
+
+
 def compiler_version(cxx: str) -> str | None:
     try:
         out = subprocess.run(
@@ -63,14 +88,27 @@ def compiler_version(cxx: str) -> str | None:
         return None
 
 
-def sys_tc(compiler: str, build_type: str, enable_ccache: bool = False) -> rw.Toolchain:
+def sys_tc(
+    compiler: str,
+    build_type: str,
+    enable_ccache: bool = False,
+    jobs: int | None = None,
+) -> rw.Toolchain:
     return rw.Toolchain(
-        compiler, "-std=c++20", build_type=build_type, enable_ccache=enable_ccache
+        compiler,
+        "-std=c++20",
+        build_type=build_type,
+        enable_ccache=enable_ccache,
+        jobs=jobs if jobs is not None else rw.detect_parallelism().jobs,
     )
 
 
 def psy_tc(
-    compiler: str, include: Path, build_type: str, enable_ccache: bool = False
+    compiler: str,
+    include: Path,
+    build_type: str,
+    enable_ccache: bool = False,
+    jobs: int | None = None,
 ) -> rw.Toolchain:
     return rw.Toolchain(
         compiler,
@@ -79,6 +117,7 @@ def psy_tc(
         PSY_LIBS,
         build_type=build_type,
         enable_ccache=enable_ccache,
+        jobs=jobs if jobs is not None else rw.detect_parallelism().jobs,
     )
 
 
@@ -108,6 +147,7 @@ def measure_project(
     reps: int,
     include: Path,
     enable_ccache: bool = False,
+    jobs: int | None = None,
 ) -> dict[str, dict[str, list[float]]]:
     """Build `project` `reps` times under the system toolchain and psychicstd
     (headers from `include`); return {"system"|"psychicstd": {phase: [ms, ...]}}.
@@ -117,8 +157,8 @@ def measure_project(
     working tree's absolute speedup rather than a main-vs-PR regression diff.
     """
     variants = {
-        "system": sys_tc(compiler, build_type, enable_ccache),
-        "psychicstd": psy_tc(compiler, include, build_type, enable_ccache),
+        "system": sys_tc(compiler, build_type, enable_ccache, jobs),
+        "psychicstd": psy_tc(compiler, include, build_type, enable_ccache, jobs),
     }
     return _build_matrix(variants, rw.PROJECTS[project].build, reps, project)
 
@@ -129,13 +169,14 @@ def check_project(
     build_type: str,
     include: Path,
     enable_ccache: bool = False,
+    jobs: int | None = None,
 ) -> None:
     """Run a single psychicstd build of `project` and fail on build errors.
 
     This is a lightweight compile/build check, not a performance measurement.
     """
     variants = {
-        "psychicstd": psy_tc(compiler, include, build_type, enable_ccache),
+        "psychicstd": psy_tc(compiler, include, build_type, enable_ccache, jobs),
     }
     _build_matrix(variants, rw.PROJECTS[project].build, 1, project)
 
@@ -177,8 +218,21 @@ def main() -> int:
         default="debug",
         help="build type, translated per-project (default: debug)",
     )
+    repetitions = ap.add_mutually_exclusive_group()
+    repetitions.add_argument(
+        "--reps", type=int, help="fixed build repetitions (default: 3)"
+    )
+    repetitions.add_argument(
+        "--time-budget",
+        type=_duration,
+        metavar="DURATION",
+        help="choose repetitions for an estimated duration, e.g. 5m",
+    )
     ap.add_argument(
-        "--reps", type=int, default=3, help="build repetitions (default: 3)"
+        "--max-reps",
+        type=int,
+        default=5,
+        help="maximum repetitions with --time-budget (default: 5)",
     )
     ap.add_argument(
         "--enable-ccache",
@@ -187,8 +241,33 @@ def main() -> int:
         "for debugging the script/recipes, not for real measurements)",
     )
     args = ap.parse_args()
+    if args.reps is not None and args.reps <= 0:
+        ap.error("--reps must be positive")
+    if args.max_reps <= 0:
+        ap.error("--max-reps must be positive")
+
+    parallelism = rw.detect_parallelism()
+    if args.time_budget is not None:
+        reps, repetition_cost = _budget_repetitions(
+            args.project,
+            args.build_type,
+            args.time_budget,
+            args.max_reps,
+            parallelism.jobs,
+        )
+        expected_jobs = rw.PROJECTS[args.project].expected_jobs
+        estimate = reps * repetition_cost
+        print(
+            f"Benchmark plan: {reps} repetition(s), approximately "
+            f"{estimate:.0f}s of the {args.time_budget:.0f}s budget "
+            f"({parallelism.jobs} jobs; calibrated at {expected_jobs})",
+            file=sys.stderr,
+        )
+    else:
+        reps = args.reps if args.reps is not None else 3
 
     build = rw.PROJECTS[args.project].build
+    jobs = parallelism.jobs
 
     with tempfile.TemporaryDirectory(
         prefix="psychicstd-rw-", ignore_cleanup_errors=True
@@ -204,22 +283,27 @@ def main() -> int:
             # Measure system twice (base/head) so its drift is a real noise proxy.
             variants = {
                 "system_base": sys_tc(
-                    args.compiler, args.build_type, args.enable_ccache
+                    args.compiler, args.build_type, args.enable_ccache, jobs
                 ),
                 "ref": psy_tc(
                     args.compiler,
                     worktree / "include",
                     args.build_type,
                     args.enable_ccache,
+                    jobs,
                 ),
                 "system_head": sys_tc(
-                    args.compiler, args.build_type, args.enable_ccache
+                    args.compiler, args.build_type, args.enable_ccache, jobs
                 ),
                 "head": psy_tc(
-                    args.compiler, REPO / "include", args.build_type, args.enable_ccache
+                    args.compiler,
+                    REPO / "include",
+                    args.build_type,
+                    args.enable_ccache,
+                    jobs,
                 ),
             }
-            samples = _build_matrix(variants, build, args.reps, args.project)
+            samples = _build_matrix(variants, build, reps, args.project)
         finally:
             subprocess.run(
                 ["git", "worktree", "remove", "--force", str(worktree)],

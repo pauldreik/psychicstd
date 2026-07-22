@@ -476,10 +476,29 @@ unique_ptr<T> make_unique(size_t n)
 namespace __detail {
 struct __sp_ctrl {
   long count = 1;
+  // One implicit weak reference keeps the control block alive while strong
+  // owners exist. Explicit weak users add to this count.
+  long weak_count = 1;
   virtual void destroy() noexcept = 0;
   virtual void* get_deleter(const type_info&) noexcept { return nullptr; }
   virtual ~__sp_ctrl() = default;
 };
+inline void __sp_weak_add(__sp_ctrl* ctrl) noexcept {
+  __atomic_add_fetch(&ctrl->weak_count, 1, __ATOMIC_RELAXED);
+}
+inline void __sp_weak_release(__sp_ctrl* ctrl) noexcept {
+  if (__atomic_sub_fetch(&ctrl->weak_count, 1, __ATOMIC_ACQ_REL) == 0)
+    delete ctrl;
+}
+inline bool __sp_strong_add_if_live(__sp_ctrl* ctrl) noexcept {
+  long count = __atomic_load_n(&ctrl->count, __ATOMIC_RELAXED);
+  while (count != 0) {
+    if (__atomic_compare_exchange_n(&ctrl->count, &count, count + 1, true,
+                                    __ATOMIC_RELAXED, __ATOMIC_RELAXED))
+      return true;
+  }
+  return false;
+}
 template <typename U> struct __sp_ctrl_impl : __sp_ctrl {
   U* obj;
   explicit __sp_ctrl_impl(U* p) : obj(p) {}
@@ -510,13 +529,54 @@ template <typename T, typename Alloc> struct __sp_alloc_del {
     allocator_traits<Alloc>::deallocate(alloc, allocation, 1);
   }
 };
+struct __esft_tag {};
 } // namespace __detail
 
-// shared_ptr — non-atomic reference counting (thread-unsafe by design)
+template <typename T> class shared_ptr;
+
+class bad_weak_ptr : public exception {
+public:
+  const char* what() const noexcept override { return "bad_weak_ptr"; }
+};
+
+template <typename T> class enable_shared_from_this {
+  mutable __detail::__sp_ctrl* ctrl_ = nullptr;
+  mutable T* ptr_ = nullptr;
+
+  template <typename U> friend class shared_ptr;
+
+  void __accept(__detail::__sp_ctrl* ctrl, T* ptr) const noexcept {
+    if (!ctrl_ || __atomic_load_n(&ctrl_->count, __ATOMIC_RELAXED) == 0) {
+      if (ctrl_)
+        __detail::__sp_weak_release(ctrl_);
+      ctrl_ = ctrl, ptr_ = ptr;
+      __detail::__sp_weak_add(ctrl_);
+    }
+  }
+
+protected:
+  constexpr enable_shared_from_this() noexcept = default;
+  enable_shared_from_this(const enable_shared_from_this&) noexcept {}
+  enable_shared_from_this& operator=(const enable_shared_from_this&) noexcept {
+    return *this;
+  }
+  ~enable_shared_from_this() {
+    if (ctrl_)
+      __detail::__sp_weak_release(ctrl_);
+  }
+
+public:
+  shared_ptr<T> shared_from_this();
+  shared_ptr<const T> shared_from_this() const;
+};
+
+// shared_ptr — the control-block count is atomic; individual pointer objects
+// still must not be concurrently mutated.
 template <typename T> class shared_ptr {
   // Allow shared_ptr<U> to read our private members directly.  Required by
   // the converting constructors and the aliasing constructor below.
   template <typename U> friend class shared_ptr;
+  template <typename U> friend class enable_shared_from_this;
   template <typename D, typename U>
   friend D* get_deleter(const shared_ptr<U>&) noexcept;
 
@@ -525,14 +585,30 @@ template <typename T> class shared_ptr {
 
   void inc() noexcept {
     if (ctrl_)
-      ++ctrl_->count;
+      __atomic_add_fetch(&ctrl_->count, 1, __ATOMIC_RELAXED);
   }
   void dec() noexcept {
-    if (ctrl_ && --ctrl_->count == 0) {
-      ctrl_->destroy();
-      delete ctrl_;
+    auto* ctrl = ctrl_;
+    if (ctrl && __atomic_sub_fetch(&ctrl->count, 1, __ATOMIC_ACQ_REL) == 0) {
+      ctrl->destroy();
+      __detail::__sp_weak_release(ctrl);
       ctrl_ = nullptr;
       ptr_ = nullptr;
+    }
+  }
+
+  template <typename U> void init_esft(U* p) noexcept {
+    using V = remove_cv_t<U>;
+    if constexpr (is_base_of_v<enable_shared_from_this<V>, V>)
+      static_cast<enable_shared_from_this<V>*>(p)->__accept(ctrl_, p);
+  }
+
+  shared_ptr(__detail::__sp_ctrl* ctrl, T* ptr, __detail::__esft_tag)
+      : ptr_(ptr), ctrl_(ctrl) {
+    if (!ctrl_ || !__detail::__sp_strong_add_if_live(ctrl_)) {
+      ptr_ = nullptr;
+      ctrl_ = nullptr;
+      _PSYCHICSTD_THROW(bad_weak_ptr{});
     }
   }
 
@@ -544,10 +620,14 @@ public:
 
   template <typename U>
   explicit shared_ptr(U* p)
-      : ptr_(p), ctrl_(new __detail::__sp_ctrl_impl<U>(p)) {}
+      : ptr_(p), ctrl_(new __detail::__sp_ctrl_impl<U>(p)) {
+    init_esft(p);
+  }
   template <typename U, typename D>
   shared_ptr(U* p, D d)
-      : ptr_(p), ctrl_(new __detail::__sp_ctrl_del<U, D>(p, d)) {}
+      : ptr_(p), ctrl_(new __detail::__sp_ctrl_del<U, D>(p, d)) {
+    init_esft(p);
+  }
 
   shared_ptr(const shared_ptr& o) noexcept : ptr_(o.ptr_), ctrl_(o.ctrl_) {
     inc();
@@ -579,6 +659,7 @@ public:
       ctrl_ = new __detail::__sp_ctrl_del<U, D>(
           owned, static_cast<D&&>(o.get_deleter()));
       ptr_ = owned;
+      init_esft(owned);
       o.release();
     }
   }
@@ -629,7 +710,9 @@ public:
   T* operator->() const noexcept { return ptr_; }
   T* get() const noexcept { return ptr_; }
   explicit operator bool() const noexcept { return ptr_ != nullptr; }
-  long use_count() const noexcept { return ctrl_ ? ctrl_->count : 0; }
+  long use_count() const noexcept {
+    return ctrl_ ? __atomic_load_n(&ctrl_->count, __ATOMIC_RELAXED) : 0;
+  }
   bool unique() const noexcept { return use_count() == 1; }
 
   void reset() noexcept {
@@ -655,6 +738,16 @@ public:
     return ctrl_ < o.ctrl_;
   }
 };
+
+template <typename T>
+shared_ptr<T> enable_shared_from_this<T>::shared_from_this() {
+  return shared_ptr<T>(ctrl_, ptr_, {});
+}
+
+template <typename T>
+shared_ptr<const T> enable_shared_from_this<T>::shared_from_this() const {
+  return shared_ptr<const T>(ctrl_, ptr_, {});
+}
 
 template <typename D, typename T>
 D* get_deleter(const shared_ptr<T>& value) noexcept {
@@ -716,6 +809,10 @@ shared_ptr<T> allocate_shared(const Alloc& alloc, Args&&... args) {
 template <typename T, typename U>
 shared_ptr<T> static_pointer_cast(const shared_ptr<U>& p) noexcept {
   return shared_ptr<T>(p, static_cast<T*>(p.get()));
+}
+template <typename T, typename U>
+shared_ptr<T> const_pointer_cast(const shared_ptr<U>& p) noexcept {
+  return shared_ptr<T>(p, const_cast<T*>(p.get()));
 }
 template <typename T, typename U>
 shared_ptr<T> dynamic_pointer_cast(const shared_ptr<U>& p) noexcept {

@@ -10,6 +10,8 @@ public:
   using char_type = Char;
   using traits_type = Traits;
   using int_type = typename Traits::int_type;
+  using pos_type = streampos;
+  using off_type = streamoff;
 
   virtual ~basic_streambuf() = default;
 

@@ -9,6 +9,7 @@
 // libstdc++'s <cmath> exposes <stdlib.h> via <bits/std_abs.h>; real-world
 // code (eigen, cmake) relies on that transitive surface.
 #include <cstdlib>
+#include <type_traits>
 #endif
 
 // C99 defines isnan/isinf/isfinite/isnormal/signbit as macros.
@@ -154,8 +155,32 @@ using ::tgammaf;
 inline float abs(float x) { return ::fabsf(x); }
 inline double abs(double x) { return ::fabs(x); }
 inline long double abs(long double x) { return ::fabsl(x); }
+inline float sqrt(float x) { return ::sqrtf(x); }
+inline long double sqrt(long double x) { return ::sqrtl(x); }
+#if _PSYCHICSTD_COMPATIBILITY_LEVEL >= _PSYCHICSTD_COMPAT_DROPIN
+template <typename T>
+  requires(is_integral_v<T>)
+constexpr double sqrt(T x) {
+  return __builtin_sqrt(static_cast<double>(x));
+}
+#else
+#if defined(__has_builtin) && __has_builtin(__is_integral)
+template <typename T>
+  requires(__is_integral(T))
+#else
+template <typename T>
+  requires(__builtin_classify_type(*(T*)nullptr) == 1)
+#endif
+constexpr double sqrt(T x) {
+  return __builtin_sqrt(static_cast<double>(x));
+}
+#endif
 // integer abs overloads come from <__psychicstd_abs>
+inline float nextafter(float x, float y) { return ::nextafterf(x, y); }
 using ::nextafter;
+inline long double nextafter(long double x, long double y) {
+  return ::nextafterl(x, y);
+}
 using ::nextafterf;
 using ::nextafterl;
 using ::nexttoward;

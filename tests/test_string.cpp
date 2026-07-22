@@ -111,6 +111,10 @@ int main() {
   psyassert(s == "okh!!ellohel:lo");
   s.replace(0, 2, 3, '-');
   psyassert(s == "---h!!ellohel:lo");
+  s.replace(0, 3, "replace", 7);
+  psyassert(s == "replaceh!!ellohel:lo");
+  s.replace(0, 7, "ok");
+  psyassert(s == "okh!!ellohel:lo");
 
   std::string erased = "abracadabra";
   psyassert(std::erase(erased, 'a') == 5);

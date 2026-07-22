@@ -1,6 +1,7 @@
 #include "psyassert.h"
 #include <memory>
 #include <string>
+#include <thread>
 #include <utility>
 #include <vector>
 
@@ -111,6 +112,50 @@ static void test_converting_ctor_from_prvalue() {
   psyassert(b2->x == 42);
 }
 
+static void test_const_pointer_cast() {
+  auto mutable_ptr = std::make_shared<int>(42);
+  std::shared_ptr<const int> const_ptr = mutable_ptr;
+  auto cast = std::const_pointer_cast<int>(const_ptr);
+  *cast = 7;
+  psyassert(*mutable_ptr == 7);
+  psyassert(cast.use_count() == 3);
+}
+
+struct SelfShared : std::enable_shared_from_this<SelfShared> {
+  std::shared_ptr<SelfShared> self() { return shared_from_this(); }
+};
+
+static void test_enable_shared_from_this() {
+  auto owner = std::make_shared<SelfShared>();
+  auto self = owner->self();
+  psyassert(self.get() == owner.get());
+  psyassert(owner.use_count() == 2);
+
+  SelfShared unowned;
+  bool threw = false;
+  try {
+    (void)unowned.self();
+  } catch (const std::bad_weak_ptr&) {
+    threw = true;
+  }
+  psyassert(threw);
+
+  struct keep_alive {
+    void operator()(SelfShared*) const {}
+  };
+  SelfShared rebound;
+  {
+    std::shared_ptr<SelfShared> first(&rebound, keep_alive{});
+    psyassert(rebound.self().use_count() == 2);
+  }
+  {
+    std::shared_ptr<SelfShared> second(&rebound, keep_alive{});
+    auto rebound_self = rebound.self();
+    psyassert(rebound_self.get() == &rebound);
+    psyassert(second.use_count() == 2);
+  }
+}
+
 static void test_shared_ptr_from_unique_ptr() {
   int deletes = 0;
   std::unique_ptr<Derived, CountingDeleter> unique(new Derived, {&deletes});
@@ -141,6 +186,15 @@ static void test_shared_ptr_custom_deleter() {
 
   shared.reset();
   psyassert(deletes == 1);
+}
+
+static void test_shared_ptr_concurrent_destruction() {
+  auto owner = std::make_shared<int>(42);
+  std::thread first([copy = owner] {});
+  std::thread second([copy = owner] {});
+  first.join();
+  second.join();
+  psyassert(*owner == 42);
 }
 
 // Bug: at -O2 the old converting constructor used reinterpret_cast to read
@@ -195,7 +249,10 @@ int main() {
   test_allocate_shared();
   test_converting_copy_ctor();
   test_converting_ctor_from_prvalue();
+  test_const_pointer_cast();
+  test_enable_shared_from_this();
   test_shared_ptr_from_unique_ptr();
   test_shared_ptr_custom_deleter();
+  test_shared_ptr_concurrent_destruction();
   test_member_init_from_template_prvalue();
 }

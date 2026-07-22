@@ -19,6 +19,16 @@ struct stable_value {
   int order;
 };
 
+struct stable_move_only {
+  int key;
+  int order;
+  stable_move_only(int key_, int order_) : key(key_), order(order_) {}
+  stable_move_only(const stable_move_only&) = delete;
+  stable_move_only& operator=(const stable_move_only&) = delete;
+  stable_move_only(stable_move_only&&) = default;
+  stable_move_only& operator=(stable_move_only&&) = default;
+};
+
 constexpr bool constexpr_nth_element() {
   int values[] = {5, 1, 4, 2, 3};
   std::nth_element(values, values + 2, values + 5);
@@ -115,4 +125,53 @@ int main() {
   psyassert(stable[1].order == 3);
   psyassert(stable[2].order == 0);
   psyassert(stable[3].order == 2);
+
+  std::vector<stable_move_only> stable_movable;
+  for (int i = 0; i < 64; ++i)
+    stable_movable.emplace_back(i % 4, i);
+  std::stable_sort(stable_movable.begin(), stable_movable.end(),
+                   [](const stable_move_only& a, const stable_move_only& b) {
+                     return a.key < b.key;
+                   });
+  for (int i = 0; i < 64; ++i) {
+    psyassert(stable_movable[i].key == i / 16);
+    psyassert(stable_movable[i].order == (i % 16) * 4 + i / 16);
+  }
+
+  std::vector<stable_value> random_stable;
+  unsigned state = 1;
+  for (int i = 0; i < 257; ++i) {
+    state = state * 1664525u + 1013904223u;
+    random_stable.push_back({static_cast<int>(state % 11), i});
+  }
+  std::stable_sort(random_stable.begin(), random_stable.end(),
+                   [](const stable_value& a, const stable_value& b) {
+                     return a.key < b.key;
+                   });
+  for (std::size_t i = 1; i < random_stable.size(); ++i) {
+    psyassert(random_stable[i - 1].key <= random_stable[i].key);
+    if (random_stable[i - 1].key == random_stable[i].key)
+      psyassert(random_stable[i - 1].order < random_stable[i].order);
+  }
+
+  std::vector<int> large(2048);
+  for (int i = 0; i < 2048; ++i)
+    large[i] = 2047 - i;
+  int comparisons = 0;
+  std::stable_sort(large.begin(), large.end(), [&](int x, int y) {
+    ++comparisons;
+    return x < y;
+  });
+  psyassert(std::is_sorted(large.begin(), large.end()));
+  psyassert(comparisons < 500000);
+
+  std::vector<stable_value> merged = {{0, 0}, {1, 1}, {0, 2}, {1, 3}};
+  std::inplace_merge(merged.begin(), merged.begin() + 2, merged.end(),
+                     [](const stable_value& a, const stable_value& b) {
+                       return a.key < b.key;
+                     });
+  psyassert(merged[0].order == 0);
+  psyassert(merged[1].order == 2);
+  psyassert(merged[2].order == 1);
+  psyassert(merged[3].order == 3);
 }

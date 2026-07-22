@@ -31,6 +31,43 @@ PHASES = ("configure", "compile", "run tests")
 
 
 @dataclass(frozen=True)
+class Parallelism:
+    logical_cpus: int
+    jobs: int
+    memory_jobs: int
+    available_memory: int
+
+    @property
+    def memory_limited(self) -> bool:
+        return self.jobs < self.logical_cpus
+
+
+def detect_parallelism() -> Parallelism:
+    """Choose one shared job count for every real-world recipe."""
+    # SC_AVPHYS_PAGES excludes reclaimable cache and substantially
+    # under-reports usable memory on Linux. MemAvailable is the kernel's
+    # estimate of memory available without swapping.
+    available = 0
+    try:
+        for line in Path("/proc/meminfo").read_text().splitlines():
+            if line.startswith("MemAvailable:"):
+                available = int(line.split()[1]) * 1024
+                break
+    except (OSError, ValueError):
+        pass
+    if not available and hasattr(os, "sysconf"):
+        available = os.sysconf("SC_PAGE_SIZE") * os.sysconf("SC_AVPHYS_PAGES")
+    logical_cpus = os.cpu_count() or 1
+    memory_jobs = available // (1536 * 1024 * 1024) if available else 1
+    return Parallelism(
+        logical_cpus,
+        max(1, min(logical_cpus, memory_jobs)),
+        max(1, memory_jobs),
+        available,
+    )
+
+
+@dataclass(frozen=True)
 class Toolchain:
     """A compiler invocation: flags plus the link additions psychicstd needs.
 
@@ -45,6 +82,7 @@ class Toolchain:
     libs: str = ""
     build_type: str = "debug"
     enable_ccache: bool = False
+    jobs: int = field(default_factory=lambda: detect_parallelism().jobs)
 
 
 @dataclass(frozen=True)
@@ -59,10 +97,16 @@ class Project:
 
     comment: optional project-level note. comments: optional per-phase note.
     Both empty by default.
+
+    expected_seconds estimates one build() invocation for each build type;
+    expected_jobs records the parallelism used to obtain those estimates.
+    The report generator uses both fields to allocate a global time budget.
     """
 
     version: str
     build: Callable[[Toolchain], dict[str, float]]
+    expected_seconds: dict[str, float]
+    expected_jobs: int = 20
     phases: tuple[str, ...] = PHASES
     comment: str = ""
     comments: dict[str, str] = field(default_factory=dict)
@@ -89,12 +133,14 @@ def _timed(cmd: list[str], cwd: Path, env: dict[str, str]) -> float:
     return (time.monotonic() - t0) * 1000.0
 
 
-def _timed_many(cmds: list[list[str]], cwd: Path, env: dict[str, str]) -> float:
+def _timed_many(
+    cmds: list[list[str]], cwd: Path, env: dict[str, str], jobs: int
+) -> float:
     """Wall-clock time to run many independent commands (e.g. compiling one
     file each) concurrently across CPUs -- unlike summing each command's own
     elapsed time, this reflects the phase's actual wall-clock duration."""
     t0 = time.monotonic()
-    with ThreadPoolExecutor(max_workers=os.cpu_count() or 1) as pool:
+    with ThreadPoolExecutor(max_workers=jobs) as pool:
         for _ in pool.map(lambda cmd: _run(cmd, cwd, env), cmds):
             pass
     return (time.monotonic() - t0) * 1000.0
@@ -115,17 +161,6 @@ def _env(tc: Toolchain, **extra: str) -> dict[str, str]:
     if not tc.enable_ccache:
         env["CCACHE_DISABLE"] = "1"
     return env
-
-
-def _jobs() -> str:
-    """Cap parallel builds so each active compiler gets about 1.5 GiB."""
-    available = (
-        os.sysconf("SC_PAGE_SIZE") * os.sysconf("SC_AVPHYS_PAGES")
-        if hasattr(os, "sysconf")
-        else 0
-    )
-    memory_jobs = available // (1536 * 1024 * 1024) if available else 1
-    return f"-j{max(1, min(os.cpu_count() or 1, memory_jobs))}"
 
 
 def _compiler_wrapper(
@@ -195,7 +230,7 @@ def _catch2() -> Project:
                 "-DCATCH_ENABLE_WERROR=OFF",
                 "-DBUILD_SHARED_LIBS=OFF",
             ]
-            jobs = _jobs()
+            jobs = f"-j{tc.jobs}"
             return {
                 "configure": _timed(configure, src, env),
                 "compile": _timed(["cmake", "--build", "build", jobs], src, env),
@@ -217,6 +252,7 @@ def _catch2() -> Project:
     return Project(
         version=version,
         build=build,
+        expected_seconds={"debug": 10, "release": 13},
         phases=("compile", "run tests"),
         comments={"run tests": "the approval tests are ignored"},
     )
@@ -261,7 +297,7 @@ def _abseil() -> Project:
                 "-DABSL_USE_GOOGLETEST_HEAD=ON",
                 "-DBUILD_SHARED_LIBS=OFF",
             ]
-            jobs = _jobs()
+            jobs = f"-j{tc.jobs}"
             base_targets = [
                 "base",
                 "raw_logging_internal",
@@ -314,6 +350,7 @@ def _abseil() -> Project:
     return Project(
         version=version,
         build=build,
+        expected_seconds={"debug": 14, "release": 19},
         comment="Builds and runs Abseil's upstream absl/base tests.",
     )
 
@@ -356,7 +393,7 @@ def _googletest() -> Project:
                 "-DBUILD_GMOCK=OFF",
                 "-DINSTALL_GTEST=OFF",
             ]
-            jobs = f"-j{os.cpu_count() or 1}"
+            jobs = f"-j{tc.jobs}"
             return {
                 "configure": _timed(configure, src, env),
                 "compile": _timed(["cmake", "--build", "build", jobs], src, env),
@@ -370,6 +407,7 @@ def _googletest() -> Project:
     return Project(
         version=version,
         build=build,
+        expected_seconds={"debug": 32, "release": 69},
         comment="Builds GoogleTest's upstream unit tests with GMock and samples "
         "disabled, then runs the resulting CTest suite.",
     )
@@ -419,7 +457,7 @@ def _cmake() -> Project:
                 "-DCMake_ENABLE_DEBUGGER=OFF",
                 "-DBUILD_TESTING=ON",
             ]
-            jobs = f"-j{os.cpu_count() or 1}"
+            jobs = f"-j{tc.jobs}"
             configure_ms = _timed(configure, src, env)
             compile_ms = _timed(
                 [
@@ -460,6 +498,7 @@ def _cmake() -> Project:
     return Project(
         version=version,
         build=build,
+        expected_seconds={"debug": 65, "release": 70},
         comment="Builds upstream CMake's core static library together with "
         "its KWSys, std-compatibility, and JSON support targets, then runs "
         "the supported KWSys tests. OpenSSL and debugger support are disabled.",
@@ -502,7 +541,7 @@ def _cppcheck() -> Project:
                     "-DHAVE_EXECINFO_H=1",
                 )
             )
-            jobs = f"-j{os.cpu_count() or 1}"
+            jobs = f"-j{tc.jobs}"
             make_args = [
                 jobs,
                 "CXX=" + str(wrapper),
@@ -530,6 +569,7 @@ def _cppcheck() -> Project:
     return Project(
         version=version,
         build=build,
+        expected_seconds={"debug": 15, "release": 15},
         phases=("compile", "run tests"),
         comment="the complete native Makefile build is compiled and linked; "
         "Cppcheck's own test runner is run with one libstdc++ diagnostic "
@@ -615,6 +655,7 @@ def _eigen() -> Project:
     return Project(
         version=version,
         build=build,
+        expected_seconds={"debug": 15, "release": 15},
         phases=("compile", "run tests"),
         comment="eigen has no configure step; a fixed subset of its test "
         "suite is compiled and run individually, with times summed.",
@@ -667,7 +708,7 @@ def _fmt() -> Project:
                 "-DFMT_INSTALL=OFF",
                 "-DBUILD_SHARED_LIBS=OFF",
             ]
-            jobs = f"-j{os.cpu_count() or 1}"
+            jobs = f"-j{tc.jobs}"
             configure_ms = _timed(configure, src, env)
             compile_ms = _timed(["cmake", "--build", "build", jobs], src, env)
 
@@ -678,7 +719,7 @@ def _fmt() -> Project:
                     "build",
                     "--output-on-failure",
                     "-j",
-                    str(os.cpu_count() or 1),
+                    str(tc.jobs),
                 ],
                 src,
                 env,
@@ -693,6 +734,7 @@ def _fmt() -> Project:
     return Project(
         version=version,
         build=build,
+        expected_seconds={"debug": 8, "release": 20},
         phases=("compile", "run tests"),
         comment="fmt is built with locale support; its own unit tests are run.",
     )
@@ -745,7 +787,7 @@ def _nlohmann() -> Project:
                 "-DJSON_TestStandards=20",
                 "-DJSON_BuildTests=ON",
             ]
-            jobs = f"-j{os.cpu_count() or 1}"
+            jobs = f"-j{tc.jobs}"
             configure_ms = _timed(configure, src, env)
             compile_ms = _timed(["cmake", "--build", "build", jobs], src, env)
             run_tests_ms = _timed(
@@ -775,7 +817,7 @@ def _nlohmann() -> Project:
                     + (tc.libs.split() if tc.libs else [])
                     + ["-o", str(binary)]
                 )
-            examples_ms = _timed_many(example_cmds, src, env)
+            examples_ms = _timed_many(example_cmds, src, env, tc.jobs)
 
             return {
                 "configure": configure_ms,
@@ -787,6 +829,7 @@ def _nlohmann() -> Project:
     return Project(
         version=version,
         build=build,
+        expected_seconds={"debug": 57, "release": 60},
         phases=("configure", "compile", "run tests", "examples"),
         comments={
             "run tests": "unicode/cbor/msgpack (slow), algorithms (unspecified "
@@ -836,11 +879,11 @@ def _rapidjson() -> Project:
                 " -Wno-error=sign-conversion -Wno-error=sign-compare"
             )
             if "clang" not in tc.cxx.lower():
-                # GCC 12 diagnoses RapidJSON's realloc wrapper at -O3 as an
-                # impossibly large allocation; its tests intentionally pass
-                # the allocation through that wrapper.
+                # Modern GCC emits false positives for RapidJSON's allocation
+                # wrappers at -O3; upstream enables -Werror for its tests.
                 cxxflags += (
                     " -Wno-error=alloc-size-larger-than= -Wno-error=array-bounds"
+                    " -Wno-error=stringop-overflow"
                 )
             configure = [
                 "cmake",
@@ -865,7 +908,7 @@ def _rapidjson() -> Project:
                 "-DRAPIDJSON_BUILD_TESTS=ON",
                 "-DRAPIDJSON_ENABLE_INSTRUMENTATION_OPT=OFF",
             ]
-            jobs = _jobs()
+            jobs = f"-j{tc.jobs}"
             return {
                 "configure": _timed(configure, src, env),
                 "compile": _timed(
@@ -899,6 +942,7 @@ def _rapidjson() -> Project:
     return Project(
         version=version,
         build=build,
+        expected_seconds={"debug": 34, "release": 97},
         phases=("configure", "compile", "run example", "run tests"),
         comment="RapidJSON's examples, archivertest, and unit tests are built; "
         "simpledom and unittest are run.",
@@ -963,7 +1007,7 @@ def _rdfind() -> Project:
                 configure.append(f"LDFLAGS={tc.ldflags}")
             if tc.libs:
                 configure.append(f"LIBS={tc.libs}")
-            jobs = f"-j{os.cpu_count() or 1}"
+            jobs = f"-j{tc.jobs}"
             return {
                 "configure": _timed(configure, src, env),
                 "compile": _timed(["make", jobs], src, env),
@@ -973,6 +1017,7 @@ def _rdfind() -> Project:
     return Project(
         version=proj_version,
         build=build,
+        expected_seconds={"debug": 6, "release": 4},
         comment="rdfind is an autoconf based project. It uses psychic strict mode.",
     )
 
@@ -1031,7 +1076,7 @@ def _simdutf() -> Project:
                 "-DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY",
                 "-DBUILD_SHARED_LIBS=OFF",
             ]
-            jobs = f"-j{os.cpu_count() or 1}"
+            jobs = f"-j{tc.jobs}"
             return {
                 "configure": _timed(configure, src, env),
                 "compile": _timed(
@@ -1053,6 +1098,7 @@ def _simdutf() -> Project:
     return Project(
         version=version,
         build=build,
+        expected_seconds={"debug": 27, "release": 20},
         phases=("compile", "run tests"),
         comment="simdutf code is mostly simd intrinsics.",
     )
@@ -1137,10 +1183,130 @@ def _boost_asio() -> Project:
     return Project(
         version=version,
         build=build,
+        expected_seconds={"debug": 39, "release": 39},
         comments={
             "compile": "Representative upstream Asio tests are compiled and "
             "linked directly; unrelated Boost libraries are excluded.",
         },
+    )
+
+
+# --- opencv --------------------------------------------------------------
+
+
+def _opencv() -> Project:
+    version = "4.13.0"
+    url = f"https://github.com/opencv/opencv/archive/refs/tags/{version}.tar.gz"
+    checksum = "1d40ca017ea51c533cf9fd5cbde5b5fe7ae248291ddf2af99d4c17cf8e13017d"
+    extra_url = (
+        f"https://github.com/opencv/opencv_extra/archive/refs/tags/{version}.tar.gz"
+    )
+    extra_checksum = "73eda44b867b898c3266db6b0c31c1641a7b6ca6e46914c43508e780a7d56d66"
+
+    def build(tc: Toolchain) -> dict[str, float]:
+        tarball = RW_DIR / f"opencv-{version}.tar.gz"
+        _fetch(url, tarball, checksum)
+        extra_tarball = RW_DIR / f"opencv_extra-{version}.tar.gz"
+        _fetch(extra_url, extra_tarball, extra_checksum)
+
+        with tempfile.TemporaryDirectory(
+            prefix="rw-opencv-", ignore_cleanup_errors=True
+        ) as work_dir:
+            work = Path(work_dir)
+            with tarfile.open(tarball) as t:
+                t.extractall(work)
+            with tarfile.open(extra_tarball) as t:
+                t.extractall(work)
+            src = work / f"opencv-{version}"
+            test_data = work / f"opencv_extra-{version}" / "testdata"
+
+            env = _env(tc, OPENCV_TEST_DATA_PATH=str(test_data))
+            # OpenCV enables a large collection of optional codecs, language
+            # bindings, and hardware backends by default. They are unrelated
+            # to the standard-library-heavy core and make this recipe depend
+            # on whichever packages happen to be installed on the runner.
+            # Its SIMD emulator tests also type-pun through incompatible
+            # pointers, which GCC 13 misoptimizes at -O3 with strict aliasing.
+            configure = [
+                "cmake",
+                "-S",
+                ".",
+                "-B",
+                "build",
+                "-GNinja",
+                "-DCMAKE_BUILD_TYPE=" + tc.build_type.capitalize(),
+                "-DCMAKE_CXX_COMPILER=" + tc.cxx,
+                "-DCMAKE_CXX_FLAGS=" + tc.cxxflags + " -fno-strict-aliasing",
+                "-DCMAKE_EXE_LINKER_FLAGS=" + tc.ldflags,
+                "-DCMAKE_CXX_STANDARD_LIBRARIES=" + tc.libs,
+                "-DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY",
+                "-DCMAKE_CXX_STANDARD=20",
+                # The test support module owns the generated test targets;
+                # without it BUILD_TESTS=ON leaves only the aggregate target.
+                "-DBUILD_LIST=core,imgproc,ts",
+                "-DBUILD_TESTS=ON",
+                "-DBUILD_PERF_TESTS=OFF",
+                "-DBUILD_EXAMPLES=OFF",
+                "-DBUILD_opencv_apps=OFF",
+                "-DBUILD_opencv_gapi=OFF",
+                "-DBUILD_opencv_python3=OFF",
+                "-DBUILD_JAVA=OFF",
+                "-DWITH_IPP=OFF",
+                "-DWITH_OPENCL=OFF",
+                "-DWITH_OPENGL=OFF",
+                "-DWITH_TBB=OFF",
+                "-DWITH_GTK=OFF",
+                "-DWITH_QT=OFF",
+                "-DWITH_FFMPEG=OFF",
+                "-DWITH_GSTREAMER=OFF",
+                "-DWITH_V4L=OFF",
+                "-DWITH_OPENEXR=OFF",
+                "-DBUILD_OPENEXR=OFF",
+                # The imgproc unit tests use JPEG and PNG regression fixtures.
+                "-DWITH_JPEG=ON",
+                "-DWITH_PNG=ON",
+                "-DWITH_TIFF=OFF",
+                "-DWITH_WEBP=OFF",
+                "-DWITH_OPENJPEG=OFF",
+            ]
+            jobs = f"-j{tc.jobs}"
+            return {
+                "configure": _timed(configure, src, env),
+                "compile": _timed(
+                    [
+                        "cmake",
+                        "--build",
+                        "build",
+                        "--target",
+                        "opencv_test_core",
+                        "opencv_test_imgproc",
+                        jobs,
+                    ],
+                    src,
+                    env,
+                ),
+                "run tests": _timed(
+                    [
+                        "ctest",
+                        "--test-dir",
+                        "build",
+                        "--output-on-failure",
+                        "-R",
+                        r"^opencv_test_(core|imgproc)$",
+                        jobs,
+                    ],
+                    src,
+                    env,
+                ),
+            }
+
+    return Project(
+        version=version,
+        build=build,
+        expected_seconds={"debug": 540, "release": 189},
+        comment="Builds OpenCV's core and imgproc modules and runs their "
+        "upstream tests; optional codecs, bindings, and hardware backends "
+        "are disabled.",
     )
 
 
@@ -1154,6 +1320,7 @@ PROJECTS: dict[str, Project] = {
     "fmt": _fmt(),
     "googletest": _googletest(),
     "nlohmann": _nlohmann(),
+    "opencv": _opencv(),
     "rapidjson": _rapidjson(),
     "rdfind": _rdfind(),
     "simdutf": _simdutf(),

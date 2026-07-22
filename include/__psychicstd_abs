@@ -1,10 +1,19 @@
 #pragma once
+#include <__psychicstd_config>
 
 // Integer std::abs overloads shared by <cmath> and <cstdlib>. Keep these as
 // plain arithmetic: Clang sanitizer instrumentation prevents the corresponding
 // compiler builtins from being constant expressions.
 namespace std {
+#if _PSYCHICSTD_COMPATIBILITY_LEVEL < _PSYCHICSTD_COMPAT_DROPIN
 inline constexpr int abs(int __x) { return __x < 0 ? -__x : __x; }
+#elif defined(__clang__)
+template <typename T>
+  requires(__is_same(T, int))
+constexpr int abs(T __x) {
+  return __x < 0 ? -__x : __x;
+}
+#endif
 inline constexpr long abs(long __x) { return __x < 0 ? -__x : __x; }
 inline constexpr long long abs(long long __x) { return __x < 0 ? -__x : __x; }
 } // namespace std
