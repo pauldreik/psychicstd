@@ -161,7 +161,6 @@ def main() -> None:
 
     for bench in sorted(BENCH_DIR.glob("bench_*.cpp")):
         name = bench.stem.removeprefix("bench_")
-        name = "all-headers" if name == "all" else name
         if (tests_dir / f"test_{name}.cpp").is_file():
             name = f"bench/{name}"
         # If the name matches an extra-include key, that key is required
