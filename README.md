@@ -312,6 +312,8 @@ Since this library is all about compilation speed, there is benchmarking to meas
 cmake --build build --target bench
 # or directly:
 python3 benchmarks/compile_time/run_bench.py
+# quicker run with three compilations per file:
+python3 benchmarks/compile_time/run_bench.py --reps 3
 ```
 
 View the results by inspecting [speed.md](speed.md).
