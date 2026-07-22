@@ -6,23 +6,23 @@ It is not complete. It is not fully compliant. But it is good enough to quickly 
 
 | Project | Compile time speedup | comment |
 |-------------------------------------------------------------|-----------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------|
-| [Boost.Asio](https://www.boost.org/libs/asio/) | [1.94x](use_on_realworld_projects/boost-asio_speed_report.md) | |
-| [catch2](https://github.com/catchorg/Catch2) | [3.20x](use_on_realworld_projects/catch2_speed_report.md) | |
-| [cmake](https://cmake.org/) | [3.08x](use_on_realworld_projects/cmake_speed_report.md) | Uses a compiler wrapper to build. |
-| [cppcheck](https://github.com/cppcheck-opensource/cppcheck) | [1.94x](use_on_realworld_projects/cppcheck_speed_report.md)| |
-| [eigen](https://gitlab.com/libeigen/eigen) | [1.80x](use_on_realworld_projects/eigen_speed_report.md) | |
-| [fmt](https://github.com/fmtlib/fmt) | [1.62x](use_on_realworld_projects/fmt_speed_report.md) | Full build and test suite pass in both drop-in and strict psychicstd mode. |
-| [googletest](https://github.com/google/googletest) | [1.51x](use_on_realworld_projects/googletest_speed_report.md) | |
-| [nlohmann json](https://json.nlohmann.me/) | [1.99x](use_on_realworld_projects/nlohmann_speed_report.md) | Uncovered a reliance on implementation-specific behaviour, fixed in [PR #5236](https://github.com/nlohmann/json/pull/5236). |
+| [Boost.Asio](https://www.boost.org/libs/asio/) | [2.16x](use_on_realworld_projects/boost-asio_speed_report.md) | |
+| [catch2](https://github.com/catchorg/Catch2) | [3.58x](use_on_realworld_projects/catch2_speed_report.md) | |
+| [cmake](https://cmake.org/) | [3.28x](use_on_realworld_projects/cmake_speed_report.md) | Uses a compiler wrapper to build. |
+| [cppcheck](https://github.com/cppcheck-opensource/cppcheck) | [2.04x](use_on_realworld_projects/cppcheck_speed_report.md)| |
+| [eigen](https://gitlab.com/libeigen/eigen) | [1.93x](use_on_realworld_projects/eigen_speed_report.md) | |
+| [fmt](https://github.com/fmtlib/fmt) | [1.65x](use_on_realworld_projects/fmt_speed_report.md) | |
+| [googletest](https://github.com/google/googletest) | [1.58x](use_on_realworld_projects/googletest_speed_report.md) | |
+| [nlohmann json](https://json.nlohmann.me/) | [2.09x](use_on_realworld_projects/nlohmann_speed_report.md) | Uncovered a reliance on implementation-specific behaviour, fixed in [PR #5236](https://github.com/nlohmann/json/pull/5236). |
 | [OpenCV](https://opencv.org/) | [1.75x](use_on_realworld_projects/opencv_speed_report.md) | Builds the core and imgproc modules and their tests. |
-| [rapidjson](https://github.com/Tencent/rapidjson/) | [1.22x](use_on_realworld_projects/rapidjson_speed_report.md) | Allocator support in std::string is missing |
-| [rdfind](https://rdfind.pauldreik.se/) | [3.33x](use_on_realworld_projects/rdfind_speed_report.md) | Runs in psychic strict mode, see "Compatibility levels" further down this document. Strict mode uncovered code relying on transitive includes. |
-| [simdutf](https://github.com/simdutf/simdutf) | [1.65x](use_on_realworld_projects/simdutf_speed_report.md) | Consists mostly of simd intrinsics, no speedup expected. [Strict mode uncovered code relying on transitive includes](https://github.com/simdutf/simdutf/pull/998). |
-| [wordcounter](benchmarks/compile_time/bench_wordcounter.cpp)| [4.8x](speed.md) | [demo program using STL](benchmarks/compile_time/bench_wordcounter.cpp). Counts word occurence in text files. |
+| [rapidjson](https://github.com/Tencent/rapidjson/) | [1.26x](use_on_realworld_projects/rapidjson_speed_report.md) | Not using much of the standard library, little speedup expected. |
+| [rdfind](https://rdfind.pauldreik.se/) | [4.07x](use_on_realworld_projects/rdfind_speed_report.md) | Runs in psychic strict mode, see "Compatibility levels" further down this document. Strict mode uncovered code relying on transitive includes. |
+| [simdutf](https://github.com/simdutf/simdutf) | [1.64x](use_on_realworld_projects/simdutf_speed_report.md) | Mostly SIMD intrinsics. [Strict mode uncovered missing includes](https://github.com/simdutf/simdutf/pull/998); the pinned test suite currently runs in drop-in mode because a helper omits `<cstdlib>`. |
+| [wordcounter](benchmarks/compile_time/bench_wordcounter.cpp)| [4.0x](speed.md) | [demo program using STL](benchmarks/compile_time/bench_wordcounter.cpp). Counts word occurrences in text files. |
 
 Find the scripts validating the build and generating the above number in the [use_on_realworld_projects/](use_on_realworld_projects) directory. Platform-wide measurements are available for [Linux](speed.md) and [macOS](speed_macos.md), including separate process-startup results for [Linux](startup.md) and [macOS](startup_macos.md).
 
-There's a second, smaller speedup too: since psychicstd headers are used with `-nostdinc++` and never pull in `libstdc++.so.6`, binaries link against fewer shared libraries. That means less work for the dynamic loader on every process start — a [1.80x faster startup](startup.md) for a trivial program in the measurement above. It's a minor effect on its own, but it's not nothing when it's paid on every one of the hundreds of test binaries `ctest` spawns during the edit-compile-debug cycle.
+Static linking also avoids the `libstdc++.so.6` and `libm.so.6` dependencies. A representative Linux program measured [1.70x faster exec-to-exit](startup.md), including loading, initialization, and its small fixed workload.
 
 Once you have coded for a while, switch to a real quality standard library (typically libstdc++ or libc++) and test and build real releases - psychicstd is just intended for speeding up the development.
 
@@ -31,7 +31,7 @@ Once you have coded for a while, switch to a real quality standard library (typi
 Completeness varies by header, development has been guided what is needed to get realworld
 projects to compile. The `std::string` header is perhaps the most used header and to
 investigate the complementess I counted the number of public member functios to see what
-is missing. It implements **44 of libstdc++'s 45 public `basic_string` method names (98%)**, missing only `copy` and `get_allocator`. See the [`std::string` completeness case study](casestudies/string_completeness/stringcompletenesscasestudy.md) for details. Note that a present method name is not full compliance — see [compliance.md](compliance.md) for behavioral coverage.
+is missing. It has **45 distinct public `basic_string` method names**, the same count as libstdc++: psychicstd is missing `copy` but adds C++23's `contains`. See the [`std::string` completeness case study](casestudies/string_completeness/stringcompletenesscasestudy.md) for details. Note that a present method name is not full compliance — see [compliance.md](compliance.md) for behavioral coverage.
 
 Some facilities are omitted deliberately when their practical value does not
 justify the compile-time cost. For example, `<iostream>` provides the commonly
@@ -58,9 +58,11 @@ An AI can mostly guide itself trying to get the library through all the tests. A
 
 Psychicstd uses `-nostdinc++ -I/path/to/psychicstd/include` so the compiler
 picks up vector, string and other headers from psychicstd instead of
-libstdc++. A small static library supplies the standard iostream objects and
-the commonly used narrow-stream template instantiations. The CMake target and
-toolchain overlay both link it automatically.
+libstdc++. A small static library supplies code deliberately moved out of the
+headers: standard stream objects, cold exception and system-error paths,
+string conversions, and selected narrow-character template instantiations.
+Consumers must link this library. The CMake toolchain overlay builds and links
+it automatically; manual integrations must build and link it explicitly.
 
 The standard library uses `std::` namespace just like the real standard. You should not have to do any changes to your program.
 
@@ -71,8 +73,9 @@ Compile time for these headers is dominated by the compiler *frontend*, in two p
 A concrete example is that `std::sort` has a very short and simple implementation to minimize compile time. It is still O(Nlog(N)) but not as fast as other standard libraries **in release mode**. In debug mode, it can however even be faster!
 
 The [compiled-library experiment](docs/compiled-library.md) measures the
-compile-time effect and linked-size tradeoff of moving the narrow iostream
-implementation out of headers.
+compile-time and linked-size effects of outlining these paths, explicitly
+instantiating narrow strings and stringstreams, and splitting the runtime into
+independently extracted archive members.
 
 ## Compatibility levels
 
@@ -137,20 +140,24 @@ Unit tests should pass. The compliance test need not, getting 100% compliance is
 No changes to your source code are needed. You inject compile and link flags
 at configure time; your project's own build files stay untouched.
 
-The CMake toolchain described below is the recommended integration. If you
-inject the flags manually, first build the static library with the same
-compiler as the consuming project:
+The CMake toolchain described below is the recommended integration and builds
+the runtime as part of the consuming project. If you inject flags manually,
+first configure a separate psychicstd build with the same compiler as the
+consumer. Replace `/path/to/your-c++` with that compiler, for example `g++-14`
+or `clang++`:
 
 ```bash
 cmake -S /path/to/psychicstd -B /path/to/psychicstd/build-runtime \
-    -DCMAKE_CXX_COMPILER=g++-14 \
+    -DCMAKE_CXX_COMPILER=/path/to/your-c++ \
     -DPSYCHICSTD_BUILD_TESTS=OFF \
     -DPSYCHICSTD_BUILD_BENCHMARKS=OFF
 cmake --build /path/to/psychicstd/build-runtime --target psychicstd
 ```
 
-The manual examples below call that output
-`/path/to/psychicstd/build-runtime/libpsychicstd.a`.
+With a single-configuration Makefiles or Ninja generator, the manual examples
+below call that output
+`/path/to/psychicstd/build-runtime/libpsychicstd.a`. Rebuild it when changing
+compiler or instrumentation flags that should also apply to the runtime.
 
 ### CMake / GCC 12
 
@@ -211,8 +218,9 @@ cmake -S . -B build-with-psychic \
 ```
 
 The toolchain is designed to compose with user flags and sanitizer settings.
-It adds a private static-library target to the consuming build, so no separate
-psychicstd build step is needed.
+It adds an internal static-library target to the consuming build and links it
+to targets declared after the top-level `project()` call, so no separate
+psychicstd build step or archive path is needed.
 If you already have a generated toolchain file, include the psychicstd one
 after it from a small wrapper toolchain file.
 
@@ -221,7 +229,7 @@ after it from a small wrapper toolchain file.
 If you already use Conan, the intended integration point is a single overlay
 profile: [`tests/conan_project/psychic.profile`](tests/conan_project/psychic.profile).
 It composes with your existing host/build profiles and injects the psychicstd
-toolchain plus the small `fmt`-specific define used by the example project.
+toolchain without selecting a compiler or adding dependency-specific flags.
 
 Apply it to both host and build contexts so your app and its C++ dependencies
 are built with the same standard library choice:
@@ -246,8 +254,8 @@ include(/path/to/psychic.profile)
 The example in `tests/conan_project/` uses `fmt` to show a real third-party
 dependency built this way. The profile does not overwrite sanitizer flags, so
 ASan and UBSan keep working the way Conan or your project already configures
-them. Supported compilers are the same as the native CMake path: clang and GCC
-13+ on Linux.
+them. Supported compilers are the same as the toolchain-overlay path: Clang
+and GCC 13+ on Linux.
 
 ### Notes for all configurations
 
@@ -290,11 +298,11 @@ The default build covers the library itself — no third-party code, no network 
 
 - each implemented header compiled against both the system STL and psychicstd, to check behavioral equivalence
 - a self-containment test per header: including just that one header (and nothing else) must compile
-- a simulated external project that uses psychicstd via `-DCMAKE_CXX_FLAGS`
+- a simulated external project that uses the psychicstd toolchain overlay, including ASan and UBSan variants
 
 ### Testing on real-world projects
 
-Correctness in practice is verified by compiling — and running the test suites of — actual third-party projects against psychicstd. The scripts in [`use_on_realworld_projects/`](use_on_realworld_projects/) clone, build, and run Boost.Asio, Catch2, cppcheck, eigen, fmt, nlohmann json, OpenCV, RapidJSON, rdfind and simdutf. The CMake recipe builds its supported upstream KWSys and utility targets. These recipes produce the speedup reports linked at the top of this README.
+Correctness in practice is verified by compiling — and running the test suites of — actual third-party projects against psychicstd. The scripts in [`use_on_realworld_projects/`](use_on_realworld_projects/) clone, build, and run Boost.Asio, Catch2, cppcheck, Eigen, fmt, GoogleTest, nlohmann JSON, OpenCV, RapidJSON, rdfind, and simdutf. The CMake recipe builds its supported upstream KWSys and utility targets. These recipes produce the speedup reports linked at the top of this README.
 
 ### Benchmarks
 
@@ -308,7 +316,7 @@ python3 benchmarks/compile_time/run_bench.py
 
 View the results by inspecting [speed.md](speed.md).
 
-There is also a benchmark for process startup time (dynamic linker overhead, not compile time — see the note above):
+There is also a benchmark for process startup time (exec-to-exit time, not an isolated dynamic-linker measurement — see the note above):
 
 ```bash
 cmake --build build --target startup_bench

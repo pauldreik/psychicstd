@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 """
-Measures process startup time (median exec-to-exit wall time) for a trivial
-program built against the system STL vs psychicstd, and compares the shared
-libraries each links against. psychicstd builds link fewer shared objects
-(no libstdc++.so.6/libm.so.6), so the dynamic loader has less work to do on
-every process start -- distinct from and additional to the compile-time win.
+Measures exec-to-exit wall time for a representative small program built
+against the system STL vs psychicstd, and compares the shared libraries loaded
+by each executable. The timing includes dynamic loading, runtime initialization,
+and the program's fixed workload; it is not an isolated dynamic-linker benchmark.
 
 Writes results to stdout and updates startup.md in the repo root.
 Usage: run_bench.py [system_binary] [psychicstd_binary]
@@ -21,6 +20,7 @@ from pathlib import Path
 BENCH_DIR = Path(__file__).parent.resolve()
 REPO_ROOT = BENCH_DIR.parent.parent
 N = int(os.environ.get("BENCH_N", "300"))
+REPETITIONS = int(os.environ.get("BENCH_REPS", "3"))
 WARMUP = 20
 
 
@@ -83,10 +83,21 @@ def main() -> None:
         if not b.is_file():
             sys.exit(f"error: {b} not found -- build it first (cmake --build build)")
 
-    print(f"measuring {N} runs each (after {WARMUP} warmup runs)...")
-    sys_s, psy_s = paired_samples_ms(system_bin, psychicstd_bin)
-    sys_ms = statistics.median(sys_s)
-    psy_ms = statistics.median(psy_s)
+    print(
+        f"measuring {REPETITIONS} batches of {N} paired runs "
+        f"(after {WARMUP} warmup pairs per batch)..."
+    )
+    batch_medians = []
+    for repetition in range(REPETITIONS):
+        sys_s, psy_s = paired_samples_ms(system_bin, psychicstd_bin)
+        batch_medians.append((statistics.median(sys_s), statistics.median(psy_s)))
+        sys_batch, psy_batch = batch_medians[-1]
+        print(
+            f"batch {repetition + 1}: system {sys_batch:.3f} ms, "
+            f"psychicstd {psy_batch:.3f} ms, {sys_batch / psy_batch:.2f}x"
+        )
+    sys_ms = statistics.median(sample[0] for sample in batch_medians)
+    psy_ms = statistics.median(sample[1] for sample in batch_medians)
     ratio = sys_ms / psy_ms
 
     sys_libs = shared_libs(system_bin)
@@ -100,14 +111,21 @@ def main() -> None:
     with open(startup_md, "w") as f:
         f.write("# Process Startup Speed\n\n")
         f.write(
-            f"Median of {N} runs (after {WARMUP} warmup runs) of a trivial program "
+            f"Median of {REPETITIONS} batches of {N} paired runs (after {WARMUP} "
+            "warmup pairs per batch) of a representative small program "
             "(`benchmarks/startup_time/bench_startup.cpp`) linked against the system "
-            "STL vs psychicstd. This measures exec-to-exit wall time, i.e. dynamic "
-            "linker + startup overhead -- separate from compile time, and separate "
-            "from the program's own work.\n\n"
+            "STL vs psychicstd. This measures exec-to-exit wall time, including "
+            "dynamic loading, runtime initialization, and the program's fixed "
+            "workload. It is not an isolated measurement of dynamic-linker time.\n\n"
+        )
+        f.write(
+            "psychicstd is linked as a static archive: required archive members are "
+            "copied into the executable, so `libpsychicstd.a` is not a startup-time "
+            "shared-library dependency. The table lists shared libraries reported by "
+            "the platform dependency tool.\n\n"
         )
         f.write(f"Last updated: {datetime.now().strftime('%Y-%m-%d %H:%M')}\n\n")
-        f.write("| | median startup | shared libraries |\n")
+        f.write("| | median exec-to-exit | shared libraries |\n")
         f.write("|--|---:|---|\n")
         f.write(f"| system | {sys_ms:.3f} ms | {', '.join(sys_libs)} |\n")
         f.write(f"| psychicstd | {psy_ms:.3f} ms | {', '.join(psy_libs)} |\n")

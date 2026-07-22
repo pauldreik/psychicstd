@@ -1,25 +1,27 @@
 # Compiled library experiment
 
-Psychicstd now has a small compiled component. The public CMake target is a
-static library, while the toolchain overlay adds an equivalent private static
-library to an otherwise unmodified consuming project.
+The initial experiment added a small compiled component. The public CMake
+target is a static library, while the toolchain overlay adds an equivalent
+internal static library to an otherwise unmodified consuming project. The
+follow-up sections below describe the additional outlined paths and the final
+archive split retained in the current implementation.
 
-The first compiled translation unit contains:
+The first compiled translation unit contained:
 
 - `cin`, `cout`, `cerr`, and `clog`, including their stdio stream buffers;
 - the cold `ios_base::failure` construction and throw path;
 - explicit instantiations of `basic_istream<char>` and
   `basic_ostream<char>`.
 
-The explicit instantiations are used only when exceptions are enabled.
+Those explicit instantiations were used only when exceptions were enabled.
 `-fno-exceptions` consumers keep local instantiations so the header's abort
 path does not depend on how the static library was compiled.
 
-This is deliberately still one source file. It keeps the initial build and
-integration simple. If linked binary size or incremental rebuilding of the
-library becomes important, the next split should be `ios.cpp`, `istream.cpp`,
-`ostream.cpp`, and one source file per global stream. Static archive extraction
-would then avoid bringing unused input or output code into a program.
+That initial implementation deliberately used one source file to keep the
+first build and integration simple. It identified `ios.cpp`, `istream.cpp`,
+`ostream.cpp`, and one source file per global stream as the next split, so
+static archive extraction could avoid bringing unused input or output code
+into a program. The final follow-up performs that split.
 
 ## Measurements
 
