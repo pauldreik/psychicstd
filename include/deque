@@ -456,12 +456,12 @@ public:
   }
   reference at(size_type i) {
     if (i >= size_)
-      _PSYCHICSTD_THROW(out_of_range("deque::at"));
+      _PSYCHICSTD_THROW_HELPER(__throw_out_of_range, "deque::at");
     return data_[start_ + i];
   }
   const_reference at(size_type i) const {
     if (i >= size_)
-      _PSYCHICSTD_THROW(out_of_range("deque::at"));
+      _PSYCHICSTD_THROW_HELPER(__throw_out_of_range, "deque::at");
     return data_[start_ + i];
   }
   reference front() noexcept { return data_[start_]; }

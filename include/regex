@@ -21,7 +21,7 @@ public:
     if (flags & icase)
       rf |= REG_ICASE;
     if (::regcomp(&re_, pattern.c_str(), rf) != 0)
-      _PSYCHICSTD_THROW(runtime_error("regex: bad pattern"));
+      _PSYCHICSTD_THROW_HELPER(__throw_runtime_error, "regex: bad pattern");
     valid_ = true;
   }
   explicit regex(const char* pattern, flag_type flags = ECMAScript) {
@@ -29,7 +29,7 @@ public:
     if (flags & icase)
       rf |= REG_ICASE;
     if (::regcomp(&re_, pattern, rf) != 0)
-      _PSYCHICSTD_THROW(runtime_error("regex: bad pattern"));
+      _PSYCHICSTD_THROW_HELPER(__throw_runtime_error, "regex: bad pattern");
     valid_ = true;
   }
 

@@ -44,6 +44,14 @@ int main() {
   psyassert(d->value == 30);
 
   std::optional<int> empty;
+  bool bad_access = false;
+  try {
+    (void)empty.value();
+  } catch (const std::bad_optional_access& error) {
+    bad_access = error.what()[0] != '\0';
+  }
+  psyassert(bad_access);
+
   std::optional<int> low = 1;
   std::optional<int> high = 2;
   psyassert(empty < low);

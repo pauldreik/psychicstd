@@ -5,6 +5,12 @@
 #include <system_error>
 
 int main() {
+  psyassert(&std::generic_category() == &std::generic_category());
+  psyassert(&std::system_category() == &std::system_category());
+  psyassert(&std::generic_category() != &std::system_category());
+  psyassert(std::string(std::generic_category().name()) == "generic");
+  psyassert(std::string(std::system_category().name()) == "system");
+
   auto ec = std::error_code(EDOM, std::generic_category());
   psyassert(ec.value() == EDOM);
   psyassert(ec.category() == std::generic_category());

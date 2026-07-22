@@ -54,6 +54,54 @@ else:
 # build system's convention (CMAKE_BUILD_TYPE, an -O flag, ...) -- see Toolchain.
 BUILD_TYPES = ("debug", "release")
 
+_runtime_dirs: list[tempfile.TemporaryDirectory[str]] = []
+
+
+def _runtime_library(compiler: str, include: Path) -> str:
+    """Build the compiled psychicstd component outside measured phases.
+
+    The include directory may belong to a reference worktree predating the
+    compiled library, in which case its header-only implementation needs no
+    library.
+    """
+    source_dir = include.parent / "src"
+    sources = [
+        source_dir / name
+        for name in ("iostream.cpp", "stdexcept.cpp", "system_error.cpp", "string.cpp")
+        if (source_dir / name).is_file()
+    ]
+    if not sources:
+        return ""
+
+    work = tempfile.TemporaryDirectory(prefix="psychicstd-runtime-")
+    _runtime_dirs.append(work)
+    outputs = []
+    for source in sources:
+        output = Path(work.name) / f"{source.stem}.o"
+        subprocess.run(
+            [
+                compiler,
+                "-std=c++20",
+                "-nostdinc++",
+                "-isystem",
+                str(include),
+                "-fvisibility=hidden",
+                "-fPIC",
+                "-c",
+                str(source),
+                "-o",
+                str(output),
+            ],
+            check=True,
+        )
+        outputs.append(output)
+    archive = Path(work.name) / "libpsychicstd.a"
+    subprocess.run(
+        ["ar", "rcs", str(archive), *(str(output) for output in outputs)],
+        check=True,
+    )
+    return str(archive)
+
 
 def _duration(value: str) -> float:
     match = re.fullmatch(r"([0-9]+(?:\.[0-9]+)?)([smh]?)", value)
@@ -110,11 +158,13 @@ def psy_tc(
     enable_ccache: bool = False,
     jobs: int | None = None,
 ) -> rw.Toolchain:
+    runtime = _runtime_library(compiler, include)
+    libs = f"{runtime} {PSY_LIBS}" if runtime else PSY_LIBS
     return rw.Toolchain(
         compiler,
         f"-std=c++20 -nostdinc++ -isystem {include}",
         PSY_LDFLAGS,
-        PSY_LIBS,
+        libs,
         build_type=build_type,
         enable_ccache=enable_ccache,
         jobs=jobs if jobs is not None else rw.detect_parallelism().jobs,

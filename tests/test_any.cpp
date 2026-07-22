@@ -48,4 +48,12 @@ int main() {
     psyassert(tracked::live == 1);
   }
   psyassert(tracked::live == 0);
+
+  bool bad_cast = false;
+  try {
+    (void)std::any_cast<double>(a);
+  } catch (const std::bad_any_cast& error) {
+    bad_cast = error.what()[0] != '\0';
+  }
+  psyassert(bad_cast);
 }

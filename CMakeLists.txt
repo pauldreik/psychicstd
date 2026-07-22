@@ -3,8 +3,16 @@ project(psychicstd LANGUAGES CXX VERSION 0.1.0)
 
 file(WRITE "${CMAKE_BINARY_DIR}/.gitignore" "*\n")
 
-add_library(psychicstd STATIC src/iostream.cpp)
+add_library(
+    psychicstd
+    STATIC
+    src/iostream.cpp
+    src/stdexcept.cpp
+    src/string.cpp
+    src/system_error.cpp
+)
 add_library(psychicstd::psychicstd ALIAS psychicstd)
+set_target_properties(psychicstd PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
 target_compile_features(psychicstd PUBLIC cxx_std_20)
 target_compile_options(psychicstd PUBLIC -nostdinc++ -fvisibility=hidden)

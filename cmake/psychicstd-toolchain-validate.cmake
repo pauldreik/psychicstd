@@ -27,7 +27,15 @@ endif()
 # project(), just as the toolchain already supplies its headers and ABI runtime.
 get_property(_psychicstd_in_try_compile GLOBAL PROPERTY IN_TRY_COMPILE)
 if(NOT _psychicstd_in_try_compile AND NOT TARGET _psychicstd_runtime)
-    add_library(_psychicstd_runtime STATIC "${PSYCHICSTD_ROOT}/src/iostream.cpp")
+    add_library(
+        _psychicstd_runtime
+        STATIC
+        "${PSYCHICSTD_ROOT}/src/iostream.cpp"
+        "${PSYCHICSTD_ROOT}/src/stdexcept.cpp"
+        "${PSYCHICSTD_ROOT}/src/string.cpp"
+        "${PSYCHICSTD_ROOT}/src/system_error.cpp"
+    )
+    set_target_properties(_psychicstd_runtime PROPERTIES POSITION_INDEPENDENT_CODE ON)
     target_compile_features(_psychicstd_runtime PRIVATE cxx_std_20)
     link_libraries(_psychicstd_runtime)
 endif()

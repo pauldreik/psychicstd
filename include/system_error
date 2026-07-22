@@ -1,8 +1,11 @@
 #pragma once
 #include <__psychicstd_except>
-#include <cstdio>
-#include <string.h> // strerror_r
 #include <string>
+
+#if _PSYCHICSTD_COMPATIBILITY_LEVEL >= _PSYCHICSTD_COMPAT_DROPIN
+#include <cstdio>
+#include <string.h>
+#endif
 
 namespace std {
 
@@ -25,7 +28,7 @@ inline constexpr bool is_error_condition_enum_v =
 
 class error_category {
 public:
-  virtual ~error_category() = default;
+  virtual ~error_category();
   virtual const char* name() const noexcept = 0;
   virtual string message(int ev) const = 0;
   virtual error_condition default_error_condition(int ev) const noexcept;
@@ -39,40 +42,8 @@ public:
   bool operator<(const error_category& o) const noexcept { return this < &o; }
 };
 
-namespace __detail {
-// strerror_r comes in two flavors: POSIX/Darwin returns int (message written
-// to the buffer), glibc with _GNU_SOURCE returns char*. Overload on the
-// result type so both signatures work without platform #ifdefs.
-inline const char* __strerror_result(int, const char* __buf) { return __buf; }
-inline const char* __strerror_result(const char* __r, const char*) {
-  return __r;
-}
-
-inline string __errno_message(int __ev) {
-  char __buf[128] = "";
-  return string(
-      __strerror_result(::strerror_r(__ev, __buf, sizeof(__buf)), __buf));
-}
-
-struct __generic_category : error_category {
-  const char* name() const noexcept override { return "generic"; }
-  string message(int __ev) const override { return __errno_message(__ev); }
-};
-struct __system_category : error_category {
-  const char* name() const noexcept override { return "system"; }
-  string message(int __ev) const override { return __errno_message(__ev); }
-};
-} // namespace __detail
-
-inline const error_category& system_category() noexcept {
-  static __detail::__system_category c;
-  return c;
-}
-
-inline const error_category& generic_category() noexcept {
-  static __detail::__generic_category c;
-  return c;
-}
+const error_category& system_category() noexcept;
+const error_category& generic_category() noexcept;
 
 class error_condition {
   int val_ = 0;
@@ -83,7 +54,7 @@ public:
   error_condition(int v, const error_category& c) : val_(v), cat_(&c) {}
   int value() const noexcept { return val_; }
   const error_category& category() const noexcept { return *cat_; }
-  string message() const { return cat_->message(val_); }
+  string message() const;
   explicit operator bool() const noexcept { return val_ != 0; }
 
   friend bool operator==(const error_condition& a,
@@ -105,7 +76,7 @@ public:
   error_code(int v, const error_category& c) : val_(v), cat_(&c) {}
   int value() const noexcept { return val_; }
   const error_category& category() const noexcept { return *cat_; }
-  string message() const { return cat_->message(val_); }
+  string message() const;
   explicit operator bool() const noexcept { return val_ != 0; }
 
   friend bool operator==(const error_code& a, const error_code& b) noexcept {
@@ -122,22 +93,6 @@ inline bool operator<(const error_code& a, const error_code& b) noexcept {
   if (b.category() < a.category())
     return false;
   return a.value() < b.value();
-}
-
-inline error_condition
-error_category::default_error_condition(int ev) const noexcept {
-  return error_condition(ev, *this);
-}
-
-inline bool
-error_category::equivalent(int code,
-                           const error_condition& condition) const noexcept {
-  return default_error_condition(code) == condition;
-}
-
-inline bool error_category::equivalent(const error_code& code,
-                                       int condition) const noexcept {
-  return *this == code.category() && code.value() == condition;
 }
 
 inline bool operator==(const error_code& code,
@@ -161,29 +116,14 @@ inline bool operator!=(const error_condition& condition,
 class system_error : public runtime_error {
   error_code ec_;
 
-  // Same what() convention as libstdc++/libc++: "<what_arg>: <ec.message()>".
-  static string __build_what(const error_code& __ec, const char* __what) {
-    string __s;
-    if (__what && *__what) {
-      __s = __what;
-      __s += ": ";
-    }
-    __s += __ec.message();
-    return __s;
-  }
-
 public:
-  system_error(error_code ec, const string& what_arg)
-      : runtime_error(__build_what(ec, what_arg.c_str())), ec_(ec) {}
-  system_error(error_code ec, const char* what_arg)
-      : runtime_error(__build_what(ec, what_arg)), ec_(ec) {}
-  explicit system_error(error_code ec) : runtime_error(ec.message()), ec_(ec) {}
-  system_error(int ev, const error_category& ecat, const string& what_arg)
-      : system_error(error_code(ev, ecat), what_arg) {}
-  system_error(int ev, const error_category& ecat, const char* what_arg)
-      : system_error(error_code(ev, ecat), what_arg) {}
-  system_error(int ev, const error_category& ecat)
-      : system_error(error_code(ev, ecat)) {}
+  system_error(error_code ec, const string& what_arg);
+  system_error(error_code ec, const char* what_arg);
+  explicit system_error(error_code ec);
+  system_error(int ev, const error_category& ecat, const string& what_arg);
+  system_error(int ev, const error_category& ecat, const char* what_arg);
+  system_error(int ev, const error_category& ecat);
+  ~system_error() noexcept override;
   const error_code& code() const noexcept { return ec_; }
 };
 
