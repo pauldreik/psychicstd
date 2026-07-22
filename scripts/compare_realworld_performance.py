@@ -16,7 +16,7 @@ Usage:
   scripts/compare_realworld_performance.py [--compiler CXX]
       [--build-type {debug,release,both}] [--reps N]
       [--project {NAME,all} ...] [--enable-ccache] [--output PATH]
-      [--check-only]
+      [--jobs N] [--check-only]
   scripts/compare_realworld_performance.py --list
 """
 
@@ -151,6 +151,11 @@ def main() -> int:
         "--reps", type=int, default=3, help="build repetitions (default: 3)"
     )
     ap.add_argument(
+        "--jobs",
+        type=int,
+        help="parallel build jobs (default: automatically detected)",
+    )
+    ap.add_argument(
         "--enable-ccache",
         action="store_true",
         help="leave ccache enabled (faster iteration, but skews timings -- use "
@@ -175,6 +180,9 @@ def main() -> int:
     )
     args = ap.parse_args()
 
+    if args.jobs is not None and args.jobs <= 0:
+        ap.error("--jobs must be positive")
+
     if not args.enable_ccache:
         os.environ["CCACHE_DISABLE"] = "1"
 
@@ -188,6 +196,7 @@ def main() -> int:
         projects = sorted(args.projects)
     build_types = cr.BUILD_TYPES if args.build_type == "both" else (args.build_type,)
     parallelism = rw.detect_parallelism()
+    jobs = args.jobs if args.jobs is not None else parallelism.jobs
 
     if args.check_only:
         if args.output:
@@ -204,7 +213,7 @@ def main() -> int:
                     build_type,
                     REPO / "include",
                     args.enable_ccache,
-                    parallelism.jobs,
+                    jobs,
                 )
         return 0
 
@@ -219,7 +228,7 @@ def main() -> int:
                 args.reps,
                 REPO / "include",
                 args.enable_ccache,
-                parallelism.jobs,
+                jobs,
             )
 
     ver = cr.compiler_version(args.compiler) or "unknown"
@@ -240,7 +249,7 @@ def main() -> int:
         f"{GREEN} the whole CI is above 1x (reliably faster) · {RED} the whole "
         f"CI is below 1x (reliably slower) · {YELLOW} the CI straddles 1x (not "
         "distinguishable from run-to-run noise).\n",
-        f"Parallelism: **{parallelism.jobs} jobs** "
+        f"Parallelism: **{jobs} jobs** "
         f"({parallelism.logical_cpus} logical CPUs available; the memory "
         f"estimate permits {parallelism.memory_jobs} jobs at 1.5 GiB/job). "
         f"ccache was {'enabled' if args.enable_ccache else 'disabled'}.\n",
@@ -262,7 +271,7 @@ def main() -> int:
     lines.append(
         "---\nReproduce this on your machine: "
         f"`scripts/compare_realworld_performance.py --compiler {args.compiler} "
-        f"--build-type {args.build_type} --reps {args.reps}"
+        f"--build-type {args.build_type} --reps {args.reps} --jobs {jobs}"
         + (" --enable-ccache" if args.enable_ccache else "")
         + "`"
     )

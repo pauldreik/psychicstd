@@ -10,7 +10,7 @@ Usage:
   scripts/generate_realworld_reports.py [--compiler CXX]
       [--build-type {debug,release,both}]
       [--reps N | --time-budget DURATION] [--max-reps N]
-      [--plan-only] [--enable-ccache]
+      [--jobs N] [--plan-only] [--enable-ccache]
 """
 
 import argparse
@@ -182,6 +182,12 @@ def main() -> int:
         help="maximum repetitions per project with --time-budget (default: 5)",
     )
     ap.add_argument(
+        "--jobs",
+        type=int,
+        default=8,
+        help="parallel build jobs passed to every benchmark (default: 8)",
+    )
+    ap.add_argument(
         "--plan-only",
         action="store_true",
         help="print the repetition plan without running benchmarks or writing files",
@@ -197,6 +203,8 @@ def main() -> int:
         ap.error("--reps must be positive")
     if args.max_reps <= 0:
         ap.error("--max-reps must be positive")
+    if args.jobs <= 0:
+        ap.error("--jobs must be positive")
 
     readme = README.read_text()
     reports = _linked_reports(readme)
@@ -222,13 +230,12 @@ def main() -> int:
     else:
         reps = dict.fromkeys(projects, args.reps if args.reps is not None else 3)
 
-    parallelism = rw.detect_parallelism()
     expected_jobs = {rw.PROJECTS[project].expected_jobs for project in projects}
-    if expected_jobs != {parallelism.jobs}:
+    if expected_jobs != {args.jobs}:
         expected = ", ".join(str(jobs) for jobs in sorted(expected_jobs))
         print(
             f"warning: runtime estimates were measured at {expected} jobs; "
-            f"this run will use {parallelism.jobs}",
+            f"this run will use {args.jobs}",
             file=sys.stderr,
         )
     _print_plan(projects, reps, costs)
@@ -251,6 +258,8 @@ def main() -> int:
                 args.build_type,
                 "--reps",
                 str(reps[project]),
+                "--jobs",
+                str(args.jobs),
                 "--output",
                 str(output),
             ]
