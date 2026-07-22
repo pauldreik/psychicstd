@@ -1,3 +1,5 @@
+#ifndef __APPLE__
+
 #include "stdio_streambuf.h"
 
 #include <iostream>
@@ -16,3 +18,5 @@ ostream __attribute__((init_priority(psychicstd_detail::stream_init_priority)))
 cout(&cout_buffer);
 
 } // namespace std
+
+#endif

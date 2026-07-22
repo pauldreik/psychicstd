@@ -11,6 +11,7 @@ add_library(
     src/clog.cpp
     src/cout.cpp
     src/ios.cpp
+    src/iostream_macos.cpp
     src/istream.cpp
     src/ostream.cpp
     src/sstream_instantiations.cpp

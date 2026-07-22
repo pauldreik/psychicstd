@@ -9,4 +9,10 @@ extern ostream cout;
 extern ostream cerr;
 extern ostream clog;
 
+#ifdef __APPLE__
+// Mach-O does not honor init_priority across translation units. This guard
+// initializes the standard streams before later globals in every user TU.
+static ios_base::Init __ioinit;
+#endif
+
 } // namespace std

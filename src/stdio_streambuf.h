@@ -19,8 +19,8 @@ private:
   FILE* file_;
 };
 
-// Construct before ordinary user globals and destroy after them. psychicstd is
-// Linux-only, and both supported compilers implement init_priority.
+// ELF platforms use this to construct streams before ordinary user globals.
+// Mach-O needs the ios_base::Init guard because its ordering is TU-local.
 inline constexpr int stream_init_priority = 101;
 
 } // namespace psychicstd_detail

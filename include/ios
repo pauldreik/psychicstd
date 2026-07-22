@@ -13,8 +13,13 @@ class ios_base {
 public:
   class Init {
   public:
+#ifdef __APPLE__
+    Init();
+    ~Init();
+#else
     Init() = default;
     ~Init() = default;
+#endif
   };
 
   class failure : public system_error {
