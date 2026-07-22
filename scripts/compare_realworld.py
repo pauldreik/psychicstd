@@ -67,7 +67,13 @@ def _runtime_library(compiler: str, include: Path) -> str:
     source_dir = include.parent / "src"
     sources = [
         source_dir / name
-        for name in ("iostream.cpp", "stdexcept.cpp", "system_error.cpp", "string.cpp")
+        for name in (
+            "iostream.cpp",
+            "stdexcept.cpp",
+            "system_error.cpp",
+            "string.cpp",
+            "string_instantiations.cpp",
+        )
         if (source_dir / name).is_file()
     ]
     if not sources:

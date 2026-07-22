@@ -9,6 +9,7 @@ add_library(
     src/iostream.cpp
     src/stdexcept.cpp
     src/string.cpp
+    src/string_instantiations.cpp
     src/system_error.cpp
 )
 add_library(psychicstd::psychicstd ALIAS psychicstd)

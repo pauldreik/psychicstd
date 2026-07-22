@@ -683,6 +683,10 @@ private:
   }
 };
 
+#if defined(__cpp_exceptions)
+extern template class basic_string<char>;
+#endif
+
 // Concatenation
 template <typename C, typename T, typename A>
 basic_string<C, T, A> operator+(const basic_string<C, T, A>& a,

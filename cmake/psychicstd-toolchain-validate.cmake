@@ -33,6 +33,7 @@ if(NOT _psychicstd_in_try_compile AND NOT TARGET _psychicstd_runtime)
         "${PSYCHICSTD_ROOT}/src/iostream.cpp"
         "${PSYCHICSTD_ROOT}/src/stdexcept.cpp"
         "${PSYCHICSTD_ROOT}/src/string.cpp"
+        "${PSYCHICSTD_ROOT}/src/string_instantiations.cpp"
         "${PSYCHICSTD_ROOT}/src/system_error.cpp"
     )
     set_target_properties(_psychicstd_runtime PROPERTIES POSITION_INDEPENDENT_CODE ON)

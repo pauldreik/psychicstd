@@ -133,3 +133,36 @@ both combined. A complete runtime archive also builds with `-fno-exceptions`;
 optional and string-conversion failure consumers link and abort locally. A
 normal executable and a shared-library consumer both link the GCC 14 PIC
 archive successfully.
+
+### Narrow string explicit instantiation
+
+This separately measured follow-up compares against `bd99ca8`. It tests an
+`extern template` declaration for `basic_string<char>` backed by a dedicated
+PIC archive object. Keeping the instantiation separate prevents users of the
+conversion and system-error objects from pulling it in accidentally.
+`-fno-exceptions` consumers retain local instantiation so their failure paths
+still abort locally. Measurements use GCC 14 Debug with ccache disabled and
+three repetitions, matching the cold-path experiment.
+
+The focused exercised-string probe is inconclusive. Its caller object falls
+from 58,360 to 40,232 bytes and GCC's code-generation total falls from 20 to
+10 ms, but median compilation remains 0.16 s. The header grows from 34,941 to
+35,021 bytes, the new GCC 14 Debug instantiation object is 144,560 bytes, and
+linked text grows from 82,101 to 104,212 bytes. The slice is provisional until
+the real-project gate; absent a repeatable compile-time improvement, the linked
+size cost is grounds to revert it.
+
+The real-project gate resolves the decision in favor of keeping the slice.
+Three string-heavy builds improve beyond system drift, Eigen remains flat, and
+all test phases are flat or faster:
+
+| Project and phase | Baseline | Explicit instantiation | Change | System drift |
+| --- | ---: | ---: | ---: | ---: |
+| rdfind compile | 229.9 ms | 219.1 ms | -4.7% | +0.7% |
+| fmt compile | 5,088.2 ms | 4,888.7 ms | -3.9% | +1.5% |
+| Catch2 compile | 2,936.5 ms | 2,858.4 ms | -2.7% | +0.8% |
+| Eigen compile | 10,893.5 ms | 10,865.0 ms | -0.3% | +1.9% |
+
+The 22,111-byte linked-text increase in the focused probe is accepted because
+psychicstd prioritizes development compile speed, the instantiation remains a
+separately extracted archive member, and no measured project regresses.
