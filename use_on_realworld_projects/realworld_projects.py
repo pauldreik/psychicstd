@@ -879,11 +879,11 @@ def _rapidjson() -> Project:
                 " -Wno-error=sign-conversion -Wno-error=sign-compare"
             )
             if "clang" not in tc.cxx.lower():
-                # GCC 12 diagnoses RapidJSON's realloc wrapper at -O3 as an
-                # impossibly large allocation; its tests intentionally pass
-                # the allocation through that wrapper.
+                # Modern GCC emits false positives for RapidJSON's allocation
+                # wrappers at -O3; upstream enables -Werror for its tests.
                 cxxflags += (
                     " -Wno-error=alloc-size-larger-than= -Wno-error=array-bounds"
+                    " -Wno-error=stringop-overflow"
                 )
             configure = [
                 "cmake",
