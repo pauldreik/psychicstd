@@ -25,6 +25,7 @@ import json
 import os
 import random
 import re
+import shlex
 import statistics
 import subprocess
 import sys
@@ -36,6 +37,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).parent.parent.resolve()
 PSYCHICSTD = REPO_ROOT / "include"
+RUNTIME_SOURCES = sorted((REPO_ROOT / "src").glob("*.cpp"))
 LLVM_ROOT = Path(
     os.environ.get("LLVM_ROOT", Path.home() / "code/thirdparty/llvm-project")
 )
@@ -50,6 +52,10 @@ SPEED_GREEN = 1.2
 SPEED_RED = 0.8
 
 CXX = os.environ.get("CXX", "g++")
+CXX_CMD = shlex.split(CXX)
+AR = os.environ.get("AR", "ar")
+RUNTIME_ARCHIVE: Path | None = None
+_RUNTIME_DIRECTORY: tempfile.TemporaryDirectory | None = None
 
 # Sanitizer mode: compile both STLs with ASan+UBSan and run the .pass tests, so
 # runtime memory/UB bugs in psychicstd surface as failures the system STL does
@@ -65,6 +71,8 @@ SAN_ENV = {
 # tests fit in the per-test timeout. Per-test compile+run timeout in seconds.
 EXTRA_CFLAGS: list[str] = []
 TEST_TIMEOUT = 20
+# The one-time archive build can contend with other jobs on a busy CI runner.
+RUNTIME_BUILD_TIMEOUT = 120
 
 # Known sanitizer failures; the gate fails only on failures NOT listed here.
 BASELINE_FILE = REPO_ROOT / "tools" / "compliance_sanitize_baseline.txt"
@@ -181,20 +189,58 @@ def run_cmd(
         return False, str(e)
 
 
+def build_runtime_archive(flags: list[str]) -> Path:
+    """Build the compiled psychicstd component used by conformance tests."""
+    global _RUNTIME_DIRECTORY
+    _RUNTIME_DIRECTORY = tempfile.TemporaryDirectory(prefix="psychicstd-compliance-")
+    build_dir = Path(_RUNTIME_DIRECTORY.name)
+    objects = []
+    compile_flags = [
+        "-std=c++23",
+        "-nostdinc++",
+        "-fvisibility=hidden",
+        f"-I{PSYCHICSTD}",
+        *flags,
+    ]
+    for source in RUNTIME_SOURCES:
+        obj = build_dir / f"{source.stem}.o"
+        ok, output = run_cmd(
+            [*CXX_CMD, *compile_flags, "-c", str(source), "-o", str(obj)],
+            timeout=RUNTIME_BUILD_TIMEOUT,
+        )
+        if not ok:
+            sys.exit(f"failed to build psychicstd runtime ({source.name}):\n{output}")
+        objects.append(obj)
+
+    archive = build_dir / "libpsychicstd.a"
+    ok, output = run_cmd(
+        [AR, "rcs", str(archive), *(str(obj) for obj in objects)],
+        timeout=RUNTIME_BUILD_TIMEOUT,
+    )
+    if not ok:
+        sys.exit(f"failed to archive psychicstd runtime:\n{output}")
+    return archive
+
+
 def try_compile_run(
-    src: Path, flags: list[str], xflags: list[str], run_exe: bool
+    src: Path,
+    flags: list[str],
+    xflags: list[str],
+    link_inputs: list[str],
+    run_exe: bool,
 ) -> tuple[str, float | None]:
     """Returns ('pass'/'rfail'/'cfail', compile_ms or None if compile failed)."""
     with tempfile.NamedTemporaryFile(suffix="", delete=False, dir="/tmp") as f:
         exe = f.name
     try:
         cmd = [
-            CXX,
+            *CXX_CMD,
             "-std=c++23",
             *flags,
             *xflags,
             f"-I{SUPPORT_DIR}",
             str(src),
+            *link_inputs,
             "-o",
             exe,
         ]
@@ -308,10 +354,13 @@ def _test_one(
     """Compile/run one test with both sys and psy flags; return (path_str, entry)."""
     xf = extra_flags(src.read_text(errors="replace"))
     is_exec = not src.stem.endswith(".compile.pass")
-    sys_status, sys_ms = try_compile_run(src, sys_flags, xf, is_exec)
+    sys_status, sys_ms = try_compile_run(src, sys_flags, xf, [], is_exec)
     entry: dict = {"sys": sys_status, "sys_ms": sys_ms, "psy": None, "psy_ms": None}
     if sys_status == "pass":
-        psy_status, psy_ms = try_compile_run(src, psy_flags, xf, is_exec)
+        assert RUNTIME_ARCHIVE is not None
+        psy_status, psy_ms = try_compile_run(
+            src, psy_flags, xf, [str(RUNTIME_ARCHIVE)], is_exec
+        )
         entry["psy"] = psy_status
         entry["psy_ms"] = psy_ms
     return str(src), entry
@@ -454,14 +503,15 @@ def _print_failing(headers: list[str], cache: dict) -> None:
         example = failing[0][0]
         print("\n  Quick test (psychicstd):")
         print(
-            f"  g++ -std=c++23 -nostdinc++ -I{PSYCHICSTD} -I{SUPPORT_DIR} {example} -o /tmp/t && /tmp/t"
+            f"  g++ -std=c++23 -nostdinc++ -I{PSYCHICSTD} -I{SUPPORT_DIR} "
+            f"{example} /path/to/libpsychicstd.a -o /tmp/t && /tmp/t"
         )
     if not any_printed:
         print("No failing tests in cache.")
 
 
 def main() -> None:
-    global SANITIZE, CACHE_FILE, EXTRA_CFLAGS, TEST_TIMEOUT
+    global SANITIZE, CACHE_FILE, EXTRA_CFLAGS, TEST_TIMEOUT, RUNTIME_ARCHIVE
     ap = argparse.ArgumentParser(description="Generate compliance.md")
     ap.add_argument("headers", nargs="*", help="Headers to filter; default: all")
     ap.add_argument(
@@ -531,6 +581,9 @@ def main() -> None:
         )
         _print_failing(headers_to_list, cache)
         return
+
+    runtime_flags = [*(SAN_CFLAGS if SANITIZE else []), *EXTRA_CFLAGS]
+    RUNTIME_ARCHIVE = build_runtime_archive(runtime_flags)
 
     n_sample = args.sample
     to_run = (filter_set & set(all_headers)) if filter_set else set(all_headers)
