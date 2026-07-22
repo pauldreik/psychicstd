@@ -2,7 +2,7 @@
 
 Compiler: `c++ (Debian 14.2.0-19) 14.2.0`. Each project is built 5 time(s) per side (system libstdc++, psychicstd); `system (s)`/`psychicstd (s)` are the *median* build time of those repetitions, in seconds -- the median is used instead of the mean so one repetition disturbed by another process on the machine doesn't skew the result. `speedup` = system median / psychicstd median (>1x means psychicstd is faster); its bracketed range is a 95% confidence interval on that *same ratio* (obtained by resampling the raw per-repetition timings, not just the two medians, 2000 times) -- so it reflects how much the repetitions varied, not a different unit. 🟢 the whole CI is above 1x (reliably faster) · 🔴 the whole CI is below 1x (reliably slower) · 🟡 the CI straddles 1x (not distinguishable from run-to-run noise).
 
-Parallelism: **20 jobs** (20 logical CPUs available; the memory estimate permits 21 jobs at 1.5 GiB/job). ccache was disabled.
+Parallelism: **8 jobs** (8 logical CPUs available; the memory estimate permits 21 jobs at 1.5 GiB/job). ccache was disabled.
 
 ## eigen (3.4.0)
 
@@ -12,15 +12,15 @@ eigen has no configure step; a fixed subset of its test suite is compiled and ru
 
 | step | system (s) | psychicstd (s) | speedup | comment |
 | --- | ---: | ---: | ---: | --- |
-| compile | 19.72 | 10.93 | 🟢 1.80x [1.80x, 1.81x] | |
-| run tests | 0.03 | 0.02 | 🟢 1.31x [1.28x, 1.36x] | |
+| compile | 19.68 | 10.91 | 🟢 1.80x [1.79x, 1.81x] | |
+| run tests | 0.03 | 0.02 | 🟢 1.32x [1.28x, 1.37x] | |
 
 ### Release
 
 | step | system (s) | psychicstd (s) | speedup | comment |
 | --- | ---: | ---: | ---: | --- |
-| compile | 19.71 | 10.93 | 🟢 1.80x [1.80x, 1.81x] | |
-| run tests | 0.03 | 0.02 | 🟢 1.31x [1.24x, 1.35x] | |
+| compile | 19.74 | 10.92 | 🟢 1.81x [1.80x, 1.81x] | |
+| run tests | 0.03 | 0.02 | 🟢 1.31x [1.26x, 1.35x] | |
 
 ______________________________________________________________________
 
