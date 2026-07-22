@@ -246,13 +246,19 @@ public:
 
   // Seek and tell
   basic_istream& seekg(pos_type pos) {
-    if (this->good())
-      this->rdbuf()->pubseekpos(pos, ios_base::in);
+    this->clear(this->rdstate() & ~ios_base::eofbit);
+    if (!this->fail() &&
+        (!this->rdbuf() ||
+         this->rdbuf()->pubseekpos(pos, ios_base::in) == pos_type(-1)))
+      this->setstate(ios_base::failbit);
     return *this;
   }
   basic_istream& seekg(off_type off, ios_base::seekdir dir) {
-    if (this->good())
-      this->rdbuf()->pubseekoff(off, dir, ios_base::in);
+    this->clear(this->rdstate() & ~ios_base::eofbit);
+    if (!this->fail() &&
+        (!this->rdbuf() ||
+         this->rdbuf()->pubseekoff(off, dir, ios_base::in) == pos_type(-1)))
+      this->setstate(ios_base::failbit);
     return *this;
   }
   pos_type tellg() {

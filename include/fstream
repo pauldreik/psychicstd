@@ -23,16 +23,25 @@ public:
   bool is_open() const noexcept { return fp_ != nullptr; }
 
   basic_filebuf* open(const char* path, ios_base::openmode mode) {
-    const char* m;
-    if ((mode & ios_base::in) && (mode & ios_base::out))
-      m = "r+";
-    else if (mode & ios_base::app)
-      m = "a";
-    else if (mode & ios_base::out)
-      m = "w";
-    else
-      m = "r";
+    if (fp_)
+      return nullptr;
+
+    const bool in = mode & ios_base::in;
+    const bool out = mode & ios_base::out;
+    const bool app = mode & ios_base::app;
+    const bool trunc = mode & ios_base::trunc;
+    if ((trunc && !out) || (app && trunc) || (!in && !out && !app))
+      return nullptr;
+
+    const char* m = app         ? (in ? "a+" : "a")
+                    : in && out ? (trunc ? "w+" : "r+")
+                    : out       ? "w"
+                                : "r";
     fp_ = ::fopen(path, m);
+    if (fp_ && (mode & ios_base::ate) && ::fseeko(fp_, 0, SEEK_END) != 0) {
+      ::fclose(fp_);
+      fp_ = nullptr;
+    }
     return fp_ ? this : nullptr;
   }
   basic_filebuf* open(const basic_string<Char, Traits>& path,
@@ -59,25 +68,27 @@ protected:
   int_type overflow(int_type c) override {
     if (!fp_ || Traits::eq_int_type(c, Traits::eof()))
       return Traits::eof();
-    char ch = Traits::to_char_type(c);
-    return ::fwrite(&ch, 1, 1, fp_) == 1 ? c : Traits::eof();
+    Char ch = Traits::to_char_type(c);
+    return ::fwrite(&ch, sizeof(Char), 1, fp_) == 1 ? c : Traits::eof();
   }
 
   // Read support
   int_type underflow() override {
     if (!fp_)
       return Traits::eof();
-    int c = ::fgetc(fp_);
-    if (c == EOF)
+    Char c;
+    if (::fread(&c, sizeof(Char), 1, fp_) != 1)
       return Traits::eof();
-    ::ungetc(c, fp_);
-    return Traits::to_int_type((Char)c);
+    if (::fseeko(fp_, -(off_t)sizeof(Char), SEEK_CUR) != 0)
+      return Traits::eof();
+    return Traits::to_int_type(c);
   }
   int_type uflow() override {
     if (!fp_)
       return Traits::eof();
-    int c = ::fgetc(fp_);
-    return c == EOF ? Traits::eof() : Traits::to_int_type((Char)c);
+    Char c;
+    return ::fread(&c, sizeof(Char), 1, fp_) == 1 ? Traits::to_int_type(c)
+                                                  : Traits::eof();
   }
   streamsize xsgetn(Char* s, streamsize n) override {
     if (!fp_)
@@ -89,7 +100,7 @@ protected:
   streampos seekpos(streampos pos, ios_base::openmode) override {
     if (!fp_)
       return streampos(-1);
-    if (::fseeko(fp_, (off_t)pos, SEEK_SET) != 0)
+    if (::fseeko(fp_, (off_t)pos * (off_t)sizeof(Char), SEEK_SET) != 0)
       return streampos(-1);
     return pos;
   }
@@ -100,9 +111,9 @@ protected:
     int whence = (dir == ios_base::beg)   ? SEEK_SET
                  : (dir == ios_base::cur) ? SEEK_CUR
                                           : SEEK_END;
-    if (::fseeko(fp_, (off_t)off, whence) != 0)
+    if (::fseeko(fp_, (off_t)off * (off_t)sizeof(Char), whence) != 0)
       return streampos(-1);
-    return (streampos)::ftello(fp_);
+    return (streampos)(::ftello(fp_) / (off_t)sizeof(Char));
   }
 
   int sync() override { return fp_ && ::fflush(fp_) == 0 ? 0 : -1; }

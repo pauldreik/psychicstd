@@ -1,7 +1,21 @@
 #include "psyassert.h"
 #include <limits>
 #include <sstream>
+#include <streambuf>
 #include <string>
+
+class seekbuf : public std::streambuf {
+public:
+  int calls = 0;
+
+protected:
+  pos_type seekoff(off_type off, std::ios_base::seekdir,
+                   std::ios_base::openmode which) override {
+    psyassert(which == std::ios_base::in);
+    ++calls;
+    return pos_type(off);
+  }
+};
 
 int main() {
   std::istream null_stream(nullptr);
@@ -82,4 +96,25 @@ int main() {
   psyassert(threw);
   psyassert(peek_throwing.eof());
   psyassert(!peek_throwing.fail());
+
+  seekbuf seeking_buffer;
+  std::istream seeking(&seeking_buffer);
+  seeking.seekg(5, std::ios_base::cur);
+  psyassert(seeking.good());
+  psyassert(seeking_buffer.calls == 1);
+  seeking.seekg(-1, std::ios_base::beg);
+  psyassert(seeking.fail());
+  psyassert(seeking_buffer.calls == 2);
+
+  seekbuf position_buffer;
+  std::istream position_seeking(&position_buffer);
+  position_seeking.seekg(std::streampos(1));
+  psyassert(position_seeking.fail());
+
+  seekbuf eof_seeking_buffer;
+  std::istream eof_seeking(&eof_seeking_buffer);
+  eof_seeking.setstate(std::ios_base::eofbit);
+  eof_seeking.seekg(5, std::ios_base::beg);
+  psyassert(eof_seeking.good());
+  psyassert(eof_seeking_buffer.calls == 1);
 }
