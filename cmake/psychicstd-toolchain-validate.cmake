@@ -45,29 +45,15 @@ if(NOT _psychicstd_in_try_compile AND NOT TARGET _psychicstd_runtime)
         "${PSYCHICSTD_ROOT}/src/string_instantiations.cpp"
         "${PSYCHICSTD_ROOT}/src/system_error.cpp"
     )
-    set_target_properties(
-        _psychicstd_runtime
-        PROPERTIES
-            ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
-            POSITION_INDEPENDENT_CODE ON
-    )
-    foreach(_psychicstd_config IN LISTS CMAKE_CONFIGURATION_TYPES)
-        string(TOUPPER "${_psychicstd_config}" _psychicstd_config_upper)
-        set_target_properties(
-            _psychicstd_runtime
-            PROPERTIES
-                "ARCHIVE_OUTPUT_DIRECTORY_${_psychicstd_config_upper}" "${CMAKE_CURRENT_BINARY_DIR}"
-        )
-    endforeach()
+    set_target_properties(_psychicstd_runtime PROPERTIES POSITION_INDEPENDENT_CODE ON)
     target_compile_features(_psychicstd_runtime PRIVATE cxx_std_20)
-    # Keep the private target out of package exports. The wrapper supplies only
-    # build ordering; the archive goes after project libraries and before the
-    # ABI libraries in CMAKE_CXX_STANDARD_LIBRARIES.
-    add_library(_psychicstd_runtime_link INTERFACE IMPORTED GLOBAL)
-    add_dependencies(_psychicstd_runtime_link _psychicstd_runtime)
-    link_libraries("$<BUILD_INTERFACE:_psychicstd_runtime_link>")
+    # Keep the private target out of package exports. The wrapper supplies build
+    # ordering; the archive follows project libraries and precedes ABI libraries.
+    add_library(_psychicstd_runtime_order INTERFACE IMPORTED GLOBAL)
+    add_dependencies(_psychicstd_runtime_order _psychicstd_runtime)
+    link_libraries("$<BUILD_LOCAL_INTERFACE:_psychicstd_runtime_order>")
     set(_psychicstd_runtime_archive
-        "${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_STATIC_LIBRARY_PREFIX}_psychicstd_runtime${CMAKE_STATIC_LIBRARY_SUFFIX}"
+        "${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/${CMAKE_STATIC_LIBRARY_PREFIX}_psychicstd_runtime${CMAKE_STATIC_LIBRARY_SUFFIX}"
     )
     set(CMAKE_CXX_STANDARD_LIBRARIES
         "\"${_psychicstd_runtime_archive}\" ${CMAKE_CXX_STANDARD_LIBRARIES}"

@@ -2,6 +2,10 @@ cmake_minimum_required(VERSION 3.20)
 project(my_app LANGUAGES CXX)
 file(WRITE "${CMAKE_BINARY_DIR}/.gitignore" "*\n")
 
+if(PSYCHICSTD_EXPECT_PROJECT_INCLUDE AND NOT PSYCHICSTD_TEST_PROJECT_INCLUDE_RAN)
+    message(FATAL_ERROR "pre-existing CMAKE_PROJECT_INCLUDE was not run")
+endif()
+
 set(PSYCHICSTD_FETCHCONTENT_SOURCE "" CACHE PATH "Local psychicstd source for FetchContent")
 if(PSYCHICSTD_FETCHCONTENT_SOURCE)
     include(FetchContent)

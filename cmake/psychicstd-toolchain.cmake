@@ -9,6 +9,10 @@
 
 include_guard(GLOBAL)
 
+if(CMAKE_VERSION VERSION_LESS "3.26")
+    message(FATAL_ERROR "psychicstd toolchain requires CMake 3.26 or newer")
+endif()
+
 if(NOT UNIX OR WIN32)
     message(FATAL_ERROR "psychicstd toolchain is supported on Linux and macOS only")
 endif()
@@ -31,7 +35,7 @@ endif()
 # Append to any existing user or Conan flags rather than replacing them. This
 # keeps sanitizer flags and other project-specific options intact.
 set(CMAKE_CXX_FLAGS
-    "${CMAKE_CXX_FLAGS} -nostdinc++ -fvisibility=hidden -isystem ${PSYCHICSTD_INCLUDE_DIR}"
+    "${CMAKE_CXX_FLAGS} -nostdinc++ -fvisibility=hidden -isystem \"${PSYCHICSTD_INCLUDE_DIR}\""
 )
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -nostdlib++")
 # C++ ABI runtime: libc++abi on macOS, libsupc++ (+ libatomic) elsewhere.
@@ -43,10 +47,7 @@ else()
     set(CMAKE_CXX_STANDARD_LIBRARIES "${CMAKE_CXX_STANDARD_LIBRARIES} -lsupc++ -latomic")
 endif()
 
-# Run a validation pass after the real compiler is identified.
-set(_psychicstd_validate "${CMAKE_CURRENT_LIST_DIR}/psychicstd-toolchain-validate.cmake")
-if(CMAKE_PROJECT_INCLUDE)
-    list(APPEND CMAKE_PROJECT_INCLUDE "${_psychicstd_validate}")
-else()
-    set(CMAKE_PROJECT_INCLUDE "${_psychicstd_validate}")
-endif()
+# Preserve existing project injections through a single include file. CMake
+# versions before 3.29 do not support lists in CMAKE_PROJECT_INCLUDE.
+set(_psychicstd_previous_project_includes "${CMAKE_PROJECT_INCLUDE}")
+set(CMAKE_PROJECT_INCLUDE "${CMAKE_CURRENT_LIST_DIR}/psychicstd-toolchain-project-include.cmake")
