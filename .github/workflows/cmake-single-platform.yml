@@ -20,6 +20,26 @@ jobs:
       - name: Test
         working-directory: ${{github.workspace}}/build
         run: ctest -C ${{env.BUILD_TYPE}} --output-on-failure
+  conan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install Conan
+        run: pipx install conan==2.30.0
+      - name: Show Conan version
+        run: conan --version
+      - name: Configure CMake
+        run: >
+          cmake -B ${{github.workspace}}/build_conan
+          -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
+          -DPSYCHICSTD_BUILD_BENCHMARKS=OFF
+      - name: Test Conan integration
+        run: >
+          ctest --test-dir ${{github.workspace}}/build_conan
+          -C ${{env.BUILD_TYPE}}
+          -R '^conan_project_profile$'
+          --no-tests=error
+          --output-on-failure
   macos:
     runs-on: macos-latest
     steps:
