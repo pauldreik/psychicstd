@@ -209,7 +209,7 @@ cmake -S . -B build-with-psychic \
 For CMake projects, the most convenient integration point is the toolchain
 overlay in [`cmake/psychicstd-toolchain.cmake`](cmake/psychicstd-toolchain.cmake).
 It keeps the compiler choice outside the toolchain and only injects the
-psychicstd-specific flags.
+psychicstd-specific flags. The overlay requires CMake 3.26 or newer.
 
 ```bash
 cmake -S . -B build-with-psychic \
@@ -234,16 +234,16 @@ include(FetchContent)
 FetchContent_Declare(
     psychicstd
     GIT_REPOSITORY https://github.com/pauldreik/psychicstd.git
-    GIT_TAG main
+    GIT_TAG 203533b27ee2487a1ad3f1417ad13376acbbe5ff
 )
 FetchContent_MakeAvailable(psychicstd)
 
 target_link_libraries(your_target PRIVATE psychicstd::psychicstd)
 ```
 
-Pin `GIT_TAG` to a commit for reproducible builds. Tests and benchmarks default
-to off when psychicstd is fetched. Linking the target supplies the replacement
-headers, static runtime, and required ABI-library flags.
+Update `GIT_TAG` to the psychicstd commit you want to use. Tests and benchmarks
+default to off when psychicstd is fetched. Linking the target supplies the
+replacement headers, static runtime, and required ABI-library flags.
 
 Every target containing C++ sources, including fetched dependencies, must use
 the same standard library. Link `psychicstd::psychicstd` to each such target or
@@ -254,24 +254,23 @@ project or its whole dependency graph.
 
 If you already use Conan, the intended integration point is a single overlay
 profile: [`tests/conan_project/psychic.profile`](tests/conan_project/psychic.profile).
-It composes with your existing host/build profiles and injects the psychicstd
-toolchain without selecting a compiler or adding dependency-specific flags.
+It composes with your existing host profile and injects the psychicstd toolchain
+without selecting a compiler or adding dependency-specific flags.
 
-Apply it to both host and build contexts so your app and its C++ dependencies
-are built with the same standard library choice:
+Apply it to the host context so your app and its linked C++ dependencies are
+built with the same standard library choice. Keep the normal build profile for
+tools that run while building:
 
 ```bash
 conan install . \
     -pr:h=your-host.profile \
     -pr:h=/path/to/psychic.profile \
     -pr:b=your-build.profile \
-    -pr:b=/path/to/psychic.profile \
     --build=missing
 ```
 
-If your host and build profiles are the same, reuse the same base profile for
-both contexts and append the psychic profile last. File-based composition works
-too:
+Append the psychic profile last in the host context. File-based composition
+works too:
 
 ```text
 include(/path/to/psychic.profile)
