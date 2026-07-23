@@ -5,3 +5,6 @@
 # path and the exact linker/runtime flags needed for the selected compiler.
 [conf]
 *:tools.cmake.cmaketoolchain:user_toolchain=['{{ os.path.join(profile_dir, "..", "..", "cmake", "psychicstd-toolchain.cmake") }}']
+# Keep this in sync with project(... VERSION ...) in the top-level CMakeLists.txt.
+user.psychicstd:version=0.1.0
+tools.info.package_id:confs=['user.psychicstd:version']

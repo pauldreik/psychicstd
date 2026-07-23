@@ -283,6 +283,11 @@ ASan and UBSan keep working the way Conan or your project already configures
 them. Supported compilers are the same as the toolchain-overlay path: Clang
 and GCC 13+ on Linux.
 
+The overlay includes the psychicstd release version in Conan package IDs, so
+Conan does not reuse binaries built with the normal standard library. For local
+experiments, consider setting `CONAN_HOME` to a separate directory to keep
+psychicstd-built packages out of your normal Conan cache.
+
 ### Notes for all configurations
 
 `-fvisibility=hidden` prevents psychicstd's symbols from interposing with
