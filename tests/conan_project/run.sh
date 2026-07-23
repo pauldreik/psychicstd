@@ -24,9 +24,10 @@ fi
 rm -rf "$BUILD_DIR"
 mkdir -p "$BUILD_DIR"
 
-if [[ "$REAL_CXX" == *clang* ]]; then
+COMPILER_MACROS="$("$REAL_CXX" -dM -E -x c++ /dev/null)"
+if [[ "$COMPILER_MACROS" == *"__clang__"* ]]; then
   CONAN_COMPILER=clang
-elif [[ "$REAL_CXX" == *g++* || "$REAL_CXX" == *gcc* ]]; then
+elif [[ "$COMPILER_MACROS" == *"__GNUC__"* ]]; then
   CONAN_COMPILER=gcc
 else
   echo "unsupported compiler for example: $REAL_CXX" >&2
