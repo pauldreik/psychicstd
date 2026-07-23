@@ -224,6 +224,32 @@ psychicstd build step or archive path is needed.
 If you already have a generated toolchain file, include the psychicstd one
 after it from a small wrapper toolchain file.
 
+### CMake FetchContent
+
+Projects that can link psychicstd explicitly may fetch and build it as a normal
+static-library dependency:
+
+```cmake
+include(FetchContent)
+FetchContent_Declare(
+    psychicstd
+    GIT_REPOSITORY https://github.com/pauldreik/psychicstd.git
+    GIT_TAG main
+)
+FetchContent_MakeAvailable(psychicstd)
+
+target_link_libraries(your_target PRIVATE psychicstd::psychicstd)
+```
+
+Pin `GIT_TAG` to a commit for reproducible builds. Tests and benchmarks default
+to off when psychicstd is fetched. Linking the target supplies the replacement
+headers, static runtime, and required ABI-library flags.
+
+Every target containing C++ sources, including fetched dependencies, must use
+the same standard library. Link `psychicstd::psychicstd` to each such target or
+use the toolchain overlay when replacing the standard library for an untouched
+project or its whole dependency graph.
+
 ### Using with Conan
 
 If you already use Conan, the intended integration point is a single overlay

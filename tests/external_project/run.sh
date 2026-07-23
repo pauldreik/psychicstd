@@ -3,7 +3,8 @@
 # Defaults to two directories above this script if not given.
 #
 # Simulates an independent CMake project consuming psychicstd.  The project
-# itself stays untouched; the toolchain overlay is selected at configure time.
+# itself stays untouched in toolchain mode. FetchContent mode links the
+# psychicstd CMake target from the same small test project.
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -27,6 +28,9 @@ if [[ -n "$CXX_COMPILER" ]]; then
 fi
 
 case "$MODE" in
+  fetchcontent)
+    cmake_args+=(-DPSYCHICSTD_FETCHCONTENT_SOURCE="$PSYCHICSTD_ROOT")
+    ;;
   toolchain)
     cmake_args+=(-DCMAKE_TOOLCHAIN_FILE="$PSYCHICSTD_ROOT/cmake/psychicstd-toolchain.cmake")
     ;;
