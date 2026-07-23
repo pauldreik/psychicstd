@@ -9,7 +9,8 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REAL_CXX="${1:-${CXX:-clang++}}"
 BUILD_DIR="$SCRIPT_DIR/build"
-PROFILE="$BUILD_DIR/profile.profile"
+BUILD_PROFILE="$BUILD_DIR/build.profile"
+HOST_PROFILE="$BUILD_DIR/host.profile"
 
 if ! command -v conan >/dev/null 2>&1; then
   echo "conan is not installed; skipping example run" >&2
@@ -24,9 +25,10 @@ fi
 rm -rf "$BUILD_DIR"
 mkdir -p "$BUILD_DIR"
 
-if [[ "$REAL_CXX" == *clang* ]]; then
+COMPILER_MACROS="$("$REAL_CXX" -dM -E -x c++ /dev/null)"
+if [[ "$COMPILER_MACROS" == *"__clang__"* ]]; then
   CONAN_COMPILER=clang
-elif [[ "$REAL_CXX" == *g++* || "$REAL_CXX" == *gcc* ]]; then
+elif [[ "$COMPILER_MACROS" == *"__GNUC__"* ]]; then
   CONAN_COMPILER=gcc
 else
   echo "unsupported compiler for example: $REAL_CXX" >&2
@@ -57,9 +59,7 @@ if [[ -z "$CONAN_COMPILER_VERSION" ]]; then
   exit 2
 fi
 
-cat >"$PROFILE" <<EOF
-include($SCRIPT_DIR/psychic.profile)
-
+cat >"$BUILD_PROFILE" <<EOF
 [settings]
 os=Linux
 arch=x86_64
@@ -70,17 +70,58 @@ compiler.libcxx=libstdc++11
 compiler.cppstd=gnu23
 EOF
 
+cat >"$HOST_PROFILE" <<EOF
+include($BUILD_PROFILE)
+include($SCRIPT_DIR/psychic.profile)
+EOF
+
 export CXX="$REAL_CXX"
 
-conan create "$SCRIPT_DIR" --profile:all "$PROFILE" --build=missing
-
-conan install "$SCRIPT_DIR" \
+conan build "$SCRIPT_DIR" \
   --output-folder "$BUILD_DIR" \
-  --profile:all "$PROFILE" \
+  --profile:build "$BUILD_PROFILE" \
+  --profile:host "$HOST_PROFILE" \
   --build=missing
 
-cmake -S "$SCRIPT_DIR" -B "$BUILD_DIR" \
-  -DCMAKE_TOOLCHAIN_FILE="$BUILD_DIR/build/Release/generators/conan_toolchain.cmake" \
-  -DCMAKE_BUILD_TYPE=Release
-cmake --build "$BUILD_DIR"
-"$BUILD_DIR/my_app"
+# Dependencies built with different psychicstd versions must not share binaries.
+CONAN_GRAPH_ARGS=(
+  "$SCRIPT_DIR"
+  --profile:build "$BUILD_PROFILE"
+  --profile:host "$HOST_PROFILE"
+  --no-remote
+  --format=json
+  -vquiet
+)
+conan graph info "${CONAN_GRAPH_ARGS[@]}" \
+  --out-file="$BUILD_DIR/graph.json"
+conan graph info "${CONAN_GRAPH_ARGS[@]}" \
+  --conf:host user.psychicstd:version=package-id-test \
+  --out-file="$BUILD_DIR/graph-other-version.json"
+
+fmt_package_id() {
+  python3 - "$1" <<'PY'
+import json
+import sys
+
+with open(sys.argv[1], encoding="utf-8") as graph_file:
+    nodes = json.load(graph_file)["graph"]["nodes"].values()
+
+package_ids = [
+    node["package_id"]
+    for node in nodes
+    if node["ref"].split("#", 1)[0].startswith("fmt/")
+]
+if len(package_ids) != 1:
+    raise SystemExit(f"expected one fmt node, found {len(package_ids)}")
+print(package_ids[0])
+PY
+}
+
+default_package_id="$(fmt_package_id "$BUILD_DIR/graph.json")"
+other_package_id="$(fmt_package_id "$BUILD_DIR/graph-other-version.json")"
+if [[ "$default_package_id" == "$other_package_id" ]]; then
+  echo "user.psychicstd:version did not affect fmt's package ID" >&2
+  exit 1
+fi
+
+"$BUILD_DIR/build/Release/my_app"

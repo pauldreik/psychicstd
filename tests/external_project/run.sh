@@ -3,7 +3,8 @@
 # Defaults to two directories above this script if not given.
 #
 # Simulates an independent CMake project consuming psychicstd.  The project
-# itself stays untouched; the toolchain overlay is selected at configure time.
+# itself stays untouched in toolchain mode. FetchContent mode links the
+# psychicstd CMake target from the same small test project.
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -16,6 +17,13 @@ BUILD_DIR="$BUILD_ROOT/$MODE"
 rm -rf "$BUILD_DIR"
 mkdir -p "$BUILD_ROOT"
 
+TOOLCHAIN_ROOT="$PSYCHICSTD_ROOT"
+if [[ "$MODE" == toolchain-space ]]; then
+  mkdir -p "$BUILD_DIR"
+  TOOLCHAIN_ROOT="$BUILD_DIR/psychic std"
+  ln -s "$PSYCHICSTD_ROOT" "$TOOLCHAIN_ROOT"
+fi
+
 cmake_args=(
   -S "$SCRIPT_DIR"
   -B "$BUILD_DIR"
@@ -27,8 +35,27 @@ if [[ -n "$CXX_COMPILER" ]]; then
 fi
 
 case "$MODE" in
+  fetchcontent)
+    cmake_args+=(-DPSYCHICSTD_FETCHCONTENT_SOURCE="$PSYCHICSTD_ROOT")
+    ;;
   toolchain)
-    cmake_args+=(-DCMAKE_TOOLCHAIN_FILE="$PSYCHICSTD_ROOT/cmake/psychicstd-toolchain.cmake")
+    cmake_args+=(-DCMAKE_TOOLCHAIN_FILE="$TOOLCHAIN_ROOT/cmake/psychicstd-toolchain.cmake")
+    ;;
+  toolchain-multi-config)
+    cmake_args+=(
+      -G "Ninja Multi-Config"
+      -DCMAKE_TOOLCHAIN_FILE="$TOOLCHAIN_ROOT/cmake/psychicstd-toolchain.cmake"
+    )
+    ;;
+  toolchain-project-include)
+    cmake_args+=(
+      -DCMAKE_TOOLCHAIN_FILE="$TOOLCHAIN_ROOT/cmake/psychicstd-toolchain.cmake"
+      -DCMAKE_PROJECT_INCLUDE="$SCRIPT_DIR/project-include.cmake"
+      -DPSYCHICSTD_EXPECT_PROJECT_INCLUDE=ON
+    )
+    ;;
+  toolchain-space)
+    cmake_args+=(-DCMAKE_TOOLCHAIN_FILE="$TOOLCHAIN_ROOT/cmake/psychicstd-toolchain.cmake")
     ;;
   toolchain-asan)
     cmake_args+=(
@@ -60,7 +87,13 @@ esac
 cmake "${cmake_args[@]}"
 # Reconfiguring an existing build must apply the overlay again.
 cmake "${cmake_args[@]}"
-cmake --build "$BUILD_DIR"
+
+if [[ "$MODE" == toolchain-multi-config ]]; then
+  cmake --build "$BUILD_DIR" --config Debug
+  cmake --build "$BUILD_DIR" --config Release
+else
+  cmake --build "$BUILD_DIR"
+fi
 
 run_env=()
 case "$MODE" in
@@ -82,4 +115,9 @@ case "$MODE" in
     ;;
 esac
 
-env "${run_env[@]}" "$BUILD_DIR/my_app"
+if [[ "$MODE" == toolchain-multi-config ]]; then
+  "$BUILD_DIR/Debug/my_app"
+  "$BUILD_DIR/Release/my_app"
+else
+  env "${run_env[@]}" "$BUILD_DIR/my_app"
+fi

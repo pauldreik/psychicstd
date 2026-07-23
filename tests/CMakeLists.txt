@@ -139,6 +139,18 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin" AND CMAKE_CXX_COMPILER_ID STREQUAL "A
     set(_psychicstd_toolchain_supported ON)
 endif()
 
+if(
+    (CMAKE_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+    OR (CMAKE_SYSTEM_NAME STREQUAL "Darwin" AND CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
+)
+    add_test(
+        NAME ext_project_fetchcontent
+        COMMAND
+            bash ${CMAKE_CURRENT_SOURCE_DIR}/external_project/run.sh ${CMAKE_SOURCE_DIR}
+            fetchcontent ${CMAKE_CXX_COMPILER}
+    )
+endif()
+
 if(_psychicstd_toolchain_supported)
     add_test(
         NAME ext_project_toolchain
@@ -164,6 +176,27 @@ if(_psychicstd_toolchain_supported)
             bash ${CMAKE_CURRENT_SOURCE_DIR}/external_project/run.sh ${CMAKE_SOURCE_DIR}
             toolchain-asan-ubsan ${CMAKE_CXX_COMPILER}
     )
+    add_test(
+        NAME ext_project_toolchain_project_include
+        COMMAND
+            bash ${CMAKE_CURRENT_SOURCE_DIR}/external_project/run.sh ${CMAKE_SOURCE_DIR}
+            toolchain-project-include ${CMAKE_CXX_COMPILER}
+    )
+    add_test(
+        NAME ext_project_toolchain_space
+        COMMAND
+            bash ${CMAKE_CURRENT_SOURCE_DIR}/external_project/run.sh ${CMAKE_SOURCE_DIR}
+            toolchain-space ${CMAKE_CXX_COMPILER}
+    )
+    find_program(_psychicstd_ninja_executable ninja)
+    if(_psychicstd_ninja_executable)
+        add_test(
+            NAME ext_project_toolchain_multi_config
+            COMMAND
+                bash ${CMAKE_CURRENT_SOURCE_DIR}/external_project/run.sh ${CMAKE_SOURCE_DIR}
+                toolchain-multi-config ${CMAKE_CXX_COMPILER}
+        )
+    endif()
 endif()
 
 find_program(_psychicstd_conan_executable conan)

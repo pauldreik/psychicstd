@@ -14,7 +14,9 @@ class PsychicstdConanExample(ConanFile):
         cmake_layout(self)
 
     def generate(self):
-        CMakeToolchain(self).generate()
+        toolchain = CMakeToolchain(self)
+        toolchain.user_presets_path = False
+        toolchain.generate()
         CMakeDeps(self).generate()
 
     def build(self):

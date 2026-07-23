@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.25)
 project(psychicstd LANGUAGES CXX VERSION 0.1.0)
 
-file(WRITE "${CMAKE_BINARY_DIR}/.gitignore" "*\n")
+file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/.gitignore" "*\n")
 
 add_library(
     psychicstd
@@ -92,9 +92,11 @@ target_include_directories(
     PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include> $<INSTALL_INTERFACE:include>
 )
 
-set(CMAKE_EXPORT_COMPILE_COMMANDS On)
-option(PSYCHICSTD_BUILD_TESTS "Build tests" ON)
-option(PSYCHICSTD_BUILD_BENCHMARKS "Build compile-time benchmarks" ON)
+if(PROJECT_IS_TOP_LEVEL)
+    set(CMAKE_EXPORT_COMPILE_COMMANDS On)
+endif()
+option(PSYCHICSTD_BUILD_TESTS "Build tests" "${PROJECT_IS_TOP_LEVEL}")
+option(PSYCHICSTD_BUILD_BENCHMARKS "Build compile-time benchmarks" "${PROJECT_IS_TOP_LEVEL}")
 
 if(PSYCHICSTD_BUILD_TESTS)
     enable_testing()

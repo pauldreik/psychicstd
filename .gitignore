@@ -1,5 +1,7 @@
 .cache/
 CMakeLists.txt.user
+CMakeUserPresets.json
+tests/conan_project/build/
 .compliance_cache.json
 # sneakernet patch bundles produced by scripts/export-commits-sneakernet.sh
 patches-*.tar.gz

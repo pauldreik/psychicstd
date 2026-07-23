@@ -47,5 +47,15 @@ if(NOT _psychicstd_in_try_compile AND NOT TARGET _psychicstd_runtime)
     )
     set_target_properties(_psychicstd_runtime PROPERTIES POSITION_INDEPENDENT_CODE ON)
     target_compile_features(_psychicstd_runtime PRIVATE cxx_std_20)
-    link_libraries(_psychicstd_runtime)
+    # Keep the private target out of package exports. The wrapper supplies build
+    # ordering; the archive follows project libraries and precedes ABI libraries.
+    add_library(_psychicstd_runtime_order INTERFACE IMPORTED GLOBAL)
+    add_dependencies(_psychicstd_runtime_order _psychicstd_runtime)
+    link_libraries("$<BUILD_LOCAL_INTERFACE:_psychicstd_runtime_order>")
+    set(_psychicstd_runtime_archive
+        "${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/${CMAKE_STATIC_LIBRARY_PREFIX}_psychicstd_runtime${CMAKE_STATIC_LIBRARY_SUFFIX}"
+    )
+    set(CMAKE_CXX_STANDARD_LIBRARIES
+        "\"${_psychicstd_runtime_archive}\" ${CMAKE_CXX_STANDARD_LIBRARIES}"
+    )
 endif()
