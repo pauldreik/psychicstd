@@ -83,4 +83,45 @@ conan build "$SCRIPT_DIR" \
   --profile:host "$HOST_PROFILE" \
   --build=missing
 
+# Dependencies built with different psychicstd versions must not share binaries.
+CONAN_GRAPH_ARGS=(
+  "$SCRIPT_DIR"
+  --profile:build "$BUILD_PROFILE"
+  --profile:host "$HOST_PROFILE"
+  --no-remote
+  --format=json
+  -vquiet
+)
+conan graph info "${CONAN_GRAPH_ARGS[@]}" \
+  --out-file="$BUILD_DIR/graph.json"
+conan graph info "${CONAN_GRAPH_ARGS[@]}" \
+  --conf:host user.psychicstd:version=package-id-test \
+  --out-file="$BUILD_DIR/graph-other-version.json"
+
+fmt_package_id() {
+  python3 - "$1" <<'PY'
+import json
+import sys
+
+with open(sys.argv[1], encoding="utf-8") as graph_file:
+    nodes = json.load(graph_file)["graph"]["nodes"].values()
+
+package_ids = [
+    node["package_id"]
+    for node in nodes
+    if node["ref"].split("#", 1)[0].startswith("fmt/")
+]
+if len(package_ids) != 1:
+    raise SystemExit(f"expected one fmt node, found {len(package_ids)}")
+print(package_ids[0])
+PY
+}
+
+default_package_id="$(fmt_package_id "$BUILD_DIR/graph.json")"
+other_package_id="$(fmt_package_id "$BUILD_DIR/graph-other-version.json")"
+if [[ "$default_package_id" == "$other_package_id" ]]; then
+  echo "user.psychicstd:version did not affect fmt's package ID" >&2
+  exit 1
+fi
+
 "$BUILD_DIR/build/Release/my_app"
