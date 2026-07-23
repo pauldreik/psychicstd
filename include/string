@@ -3,15 +3,19 @@
 #include <__psychicstd_config>
 #include <__psychicstd_except>
 #include <__psychicstd_iterator_core>
-#include <cerrno>
 #include <compare>
 #include <cstddef>
-#include <cstdlib>
 #include <initializer_list>
 #include <iosfwd>
 #include <memory>
 #include <string_view>
 #include <version>
+
+#if _PSYCHICSTD_COMPATIBILITY_LEVEL >= _PSYCHICSTD_COMPAT_DROPIN ||            \
+    !defined(__cpp_exceptions)
+#include <cerrno>
+#include <cstdlib>
+#endif
 
 #if _PSYCHICSTD_COMPATIBILITY_LEVEL >= _PSYCHICSTD_COMPAT_DROPIN
 // libstdc++ exposes equal through <string>; Catch2 relies on that exception.
@@ -167,12 +171,12 @@ public:
   const Char& operator[](size_type i) const noexcept { return data_[i]; }
   constexpr Char& at(size_type i) {
     if (__builtin_expect(i >= size_, false))
-      _PSYCHICSTD_THROW(out_of_range("basic_string::at"));
+      _PSYCHICSTD_THROW_HELPER(__throw_out_of_range, "basic_string::at");
     return data_[i];
   }
   constexpr const Char& at(size_type i) const {
     if (__builtin_expect(i >= size_, false))
-      _PSYCHICSTD_THROW(out_of_range("basic_string::at"));
+      _PSYCHICSTD_THROW_HELPER(__throw_out_of_range, "basic_string::at");
     return data_[i];
   }
   Char& front() noexcept { return data_[0]; }
@@ -580,7 +584,7 @@ public:
   int compare(const Char* s) const noexcept { return compare(basic_string(s)); }
   int compare(size_type pos1, size_type n1, const Char* s) const {
     if (pos1 > size_)
-      _PSYCHICSTD_THROW(out_of_range("basic_string::compare"));
+      _PSYCHICSTD_THROW_HELPER(__throw_out_of_range, "basic_string::compare");
     size_type left = n1 < size_ - pos1 ? n1 : size_ - pos1;
     size_type slen = Traits::length(s);
     size_type clen = left < slen ? left : slen;
@@ -595,7 +599,7 @@ public:
   }
   int compare(size_type pos1, size_type n1, const basic_string& o) const {
     if (pos1 > size_)
-      _PSYCHICSTD_THROW(out_of_range("basic_string::compare"));
+      _PSYCHICSTD_THROW_HELPER(__throw_out_of_range, "basic_string::compare");
     size_type left = n1 < size_ - pos1 ? n1 : size_ - pos1;
     size_type clen = left < o.size_ ? left : o.size_;
     int r = Traits::compare(data() + pos1, o.data(), clen);
@@ -609,7 +613,7 @@ public:
   }
   int compare(size_type pos1, size_type n1, const Char* s, size_type n2) const {
     if (pos1 > size_)
-      _PSYCHICSTD_THROW(out_of_range("basic_string::compare"));
+      _PSYCHICSTD_THROW_HELPER(__throw_out_of_range, "basic_string::compare");
     size_type left = n1 < size_ - pos1 ? n1 : size_ - pos1;
     size_type clen = left < n2 ? left : n2;
     int r = Traits::compare(data() + pos1, s, clen);
@@ -624,7 +628,7 @@ public:
   int compare(size_type pos1, size_type n1, const basic_string& o,
               size_type pos2, size_type n2) const {
     if (pos1 > size_ || pos2 > o.size_)
-      _PSYCHICSTD_THROW(out_of_range("basic_string::compare"));
+      _PSYCHICSTD_THROW_HELPER(__throw_out_of_range, "basic_string::compare");
     size_type left = n1 < size_ - pos1 ? n1 : size_ - pos1;
     size_type right = n2 < o.size_ - pos2 ? n2 : o.size_ - pos2;
     size_type clen = left < right ? left : right;
@@ -678,6 +682,10 @@ private:
     reserve(new_cap);
   }
 };
+
+#if defined(__cpp_exceptions)
+extern template class basic_string<char>;
+#endif
 
 // Concatenation
 template <typename C, typename T, typename A>
@@ -882,147 +890,92 @@ erase_if(basic_string<C, T, A>& s, Pred pred) {
   return old_size - out;
 }
 
-// to_string
-inline string to_string(int v) {
-  char b[32];
-  int n = __builtin_sprintf(b, "%d", v);
-  return {b, (size_t)n};
-}
-inline string to_string(long v) {
-  char b[32];
-  int n = __builtin_sprintf(b, "%ld", v);
-  return {b, (size_t)n};
-}
-inline string to_string(long long v) {
-  char b[32];
-  int n = __builtin_sprintf(b, "%lld", v);
-  return {b, (size_t)n};
-}
-inline string to_string(unsigned v) {
-  char b[32];
-  int n = __builtin_sprintf(b, "%u", v);
-  return {b, (size_t)n};
-}
-inline string to_string(unsigned long v) {
-  char b[32];
-  int n = __builtin_sprintf(b, "%lu", v);
-  return {b, (size_t)n};
-}
-inline string to_string(unsigned long long v) {
-  char b[32];
-  int n = __builtin_sprintf(b, "%llu", v);
-  return {b, (size_t)n};
-}
-inline string to_string(float v) {
-  char b[64];
-  int n = __builtin_sprintf(b, "%f", v);
-  return {b, (size_t)n};
-}
-inline string to_string(double v) {
-  char b[64];
-  int n = __builtin_sprintf(b, "%f", v);
-  return {b, (size_t)n};
-}
-inline string to_string(long double v) {
-  char b[64];
-  int n = __builtin_sprintf(b, "%Lf", v);
-  return {b, (size_t)n};
+string to_string(int value);
+string to_string(long value);
+string to_string(long long value);
+string to_string(unsigned value);
+string to_string(unsigned long value);
+string to_string(unsigned long long value);
+string to_string(float value);
+string to_string(double value);
+string to_string(long double value);
+
+#if defined(__cpp_exceptions)
+int stoi(const string& value, size_t* pos = nullptr, int base = 10);
+long stol(const string& value, size_t* pos = nullptr, int base = 10);
+long long stoll(const string& value, size_t* pos = nullptr, int base = 10);
+unsigned long stoul(const string& value, size_t* pos = nullptr, int base = 10);
+unsigned long long stoull(const string& value, size_t* pos = nullptr,
+                          int base = 10);
+float stof(const string& value, size_t* pos = nullptr);
+double stod(const string& value, size_t* pos = nullptr);
+long double stold(const string& value, size_t* pos = nullptr);
+#else
+template <typename Value>
+inline Value __finish_string_conversion(const string& input, char* end,
+                                        Value value, size_t* pos) {
+  if (pos)
+    *pos = static_cast<size_t>(end - input.c_str());
+  if (end == input.c_str() || errno == ERANGE)
+    __builtin_abort();
+  return value;
 }
 
-// sto* — string to arithmetic conversions
-inline int stoi(const string& s, size_t* pos = nullptr, int base = 10) {
+inline int stoi(const string& input, size_t* pos = nullptr, int base = 10) {
   errno = 0;
   char* end;
-  auto v = ::strtol(s.c_str(), &end, base);
-  if (pos)
-    *pos = end - s.c_str();
-  if (end == s.c_str())
-    _PSYCHICSTD_THROW(invalid_argument("stoi"));
-  if (errno == ERANGE)
-    _PSYCHICSTD_THROW(out_of_range("stoi"));
-  return (int)v;
+  long value = ::strtol(input.c_str(), &end, base);
+  value = __finish_string_conversion(input, end, value, pos);
+  if (value < (-__INT_MAX__ - 1) || value > __INT_MAX__)
+    __builtin_abort();
+  return static_cast<int>(value);
 }
-inline long stol(const string& s, size_t* pos = nullptr, int base = 10) {
+inline long stol(const string& input, size_t* pos = nullptr, int base = 10) {
   errno = 0;
   char* end;
-  auto v = ::strtol(s.c_str(), &end, base);
-  if (pos)
-    *pos = end - s.c_str();
-  if (end == s.c_str())
-    _PSYCHICSTD_THROW(invalid_argument("stol"));
-  if (errno == ERANGE)
-    _PSYCHICSTD_THROW(out_of_range("stol"));
-  return v;
+  auto value = ::strtol(input.c_str(), &end, base);
+  return __finish_string_conversion(input, end, value, pos);
 }
-inline long long stoll(const string& s, size_t* pos = nullptr, int base = 10) {
+inline long long stoll(const string& input, size_t* pos = nullptr,
+                       int base = 10) {
   errno = 0;
   char* end;
-  auto v = ::strtoll(s.c_str(), &end, base);
-  if (pos)
-    *pos = end - s.c_str();
-  if (end == s.c_str())
-    _PSYCHICSTD_THROW(invalid_argument("stoll"));
-  if (errno == ERANGE)
-    _PSYCHICSTD_THROW(out_of_range("stoll"));
-  return v;
+  auto value = ::strtoll(input.c_str(), &end, base);
+  return __finish_string_conversion(input, end, value, pos);
 }
-inline unsigned long stoul(const string& s, size_t* pos = nullptr,
+inline unsigned long stoul(const string& input, size_t* pos = nullptr,
                            int base = 10) {
   errno = 0;
   char* end;
-  auto v = ::strtoul(s.c_str(), &end, base);
-  if (pos)
-    *pos = end - s.c_str();
-  if (end == s.c_str())
-    _PSYCHICSTD_THROW(invalid_argument("stoul"));
-  if (errno == ERANGE)
-    _PSYCHICSTD_THROW(out_of_range("stoul"));
-  return v;
+  auto value = ::strtoul(input.c_str(), &end, base);
+  return __finish_string_conversion(input, end, value, pos);
 }
-inline unsigned long long stoull(const string& s, size_t* pos = nullptr,
+inline unsigned long long stoull(const string& input, size_t* pos = nullptr,
                                  int base = 10) {
   errno = 0;
   char* end;
-  auto v = ::strtoull(s.c_str(), &end, base);
-  if (pos)
-    *pos = end - s.c_str();
-  if (end == s.c_str())
-    _PSYCHICSTD_THROW(invalid_argument("stoull"));
-  if (errno == ERANGE)
-    _PSYCHICSTD_THROW(out_of_range("stoull"));
-  return v;
+  auto value = ::strtoull(input.c_str(), &end, base);
+  return __finish_string_conversion(input, end, value, pos);
 }
-inline float stof(const string& s, size_t* pos = nullptr) {
+inline float stof(const string& input, size_t* pos = nullptr) {
   errno = 0;
   char* end;
-  auto v = ::strtof(s.c_str(), &end);
-  if (pos)
-    *pos = end - s.c_str();
-  if (end == s.c_str())
-    _PSYCHICSTD_THROW(invalid_argument("stof"));
-  if (errno == ERANGE)
-    _PSYCHICSTD_THROW(out_of_range("stof"));
-  return v;
+  auto value = ::strtof(input.c_str(), &end);
+  return __finish_string_conversion(input, end, value, pos);
 }
-inline double stod(const string& s, size_t* pos = nullptr) {
+inline double stod(const string& input, size_t* pos = nullptr) {
   errno = 0;
   char* end;
-  auto v = ::strtod(s.c_str(), &end);
-  if (pos)
-    *pos = end - s.c_str();
-  if (end == s.c_str())
-    _PSYCHICSTD_THROW(invalid_argument("stod"));
-  if (errno == ERANGE)
-    _PSYCHICSTD_THROW(out_of_range("stod"));
-  return v;
+  auto value = ::strtod(input.c_str(), &end);
+  return __finish_string_conversion(input, end, value, pos);
 }
-inline long double stold(const string& s, size_t* pos = nullptr) {
+inline long double stold(const string& input, size_t* pos = nullptr) {
+  errno = 0;
   char* end;
-  auto v = ::strtold(s.c_str(), &end);
-  if (pos)
-    *pos = end - s.c_str();
-  return v;
+  auto value = ::strtold(input.c_str(), &end);
+  return __finish_string_conversion(input, end, value, pos);
 }
+#endif
 
 // hash<basic_string> specializations
 template <typename Char, typename Traits, typename Alloc>

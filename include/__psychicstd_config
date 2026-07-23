@@ -36,11 +36,13 @@
 // Exception support (honors -fno-exceptions)
 #if defined(__cpp_exceptions)
 #define _PSYCHICSTD_THROW(x) throw x
+#define _PSYCHICSTD_THROW_HELPER(helper, ...) helper(__VA_ARGS__)
 #define _PSYCHICSTD_TRY try
 #define _PSYCHICSTD_CATCH(decl) catch (decl)
 #define _PSYCHICSTD_RETHROW throw
 #else
 #define _PSYCHICSTD_THROW(x) __builtin_abort()
+#define _PSYCHICSTD_THROW_HELPER(helper, ...) __builtin_abort()
 #define _PSYCHICSTD_TRY if (true)
 #define _PSYCHICSTD_CATCH(decl) if (false)
 #define _PSYCHICSTD_RETHROW ((void)0)

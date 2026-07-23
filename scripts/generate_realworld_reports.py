@@ -10,7 +10,7 @@ Usage:
   scripts/generate_realworld_reports.py [--compiler CXX]
       [--build-type {debug,release,both}]
       [--reps N | --time-budget DURATION] [--max-reps N]
-      [--jobs N] [--plan-only] [--enable-ccache]
+      [--jobs N] [--order {readme,speed}] [--plan-only] [--enable-ccache]
 """
 
 import argparse
@@ -188,6 +188,13 @@ def main() -> int:
         help="parallel build jobs passed to every benchmark (default: 8)",
     )
     ap.add_argument(
+        "--order",
+        choices=("readme", "speed"),
+        default="readme",
+        help="run in README order or fastest estimated projects first "
+        "(default: readme)",
+    )
+    ap.add_argument(
         "--plan-only",
         action="store_true",
         help="print the repetition plan without running benchmarks or writing files",
@@ -220,6 +227,9 @@ def main() -> int:
         ("debug", "release") if args.build_type == "both" else (args.build_type,)
     )
     costs = {project: _repetition_cost(project, build_types) for project in projects}
+    if args.order == "speed":
+        reports.sort(key=lambda report: costs[report[0]])
+        projects = [project for project, _ in reports]
     if args.time_budget is not None:
         try:
             reps, costs = _budget_plan(
@@ -267,10 +277,10 @@ def main() -> int:
             check=True,
         )
         speedups[project] = _compile_speedup(output.read_text(), readme_build_type)
+        # Save completed results during long runs. Re-read first so edits made
+        # while a benchmark was running remain intact.
+        README.write_text(_update_readme(README.read_text(), speedups))
 
-    # Re-read after the potentially long benchmark run so unrelated edits made
-    # while it was running are not overwritten.
-    README.write_text(_update_readme(README.read_text(), speedups))
     print(f"=== updated compile speedups in {README} ===", file=sys.stderr)
     return 0
 

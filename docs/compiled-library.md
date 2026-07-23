@@ -1,0 +1,237 @@
+# Compiled library experiment
+
+The initial experiment added a small compiled component. The public CMake
+target is a static library, while the toolchain overlay adds an equivalent
+internal static library to an otherwise unmodified consuming project. The
+follow-up sections below describe the additional outlined paths and the final
+archive split retained in the current implementation.
+
+The first compiled translation unit contained:
+
+- `cin`, `cout`, `cerr`, and `clog`, including their stdio stream buffers;
+- the cold `ios_base::failure` construction and throw path;
+- explicit instantiations of `basic_istream<char>` and
+  `basic_ostream<char>`.
+
+Those explicit instantiations were used only when exceptions were enabled.
+`-fno-exceptions` consumers keep local instantiations so the header's abort
+path does not depend on how the static library was compiled.
+
+That initial implementation deliberately used one source file to keep the
+first build and integration simple. It identified `ios.cpp`, `istream.cpp`,
+`ostream.cpp`, and one source file per global stream as the next split, so
+static archive extraction could avoid bringing unused input or output code
+into a program. The final follow-up performs that split.
+
+## Measurements
+
+The probes were compiled as C++20 with Clang 22.1.8, `-O0`, `-nostdinc++`, and
+`-ftime-trace-granularity=0`. Times are the median `Total ExecuteCompiler` from
+15 alternating baseline and current compilations with a warm filesystem cache.
+The stream-using probe is `benchmarks/compile_time/bench_iostream.cpp`.
+
+| Probe | Before | Compiled library | Change |
+| --- | ---: | ---: | ---: |
+| Include `<iostream>`, empty `main` | 69.9 ms | 61.0 ms | -12.8% |
+| Write an integer to `cout`, inspect `cin` | 80.4 ms | 62.8 ms | -21.9% |
+
+For the include-only probe, generated functions fell from 72 to 14 and its
+object file from 7,963 to 980 bytes. For the probe using the streams, the object
+file fell from 17,089 to 1,173 bytes.
+
+The main tradeoff is linked code size. Explicitly instantiating the complete
+narrow stream classes increased the linked probe's text from 104,808 to
+130,181 bytes. This is acceptable for the current edit-compile-debug goal, but
+it should be remeasured on real projects. If the cost is too high, retain the
+out-of-line globals and failure path but remove the explicit instantiations;
+the initial trace showed that intermediate design retained most of the
+compile-time improvement.
+
+## Next candidates
+
+Use traces from real builds before moving more code. Good candidates are
+non-template cold paths which already carry `noinline`, repeated template
+instantiations with stable narrow-character specializations, and global state
+which should have one process-wide identity. Avoid outlining tiny hot methods:
+it saves little frontend work and adds calls and ABI surface.
+
+## Follow-up experiments
+
+### Cold-path static library
+
+This experiment compares against committed baseline `f8c842d`. It started
+from that commit with staged PIC changes in `CMakeLists.txt` and the toolchain
+validation overlay, plus a staged benchmark-harness change which builds the
+existing `iostream.cpp` runtime. The worktree also contained a staged README
+speed-table refresh and the untracked
+`scripts/rewrite_commit_preserving_merges.py` from an interrupted full report
+generator run. Those report artifacts are pre-existing and are excluded from
+this experiment; the full speed-report set will not be regenerated or
+overwritten here.
+
+Measurements use GCC 14.2.0, C++20 Debug (`-O0 -g`), `-nostdinc++`,
+`-fvisibility=hidden`, and `-fPIC`. Ccache is disabled. This host has 20 CPUs
+and initially had about 29 GiB available memory, so validation at that point
+used at most 19 parallel jobs. The focused measurements are serial. Each
+compile-time result is the median of three compiler-cache-free repetitions.
+GCC `-ftime-report` totals are recorded for the median repetition.
+
+The focused probes produced these results. `Parse`, `tmpl`, and `codegen` are
+the GCC report's wall-clock phase parsing, template instantiation, and
+optimization/code-generation totals; their 10 ms resolution makes zeroes and
+small changes directional rather than precise.
+
+| Slice and probe | Header bytes | Probe object bytes | Elapsed | Parse / tmpl / codegen |
+| --- | ---: | ---: | ---: | ---: |
+| Exceptions include, before | 2,217 | 9,304 | 0.14 s | 0.13 / 0.01 / 0.00 s |
+| Exceptions include, after | 2,544 | 9,304 | 0.14 s | 0.13 / 0.01 / 0.00 s |
+| Exceptions exercised, before | 2,217 | 22,840 | 0.15 s | 0.13 / 0.00 / 0.01 s |
+| Exceptions exercised, after | 2,544 | 10,864 | 0.14 s | 0.13 / 0.00 / 0.01 s |
+| System error include, before | 6,981 | 49,368 | 0.17 s | 0.15 / 0.00 / 0.01 s |
+| System error include, after | 4,781 | 13,752 | 0.15 s | 0.14 / 0.01 / 0.00 s |
+| System error exercised, before | 6,981 | 105,240 | 0.21 s | 0.15 / 0.00 / 0.04 s |
+| System error exercised, after | 4,781 | 15,848 | 0.15 s | 0.14 / 0.00 / 0.01 s |
+| String include, before | 35,298 | 9,240 | 0.14 s | 0.13 / 0.01 / 0.01 s |
+| String include, after | 35,064 | 9,240 | 0.14 s | 0.13 / 0.01 / 0.01 s |
+| String conversions, before | 35,298 | 69,704 | 0.17 s | 0.13 / 0.00 / 0.03 s |
+| String conversions, after | 35,064 | 40,104 | 0.14 s | 0.13 / 0.01 / 0.01 s |
+
+The new Clang Debug runtime objects are 53,680 bytes for `stdexcept.cpp`,
+77,392 bytes for `system_error.cpp`, and 59,520 bytes for `string.cpp`. The
+exception slice is kept because exercised code generation fell substantially
+without an include-only cost. The system-error slice is kept: its exercised
+object fell by 85% and its median compile fell by 29%. The string slice is
+kept: both probes avoid conversion code generation, with the exercised compile
+down about 18%. Focused behavior tests pass against both the system library and
+psychicstd.
+
+The first fmt run caught an accidental compatibility change: removing
+`<cstdio>` and `<string.h>` from `<system_error>` also removed names fmt uses
+from the drop-in transitive include surface. They are retained in drop-in mode
+but not strict mode. `<string>` similarly retains `<cerrno>` and `<cstdlib>` in
+drop-in mode, while strict `-fno-exceptions` includes them for its local
+conversion-and-abort fallback. The corrected focused string numbers above were
+remeasured from three repetitions.
+
+The combined GCC 14 Debug real-project comparison used the harness-selected 20
+jobs; available memory was at least 30 GiB during those runs. Every result was
+statistically within noise, and no project regressed by 3%:
+
+| Project and phase | Baseline | Combined | Change | System drift |
+| --- | ---: | ---: | ---: | ---: |
+| rdfind compile | 243.6 ms | 236.2 ms | -3.1% | +0.9% |
+| fmt compile | 4,853.3 ms | 4,825.2 ms | -0.6% | +2.2% |
+| Catch2 compile | 3,025.4 ms | 2,917.7 ms | -3.6% | +0.7% |
+| Eigen compile | 11,066.8 ms | 11,016.2 ms | -0.5% | +2.8% |
+
+The associated test phases changed by +0.1%, +1.8% (2.3 ms), -0.1%, and
++1.8% (0.4 ms), respectively. The combined result therefore passes the gate,
+and all three slices are kept.
+
+Validation covered the affected public behavior against both libstdc++ and
+psychicstd with GCC 14 and Clang, strict self-contained headers, focused ASan
+and UBSan runs, and the external-project toolchain tests with ASan, UBSan, and
+both combined. A complete runtime archive also builds with `-fno-exceptions`;
+optional and string-conversion failure consumers link and abort locally. A
+normal executable and a shared-library consumer both link the GCC 14 PIC
+archive successfully.
+
+### Narrow string explicit instantiation
+
+This separately measured follow-up compares against `bd99ca8`. It tests an
+`extern template` declaration for `basic_string<char>` backed by a dedicated
+PIC archive object. Keeping the instantiation separate prevents users of the
+conversion and system-error objects from pulling it in accidentally.
+`-fno-exceptions` consumers retain local instantiation so their failure paths
+still abort locally. Measurements use GCC 14 Debug with ccache disabled and
+three repetitions, matching the cold-path experiment.
+
+The focused exercised-string probe is inconclusive. Its caller object falls
+from 58,360 to 40,232 bytes and GCC's code-generation total falls from 20 to
+10 ms, but median compilation remains 0.16 s. The header grows from 34,941 to
+35,021 bytes, the new GCC 14 Debug instantiation object is 144,560 bytes, and
+linked text grows from 82,101 to 104,212 bytes. The slice is provisional until
+the real-project gate; absent a repeatable compile-time improvement, the linked
+size cost is grounds to revert it.
+
+The real-project gate resolves the decision in favor of keeping the slice.
+Three string-heavy builds improve beyond system drift, Eigen remains flat, and
+all test phases are flat or faster:
+
+| Project and phase | Baseline | Explicit instantiation | Change | System drift |
+| --- | ---: | ---: | ---: | ---: |
+| rdfind compile | 229.9 ms | 219.1 ms | -4.7% | +0.7% |
+| fmt compile | 5,088.2 ms | 4,888.7 ms | -3.9% | +1.5% |
+| Catch2 compile | 2,936.5 ms | 2,858.4 ms | -2.7% | +0.8% |
+| Eigen compile | 10,893.5 ms | 10,865.0 ms | -0.3% | +1.9% |
+
+The 22,111-byte linked-text increase in the focused probe is accepted because
+psychicstd prioritizes development compile speed, the instantiation remains a
+separately extracted archive member, and no measured project regresses.
+
+### Narrow stringstream explicit instantiation
+
+This follow-up compares against `44c6463`. It tests the four narrow
+specializations from `<sstream>` in another dedicated PIC archive object, with
+`extern template` declarations only when exceptions are enabled. The same
+three-repetition GCC 14 Debug policy and real-project gate apply.
+
+The focused exercised probe improves from 0.26 to 0.25 s. Its caller object
+falls from 135,384 to 101,656 bytes and code generation falls from 40 to 30 ms.
+The header grows from 9,123 to 9,624 bytes, the GCC 14 Debug instantiation
+object is 171,880 bytes, and linked text grows from 158,465 to 164,201 bytes.
+This smaller 3.6% text cost is provisional pending the real-project gate.
+
+The real-project gate keeps the slice. Three projects improve by 3.5-4.7%; the
+only slower median is rdfind at 2.3%, below the 3% rejection threshold and with
+a confidence interval spanning -4.1% to +8.5%:
+
+| Project and phase | Baseline | Explicit instantiation | Change | System drift |
+| --- | ---: | ---: | ---: | ---: |
+| rdfind compile | 224.1 ms | 229.3 ms | +2.3% | +0.6% |
+| fmt compile | 5,050.2 ms | 4,814.5 ms | -4.7% | +2.2% |
+| Catch2 compile | 2,891.0 ms | 2,788.4 ms | -3.5% | +1.9% |
+| Eigen compile | 11,129.2 ms | 10,685.6 ms | -4.0% | +0.3% |
+
+All associated test phases remain within noise. The focused code-generation
+reduction, modest linked-size cost, and three corroborating project gains make
+this a keep.
+
+### Iostream archive splitting
+
+This follow-up compares against `36459d3`. It splits the original monolithic
+`iostream.cpp` into `ios.cpp`, narrow stream instantiation objects, and one PIC
+archive member for each standard stream. The benchmark policy remains GCC 14
+Debug, ccache disabled, and three repetitions. The intended gain is linked
+size: a consumer which names only `cout` should no longer extract `cin`,
+`cerr`, or `clog` and their backing buffers. Compile-time and real-project
+results remain subject to the same regression gate.
+
+The public headers and generated caller text are unchanged: the `cout` and
+`cin` probes remain 87 and 98 bytes of object text respectively. Splitting the
+archive reduces a `cout`-only executable from 153,089 to 134,614 bytes of text
+(-12.1%) and a `cin`-only executable from 153,153 to 138,225 bytes (-9.7%). The
+GCC 14 Debug archive grows from 816,194 to 1,171,040 bytes because the separate
+translation units repeat debug and template metadata. That installed-library
+cost is accepted provisionally because it does not enter the consumer and the
+project prioritizes the edit-link-debug result.
+
+The three-repetition real-project gate passes. All compile medians are flat or
+faster and every compile and test phase remains statistically within noise:
+
+| Project and phase | Baseline | Split archive | Change | System drift |
+| --- | ---: | ---: | ---: | ---: |
+| rdfind compile | 232.9 ms | 222.9 ms | -4.3% | +2.7% |
+| fmt compile | 5,269.7 ms | 5,225.5 ms | -0.8% | +2.3% |
+| Catch2 compile | 2,915.5 ms | 2,882.2 ms | -1.1% | +0.6% |
+| Eigen compile | 10,804.7 ms | 10,789.1 ms | -0.1% | +2.0% |
+
+The focused linked-size reduction and absence of a real-project regression
+make this a keep.
+
+The common stdio buffer implementation lives in its own archive member so its
+code and debug information are not repeated four times. Validation covers
+GCC and Clang behavior tests, strict and `-fno-exceptions` consumers, focused
+ASan and UBSan runs, all four external toolchain configurations, a complete
+GCC 14 `-fno-exceptions` archive, and a shared-library consumer of the PIC
+archive.

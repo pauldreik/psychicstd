@@ -455,6 +455,10 @@ basic_istream<Char, Traits>& ws(basic_istream<Char, Traits>& is) {
   return is;
 }
 
+#if defined(__cpp_exceptions)
+extern template class basic_istream<char, char_traits<char>>;
+#endif
+
 using istream = basic_istream<char>;
 using wistream = basic_istream<wchar_t>;
 

@@ -81,6 +81,9 @@ foreach(t ${TESTS})
     add_test(NAME ${t}_psychicstd COMMAND ${t}_psychicstd)
 endforeach()
 
+target_sources(test_iostream_system PRIVATE iostream_globals.cpp)
+target_sources(test_iostream_psychicstd PRIVATE iostream_globals.cpp)
+
 # Generic system atomics can also require GCC's out-of-line atomic runtime.
 # macOS has no libatomic; the compiler runtime covers it.
 if(NOT APPLE)

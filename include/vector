@@ -492,12 +492,12 @@ public:
   constexpr const T& operator[](size_type i) const noexcept { return data_[i]; }
   constexpr T& at(size_type i) {
     if (i >= size_)
-      _PSYCHICSTD_THROW(out_of_range("vector::at"));
+      _PSYCHICSTD_THROW_HELPER(__throw_out_of_range, "vector::at");
     return data_[i];
   }
   constexpr const T& at(size_type i) const {
     if (i >= size_)
-      _PSYCHICSTD_THROW(out_of_range("vector::at"));
+      _PSYCHICSTD_THROW_HELPER(__throw_out_of_range, "vector::at");
     return data_[i];
   }
   constexpr T& front() noexcept { return data_[0]; }

@@ -3,14 +3,32 @@ project(psychicstd LANGUAGES CXX VERSION 0.1.0)
 
 file(WRITE "${CMAKE_BINARY_DIR}/.gitignore" "*\n")
 
-add_library(psychicstd INTERFACE)
+add_library(
+    psychicstd
+    STATIC
+    src/cerr.cpp
+    src/cin.cpp
+    src/clog.cpp
+    src/cout.cpp
+    src/ios.cpp
+    src/iostream_macos.cpp
+    src/istream.cpp
+    src/ostream.cpp
+    src/sstream_instantiations.cpp
+    src/stdio_streambuf.cpp
+    src/stdexcept.cpp
+    src/string.cpp
+    src/string_instantiations.cpp
+    src/system_error.cpp
+)
 add_library(psychicstd::psychicstd ALIAS psychicstd)
+set_target_properties(psychicstd PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
-target_compile_features(psychicstd INTERFACE cxx_std_23)
-target_compile_options(psychicstd INTERFACE -nostdinc++ -fvisibility=hidden)
+target_compile_features(psychicstd PUBLIC cxx_std_20)
+target_compile_options(psychicstd PUBLIC -nostdinc++ -fvisibility=hidden)
 if(APPLE)
     # atomic::wait uses os_sync_wait_on_address, introduced in macOS 14.4.
-    target_compile_options(psychicstd INTERFACE -mmacosx-version-min=14.4)
+    target_compile_options(psychicstd PUBLIC -mmacosx-version-min=14.4)
 endif()
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
@@ -71,7 +89,7 @@ else()
 endif()
 target_include_directories(
     psychicstd
-    INTERFACE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include> $<INSTALL_INTERFACE:include>
+    PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include> $<INSTALL_INTERFACE:include>
 )
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS On)

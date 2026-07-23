@@ -27,20 +27,21 @@ libstdc++ your clang picks up, so numbers may shift slightly by GCC version.)
 
 | | psychicstd | libstdc++ |
 | --- | --- | --- |
-| Constructors | 8 | 12 |
+| Constructors | 11 | 12 |
 | Destructor | 1 | 1 |
-| Methods | 100 | 160 |
+| Methods | 106 | 160 |
 | Conversions | 1 | 1 |
-| **Total members** | **110** | **174** |
-| Distinct method names | 48 | 76 |
-| — of which public | **44** | **45** |
+| **Total members** | **119** | **174** |
+| Distinct method names | 49 | 76 |
+| — of which public | **45** | **45** |
 
-So by raw member count psychicstd looks ~63 % complete — but by **public API**
-it is **98 % complete** (44 of 45 public method names).
+By raw member count psychicstd has 68 % as many declarations. It has the same
+number of distinct public method names as libstdc++, although the sets differ
+by one name.
 
-**What psychicstd is missing (33 distinct names):**
+**What psychicstd is missing (32 distinct names):**
 
-- **Public API gaps — only 2:** `copy`, `get_allocator`.
+- **Public API gap — only 1:** `copy`.
 - **Private implementation helpers — 31:** `_M_construct`, `_M_create`,
   `_M_dispose`, `_M_is_local`, `_M_local_data`, `_M_mutate`, `_M_replace_cold`,
   `_S_allocate`, `_S_copy`, … — the small-string-optimization and
@@ -52,15 +53,16 @@ helpers (`alloc`, `dealloc`, `grow`, `empty_str`).
 
 ## Analysis
 
-**Usability: `std::string` is effectively complete.** With 44 of 45 public
-method names present, the public surface is all there bar `copy` and
-`get_allocator` (both easy to add). For everyday development, psychicstd's
+**Usability: `std::string` is effectively complete.** It has 45 distinct
+public method names, the same count as libstdc++, with `copy` missing and
+C++23's `contains` present instead. For everyday development, psychicstd's
 `std::string` is a drop-in.
 
-**The size gap is private machinery, not missing features.** 31 of the 33
-missing names are libstdc++'s internal `_M_*`/`_S_*` helpers. The 63 %-vs-98 %
-split is the whole story in one line: psychicstd implements nearly the same
-public API with far less internal apparatus. That apparatus (SSO, allocator
+**The size gap is private machinery, not missing features.** 31 of the 32
+missing names are libstdc++'s internal `_M_*`/`_S_*` helpers. The member-count
+gap and equal public-name counts tell the story in one line: psychicstd
+implements nearly the same public API with far less internal apparatus. That
+apparatus (SSO, allocator
 propagation, the SFINAE/constraints wrapped around each overload) is exactly
 what makes libstdc++'s `<string>` slow to parse and instantiate — see the
 [`<string>` speed study](../std_string/stdstringcasestudy.md).

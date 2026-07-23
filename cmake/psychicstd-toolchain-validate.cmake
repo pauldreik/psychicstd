@@ -21,3 +21,31 @@ else()
         "psychicstd toolchain supports only GCC 13+, Clang, and AppleClang; got ${CMAKE_CXX_COMPILER_ID}"
     )
 endif()
+
+# The overlay is used without changing the consuming project's CMake files.
+# Supply psychicstd's compiled implementation to targets declared after
+# project(), just as the toolchain already supplies its headers and ABI runtime.
+get_property(_psychicstd_in_try_compile GLOBAL PROPERTY IN_TRY_COMPILE)
+if(NOT _psychicstd_in_try_compile AND NOT TARGET _psychicstd_runtime)
+    add_library(
+        _psychicstd_runtime
+        STATIC
+        "${PSYCHICSTD_ROOT}/src/cerr.cpp"
+        "${PSYCHICSTD_ROOT}/src/cin.cpp"
+        "${PSYCHICSTD_ROOT}/src/clog.cpp"
+        "${PSYCHICSTD_ROOT}/src/cout.cpp"
+        "${PSYCHICSTD_ROOT}/src/ios.cpp"
+        "${PSYCHICSTD_ROOT}/src/iostream_macos.cpp"
+        "${PSYCHICSTD_ROOT}/src/istream.cpp"
+        "${PSYCHICSTD_ROOT}/src/ostream.cpp"
+        "${PSYCHICSTD_ROOT}/src/sstream_instantiations.cpp"
+        "${PSYCHICSTD_ROOT}/src/stdio_streambuf.cpp"
+        "${PSYCHICSTD_ROOT}/src/stdexcept.cpp"
+        "${PSYCHICSTD_ROOT}/src/string.cpp"
+        "${PSYCHICSTD_ROOT}/src/string_instantiations.cpp"
+        "${PSYCHICSTD_ROOT}/src/system_error.cpp"
+    )
+    set_target_properties(_psychicstd_runtime PROPERTIES POSITION_INDEPENDENT_CODE ON)
+    target_compile_features(_psychicstd_runtime PRIVATE cxx_std_20)
+    link_libraries(_psychicstd_runtime)
+endif()

@@ -498,6 +498,10 @@ Ostream&& operator<<(Ostream&& stream, const T& value) {
   return static_cast<Ostream&&>(stream);
 }
 
+#if defined(__cpp_exceptions)
+extern template class basic_ostream<char, char_traits<char>>;
+#endif
+
 using ostream = basic_ostream<char>;
 using wostream = basic_ostream<wchar_t>;
 

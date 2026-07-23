@@ -43,6 +43,42 @@ int main() {
     conversion_threw = true;
   }
   psyassert(conversion_threw);
+
+  size_t conversion_pos = 0;
+  psyassert(std::stoi("-42tail", &conversion_pos) == -42);
+  psyassert(conversion_pos == 3);
+  psyassert(std::stol("17") == 17L);
+  psyassert(std::stoll("10000000000") == 10000000000LL);
+  psyassert(std::stoul("42") == 42UL);
+  psyassert(std::stoull("10000000000") == 10000000000ULL);
+  psyassert(std::stof("1.5") == 1.5F);
+  psyassert(std::stod("2.5") == 2.5);
+  psyassert(std::stold("3.5") == 3.5L);
+
+  psyassert(std::to_string(-42) == "-42");
+  psyassert(std::to_string(42L) == "42");
+  psyassert(std::to_string(42LL) == "42");
+  psyassert(std::to_string(42U) == "42");
+  psyassert(std::to_string(42UL) == "42");
+  psyassert(std::to_string(42ULL) == "42");
+  psyassert(std::to_string(1.5F) == "1.500000");
+  psyassert(std::to_string(2.5) == "2.500000");
+  psyassert(std::to_string(3.5L) == "3.500000");
+
+  conversion_threw = false;
+  try {
+    (void)std::stoi("999999999999999999999999999999999");
+  } catch (const std::out_of_range&) {
+    conversion_threw = true;
+  }
+  psyassert(conversion_threw);
+  conversion_threw = false;
+  try {
+    (void)std::stold("1e99999");
+  } catch (const std::out_of_range&) {
+    conversion_threw = true;
+  }
+  psyassert(conversion_threw);
   conversion_threw = false;
   try {
     (void)std::stol("x");

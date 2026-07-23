@@ -8,6 +8,8 @@
 
 namespace std {
 
+[[noreturn, gnu::cold, gnu::noinline]] void __throw_bad_any_cast();
+
 // psychicstd: minimal std::any — type-erased value container
 class any {
   static constexpr size_t SMALL = 2 * sizeof(void*);
@@ -179,19 +181,19 @@ template <typename T> const T* any_cast(const any* a) noexcept {
 template <typename T> T any_cast(const any& a) {
   auto* p = any_cast<remove_cvref_t<T>>(&a);
   if (!p)
-    _PSYCHICSTD_THROW(bad_any_cast{});
+    _PSYCHICSTD_THROW_HELPER(__throw_bad_any_cast);
   return *p;
 }
 template <typename T> T any_cast(any& a) {
   auto* p = any_cast<remove_cvref_t<T>>(&a);
   if (!p)
-    _PSYCHICSTD_THROW(bad_any_cast{});
+    _PSYCHICSTD_THROW_HELPER(__throw_bad_any_cast);
   return *p;
 }
 template <typename T> T any_cast(any&& a) {
   auto* p = any_cast<remove_cvref_t<T>>(&a);
   if (!p)
-    _PSYCHICSTD_THROW(bad_any_cast{});
+    _PSYCHICSTD_THROW_HELPER(__throw_bad_any_cast);
   // move
   return static_cast<T>(static_cast<remove_cvref_t<T>&&>(*p));
 }

@@ -238,13 +238,13 @@ public:
   T& at(const Key& key) {
     auto found = find(key);
     if (found == end())
-      _PSYCHICSTD_THROW(out_of_range("map::at: key not found"));
+      _PSYCHICSTD_THROW_HELPER(__throw_out_of_range, "map::at: key not found");
     return found->second;
   }
   const T& at(const Key& key) const {
     auto found = find(key);
     if (found == end())
-      _PSYCHICSTD_THROW(out_of_range("map::at: key not found"));
+      _PSYCHICSTD_THROW_HELPER(__throw_out_of_range, "map::at: key not found");
     return found->second;
   }
 

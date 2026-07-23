@@ -18,6 +18,8 @@ public:
   const char* what() const noexcept override { return "bad variant access"; }
 };
 
+[[noreturn, gnu::cold, gnu::noinline]] void __throw_bad_variant_access();
+
 struct monostate {};
 constexpr bool operator==(monostate, monostate) noexcept { return true; }
 constexpr strong_ordering operator<=>(monostate, monostate) noexcept {
@@ -235,7 +237,7 @@ constexpr bool holds_alternative(const variant<Ts...>& v) noexcept {
 template <size_t I, typename... Ts>
 constexpr variant_alternative_t<I, variant<Ts...>>& get(variant<Ts...>& v) {
   if (v.index() != I)
-    _PSYCHICSTD_THROW(bad_variant_access{});
+    _PSYCHICSTD_THROW_HELPER(__throw_bad_variant_access);
   return *reinterpret_cast<variant_alternative_t<I, variant<Ts...>>*>(
       v.__raw());
 }
@@ -247,7 +249,7 @@ template <size_t I, typename... Ts>
 constexpr const variant_alternative_t<I, variant<Ts...>>&
 get(const variant<Ts...>& v) {
   if (v.index() != I)
-    _PSYCHICSTD_THROW(bad_variant_access{});
+    _PSYCHICSTD_THROW_HELPER(__throw_bad_variant_access);
   return *reinterpret_cast<const variant_alternative_t<I, variant<Ts...>>*>(
       v.__raw());
 }

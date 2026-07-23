@@ -539,6 +539,8 @@ public:
   const char* what() const noexcept override { return "bad_weak_ptr"; }
 };
 
+[[noreturn, gnu::cold, gnu::noinline]] void __throw_bad_weak_ptr();
+
 template <typename T> class enable_shared_from_this {
   mutable __detail::__sp_ctrl* ctrl_ = nullptr;
   mutable T* ptr_ = nullptr;
@@ -608,7 +610,7 @@ template <typename T> class shared_ptr {
     if (!ctrl_ || !__detail::__sp_strong_add_if_live(ctrl_)) {
       ptr_ = nullptr;
       ctrl_ = nullptr;
-      _PSYCHICSTD_THROW(bad_weak_ptr{});
+      _PSYCHICSTD_THROW_HELPER(__throw_bad_weak_ptr);
     }
   }
 

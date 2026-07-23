@@ -18,6 +18,8 @@ public:
   const char* what() const noexcept override { return "bad optional access"; }
 };
 
+[[noreturn, gnu::cold, gnu::noinline]] void __throw_bad_optional_access();
+
 template <typename T> class optional {
   union {
     T val_;
@@ -106,12 +108,12 @@ public:
 
   constexpr T& value() {
     if (!has_)
-      _PSYCHICSTD_THROW(bad_optional_access());
+      _PSYCHICSTD_THROW_HELPER(__throw_bad_optional_access);
     return val_;
   }
   constexpr const T& value() const {
     if (!has_)
-      _PSYCHICSTD_THROW(bad_optional_access());
+      _PSYCHICSTD_THROW_HELPER(__throw_bad_optional_access);
     return val_;
   }
   constexpr T& operator*() noexcept { return val_; }
