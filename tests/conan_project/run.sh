@@ -9,7 +9,8 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REAL_CXX="${1:-${CXX:-clang++}}"
 BUILD_DIR="$SCRIPT_DIR/build"
-PROFILE="$BUILD_DIR/profile.profile"
+BUILD_PROFILE="$BUILD_DIR/build.profile"
+HOST_PROFILE="$BUILD_DIR/host.profile"
 
 if ! command -v conan >/dev/null 2>&1; then
   echo "conan is not installed; skipping example run" >&2
@@ -58,9 +59,7 @@ if [[ -z "$CONAN_COMPILER_VERSION" ]]; then
   exit 2
 fi
 
-cat >"$PROFILE" <<EOF
-include($SCRIPT_DIR/psychic.profile)
-
+cat >"$BUILD_PROFILE" <<EOF
 [settings]
 os=Linux
 arch=x86_64
@@ -71,17 +70,17 @@ compiler.libcxx=libstdc++11
 compiler.cppstd=gnu23
 EOF
 
+cat >"$HOST_PROFILE" <<EOF
+include($BUILD_PROFILE)
+include($SCRIPT_DIR/psychic.profile)
+EOF
+
 export CXX="$REAL_CXX"
 
-conan create "$SCRIPT_DIR" --profile:all "$PROFILE" --build=missing
-
-conan install "$SCRIPT_DIR" \
+conan build "$SCRIPT_DIR" \
   --output-folder "$BUILD_DIR" \
-  --profile:all "$PROFILE" \
+  --profile:build "$BUILD_PROFILE" \
+  --profile:host "$HOST_PROFILE" \
   --build=missing
 
-cmake -S "$SCRIPT_DIR" -B "$BUILD_DIR" \
-  -DCMAKE_TOOLCHAIN_FILE="$BUILD_DIR/build/Release/generators/conan_toolchain.cmake" \
-  -DCMAKE_BUILD_TYPE=Release
-cmake --build "$BUILD_DIR"
-"$BUILD_DIR/my_app"
+"$BUILD_DIR/build/Release/my_app"

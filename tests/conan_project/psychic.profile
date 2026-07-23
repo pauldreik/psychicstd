@@ -1,4 +1,4 @@
-# Overlay profile: include this after your normal host/build settings.
+# Overlay profile: include this after your normal host settings.
 #
 # This keeps the compiler choice from your base profile and only injects the
 # psychicstd CMake toolchain. The toolchain then adds the psychicstd include
