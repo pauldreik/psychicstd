@@ -47,7 +47,9 @@ public:
   bool operator!=(const type_info& rhs) const noexcept {
     return !operator==(rhs);
   }
-  bool before(const type_info& rhs) const noexcept;
+  bool before(const type_info& rhs) const noexcept {
+    return __builtin_strcmp(name(), rhs.name()) < 0;
+  }
   const char* name() const noexcept {
     return __name[0] == '*' ? __name + 1 : __name;
   }
