@@ -159,6 +159,15 @@ int main() {
       std::erase_if(erased, [](char c) { return c == 'b' || c == 'd'; }) == 3);
   psyassert(erased == "rcr");
 
+  std::string empty;
+  empty.erase(std::string::size_type{0});
+  empty.erase(empty.begin(), empty.end());
+  psyassert(empty.empty());
+
+  for (std::string::size_type i = 0; i < 1000; ++i)
+    empty.append(i - empty.size(), '\0');
+  psyassert(empty.size() == 999);
+
   // string <-> string_view in ?: must pick string_view (requires the
   // string_view ctor to be explicit per [string.cons]; hit by cmake).
   std::string_view sv = false ? s : std::string_view("vw");

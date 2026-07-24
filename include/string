@@ -361,6 +361,8 @@ public:
   basic_string& erase(size_type pos = 0, size_type n = npos) {
     if (n > size_ - pos)
       n = size_ - pos;
+    if (!n)
+      return *this;
     Traits::move(data_ + pos, data_ + pos + n, size_ - pos - n + 1);
     size_ -= n;
     return *this;
