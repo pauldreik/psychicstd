@@ -106,6 +106,15 @@ public:
       : tuple(static_cast<tuple<Us...>&&>(other),
               make_index_sequence<sizeof...(Ts)>{}) {}
 
+  template <typename U1, typename U2>
+    requires(sizeof...(Ts) == 2)
+  tuple(const pair<U1, U2>& p) : base(p.first, p.second) {}
+
+  template <typename U1, typename U2>
+    requires(sizeof...(Ts) == 2)
+  tuple(pair<U1, U2>&& p)
+      : base(static_cast<U1&&>(p.first), static_cast<U2&&>(p.second)) {}
+
   // Heterogeneous assignment — needed for std::tie(a,b) = tuple<Us...>{...}
   // where Ts are reference types and Us are value types.
   template <typename... Us>
