@@ -127,6 +127,7 @@ def main() -> int:
             cwd=repo,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
+            check=False,
         )
         shutil.rmtree(tmp, ignore_errors=True)
 

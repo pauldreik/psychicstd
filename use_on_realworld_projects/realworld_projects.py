@@ -120,6 +120,7 @@ def _run(cmd: list[str], cwd: Path, env: dict[str, str]) -> None:
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         text=True,
+        check=False,
     )
     if r.returncode != 0:
         print(f"failed command {cmd[0]}!\noutput:")
@@ -482,9 +483,11 @@ def _cmake() -> Project:
                     "build",
                     "--output-on-failure",
                     "-R",
-                    r"^kwsys\.test(Configure|Status|SystemTools|"
-                    r"CommandLineArguments1?|Directory|Encoding|"
-                    r"SystemInformation)$",
+                    (
+                        r"^kwsys\.test(Configure|Status|SystemTools|"
+                        r"CommandLineArguments1?|Directory|Encoding|"
+                        r"SystemInformation)$"
+                    ),
                 ],
                 src,
                 env,
@@ -529,17 +532,13 @@ def _cppcheck() -> Project:
             # The Makefile appends -std=c++11 to CXXFLAGS. Keep psychicstd's
             # required C++20 flags last with a wrapper, as other recipes do.
             wrapper = _compiler_wrapper(work / "cxx", tc)
-            cppflags = " ".join(
-                (
-                    "-Ilib",
-                    "-Ifrontend",
-                    "-Icli",
-                    "-isystem externals",
-                    "-isystem externals/picojson",
-                    "-isystem externals/simplecpp",
-                    "-isystem externals/tinyxml2",
-                    "-DHAVE_EXECINFO_H=1",
-                )
+            cppflags = (
+                "-Ilib -Ifrontend -Icli "
+                "-isystem externals "
+                "-isystem externals/picojson "
+                "-isystem externals/simplecpp "
+                "-isystem externals/tinyxml2 "
+                "-DHAVE_EXECINFO_H=1"
             )
             jobs = f"-j{tc.jobs}"
             make_args = [

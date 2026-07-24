@@ -42,8 +42,8 @@ def _git_toplevel() -> Path:
 REPO = _git_toplevel()
 for _sub in ("use_on_realworld_projects", "scripts"):
     sys.path.insert(0, str(REPO / _sub))
-import realworld_projects as rw  # noqa: E402
-import compare_realworld as cr  # noqa: E402
+import compare_realworld as cr
+import realworld_projects as rw
 
 GREEN, RED, YELLOW = "\U0001f7e2", "\U0001f534", "\U0001f7e1"
 BUILD_TYPE_CHOICES = (*cr.BUILD_TYPES, "both")
@@ -235,24 +235,28 @@ def main() -> int:
 
     lines = [
         "# Real-world project speed comparison\n",
-        f"Compiler: `{ver}`. Each project is built {args.reps} time(s) per side "
-        f"(system {'libc++' if sys.platform == 'darwin' else 'libstdc++'}, "
-        "psychicstd); `system (s)`/`psychicstd (s)` are the "
-        "*median* build time of those repetitions, in seconds -- the median is "
-        "used instead of the mean so one repetition disturbed by another process "
-        "on the machine doesn't skew the result. `speedup` = system median / "
-        "psychicstd median (>1x means psychicstd is faster); its bracketed range "
-        "is a 95% confidence interval on that *same ratio* (obtained by "
-        "resampling the raw per-repetition timings, not just the two medians, "
-        "2000 times) -- so it reflects how much the repetitions varied, not a "
-        "different unit. "
-        f"{GREEN} the whole CI is above 1x (reliably faster) · {RED} the whole "
-        f"CI is below 1x (reliably slower) · {YELLOW} the CI straddles 1x (not "
-        "distinguishable from run-to-run noise).\n",
-        f"Parallelism: **{jobs} jobs** "
-        f"({parallelism.logical_cpus} logical CPUs available; the memory "
-        f"estimate permits {parallelism.memory_jobs} jobs at 1.5 GiB/job). "
-        f"ccache was {'enabled' if args.enable_ccache else 'disabled'}.\n",
+        (
+            f"Compiler: `{ver}`. Each project is built {args.reps} time(s) per side "
+            f"(system {'libc++' if sys.platform == 'darwin' else 'libstdc++'}, "
+            "psychicstd); `system (s)`/`psychicstd (s)` are the "
+            "*median* build time of those repetitions, in seconds -- the median is "
+            "used instead of the mean so one repetition disturbed by another process "
+            "on the machine doesn't skew the result. `speedup` = system median / "
+            "psychicstd median (>1x means psychicstd is faster); its bracketed range "
+            "is a 95% confidence interval on that *same ratio* (obtained by "
+            "resampling the raw per-repetition timings, not just the two medians, "
+            "2000 times) -- so it reflects how much the repetitions varied, not a "
+            "different unit. "
+            f"{GREEN} the whole CI is above 1x (reliably faster) · {RED} the whole "
+            f"CI is below 1x (reliably slower) · {YELLOW} the CI straddles 1x (not "
+            "distinguishable from run-to-run noise).\n"
+        ),
+        (
+            f"Parallelism: **{jobs} jobs** "
+            f"({parallelism.logical_cpus} logical CPUs available; the memory "
+            f"estimate permits {parallelism.memory_jobs} jobs at 1.5 GiB/job). "
+            f"ccache was {'enabled' if args.enable_ccache else 'disabled'}.\n"
+        ),
     ]
     if args.enable_ccache:
         lines.append(
@@ -280,7 +284,12 @@ def main() -> int:
     print(report)
     if args.output:
         args.output.write_text(report + "\n", encoding="utf-8")
-        if subprocess.run(["which", "mdformat"], capture_output=True).returncode == 0:
+        if (
+            subprocess.run(
+                ["which", "mdformat"], capture_output=True, check=False
+            ).returncode
+            == 0
+        ):
             subprocess.run(["mdformat", str(args.output)], check=True)
         print(f"Report written to {args.output}", file=sys.stderr)
     return 0

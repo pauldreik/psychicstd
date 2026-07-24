@@ -121,7 +121,7 @@ def measure(gen, extra, m, workdir):
 
 def main():
     ver = subprocess.run(
-        [CXX, "--version"], capture_output=True, text=True
+        [CXX, "--version"], capture_output=True, text=True, check=False
     ).stdout.splitlines()[0]
     print(f"compiler: {ver}")
     print(f"reps per point: {N}, standard: {STD}\n")
@@ -146,10 +146,10 @@ def main():
         return next(r for r in results[name] if r[0] == m)
 
     print("\n=== summary (at M =", big, ") ===")
-    pm, pb, pt = at("plain", big)
-    im, ib, it = at("instances", big)
-    hm, hb, ht = at("instances_heavy", big)
-    rm, rb, rt = at("recursive", big)
+    _pm, pb, pt = at("plain", big)
+    _im, ib, it = at("instances", big)
+    _hm, _hb, ht = at("instances_heavy", big)
+    _rm, rb, rt = at("recursive", big)
 
     print("\n-- bytes vs instantiation: plain vs instances (same M entities) --")
     print(f"  plain     : {pb:>8}B source, {pt:7.1f} ms")

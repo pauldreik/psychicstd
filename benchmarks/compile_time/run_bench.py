@@ -179,7 +179,7 @@ def main() -> None:
 
     try:
         cxx_version = subprocess.run(
-            [cxx, "--version"], capture_output=True, text=True
+            [cxx, "--version"], capture_output=True, text=True, check=False
         ).stdout.splitlines()[0]
     except (OSError, IndexError):
         cxx_version = cxx
@@ -343,7 +343,9 @@ def main() -> None:
             f"🟡 {THRESHOLD_RED}x–{THRESHOLD_GREEN}x  "
             f"🔴 below {THRESHOLD_RED}x\n\n"
         )
-        f.write(f"Last updated: {datetime.now().strftime('%Y-%m-%d %H:%M')}\n\n")
+        f.write(
+            f"Last updated: {datetime.now().astimezone().strftime('%Y-%m-%d %H:%M')}\n\n"
+        )
         f.write("| | name | system | psychicstd | speedup | 95% CI |\n")
         f.write("|--|------|-------:|----------:|--------:|-------:|\n")
         for sys_ms, psy_ms, speedup_ci, name in results:
@@ -362,7 +364,12 @@ def main() -> None:
                 f"{format_ci(speedup_ci)} |\n"
             )
 
-    if subprocess.run(["which", "mdformat"], capture_output=True).returncode == 0:
+    if (
+        subprocess.run(
+            ["which", "mdformat"], capture_output=True, check=False
+        ).returncode
+        == 0
+    ):
         subprocess.run(["mdformat", speed_md], check=True)
     aggregate_dir.cleanup()
     print(f"\nUpdated {speed_md}")

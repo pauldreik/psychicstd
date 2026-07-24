@@ -112,7 +112,7 @@ def code_bytes(main):
 
 def main():
     print(
-        f"compiler: {subprocess.run([CXX, '--version'], capture_output=True, text=True).stdout.splitlines()[0]}"
+        f"compiler: {subprocess.run([CXX, '--version'], capture_output=True, text=True, check=False).stdout.splitlines()[0]}"
     )
     print(f"total code units (held constant): {UNITS}")
     print(f"reps per K: {N}, standard: {STD}\n")

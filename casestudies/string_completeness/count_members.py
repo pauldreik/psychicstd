@@ -46,6 +46,7 @@ def dump_ast(flags):
             [CXX, *flags, "-Xclang", "-ast-dump=json", "-fsyntax-only", src],
             capture_output=True,
             text=True,
+            check=False,
         )
         return json.loads(out.stdout)
     finally:
@@ -102,7 +103,7 @@ def analyze(flags):
 
 def main():
     ver = subprocess.run(
-        [CXX, "--version"], capture_output=True, text=True
+        [CXX, "--version"], capture_output=True, text=True, check=False
     ).stdout.splitlines()[0]
     print(f"compiler: {ver}\n")
 
