@@ -334,14 +334,86 @@ def _abseil(full: bool) -> Project:
             ]
             additional_test_targets = (
                 [
+                    "absl_nullability_test",
+                    "absl_nullability_default_nonnull_test",
+                    "absl_nullability_traits_test",
+                    "absl_scoped_set_env_test",
+                    "absl_cmake_thread_test",
+                    "absl_fast_type_id_test",
+                    "absl_prefetch_test",
+                    "absl_optimization_test",
+                    "absl_poison_test",
+                    "absl_tracing_internal_weak_test",
+                    "absl_tracing_internal_strong_test",
+                    "absl_iterator_traits_test",
                     "absl_algorithm_test",
+                    "absl_cleanup_test",
+                    "absl_compressed_tuple_test",
+                    "absl_test_instance_tracker_test",
+                    "absl_hashtable_control_bytes_test",
+                    "absl_raw_hash_set_resize_impl_test",
+                    "absl_non_temporal_memcpy_test",
+                    "absl_bounded_utf8_length_sequence_test",
+                    "absl_decode_rust_punycode_test",
+                    "absl_demangle_rust_test",
+                    "absl_utf8_for_code_point_test",
+                    "absl_city_test",
                     "absl_constexpr_testing_test",
+                    "absl_periodic_sampler_test",
+                    "absl_random_internal_traits_test",
+                    "absl_random_internal_fastmath_test",
+                    "absl_random_internal_fast_uniform_bits_test",
+                    "absl_random_internal_randen_test",
+                    "absl_random_internal_randen_slow_test",
+                    "absl_random_internal_uniform_helper_test",
+                    "absl_random_internal_wide_multiply_test",
+                    "absl_has_ostream_operator_test",
+                    "absl_utf8_test",
+                    "absl_ostringstream_test",
+                    "absl_compare_test",
                 ]
                 if full
                 else []
             )
             test_targets = [*base_test_targets, *additional_test_targets]
-            additional_library_targets = ["int128"] if full else []
+            additional_library_targets = (
+                [
+                    "atomic_hook_test_helper",
+                    "city",
+                    "civil_time",
+                    "cordz_functions",
+                    "crc_cpu_detect",
+                    "crc_internal",
+                    "debugging_internal",
+                    "decode_rust_punycode",
+                    "demangle_internal",
+                    "demangle_rust",
+                    "exponential_biased",
+                    "flags_commandlineflag_internal",
+                    "graphcycles_internal",
+                    "int128",
+                    "leak_check",
+                    "log_internal_conditions",
+                    "log_internal_nullguard",
+                    "log_severity",
+                    "periodic_sampler",
+                    "poison",
+                    "pow10_helper",
+                    "random_internal_platform",
+                    "random_internal_randen",
+                    "random_internal_randen_hwaes",
+                    "random_internal_randen_hwaes_impl",
+                    "random_internal_randen_slow",
+                    "random_seed_gen_exception",
+                    "stack_consumption",
+                    "strings_internal",
+                    "test_instance_tracker",
+                    "time_zone",
+                    "utf8_for_code_point",
+                ]
+                if full
+                else []
+            )
             compile_targets = [
                 *base_library_targets,
                 *additional_library_targets,
@@ -377,8 +449,8 @@ def _abseil(full: bool) -> Project:
             {"debug": 25, "release": 35} if full else {"debug": 14, "release": 19}
         ),
         comment=(
-            "Builds Abseil's base, algorithm, meta, and numeric components "
-            "and runs their currently supported upstream tests."
+            "Builds all 40 library targets that currently compile with "
+            "psychicstd and runs all 45 upstream tests that both build and pass."
             if full
             else "Builds absl/base and runs eight small upstream base tests."
         ),
