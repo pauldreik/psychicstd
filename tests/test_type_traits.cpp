@@ -33,6 +33,10 @@ int main() {
   static_assert(!std::is_trivially_constructible_v<int, int, int>);
   static_assert(std::is_trivially_assignable_v<int&, int>);
   static_assert(!std::is_trivially_assignable_v<const int&, int>);
+  static_assert(std::is_unsigned_v<std::make_unsigned_t<wchar_t>>);
+  static_assert(sizeof(std::make_unsigned_t<wchar_t>) == sizeof(wchar_t));
+  static_assert(std::is_signed_v<std::make_signed_t<char16_t>>);
+  static_assert(sizeof(std::make_signed_t<char16_t>) == sizeof(char16_t));
   static_assert(std::alignment_of<int>::value == alignof(int));
   static_assert(std::alignment_of_v<int> == alignof(int));
   static_assert(std::negation_v<std::false_type>);

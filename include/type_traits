@@ -562,6 +562,18 @@ template <> struct make_signed<unsigned long long> {
 template <> struct make_signed<char> {
   using type = signed char;
 };
+template <> struct make_signed<wchar_t> {
+  using type = conditional_t<sizeof(wchar_t) == sizeof(int), int, long>;
+};
+template <> struct make_signed<char8_t> {
+  using type = signed char;
+};
+template <> struct make_signed<char16_t> {
+  using type = conditional_t<sizeof(char16_t) == sizeof(short), short, int>;
+};
+template <> struct make_signed<char32_t> {
+  using type = conditional_t<sizeof(char32_t) == sizeof(int), int, long>;
+};
 template <typename T> using make_signed_t = typename make_signed<T>::type;
 
 template <typename T> struct make_unsigned {
@@ -584,6 +596,21 @@ template <> struct make_unsigned<long long> {
 };
 template <> struct make_unsigned<char> {
   using type = unsigned char;
+};
+template <> struct make_unsigned<wchar_t> {
+  using type = conditional_t<sizeof(wchar_t) == sizeof(unsigned int),
+                             unsigned int, unsigned long>;
+};
+template <> struct make_unsigned<char8_t> {
+  using type = unsigned char;
+};
+template <> struct make_unsigned<char16_t> {
+  using type = conditional_t<sizeof(char16_t) == sizeof(unsigned short),
+                             unsigned short, unsigned int>;
+};
+template <> struct make_unsigned<char32_t> {
+  using type = conditional_t<sizeof(char32_t) == sizeof(unsigned int),
+                             unsigned int, unsigned long>;
 };
 template <typename T> using make_unsigned_t = typename make_unsigned<T>::type;
 
