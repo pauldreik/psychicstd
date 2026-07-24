@@ -11,6 +11,9 @@ int main() {
   psyassert(bits[0] && !bits[1]);
   static_assert(std::is_nothrow_assignable<decltype(bits[0]), bool>::value);
 
+  const std::bitset<6> text_bits("101010");
+  psyassert(text_bits == std::bitset<6>(42));
+
   std::bitset<633> large;
   large.set(632);
   psyassert(large.test(632));

@@ -32,6 +32,15 @@ public:
 
   constexpr bitset() = default;
   constexpr bitset(unsigned long long value) : words_{value} { trim(); }
+  constexpr explicit bitset(const char* str) {
+    size_t length = 0;
+    while (str[length] != '\0')
+      ++length;
+    const size_t used = length < N ? length : N;
+    for (size_t i = 0; i < used; ++i)
+      if (str[length - i - 1] == '1')
+        words_[i / word_bits] |= 1ULL << (i % word_bits);
+  }
 
   constexpr bool operator[](size_t pos) const noexcept {
     return (words_[pos / word_bits] & (1ULL << (pos % word_bits))) != 0;
