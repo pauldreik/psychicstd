@@ -373,6 +373,7 @@ def _abseil(full: bool) -> Project:
                     "absl_ostringstream_test",
                     "absl_resize_uninitialized_test",
                     "absl_compare_test",
+                    "absl_container_memory_test",
                     "absl_absl_exception_safety_testing_test",
                     "absl_ascii_test",
                     "absl_barrier_test",
@@ -659,7 +660,7 @@ def _abseil(full: bool) -> Project:
         ),
         comment=(
             "Builds all 105 library targets that currently compile with "
-            "psychicstd and runs all 189 upstream tests that both build and pass."
+            "psychicstd and runs all 190 upstream tests that both build and pass."
             if full
             else "Builds absl/base and runs eight small upstream base tests."
         ),
