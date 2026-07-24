@@ -71,6 +71,8 @@ int main() {
   psyassert(2 >= high);
 
   std::optional<aggregate> aggregate_value;
+  std::optional<aggregate> constructed_aggregate{{1, 2}};
+  psyassert(constructed_aggregate->second == 2);
   aggregate_value = {3, 4};
   psyassert(aggregate_value->first == 3);
   aggregate_value = {5, 6};

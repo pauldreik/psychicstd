@@ -51,8 +51,11 @@ public:
       o.reset();
     }
   }
+  constexpr optional(const T& value) : val_(value), has_(true) {}
+  constexpr optional(T&& value) : val_(static_cast<T&&>(value)), has_(true) {}
   template <typename U = T>
-    requires(!is_same_v<remove_cvref_t<U>, optional>)
+    requires(!is_same_v<remove_cvref_t<U>, optional> &&
+             !is_same_v<remove_cvref_t<U>, T>)
   // forward
   constexpr optional(U&& v) : val_(static_cast<U&&>(v)), has_(true) {}
   template <typename... Args>
