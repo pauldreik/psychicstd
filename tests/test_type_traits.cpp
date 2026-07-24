@@ -31,6 +31,8 @@ int main() {
   static_assert(std::is_trivially_constructible_v<int>);
   static_assert(std::is_trivially_constructible_v<int, int>);
   static_assert(!std::is_trivially_constructible_v<int, int, int>);
+  static_assert(std::is_trivially_assignable_v<int&, int>);
+  static_assert(!std::is_trivially_assignable_v<const int&, int>);
   static_assert(std::alignment_of<int>::value == alignof(int));
   static_assert(std::alignment_of_v<int> == alignof(int));
   static_assert(std::negation_v<std::false_type>);
