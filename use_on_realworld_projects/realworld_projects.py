@@ -266,10 +266,20 @@ def _abseil() -> Project:
     version = "20260107.1"
     url = f"https://github.com/abseil/abseil-cpp/archive/refs/tags/{version}.tar.gz"
     checksum = "4314e2a7cbac89cac25a2f2322870f343d81579756ceff7f431803c2c9090195"
+    googletest_version = "1.17.0"
+    googletest_url = (
+        "https://github.com/google/googletest/releases/download/"
+        f"v{googletest_version}/googletest-{googletest_version}.tar.gz"
+    )
+    googletest_checksum = (
+        "65fab701d9829d38cb77c14acdc431d2108bfdbf8979e40eb8ae567edf10b27c"
+    )
 
     def build(tc: Toolchain) -> dict[str, float]:
         tarball = RW_DIR / f"abseil-cpp-{version}.tar.gz"
         _fetch(url, tarball, checksum)
+        googletest_tarball = RW_DIR / f"googletest-{googletest_version}.tar.gz"
+        _fetch(googletest_url, googletest_tarball, googletest_checksum)
 
         with tempfile.TemporaryDirectory(
             prefix="rw-abseil-", ignore_cleanup_errors=True
@@ -278,6 +288,9 @@ def _abseil() -> Project:
             with tarfile.open(tarball) as t:
                 t.extractall(work)
             src = work / f"abseil-cpp-{version}"
+            with tarfile.open(googletest_tarball) as t:
+                t.extractall(work)
+            googletest_src = work / f"googletest-{googletest_version}"
 
             env = _env(tc)
             configure = [
@@ -295,11 +308,11 @@ def _abseil() -> Project:
                 "-DCMAKE_CXX_STANDARD=20",
                 "-DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY",
                 "-DABSL_BUILD_TESTING=ON",
-                "-DABSL_USE_GOOGLETEST_HEAD=ON",
+                "-DABSL_LOCAL_GOOGLETEST_DIR=" + str(googletest_src),
                 "-DBUILD_SHARED_LIBS=OFF",
             ]
             jobs = f"-j{tc.jobs}"
-            base_targets = [
+            base_library_targets = [
                 "base",
                 "raw_logging_internal",
                 "spinlock_wait",
@@ -309,7 +322,7 @@ def _abseil() -> Project:
                 "strerror",
                 "tracing_internal",
             ]
-            base_targets += [
+            base_test_targets = [
                 "absl_atomic_hook_test",
                 "absl_attributes_test",
                 "absl_bit_cast_test",
@@ -319,20 +332,22 @@ def _abseil() -> Project:
                 "absl_endian_test",
                 "absl_no_destructor_test",
             ]
-            base_tests = [
-                target for target in base_targets if target.startswith("absl_")
-            ]
-            test_filter = "^(" + "|".join(base_tests) + ")$"
-
-            def compile_base() -> float:
-                t0 = time.monotonic()
-                for target in base_targets:
-                    _run(["ninja", "-C", "build", target, jobs], src, env)
-                return (time.monotonic() - t0) * 1000.0
+            test_filter = "^(" + "|".join(base_test_targets) + ")$"
 
             return {
                 "configure": _timed(configure, src, env),
-                "compile": compile_base(),
+                "compile": _timed(
+                    [
+                        "ninja",
+                        "-C",
+                        "build",
+                        jobs,
+                        *base_library_targets,
+                        *base_test_targets,
+                    ],
+                    src,
+                    env,
+                ),
                 "run tests": _timed(
                     [
                         "ctest",
@@ -352,7 +367,7 @@ def _abseil() -> Project:
         version=version,
         build=build,
         expected_seconds={"debug": 14, "release": 19},
-        comment="Builds and runs Abseil's upstream absl/base tests.",
+        comment="Builds absl/base and runs eight small upstream base tests.",
     )
 
 
