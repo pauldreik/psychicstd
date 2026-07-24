@@ -376,6 +376,7 @@ def _abseil(full: bool) -> Project:
                     "absl_absl_exception_safety_testing_test",
                     "absl_ascii_test",
                     "absl_barrier_test",
+                    "absl_bind_front_test",
                     "absl_bits_test",
                     "absl_blocking_counter_test",
                     "absl_borrowed_fixup_buffer_test",
@@ -459,6 +460,7 @@ def _abseil(full: bool) -> Project:
                     "absl_flags_reflection_test",
                     "absl_flags_sequence_lock_test",
                     "absl_flags_usage_test",
+                    "absl_function_ref_test",
                     "absl_hash_function_defaults_test",
                     "absl_layout_test",
                     "absl_leak_check_test",
@@ -492,6 +494,7 @@ def _abseil(full: bool) -> Project:
                     "absl_random_zipf_distribution_test",
                     "absl_raw_hash_set_allocator_test",
                     "absl_raw_hash_set_test",
+                    "absl_requires_test",
                     "absl_sample_element_size_test",
                     "absl_scoped_mock_log_test",
                     "absl_span_test",
@@ -656,7 +659,7 @@ def _abseil(full: bool) -> Project:
         ),
         comment=(
             "Builds all 105 library targets that currently compile with "
-            "psychicstd and runs all 186 upstream tests that both build and pass."
+            "psychicstd and runs all 189 upstream tests that both build and pass."
             if full
             else "Builds absl/base and runs eight small upstream base tests."
         ),
