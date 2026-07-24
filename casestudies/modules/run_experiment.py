@@ -73,7 +73,7 @@ def measure(label, flags, workdir):
 
 def main():
     ver = subprocess.run(
-        [CXX, "--version"], capture_output=True, text=True
+        [CXX, "--version"], capture_output=True, text=True, check=False
     ).stdout.splitlines()[0]
     print(f"compiler: {ver}")
     print(f"standard: {STD}, reps: {N}\n")

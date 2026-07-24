@@ -154,11 +154,11 @@ def _tokens(line: str) -> list[str]:
 
 def should_skip(path: Path) -> bool:
     stem = path.stem
-    if stem.endswith(".verify") or stem.endswith(".fail"):
+    if stem.endswith((".verify", ".fail")):
         return True
     if path.suffix != ".cpp":
         return True
-    if not (stem.endswith(".pass") or stem.endswith(".compile.pass")):
+    if not (stem.endswith((".pass", ".compile.pass"))):
         return True
     text = path.read_text(errors="replace")
     for m in _RE_UNSUPPORTED.finditer(text):
@@ -182,7 +182,12 @@ def run_cmd(
 ) -> tuple[bool, str]:
     try:
         r = subprocess.run(
-            cmd, capture_output=True, text=True, timeout=timeout, env=env
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            env=env,
+            check=False,
         )
         return r.returncode == 0, (r.stdout + r.stderr).strip()
     except (subprocess.TimeoutExpired, FileNotFoundError) as e:
@@ -246,7 +251,9 @@ def try_compile_run(
         ]
         t0 = time.perf_counter()
         try:
-            r = subprocess.run(cmd, capture_output=True, timeout=TEST_TIMEOUT)
+            r = subprocess.run(
+                cmd, capture_output=True, timeout=TEST_TIMEOUT, check=False
+            )
         except (subprocess.TimeoutExpired, FileNotFoundError):
             return "cfail", None
         compile_ms = (time.perf_counter() - t0) * 1000
@@ -641,7 +648,9 @@ def main() -> None:
     out = REPO_ROOT / ("compliance.sanitize.md" if SANITIZE else "compliance.md")
     with open(out, "w") as f:
         f.write("# Compliance\n\n")
-        f.write(f"Last updated: {datetime.now().strftime('%Y-%m-%d %H:%M')}\n\n")
+        f.write(
+            f"Last updated: {datetime.now().astimezone().strftime('%Y-%m-%d %H:%M')}\n\n"
+        )
 
         f.write("## Conformance\n\n")
         f.write(

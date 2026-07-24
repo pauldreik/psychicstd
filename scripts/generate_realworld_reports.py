@@ -32,7 +32,7 @@ def _git_toplevel() -> Path:
 
 REPO = _git_toplevel()
 sys.path.insert(0, str(REPO / "use_on_realworld_projects"))
-import realworld_projects as rw  # noqa: E402
+import realworld_projects as rw
 
 PERF_SCRIPT = REPO / "scripts" / "compare_realworld_performance.py"
 README = REPO / "README.md"

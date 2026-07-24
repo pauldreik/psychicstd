@@ -17,8 +17,8 @@ It is not complete. It is not fully compliant. But it is good enough to quickly 
 | [OpenCV](https://opencv.org/) | [1.83x](use_on_realworld_projects/opencv_speed_report.md) | Builds the core and imgproc modules and their tests. |
 | [rapidjson](https://github.com/Tencent/rapidjson/) | [1.26x](use_on_realworld_projects/rapidjson_speed_report.md) | Not using much of the standard library, little speedup expected. |
 | [rdfind](https://rdfind.pauldreik.se/) | [4.16x](use_on_realworld_projects/rdfind_speed_report.md) | Runs in psychic strict mode, see "Compatibility levels" further down this document. Strict mode uncovered code relying on transitive includes. |
-| [simdutf](https://github.com/simdutf/simdutf) | [1.64x](use_on_realworld_projects/simdutf_speed_report.md) | Mostly SIMD intrinsics. [Strict mode uncovered missing includes](https://github.com/simdutf/simdutf/pull/998); the pinned test suite currently runs in drop-in mode because a helper omits `<cstdlib>`. |
-| [wordcounter](benchmarks/compile_time/bench_wordcounter.cpp)| [4.0x](speed.md) | [demo program using STL](benchmarks/compile_time/bench_wordcounter.cpp). Counts word occurrences in text files. |
+| [simdutf](https://github.com/simdutf/simdutf) | [1.69x](use_on_realworld_projects/simdutf_speed_report.md) | Mostly SIMD intrinsics. [Strict mode uncovered missing includes](https://github.com/simdutf/simdutf/pull/998). Strict mode is faster than drop-in mode: 1.69x vs 1.67x|
+| [wordcounter](benchmarks/compile_time/bench_wordcounter.cpp)| [5.56x](speed.md) | [demo program using STL](benchmarks/compile_time/bench_wordcounter.cpp). Counts word occurrences in text files. |
 
 Find the scripts validating the build and generating the above number in the [use_on_realworld_projects/](use_on_realworld_projects) directory. Platform-wide measurements are available for [Linux](speed.md) and [macOS](speed_macos.md), including separate process-startup results for [Linux](startup.md) and [macOS](startup_macos.md).
 

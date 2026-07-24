@@ -26,7 +26,12 @@ WARMUP = 20
 
 def run_once_ms(binary: Path) -> float:
     start = time.perf_counter()
-    subprocess.run([str(binary)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    subprocess.run(
+        [str(binary)],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        check=False,
+    )
     return (time.perf_counter() - start) * 1000
 
 
@@ -47,7 +52,10 @@ def paired_samples_ms(
 def shared_libs(binary: Path) -> list[str]:
     if sys.platform == "darwin":
         out = subprocess.run(
-            ["otool", "-L", str(binary)], capture_output=True, text=True
+            ["otool", "-L", str(binary)],
+            capture_output=True,
+            text=True,
+            check=False,
         ).stdout
         # First line is the binary itself; the rest are "\t/path/lib.dylib (...)".
         libs = []
@@ -57,7 +65,9 @@ def shared_libs(binary: Path) -> list[str]:
                 continue
             libs.append(line.split()[0].rsplit("/", 1)[-1])
         return sorted(libs)
-    out = subprocess.run(["ldd", str(binary)], capture_output=True, text=True).stdout
+    out = subprocess.run(
+        ["ldd", str(binary)], capture_output=True, text=True, check=False
+    ).stdout
     libs = []
     for line in out.splitlines():
         line = line.strip()
@@ -124,14 +134,21 @@ def main() -> None:
             "shared-library dependency. The table lists shared libraries reported by "
             "the platform dependency tool.\n\n"
         )
-        f.write(f"Last updated: {datetime.now().strftime('%Y-%m-%d %H:%M')}\n\n")
+        f.write(
+            f"Last updated: {datetime.now().astimezone().strftime('%Y-%m-%d %H:%M')}\n\n"
+        )
         f.write("| | median exec-to-exit | shared libraries |\n")
         f.write("|--|---:|---|\n")
         f.write(f"| system | {sys_ms:.3f} ms | {', '.join(sys_libs)} |\n")
         f.write(f"| psychicstd | {psy_ms:.3f} ms | {', '.join(psy_libs)} |\n")
         f.write(f"\nSpeedup: **{ratio:.2f}x**\n")
 
-    if subprocess.run(["which", "mdformat"], capture_output=True).returncode == 0:
+    if (
+        subprocess.run(
+            ["which", "mdformat"], capture_output=True, check=False
+        ).returncode
+        == 0
+    ):
         subprocess.run(["mdformat", startup_md], check=True)
     print(f"\nUpdated {startup_md}")
 

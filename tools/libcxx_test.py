@@ -90,11 +90,11 @@ def should_skip(path: Path) -> tuple[bool, str]:
     stem = path.stem
 
     # Only run .pass.cpp and .compile.pass.cpp
-    if stem.endswith(".verify") or stem.endswith(".fail"):
+    if stem.endswith((".verify", ".fail")):
         return True, "compile-failure test"
     if path.suffix != ".cpp":
         return True, "not a .cpp file"
-    if not (stem.endswith(".pass") or stem.endswith(".compile.pass")):
+    if not (stem.endswith((".pass", ".compile.pass"))):
         return True, f"unknown pattern '{stem}'"
 
     text = path.read_text(errors="replace")
@@ -136,7 +136,9 @@ CXX = os.environ.get("CXX", "g++")
 
 def run_cmd(cmd: list[str], timeout: int = 20) -> tuple[bool, str]:
     try:
-        r = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+        r = subprocess.run(
+            cmd, capture_output=True, text=True, timeout=timeout, check=False
+        )
         return r.returncode == 0, (r.stdout + r.stderr).strip()
     except subprocess.TimeoutExpired:
         return False, f"timeout after {timeout}s"
@@ -264,7 +266,7 @@ def main() -> None:
         is_exec = not src.stem.endswith(".compile.pass")
         xf = extra_flags(src.read_text(errors="replace"))
 
-        sys_status, sys_detail = try_compile_run(src, sys_flags, xf, is_exec)
+        sys_status, _sys_detail = try_compile_run(src, sys_flags, xf, is_exec)
 
         if sys_status != "pass":
             # System STL couldn't compile/run this test — not a useful baseline
