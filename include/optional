@@ -4,6 +4,7 @@
 #include <initializer_list>
 #include <memory>
 #include <type_traits>
+#include <utility>
 
 namespace std {
 
@@ -54,6 +55,13 @@ public:
     requires(!is_same_v<remove_cvref_t<U>, optional>)
   // forward
   constexpr optional(U&& v) : val_(static_cast<U&&>(v)), has_(true) {}
+  template <typename... Args>
+  constexpr explicit optional(in_place_t, Args&&... args)
+      : val_(static_cast<Args&&>(args)...), has_(true) {}
+  template <typename U, typename... Args>
+  constexpr explicit optional(in_place_t, initializer_list<U> values,
+                              Args&&... args)
+      : val_(values, static_cast<Args&&>(args)...), has_(true) {}
 
   constexpr ~optional() { reset(); }
 
@@ -206,6 +214,46 @@ template <typename T, typename U>
   requires(!__is_optional<remove_cv_t<remove_reference_t<U>>>::value)
 constexpr bool operator!=(const U& a, const optional<T>& b) {
   return !(a == b);
+}
+template <typename T, typename U>
+  requires(!__is_optional<remove_cv_t<remove_reference_t<U>>>::value)
+constexpr bool operator<(const optional<T>& a, const U& b) {
+  return !a.has_value() || *a < b;
+}
+template <typename T, typename U>
+  requires(!__is_optional<remove_cv_t<remove_reference_t<U>>>::value)
+constexpr bool operator<(const U& a, const optional<T>& b) {
+  return b.has_value() && a < *b;
+}
+template <typename T, typename U>
+  requires(!__is_optional<remove_cv_t<remove_reference_t<U>>>::value)
+constexpr bool operator>(const optional<T>& a, const U& b) {
+  return b < a;
+}
+template <typename T, typename U>
+  requires(!__is_optional<remove_cv_t<remove_reference_t<U>>>::value)
+constexpr bool operator>(const U& a, const optional<T>& b) {
+  return b < a;
+}
+template <typename T, typename U>
+  requires(!__is_optional<remove_cv_t<remove_reference_t<U>>>::value)
+constexpr bool operator<=(const optional<T>& a, const U& b) {
+  return !(b < a);
+}
+template <typename T, typename U>
+  requires(!__is_optional<remove_cv_t<remove_reference_t<U>>>::value)
+constexpr bool operator<=(const U& a, const optional<T>& b) {
+  return !(b < a);
+}
+template <typename T, typename U>
+  requires(!__is_optional<remove_cv_t<remove_reference_t<U>>>::value)
+constexpr bool operator>=(const optional<T>& a, const U& b) {
+  return !(a < b);
+}
+template <typename T, typename U>
+  requires(!__is_optional<remove_cv_t<remove_reference_t<U>>>::value)
+constexpr bool operator>=(const U& a, const optional<T>& b) {
+  return !(a < b);
 }
 
 template <typename T> constexpr optional<decay_t<T>> make_optional(T&& v) {
