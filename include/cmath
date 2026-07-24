@@ -181,6 +181,20 @@ using ::nextafter;
 inline long double nextafter(long double x, long double y) {
   return ::nextafterl(x, y);
 }
+inline double nextafter(float x, double y) { return ::nextafter(x, y); }
+inline double nextafter(double x, float y) { return ::nextafter(x, y); }
+inline long double nextafter(float x, long double y) {
+  return ::nextafterl(x, y);
+}
+inline long double nextafter(long double x, float y) {
+  return ::nextafterl(x, y);
+}
+inline long double nextafter(double x, long double y) {
+  return ::nextafterl(x, y);
+}
+inline long double nextafter(long double x, double y) {
+  return ::nextafterl(x, y);
+}
 using ::nextafterf;
 using ::nextafterl;
 using ::nexttoward;

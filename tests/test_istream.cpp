@@ -42,6 +42,11 @@ int main() {
   invalid_float >> d;
   psyassert(invalid_float.fail());
 
+  std::istringstream long_double_input("1.25");
+  long double ld = 0;
+  long_double_input >> ld;
+  psyassert(ld == 1.25L);
+
 #if defined(PSYCHICSTD_TEST_PSYCHICSTD)
   // strtod may report ERANGE for a valid nonzero subnormal.
   std::istringstream smallest_float("4.9406564584124654e-324");

@@ -202,6 +202,7 @@ public:
   basic_istream& operator>>(unsigned long long& v) { return extract_int(v); }
   basic_istream& operator>>(float& v) { return extract_float(v); }
   basic_istream& operator>>(double& v) { return extract_float(v); }
+  basic_istream& operator>>(long double& v) { return extract_float(v); }
   basic_istream& operator>>(signed char& c) {
     Char ch{};
     if (operator>>(ch))
@@ -422,7 +423,12 @@ private:
     }
     char* end = nullptr;
     errno = 0;
-    v = (V)::strtod(buf, &end);
+    if constexpr (__is_same(V, float))
+      v = ::strtof(buf, &end);
+    else if constexpr (__is_same(V, long double))
+      v = ::strtold(buf, &end);
+    else
+      v = ::strtod(buf, &end);
     if (end == buf || (errno == ERANGE && (v == 0 || !__builtin_isfinite(v))))
       this->setstate(ios_base::failbit);
     else if (end < buf + n) {
