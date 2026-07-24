@@ -262,7 +262,7 @@ def _catch2() -> Project:
 # --- abseil ------------------------------------------------------------
 
 
-def _abseil() -> Project:
+def _abseil(full: bool) -> Project:
     version = "20260107.1"
     url = f"https://github.com/abseil/abseil-cpp/archive/refs/tags/{version}.tar.gz"
     checksum = "4314e2a7cbac89cac25a2f2322870f343d81579756ceff7f431803c2c9090195"
@@ -332,19 +332,27 @@ def _abseil() -> Project:
                 "absl_endian_test",
                 "absl_no_destructor_test",
             ]
-            test_filter = "^(" + "|".join(base_test_targets) + ")$"
+            additional_test_targets = (
+                [
+                    "absl_algorithm_test",
+                    "absl_constexpr_testing_test",
+                ]
+                if full
+                else []
+            )
+            test_targets = [*base_test_targets, *additional_test_targets]
+            additional_library_targets = ["int128"] if full else []
+            compile_targets = [
+                *base_library_targets,
+                *additional_library_targets,
+                *test_targets,
+            ]
+            test_filter = ["-R", "^(" + "|".join(test_targets) + ")$"]
 
             return {
                 "configure": _timed(configure, src, env),
                 "compile": _timed(
-                    [
-                        "ninja",
-                        "-C",
-                        "build",
-                        jobs,
-                        *base_library_targets,
-                        *base_test_targets,
-                    ],
+                    ["ninja", "-C", "build", jobs, *compile_targets],
                     src,
                     env,
                 ),
@@ -354,8 +362,7 @@ def _abseil() -> Project:
                         "--test-dir",
                         "build",
                         "--output-on-failure",
-                        "-R",
-                        test_filter,
+                        *test_filter,
                         jobs,
                     ],
                     src,
@@ -364,10 +371,17 @@ def _abseil() -> Project:
             }
 
     return Project(
-        version=version,
+        version=f"{version} (full)" if full else version,
         build=build,
-        expected_seconds={"debug": 14, "release": 19},
-        comment="Builds absl/base and runs eight small upstream base tests.",
+        expected_seconds=(
+            {"debug": 25, "release": 35} if full else {"debug": 14, "release": 19}
+        ),
+        comment=(
+            "Builds Abseil's base, algorithm, meta, and numeric components "
+            "and runs their currently supported upstream tests."
+            if full
+            else "Builds absl/base and runs eight small upstream base tests."
+        ),
     )
 
 
@@ -1323,7 +1337,8 @@ def _opencv() -> Project:
 
 
 PROJECTS: dict[str, Project] = {
-    "abseil": _abseil(),
+    "abseil": _abseil(full=False),
+    "abseil-full": _abseil(full=True),
     "boost-asio": _boost_asio(),
     "catch2": _catch2(),
     "cmake": _cmake(),
