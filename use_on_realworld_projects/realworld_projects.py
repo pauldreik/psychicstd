@@ -1025,15 +1025,13 @@ def _rdfind() -> Project:
 # --- simdutf -----
 
 
-def _simdutf() -> Project:
-    version = "master260712"  #
-    commithash = "c04f2db9eee13fbd1b6dd1c2b2fb52374738dd4d"
+def _simdutf(strict: bool, strict_label: str) -> Project:
+    version = "master260724"  # compaitibility fixes have been merged, but are not yet in a release
+    commithash = "f542909a257bb3a9947f8e9fcaaba68a3e1f3b8b"
     url = f"https://github.com/simdutf/simdutf/archive/{commithash}.tar.gz"
-    checksum = "face6b2056da68df9d758ce0ac4cca91df90ab1c668512fa541eba4cd6668686"
-    # DROPIN: tests/helpers/random_utf32.cpp calls ::abort without including
-    # <cstdlib> (an upstream include-what-you-use bug; we never patch pinned
-    # third-party sources), so strict mode cannot compile the test helpers.
-    psychicstrictlevel = 2
+    checksum = "fc6053688d67dc6b90f4dfaea12c06d8fd8254fc56fe62b9ef00942ef19cdf33"
+    compatibility_level = 0 if strict else 2
+    label = f"{version} ({strict_label})"
 
     def build(tc: Toolchain) -> dict[str, float]:
         tarball = RW_DIR / f"simdutf-{commithash}.tar.gz"
@@ -1070,7 +1068,7 @@ def _simdutf() -> Project:
                 "-DSIMDUTF_CXX_STANDARD=20",
                 "-DCMAKE_CXX_FLAGS="
                 + tc.cxxflags
-                + f" -D_PSYCHICSTD_COMPATIBILITY_LEVEL={psychicstrictlevel}",
+                + f" -D_PSYCHICSTD_COMPATIBILITY_LEVEL={compatibility_level}",
                 "-DCMAKE_EXE_LINKER_FLAGS=" + tc.ldflags,
                 "-DCMAKE_CXX_STANDARD_LIBRARIES=" + libs,
                 "-DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY",
@@ -1096,7 +1094,7 @@ def _simdutf() -> Project:
             }
 
     return Project(
-        version=version,
+        version=label,
         build=build,
         expected_seconds={"debug": 27, "release": 20},
         phases=("compile", "run tests"),
@@ -1323,5 +1321,6 @@ PROJECTS: dict[str, Project] = {
     "opencv": _opencv(),
     "rapidjson": _rapidjson(),
     "rdfind": _rdfind(),
-    "simdutf": _simdutf(),
+    "simdutf-dropin": _simdutf(strict=False, strict_label="drop-in"),
+    "simdutf": _simdutf(strict=True, strict_label="strict"),
 }
