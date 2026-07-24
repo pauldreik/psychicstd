@@ -6,6 +6,7 @@ It is not complete. It is not fully compliant. But it is good enough to quickly 
 
 | Project | Compile time speedup | comment |
 |-------------------------------------------------------------|-----------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------|
+| [Abseil](https://abseil.io/) | [2.28x](use_on_realworld_projects/abseil_speed_report.md) | Builds `absl/base` and eight small upstream base tests. |
 | [Boost.Asio](https://www.boost.org/libs/asio/) | [2.15x](use_on_realworld_projects/boost-asio_speed_report.md) | |
 | [catch2](https://github.com/catchorg/Catch2) | [3.63x](use_on_realworld_projects/catch2_speed_report.md) | |
 | [cmake](https://cmake.org/) | [3.26x](use_on_realworld_projects/cmake_speed_report.md) | Uses a compiler wrapper to build. |
@@ -332,7 +333,7 @@ The default build covers the library itself — no third-party code, no network 
 
 ### Testing on real-world projects
 
-Correctness in practice is verified by compiling — and running the test suites of — actual third-party projects against psychicstd. The scripts in [`use_on_realworld_projects/`](use_on_realworld_projects/) clone, build, and run Boost.Asio, Catch2, cppcheck, Eigen, fmt, GoogleTest, nlohmann JSON, OpenCV, RapidJSON, rdfind, and simdutf. The CMake recipe builds its supported upstream KWSys and utility targets. These recipes produce the speedup reports linked at the top of this README.
+Correctness in practice is verified by compiling — and running the test suites of — actual third-party projects against psychicstd. The scripts in [`use_on_realworld_projects/`](use_on_realworld_projects/) clone, build, and run Abseil, Boost.Asio, Catch2, cppcheck, Eigen, fmt, GoogleTest, nlohmann JSON, OpenCV, RapidJSON, rdfind, and simdutf. The CMake recipe builds its supported upstream KWSys and utility targets. These recipes produce the speedup reports linked at the top of this README.
 
 ### Benchmarks
 
