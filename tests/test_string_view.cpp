@@ -9,6 +9,11 @@
   } while (0)
 
 int main() {
+#if !defined(PSYCHICSTD_TEST_PSYCHICSTD) ||                                    \
+    _PSYCHICSTD_COMPATIBILITY_LEVEL >= _PSYCHICSTD_COMPAT_DROPIN
+  psyassert(std::min(2, 3) == 2);
+#endif
+
   std::string_view sv = "hello";
   psyassert(sv.size() == 5);
   constexpr std::wstring_view wide = L"wide";

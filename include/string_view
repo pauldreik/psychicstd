@@ -6,6 +6,9 @@
 #include <compare>
 #include <cstddef>
 #include <iosfwd>
+#if _PSYCHICSTD_COMPATIBILITY_LEVEL >= _PSYCHICSTD_COMPAT_DROPIN
+#include <__psychicstd_minmax>
+#endif
 namespace std {
 
 template <typename Char, typename Traits = char_traits<Char>>
