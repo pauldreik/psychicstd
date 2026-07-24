@@ -2,6 +2,10 @@
 #include <cstddef>
 #include <exception>
 
+namespace std {
+enum class align_val_t : size_t {};
+}
+
 // placement new is a language built-in; the header just declares the
 // signatures. global operator new/delete are provided by the runtime
 // (libstdc++/libc).

@@ -31,6 +31,29 @@ struct resize_value {
   }
 };
 
+struct operator_hijacker {
+  template <typename T> friend void operator&(T&&) = delete;
+  template <typename T, typename U> friend void operator,(T&&, U&&) = delete;
+};
+
+template <typename T> struct fancy_pointer {
+  using element_type = T;
+  template <typename U> using rebind = fancy_pointer<U>;
+};
+
+template <typename T> struct fancy_allocator {
+  using value_type = T;
+  using pointer = fancy_pointer<T>;
+  using const_pointer = fancy_pointer<const T>;
+
+  [[nodiscard]] pointer allocate(std::size_t);
+  void deallocate(pointer, std::size_t);
+};
+
+using fancy_vector = std::vector<int, fancy_allocator<int>>;
+static_assert(__is_same(fancy_vector::pointer, fancy_pointer<int>));
+static_assert(__is_same(fancy_vector::const_pointer, fancy_pointer<const int>));
+
 int main() {
   std::vector<char> zeroes(32);
   for (char c : zeroes)
@@ -80,4 +103,10 @@ int main() {
   psyassert(resize_value::moves < 512);
   for (const auto& item : resized_with_value)
     psyassert(item.n == 42);
+
+  std::vector<operator_hijacker> hijackers;
+  std::vector<operator_hijacker> other_hijackers;
+  hijackers = other_hijackers;
+  hijackers = static_cast<decltype(other_hijackers)&&>(other_hijackers);
+  hijackers.insert(hijackers.begin(), hijackers.begin(), hijackers.end());
 }

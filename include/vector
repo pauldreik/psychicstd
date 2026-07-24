@@ -27,8 +27,8 @@ public:
   using difference_type = ptrdiff_t;
   using reference = T&;
   using const_reference = const T&;
-  using pointer = T*;
-  using const_pointer = const T*;
+  using pointer = typename allocator_traits<Alloc>::pointer;
+  using const_pointer = typename allocator_traits<Alloc>::const_pointer;
   using iterator = __vec_iter<T>;
   using const_iterator = __vec_iter<const T>;
   using reverse_iterator = std::reverse_iterator<iterator>;
@@ -401,7 +401,7 @@ public:
   }
 
   constexpr vector& operator=(const vector& o) {
-    if (this == &o)
+    if (this == std::addressof(o))
       return *this;
     using traits = allocator_traits<Alloc>;
     if constexpr (traits::propagate_on_container_copy_assignment::value) {
@@ -421,7 +421,7 @@ public:
   constexpr vector& operator=(vector&& o) noexcept(
       allocator_traits<Alloc>::propagate_on_container_move_assignment::value ||
       allocator_traits<Alloc>::is_always_equal::value) {
-    if (this == &o)
+    if (this == std::addressof(o))
       return *this;
     using traits = allocator_traits<Alloc>;
     if constexpr (traits::propagate_on_container_move_assignment::value) {
