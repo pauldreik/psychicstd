@@ -1,7 +1,9 @@
 #include "psyassert.h"
 #include <memory>
 #include <string>
+#define I 42
 #include <variant>
+#undef I
 
 #if __cpp_lib_variant < 201606L
 #error "__cpp_lib_variant must advertise the C++17 baseline"
