@@ -7,6 +7,18 @@ int main() {
   std::minstd_rand0 one_seed(1);
   psyassert(zero_seed() == 16807);
   psyassert(one_seed() == 16807);
+  zero_seed.seed();
+  zero_seed.discard(9999);
+  psyassert(zero_seed() == 1043618065);
+
+  using full_width_engine = std::linear_congruential_engine<unsigned, 0, 0, 0>;
+  full_width_engine full_width;
+  full_width();
+
+  unsigned seed_values[]{3, 5, 7};
+  std::seed_seq lcg_seed(seed_values, seed_values + 3);
+  std::linear_congruential_engine<unsigned, 5, 7, 11> seeded(lcg_seed);
+  psyassert(seeded == decltype(seeded)(4));
 
   std::random_device rd;
   std::random_device token_rd("/dev/urandom");

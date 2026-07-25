@@ -67,7 +67,7 @@ public:
   static constexpr result_type default_seed = 1;
 
   explicit linear_congruential_engine(result_type seed = default_seed)
-      : state_(seed % m) {
+      : state_(_reduce(seed)) {
     if constexpr (c == 0)
       if (state_ == 0)
         state_ = 1;
@@ -78,7 +78,7 @@ public:
     seed(seq);
   }
   void seed(result_type s = default_seed) {
-    state_ = s % m;
+    state_ = _reduce(s);
     if constexpr (c == 0)
       if (state_ == 0)
         state_ = 1;
@@ -86,20 +86,27 @@ public:
   template <typename SSeq,
             typename = enable_if_t<!is_convertible_v<SSeq, result_type>>>
   void seed(SSeq& seq) {
-    constexpr int word_count = m > 0xffffffffULL ? 2 : 1;
+    constexpr int word_count = m == 0 ? (sizeof(result_type) > 4 ? 2 : 1)
+                                      : (m > 0xffffffffULL ? 2 : 1);
     uint32_t words[word_count + 3]{};
     seq.generate(words, words + word_count + 3);
     result_type value = words[3];
     if constexpr (word_count > 1)
       value |= static_cast<result_type>(words[4]) << 32;
-    state_ = value % m;
+    state_ = _reduce(value);
     if constexpr (c == 0)
       if (state_ == 0)
         state_ = 1;
   }
 
   result_type operator()() {
-    state_ = (a * state_ + c) % m;
+    using wide_type = unsigned __int128;
+    wide_type next =
+        static_cast<wide_type>(a) * state_ + static_cast<wide_type>(c);
+    if constexpr (m == 0)
+      state_ = static_cast<result_type>(next);
+    else
+      state_ = static_cast<result_type>(next % m);
     return state_;
   }
   void discard(unsigned long long count) {
@@ -107,13 +114,22 @@ public:
       operator()();
   }
   static constexpr result_type min() { return c == 0 ? 1 : 0; }
-  static constexpr result_type max() { return m - 1; }
+  static constexpr result_type max() {
+    return m == 0 ? static_cast<result_type>(-1) : m - 1;
+  }
   friend bool operator==(const linear_congruential_engine& lhs,
                          const linear_congruential_engine& rhs) {
     return lhs.state_ == rhs.state_;
   }
 
 private:
+  static constexpr result_type _reduce(result_type value) {
+    if constexpr (m == 0)
+      return value;
+    else
+      return value % m;
+  }
+
   result_type state_;
 };
 
@@ -548,16 +564,44 @@ public:
   }
 
   template <typename It> void generate(It first, It last) {
-    // Mix stored seeds into a state, then LCG-expand to fill output
-    result_type a = 0x12345678u;
-    for (size_t i = 0; i < n_; ++i)
-      a ^= v_[i] * static_cast<result_type>(i + 1);
-    size_t i = 0;
-    for (auto it = first; it != last; ++it, ++i) {
-      a = a * 1664525u + 1013904223u;
-      if (i < n_)
-        a ^= v_[i];
-      *it = a;
+    size_t count = 0;
+    for (auto it = first; it != last; ++it) {
+      *it = 0x8b8b8b8bu;
+      ++count;
+    }
+    if (count == 0)
+      return;
+
+    const size_t t = count >= 623  ? 11
+                     : count >= 68 ? 7
+                     : count >= 39 ? 5
+                     : count >= 7  ? 3
+                                   : (count - 1) / 2;
+    const size_t p = (count - t) / 2;
+    const size_t q = p + t;
+    const size_t rounds = n_ + 1 > count ? n_ + 1 : count;
+    auto at = [&](size_t i) -> decltype(auto) { return first[i]; };
+    auto mix = [](result_type value) { return value ^ (value >> 27); };
+
+    for (size_t k = 0; k < rounds; ++k) {
+      result_type r1 = 1664525u * mix(at(k % count) ^ at((k + p) % count) ^
+                                      at((k + count - 1) % count));
+      result_type r2 = r1 + static_cast<result_type>(k % count);
+      if (k == 0)
+        r2 += static_cast<result_type>(n_);
+      else if (k <= n_)
+        r2 += v_[k - 1];
+      at((k + p) % count) += r1;
+      at((k + q) % count) += r2;
+      at(k % count) = r2;
+    }
+    for (size_t k = rounds; k < rounds + count; ++k) {
+      result_type r3 = 1566083941u * mix(at(k % count) + at((k + p) % count) +
+                                         at((k + count - 1) % count));
+      result_type r4 = r3 - static_cast<result_type>(k % count);
+      at((k + p) % count) ^= r3;
+      at((k + q) % count) ^= r4;
+      at(k % count) = r4;
     }
   }
   size_t size() const { return n_; }
