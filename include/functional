@@ -22,16 +22,7 @@ template <typename R, typename... Args> class function<R(Args...)> {
     F f_;
     impl(F f) : f_(static_cast<F&&>(f)) {}
     R call(Args... args) override {
-      if constexpr (requires(F& f, Args... values) {
-                      f(static_cast<Args&&>(values)...);
-                    }) {
-        return f_(static_cast<Args&&>(args)...);
-      } else if constexpr (is_reference_v<R>) {
-        static remove_reference_t<R> fallback{};
-        return fallback;
-      } else {
-        return R{};
-      }
+      return detail::__invoke(f_, static_cast<Args&&>(args)...);
     }
     base* clone() override { return new impl(f_); }
   };

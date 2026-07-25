@@ -32,6 +32,8 @@ int main() {
   psyassert(std::invoke(&member_target::value, target) == 4);
   psyassert(std::invoke(&member_target::value, &target) == 4);
   psyassert(std::invoke(&member_target::add, target, 3) == 7);
+  std::function<int(member_target, int)> member_function = &member_target::add;
+  psyassert(member_function(target, 3) == 7);
   static_assert(
       std::is_same_v<
           std::invoke_result_t<decltype(&member_target::value), member_target&>,
