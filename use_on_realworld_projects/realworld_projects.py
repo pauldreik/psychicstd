@@ -980,12 +980,13 @@ def _eigen() -> Project:
 
 
 def _fmt() -> Project:
-    version = "11.1.4"
-    url = f"https://github.com/fmtlib/fmt/archive/refs/tags/{version}.tar.gz"
-    checksum = "ac366b7b4c2e9f0dde63a59b3feb5ee59b67974b14ee5dc9ea8ad78aa2c1ee1e"
+    commit = "7dfacc1c6d1245631521f0822529a83f30306c71"
+    version = f"commit {commit[:12]}"
+    url = f"https://github.com/pauldreik/fmt/archive/{commit}.tar.gz"
+    checksum = "1d91b09370e4b5444358749b1c1939beac2b9aeb5db70e425885945017320bcc"
 
     def build(tc: Toolchain) -> dict[str, float]:
-        tarball = RW_DIR / f"fmt-{version}.tar.gz"
+        tarball = RW_DIR / f"fmt-{commit}.tar.gz"
         _fetch(url, tarball, checksum)
 
         with tempfile.TemporaryDirectory(
@@ -994,14 +995,14 @@ def _fmt() -> Project:
             work = Path(work_dir)
             with tarfile.open(tarball) as t:
                 t.extractall(work)
-            src = work / f"fmt-{version}"
+            src = work / f"fmt-{commit}"
 
             env = _env(tc)
             # fmt's tests specialize std::is_floating_point (UB but benign);
             # Apple clang 21's libc++ hard-errors on that, so the SYSTEM
             # baseline cannot build without disabling the diagnostic. No-op
             # for psychicstd, which does not restrict specialization.
-            cxxflags = tc.cxxflags
+            cxxflags = tc.cxxflags + " -D_PSYCHICSTD_COMPATIBILITY_LEVEL=0"
             if os.uname().sysname == "Darwin":
                 cxxflags += " -Wno-invalid-specialization"
             configure = [
@@ -1048,9 +1049,10 @@ def _fmt() -> Project:
     return Project(
         version=version,
         build=build,
-        expected_seconds={"debug": 8, "release": 20},
+        expected_seconds={"debug": 12, "release": 25},
         phases=("compile", "run tests"),
-        comment="fmt is built with locale support; its own unit tests are run.",
+        comment="fmt is built in psychicstd strict mode with locale support; "
+        "its own unit tests are run.",
     )
 
 
