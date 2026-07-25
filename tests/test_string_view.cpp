@@ -26,6 +26,8 @@ int main() {
   psyassert(*sv.rbegin() == 'o');
   psyassert(sv.cbegin() == sv.begin());
   psyassert(sv.find("ellipsoid", 0, 3) == 1);
+  psyassert(sv.find('o') == 4);
+  static_assert(std::string_view("constexpr").find('p') == 7);
   psyassert(sv.rfind("hellish", std::string_view::npos, 4) == 0);
   psyassert(sv.find_first_of("xyzol", 0, 4) == 4);
   psyassert(sv.find_last_of("help", std::string_view::npos, 3) == 3);

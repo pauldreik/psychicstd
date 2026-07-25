@@ -77,8 +77,11 @@ public:
 
   basic_string(size_type n, Char c) : size_(n), cap_(n) {
     data_ = alloc(n + 1);
-    for (size_type i = 0; i < n; ++i)
-      data_[i] = c;
+    if constexpr (sizeof(Char) == 1)
+      __builtin_memset(data_, static_cast<unsigned char>(c), n);
+    else
+      for (size_type i = 0; i < n; ++i)
+        data_[i] = c;
     data_[n] = 0;
   }
 
@@ -172,8 +175,11 @@ public:
   }
   basic_string& assign(size_type n, Char c) {
     reserve(n);
-    for (size_type i = 0; i < n; ++i)
-      data_[i] = c;
+    if constexpr (sizeof(Char) == 1)
+      __builtin_memset(data_, static_cast<unsigned char>(c), n);
+    else
+      for (size_type i = 0; i < n; ++i)
+        data_[i] = c;
     size_ = n;
     data_[n] = 0;
     return *this;
@@ -241,8 +247,14 @@ public:
       data_[n] = 0;
     } else {
       reserve(n);
-      while (size_ < n)
-        push_back(c);
+      if constexpr (sizeof(Char) == 1)
+        __builtin_memset(data_ + size_, static_cast<unsigned char>(c),
+                         n - size_);
+      else
+        for (size_type i = size_; i < n; ++i)
+          data_[i] = c;
+      size_ = n;
+      data_[n] = 0;
     }
   }
 
@@ -307,8 +319,16 @@ public:
   }
   basic_string& append(const Char* s) { return append(s, Traits::length(s)); }
   basic_string& append(size_type n, Char c) {
-    while (n--)
-      push_back(c);
+    if (!n)
+      return *this;
+    grow(size_ + n);
+    if constexpr (sizeof(Char) == 1)
+      __builtin_memset(data_ + size_, static_cast<unsigned char>(c), n);
+    else
+      for (size_type i = 0; i < n; ++i)
+        data_[size_ + i] = c;
+    size_ += n;
+    data_[size_] = 0;
     return *this;
   }
   basic_string& append(basic_string_view<Char> sv) {

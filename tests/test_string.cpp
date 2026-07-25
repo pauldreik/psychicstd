@@ -129,6 +129,14 @@ int main() {
   psyassert(s == "ssig");
   s.assign(source, 1, 3);
   psyassert(s == "ssi");
+  std::string filled(64, 'x');
+  psyassert(filled.size() == 64 && filled.front() == 'x' &&
+            filled.back() == 'x');
+  filled.assign(32, 'a');
+  filled.resize(48, 'b');
+  filled.append(16, 'c');
+  psyassert(filled ==
+            std::string(32, 'a') + std::string(16, 'b') + std::string(16, 'c'));
   s.reserve(32);
   const char* storage = s.data();
   s.assign("replacement", 11);
