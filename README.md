@@ -349,6 +349,8 @@ python3 benchmarks/compile_time/run_bench.py --reps 3
 
 View the results by inspecting [speed.md](speed.md).
 
+The include cost for every individual public header is available in [include_weight.md](include_weight.md).
+
 There is also a benchmark for process startup time (exec-to-exit time, not an isolated dynamic-linker measurement — see the note above):
 
 ```bash
