@@ -1,4 +1,8 @@
 #pragma once
+#ifndef __cpp_lib_variant
+#define __cpp_lib_variant 201606L
+#endif
+
 #include <__psychicstd_config>
 #include <__psychicstd_exception_base>
 #include <__psychicstd_lifetime>
@@ -244,6 +248,19 @@ public:
     *this = static_cast<variant&&>(tmp);
   }
 
+  template <size_t I> constexpr __alt<I>& __get() noexcept {
+    if constexpr (I == 0)
+      return storage_.first;
+    else
+      return *reinterpret_cast<__alt<I>*>(&storage_);
+  }
+  template <size_t I> constexpr const __alt<I>& __get() const noexcept {
+    if constexpr (I == 0)
+      return storage_.first;
+    else
+      return *reinterpret_cast<const __alt<I>*>(&storage_);
+  }
+
   void* __raw() noexcept { return &storage_; }
   const void* __raw() const noexcept { return &storage_; }
 };
@@ -257,8 +274,7 @@ template <size_t I, typename... Ts>
 constexpr variant_alternative_t<I, variant<Ts...>>& get(variant<Ts...>& v) {
   if (v.index() != I)
     _PSYCHICSTD_THROW_HELPER(__throw_bad_variant_access);
-  return *reinterpret_cast<variant_alternative_t<I, variant<Ts...>>*>(
-      v.__raw());
+  return v.template __get<I>();
 }
 template <size_t I, typename... Ts>
 constexpr variant_alternative_t<I, variant<Ts...>>&& get(variant<Ts...>&& v) {
@@ -269,8 +285,7 @@ constexpr const variant_alternative_t<I, variant<Ts...>>&
 get(const variant<Ts...>& v) {
   if (v.index() != I)
     _PSYCHICSTD_THROW_HELPER(__throw_bad_variant_access);
-  return *reinterpret_cast<const variant_alternative_t<I, variant<Ts...>>*>(
-      v.__raw());
+  return v.template __get<I>();
 }
 
 template <typename T, typename... Ts> constexpr T& get(variant<Ts...>& v) {
@@ -311,27 +326,27 @@ constexpr const T* get_if(const variant<Ts...>* v) noexcept {
 }
 
 namespace __variant {
-template <typename R, typename Visitor, typename V, size_t... Is>
-R __visit_impl(Visitor&& vis, V&& v, index_sequence<Is...>) {
-  using Fn = R (*)(Visitor&&, V&&);
-  static constexpr Fn tbl[] = {+[](Visitor&& vis2, V&& v2) -> R {
-    return static_cast<Visitor&&>(vis2)(get<Is>(static_cast<V&&>(v2)));
-  }...};
-  return tbl[v.index()](static_cast<Visitor&&>(vis), static_cast<V&&>(v));
+template <size_t I, typename R, typename Visitor, typename V>
+constexpr R __visit_impl(Visitor&& vis, V&& v) {
+  if (v.index() == I)
+    return static_cast<Visitor&&>(vis)(get<I>(static_cast<V&&>(v)));
+  if constexpr (I + 1 < variant_size_v<remove_cvref_t<V>>)
+    return __visit_impl<I + 1, R>(static_cast<Visitor&&>(vis),
+                                  static_cast<V&&>(v));
+  else
+    _PSYCHICSTD_THROW_HELPER(__throw_bad_variant_access);
 }
 } // namespace __variant
 
 template <typename Visitor, typename V>
-decltype(auto) visit(Visitor&& vis, V&& v) {
+constexpr decltype(auto) visit(Visitor&& vis, V&& v) {
   using R = decltype(static_cast<Visitor&&>(vis)(get<0>(static_cast<V&&>(v))));
-  constexpr size_t N = variant_size_v<remove_cvref_t<V>>;
-  return __variant::__visit_impl<R>(static_cast<Visitor&&>(vis),
-                                    static_cast<V&&>(v),
-                                    make_index_sequence<N>{});
+  return __variant::__visit_impl<0, R>(static_cast<Visitor&&>(vis),
+                                       static_cast<V&&>(v));
 }
 
 template <typename Visitor, typename V1, typename V2>
-decltype(auto) visit(Visitor&& vis, V1&& v1, V2&& v2) {
+constexpr decltype(auto) visit(Visitor&& vis, V1&& v1, V2&& v2) {
   return visit(
       [&](auto&& value1) -> decltype(auto) {
         return visit(
