@@ -295,32 +295,10 @@ private:
 
   template <typename V> basic_ostream& write_int(V v) {
     char buf[32];
-    int n;
-    if (this->flags_ & ios_base::hex) {
-      if ((this->flags_ & ios_base::showbase) && v != 0)
-        n = __builtin_snprintf(
-            buf, sizeof(buf),
-            (this->flags_ & ios_base::uppercase) ? "0X%llX" : "0x%llx",
-            (unsigned long long)(typename make_unsigned<V>::type)v);
-      else
-        n = __builtin_snprintf(
-            buf, sizeof(buf),
-            (this->flags_ & ios_base::uppercase) ? "%llX" : "%llx",
-            (unsigned long long)(typename make_unsigned<V>::type)v);
-    } else if (this->flags_ & ios_base::oct) {
-      if ((this->flags_ & ios_base::showbase) && v != 0)
-        n = __builtin_snprintf(
-            buf, sizeof(buf), "0%llo",
-            (unsigned long long)(typename make_unsigned<V>::type)v);
-      else
-        n = __builtin_snprintf(
-            buf, sizeof(buf), "%llo",
-            (unsigned long long)(typename make_unsigned<V>::type)v);
-    } else {
-      n = __builtin_snprintf(
-          buf, sizeof(buf), this->flags_ & ios_base::showpos ? "%+lld" : "%lld",
-          (long long)v);
-    }
+    int n = this->_format_signed(
+        buf, sizeof(buf), static_cast<long long>(v),
+        static_cast<unsigned long long>(
+            static_cast<typename make_unsigned<V>::type>(v)));
     if (n > 0) {
       if (this->flags_ & (ios_base::hex | ios_base::oct))
         pad_and_write(buf, n);
@@ -332,33 +310,8 @@ private:
 
   template <typename V> basic_ostream& write_uint(V v) {
     char buf[32];
-    int n;
-    if (this->flags_ & ios_base::hex) {
-      if ((this->flags_ & ios_base::showbase) && v != 0)
-        n = __builtin_snprintf(buf, sizeof(buf),
-                               (this->flags_ & ios_base::uppercase) ? "0X%llX"
-                                                                    : "0x%llx",
-                               (unsigned long long)v);
-      else
-        n = __builtin_snprintf(buf, sizeof(buf),
-                               (this->flags_ & ios_base::uppercase) ? "%llX"
-                                                                    : "%llx",
-                               (unsigned long long)v);
-    } else if (this->flags_ & ios_base::oct) {
-      if ((this->flags_ & ios_base::showbase) && v != 0)
-        n = __builtin_snprintf(buf, sizeof(buf), "0%llo",
-                               (unsigned long long)v);
-      else
-        n = __builtin_snprintf(buf, sizeof(buf), "%llo", (unsigned long long)v);
-    } else {
-      n = __builtin_snprintf(buf, sizeof(buf), "%llu", (unsigned long long)v);
-      if ((this->flags_ & ios_base::showpos) && n > 0 &&
-          n + 1 < static_cast<int>(sizeof(buf))) {
-        __builtin_memmove(buf + 1, buf, static_cast<size_t>(n) + 1);
-        buf[0] = '+';
-        ++n;
-      }
-    }
+    int n = this->_format_unsigned(buf, sizeof(buf),
+                                   static_cast<unsigned long long>(v));
     if (n > 0) {
       if (this->flags_ & (ios_base::hex | ios_base::oct))
         pad_and_write(buf, n);
@@ -369,50 +322,16 @@ private:
   }
 
   basic_ostream& write_float(double v) {
-    char fmt[16];
     char buf[64];
-    const auto field = this->flags_ & ios_base::floatfield;
-    const bool upper = this->flags_ & ios_base::uppercase;
-    const char* spec = upper ? "G" : "g";
-    if (field == ios_base::floatfield)
-      spec = upper ? "A" : "a";
-    else if (field == ios_base::fixed)
-      spec = upper ? "F" : "f";
-    else if (field == ios_base::scientific)
-      spec = upper ? "E" : "e";
-    const char* alternate = this->flags_ & ios_base::showpoint ? "#" : "";
-    const char* sign = this->flags_ & ios_base::showpos ? "+" : "";
-    if (field == ios_base::floatfield)
-      __builtin_snprintf(fmt, sizeof(fmt), "%%%s%s%s", alternate, sign, spec);
-    else
-      __builtin_snprintf(fmt, sizeof(fmt), "%%%s%s.%lld%s", alternate, sign,
-                         (long long)this->prec_, spec);
-    int n = __builtin_snprintf(buf, sizeof(buf), fmt, v);
+    int n = this->_format_float(buf, sizeof(buf), v);
     if (n > 0)
       num_write(buf, n);
     return *this;
   }
 
   basic_ostream& write_long_double(long double v) {
-    char fmt[16];
     char buf[64];
-    const auto field = this->flags_ & ios_base::floatfield;
-    const bool upper = this->flags_ & ios_base::uppercase;
-    const char* spec = upper ? "LG" : "Lg";
-    if (field == ios_base::floatfield)
-      spec = upper ? "LA" : "La";
-    else if (field == ios_base::fixed)
-      spec = upper ? "LF" : "Lf";
-    else if (field == ios_base::scientific)
-      spec = upper ? "LE" : "Le";
-    const char* alternate = this->flags_ & ios_base::showpoint ? "#" : "";
-    const char* sign = this->flags_ & ios_base::showpos ? "+" : "";
-    if (field == ios_base::floatfield)
-      __builtin_snprintf(fmt, sizeof(fmt), "%%%s%s%s", alternate, sign, spec);
-    else
-      __builtin_snprintf(fmt, sizeof(fmt), "%%%s%s.%lld%s", alternate, sign,
-                         (long long)this->prec_, spec);
-    int n = __builtin_snprintf(buf, sizeof(buf), fmt, v);
+    int n = this->_format_long_double(buf, sizeof(buf), v);
     if (n > 0)
       num_write(buf, n);
     return *this;

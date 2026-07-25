@@ -133,6 +133,11 @@ public:
   }
 
 protected:
+  int _format_signed(char*, size_t, long long, unsigned long long) const;
+  int _format_unsigned(char*, size_t, unsigned long long) const;
+  int _format_float(char*, size_t, double) const;
+  int _format_long_double(char*, size_t, long double) const;
+
   [[noreturn, gnu::cold, gnu::noinline]] static void _throw_failure() {
 #if defined(__cpp_exceptions)
     _throw_failure_with_exceptions();
