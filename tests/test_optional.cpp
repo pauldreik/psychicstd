@@ -72,6 +72,8 @@ int main() {
 
   std::optional<aggregate> aggregate_value;
   std::optional<aggregate> constructed_aggregate{{1, 2}};
+  std::optional<aggregate> single_braced{{1}};
+  psyassert(single_braced->first == 1);
   psyassert(constructed_aggregate->second == 2);
   aggregate_value = {3, 4};
   psyassert(aggregate_value->first == 3);
