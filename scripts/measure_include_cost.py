@@ -147,7 +147,7 @@ def _progress_bar(
         f"[{header_index:02d}/{header_count:02d}] {header:<22} "
         f"{mode:<13} [{rep}/{reps}] "
         f"{step:>4}/{total_steps:<4} "
-        f"{frac*100:5.1f}% ETA: {eta_txt}   ",
+        f"{frac * 100:5.1f}% ETA: {eta_txt}   ",
         end="",
         file=sys.stderr,
         flush=True,
@@ -212,6 +212,7 @@ def _measure(
     include_dir: Path,
     std: str,
     reps: int,
+    headers: list[str] | None = None,
 ) -> tuple[list[Row], str]:
     cxx_flags = f"-std={std}"
     include_dir_for_flags = str(include_dir)
@@ -224,7 +225,8 @@ def _measure(
     ]
     dropin_flags = [cxx_flags, "-nostdinc++", "-isystem", include_dir_for_flags]
     std_flags = [cxx_flags]
-    headers = _public_headers(include_dir)
+    if headers is None:
+        headers = _public_headers(include_dir)
     total_steps = len(headers) * 3 * reps
     start = time.perf_counter()
 
@@ -400,6 +402,13 @@ def main() -> int:
         help="Directory with public psychicstd headers (default: include/)",
     )
     ap.add_argument(
+        "--header",
+        action="append",
+        dest="headers",
+        metavar="NAME",
+        help="Measure only this public header; may be repeated",
+    )
+    ap.add_argument(
         "-n",
         "--reps",
         type=int,
@@ -436,9 +445,19 @@ def main() -> int:
     if not include_dir.is_dir():
         ap.error(f"--include is not a directory: {include_dir}")
 
+    available_headers = _public_headers(include_dir)
+    headers = None
+    if args.headers:
+        unknown = sorted(set(args.headers) - set(available_headers))
+        if unknown:
+            ap.error(f"unknown public header(s): {', '.join(unknown)}")
+        headers = sorted(set(args.headers))
+
     os.environ["CCACHE_DISABLE"] = "1"
 
-    rows, version = _measure(args.compiler, include_dir, args.std, args.reps)
+    rows, version = _measure(
+        args.compiler, include_dir, args.std, args.reps, headers=headers
+    )
     table = _render(rows, args.sort, args.ascending)
 
     reproduce = [
@@ -452,19 +471,24 @@ def main() -> int:
         reproduce.append("--ascending")
     if args.include.resolve() != (REPO / "include").resolve():
         reproduce.append(f"--include={shlex.quote(str(include_dir))}")
+    for header in headers or []:
+        reproduce.append(f"--header={shlex.quote(header)}")
     reproduce_line = " ".join(reproduce)
     if args.output is not None:
         reproduce_line += f" --output={shlex.quote(str(args.output))}"
 
     report = [
         "# Include cost report\n",
-        "Measures compile-time cost for each public psychicstd header. It generates a "
-        "temporary cpp file for each header with a single `#include` and measures "
-        "compilation time. That is repeated for three modes: `psychic strict`, "
-        "`psychic drop-in`, and `libstdc++`.\n",
+        (
+            "Measures compile-time cost for each public psychicstd header. It generates "
+            "a temporary cpp file for each header with a single `#include` and measures "
+            "compilation time. That is repeated for three modes: `psychic strict`, "
+            "`psychic drop-in`, and `libstdc++`.\n"
+        ),
         f"Compiler: `{version}`\n",
         f"Standard: `{args.std}`\n",
         f"Repetitions per header: `{args.reps}`\n",
+        f"Headers: `{', '.join(headers)}`\n" if headers else "",
         "",
         (
             f"{GREEN} whole CI above 1x (reliably faster) · "
