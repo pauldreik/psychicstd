@@ -33,4 +33,9 @@ int main() {
   for (auto it = const_range.first; it != const_range.second; ++it)
     ++matches;
   psyassert(matches == 2);
+
+  std::unordered_multimap<int, int> equal_mm{{1, 20}, {17, 99}, {1, 10}};
+  psyassert(mm == equal_mm);
+  equal_mm.emplace(1, 10);
+  psyassert(!(mm == equal_mm));
 }

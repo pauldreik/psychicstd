@@ -820,4 +820,26 @@ bool operator==(const unordered_map<Key, T, Hash, KeyEqual, Allocator>& a,
   return true;
 }
 
+template <typename Key, typename T, typename Hash, typename KeyEqual,
+          typename Allocator>
+bool operator==(
+    const unordered_multimap<Key, T, Hash, KeyEqual, Allocator>& a,
+    const unordered_multimap<Key, T, Hash, KeyEqual, Allocator>& b) {
+  if (a.size() != b.size())
+    return false;
+  for (const auto& kv : a) {
+    size_t matches_a = 0;
+    size_t matches_b = 0;
+    for (const auto& candidate : a)
+      if (candidate == kv)
+        ++matches_a;
+    for (const auto& candidate : b)
+      if (candidate == kv)
+        ++matches_b;
+    if (matches_a != matches_b)
+      return false;
+  }
+  return true;
+}
+
 } // namespace std

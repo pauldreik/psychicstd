@@ -265,4 +265,17 @@ private:
   [[no_unique_address]] Alloc alloc_ = {};
 };
 
+template <typename Key, typename Compare, typename Alloc>
+bool operator==(const multiset<Key, Compare, Alloc>& a,
+                const multiset<Key, Compare, Alloc>& b) {
+  if (a.size() != b.size())
+    return false;
+  auto ai = a.begin();
+  auto bi = b.begin();
+  for (; ai != a.end(); ++ai, ++bi)
+    if (!(*ai == *bi))
+      return false;
+  return true;
+}
+
 } // namespace std

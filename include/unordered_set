@@ -540,4 +540,16 @@ public:
   void clear() { destroy(); }
 };
 
+template <typename Key, typename Hash, typename KeyEqual, typename Allocator>
+bool operator==(
+    const unordered_multiset<Key, Hash, KeyEqual, Allocator>& a,
+    const unordered_multiset<Key, Hash, KeyEqual, Allocator>& b) {
+  if (a.size() != b.size())
+    return false;
+  for (const auto& value : a)
+    if (a.count(value) != b.count(value))
+      return false;
+  return true;
+}
+
 } // namespace std

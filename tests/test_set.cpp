@@ -16,6 +16,10 @@ int main() {
   psyassert(*multiple.begin() == 4);
   psyassert(multiple.count(3) == 2);
   psyassert(multiple.count(4) == 1);
+  psyassert((multiple ==
+             std::multiset<int, std::greater<int>>({4, 3, 3, 2, 1})));
+  psyassert(
+      !(multiple == std::multiset<int, std::greater<int>>({4, 3, 2, 1})));
 
   int first = 1;
   int second = 2;
