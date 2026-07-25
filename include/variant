@@ -107,21 +107,32 @@ template <typename U, typename... Ts> constexpr size_t __accepted(...) {
   return variant_npos;
 }
 
+struct __uninitialized_t {};
+
+template <typename First, typename... Rest> union __storage {
+  First first;
+  alignas(__max_align<First,
+                      Rest...>) unsigned char raw[__max_size<First, Rest...>];
+
+  constexpr __storage() : first() {}
+  constexpr explicit __storage(__uninitialized_t) : raw{} {}
+  constexpr ~__storage() {}
+};
+
 } // namespace __variant
 
 template <typename... Ts> class variant {
   static_assert(sizeof...(Ts) > 0,
                 "variant must have at least one alternative");
 
-  alignas(__variant::__max_align<
-          Ts...>) unsigned char buf_[__variant::__max_size<Ts...>];
+  __variant::__storage<Ts...> storage_;
   size_t index_ = variant_npos;
 
   template <size_t I> using __alt = variant_alternative_t<I, variant>;
 
   template <size_t I, typename... Args> __alt<I>& __emplace(Args&&... args) {
     __destroy();
-    __alt<I>* p = reinterpret_cast<__alt<I>*>(buf_);
+    __alt<I>* p = reinterpret_cast<__alt<I>*>(storage_.raw);
     construct_at(p, static_cast<Args&&>(args)...);
     index_ = I;
     return *p;
@@ -132,7 +143,7 @@ template <typename... Ts> class variant {
       return;
     static constexpr void (*tbl[])(void*) = {
         +[](void* p) { static_cast<Ts*>(p)->~Ts(); }...};
-    tbl[index_](buf_);
+    tbl[index_](&storage_);
     index_ = variant_npos;
   }
 
@@ -142,7 +153,7 @@ template <typename... Ts> class variant {
       ::new (d) Ts(*static_cast<const Ts*>(s));
     }...};
     if (o.index_ != variant_npos)
-      tbl[o.index_](buf_, o.buf_);
+      tbl[o.index_](&storage_, &o.storage_);
     index_ = o.index_;
   }
 
@@ -151,37 +162,45 @@ template <typename... Ts> class variant {
       ::new (d) Ts(static_cast<Ts&&>(*static_cast<Ts*>(s)));
     }...};
     if (o.index_ != variant_npos)
-      tbl[o.index_](buf_, o.buf_);
+      tbl[o.index_](&storage_, &o.storage_);
     index_ = o.index_;
   }
 
 public:
   constexpr variant() noexcept(is_nothrow_default_constructible_v<__alt<0>>) {
-    ::new (buf_) __alt<0>();
     index_ = 0;
   }
 
-  variant(const variant& o) { __copy_from(o); }
-  variant(variant&& o) noexcept { __move_from(static_cast<variant&&>(o)); }
+  variant(const variant& o) : storage_(__variant::__uninitialized_t{}) {
+    __copy_from(o);
+  }
+  variant(variant&& o) noexcept : storage_(__variant::__uninitialized_t{}) {
+    __move_from(static_cast<variant&&>(o));
+  }
 
   template <typename U, size_t I = __variant::__accepted<U, Ts...>(0),
             typename = enable_if_t<I != variant_npos &&
                                    !is_same_v<remove_cvref_t<U>, variant>>>
-  variant(U&& u) {
+  variant(U&& u) : storage_(__variant::__uninitialized_t{}) {
     __emplace<I>(static_cast<U&&>(u));
   }
 
   template <typename T, typename... Args>
-  explicit variant(in_place_type_t<T>, Args&&... args) {
+  explicit variant(in_place_type_t<T>, Args&&... args)
+      : storage_(__variant::__uninitialized_t{}) {
     __emplace<__variant::__index_of<T, Ts...>()>(static_cast<Args&&>(args)...);
   }
 
   template <size_t I, typename... Args>
-  explicit variant(in_place_index_t<I>, Args&&... args) {
+  explicit variant(in_place_index_t<I>, Args&&... args)
+      : storage_(__variant::__uninitialized_t{}) {
     __emplace<I>(static_cast<Args&&>(args)...);
   }
 
-  ~variant() { __destroy(); }
+  constexpr ~variant() {
+    if constexpr (!(is_trivially_destructible_v<Ts> && ...))
+      __destroy();
+  }
 
   variant& operator=(const variant& o) {
     if (this != &o) {
@@ -225,8 +244,8 @@ public:
     *this = static_cast<variant&&>(tmp);
   }
 
-  void* __raw() noexcept { return buf_; }
-  const void* __raw() const noexcept { return buf_; }
+  void* __raw() noexcept { return &storage_; }
+  const void* __raw() const noexcept { return &storage_; }
 };
 
 template <typename T, typename... Ts>
