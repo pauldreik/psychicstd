@@ -4,6 +4,9 @@
 using Fn = void();
 using NothrowFn = int(int) noexcept;
 using ConstFn = void() const;
+using NothrowLvalueFn = int(int) & noexcept;
+using NothrowConstRvalueFn = int(int) const&& noexcept;
+using NothrowVariadicFn = int(int, ...) volatile& noexcept;
 struct DeletedDestructor {
   ~DeletedDestructor() = delete;
 };
@@ -39,7 +42,11 @@ int main() {
   static_assert(
       std::is_same_v<std::decay_t<NothrowFn&>, int (*)(int) noexcept>);
   static_assert(std::is_function_v<ConstFn>);
+  static_assert(std::is_function_v<NothrowLvalueFn>);
+  static_assert(std::is_function_v<NothrowConstRvalueFn>);
+  static_assert(std::is_function_v<NothrowVariadicFn>);
   static_assert(!std::is_function_v<int>);
+  static_assert(!std::is_function_v<int&>);
   static_assert(!std::is_destructible_v<DeletedDestructor>);
   static_assert(!std::is_trivially_destructible_v<DeletedDestructor>);
   static_assert(std::is_trivially_constructible_v<int>);
