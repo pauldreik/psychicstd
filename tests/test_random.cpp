@@ -3,8 +3,10 @@
 
 int main() {
   std::random_device rd;
+  std::random_device token_rd("/dev/urandom");
   auto v = rd();
   psyassert(v >= rd.min());
+  psyassert(token_rd() >= token_rd.min());
 
   std::mt19937 gen(1234);
   std::mt19937 same_gen(1234);
@@ -13,6 +15,20 @@ int main() {
   psyassert(!(gen == same_gen));
   long seed = 5678;
   gen.seed(seed);
+
+  std::seed_seq sequence{1, 2, 3};
+  unsigned parameters[3]{};
+  sequence.param(parameters);
+  psyassert(parameters[0] == 1 && parameters[1] == 2 && parameters[2] == 3);
+  std::mt19937 sequence_gen(sequence);
+  std::mt19937_64 sequence_gen_64(sequence);
+  std::minstd_rand sequence_minstd(sequence);
+  sequence_gen.discard(2);
+  sequence_gen_64.discard(2);
+  sequence_minstd.discard(2);
+  psyassert(sequence_gen() <= sequence_gen.max());
+  psyassert(sequence_gen_64() <= sequence_gen_64.max());
+  psyassert(sequence_minstd() <= sequence_minstd.max());
 
   std::bernoulli_distribution never(0);
   std::bernoulli_distribution always(1);

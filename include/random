@@ -28,6 +28,7 @@ class random_device {
 public:
   using result_type = unsigned int;
   random_device() = default;
+  explicit random_device(const char*) {}
   random_device(const random_device&) = delete;
   random_device& operator=(const random_device&) = delete;
 
@@ -67,11 +68,34 @@ public:
 
   explicit linear_congruential_engine(result_type seed = default_seed)
       : state_(seed % m) {}
+  template <typename SSeq,
+            typename = enable_if_t<!is_convertible_v<SSeq, result_type>>>
+  explicit linear_congruential_engine(SSeq& seq) {
+    seed(seq);
+  }
   void seed(result_type s = default_seed) { state_ = s % m; }
+  template <typename SSeq,
+            typename = enable_if_t<!is_convertible_v<SSeq, result_type>>>
+  void seed(SSeq& seq) {
+    constexpr int word_count = m > 0xffffffffULL ? 2 : 1;
+    uint32_t words[word_count + 3]{};
+    seq.generate(words, words + word_count + 3);
+    result_type value = words[3];
+    if constexpr (word_count > 1)
+      value |= static_cast<result_type>(words[4]) << 32;
+    state_ = value % m;
+    if constexpr (c == 0)
+      if (state_ == 0)
+        state_ = 1;
+  }
 
   result_type operator()() {
     state_ = (a * state_ + c) % m;
     return state_;
+  }
+  void discard(unsigned long long count) {
+    while (count--)
+      operator()();
   }
   static constexpr result_type min() { return c == 0 ? 1 : 0; }
   static constexpr result_type max() { return m - 1; }
@@ -119,6 +143,11 @@ public:
   static constexpr size_t state_size = 624;
 
   explicit mt19937(result_type seed = default_seed) { this->seed(seed); }
+  template <typename SSeq,
+            typename = enable_if_t<!is_convertible_v<SSeq, result_type>>>
+  explicit mt19937(SSeq& seq) {
+    seed(seq);
+  }
   void seed(result_type s) {
     mt_[0] = s;
     for (int i = 1; i < N; ++i)
@@ -141,6 +170,10 @@ public:
     y ^= (y << 15) & 0xefc60000U;
     y ^= y >> 18;
     return y;
+  }
+  void discard(unsigned long long count) {
+    while (count--)
+      operator()();
   }
   static constexpr result_type min() { return 0; }
   static constexpr result_type max() { return 0xffffffffU; }
@@ -185,10 +218,25 @@ public:
   static constexpr result_type default_seed = 5489ULL;
 
   explicit mt19937_64(result_type seed = default_seed) { this->seed(seed); }
+  template <typename SSeq,
+            typename = enable_if_t<!is_convertible_v<SSeq, result_type>>>
+  explicit mt19937_64(SSeq& seq) {
+    seed(seq);
+  }
   void seed(result_type s) {
     mt_[0] = s;
     for (int i = 1; i < N; ++i)
       mt_[i] = 6364136223846793005ULL * (mt_[i - 1] ^ (mt_[i - 1] >> 62)) + i;
+    index_ = N;
+  }
+  template <typename SSeq,
+            typename = enable_if_t<!is_convertible_v<SSeq, result_type>>>
+  void seed(SSeq& seq) {
+    uint32_t words[N * 2];
+    seq.generate(words, words + N * 2);
+    for (int i = 0; i < N; ++i)
+      mt_[i] = static_cast<uint64_t>(words[i * 2]) |
+               (static_cast<uint64_t>(words[i * 2 + 1]) << 32);
     index_ = N;
   }
 
@@ -201,6 +249,10 @@ public:
     x ^= (x << 37) & 0xfff7eee000000000ULL;
     x ^= x >> 43;
     return x;
+  }
+  void discard(unsigned long long count) {
+    while (count--)
+      operator()();
   }
   static constexpr result_type min() { return 0; }
   static constexpr result_type max() { return ~uint64_t(0); }
@@ -495,6 +547,10 @@ public:
     }
   }
   size_t size() const { return n_; }
+  template <typename OutIt> void param(OutIt out) const {
+    for (size_t i = 0; i < n_; ++i)
+      *out++ = v_[i];
+  }
 
 private:
   static constexpr size_t cap_ = 1024;
