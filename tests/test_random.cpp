@@ -1,4 +1,5 @@
 #include "psyassert.h"
+#include <limits>
 #include <random>
 
 int main() {
@@ -44,4 +45,12 @@ int main() {
   std::uniform_int_distribution<uint16_t> full_range(0, 0xFFFF);
   for (int i = 0; i < 1000; ++i)
     full_range(gen);
+
+  std::uniform_int_distribution<> default_range;
+  psyassert(default_range.min() == 0);
+  psyassert(default_range.max() == std::numeric_limits<int>::max());
+  bool generated_above_one = false;
+  for (int i = 0; i < 10; ++i)
+    generated_above_one |= default_range(gen) > 1;
+  psyassert(generated_above_one);
 }

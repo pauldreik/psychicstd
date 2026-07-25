@@ -319,17 +319,24 @@ private:
 };
 
 // uniform_int_distribution
+template <typename Int>
+inline constexpr Int __random_int_max =
+    static_cast<Int>(static_cast<make_unsigned_t<Int>>(-1) >>
+                     is_signed_v<Int>);
+
 template <typename Int = int> class uniform_int_distribution {
 public:
   using result_type = Int;
   struct param_type {
     Int a, b;
-    param_type(Int a = 0, Int b = 1) : a(a), b(b) {}
+    param_type(Int a = 0, Int b = __random_int_max<Int>) : a(a), b(b) {}
     Int min() const { return a; }
     Int max() const { return b; }
   };
 
-  explicit uniform_int_distribution(Int a = 0, Int b = 1) : p_(a, b) {}
+  explicit uniform_int_distribution(Int a = 0,
+                                    Int b = __random_int_max<Int>)
+      : p_(a, b) {}
   explicit uniform_int_distribution(const param_type& p) : p_(p) {}
 
   template <typename Engine> result_type operator()(Engine& g) {
