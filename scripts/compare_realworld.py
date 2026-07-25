@@ -68,6 +68,7 @@ def _runtime_library(compiler: str, include: Path) -> str:
     sources = [
         source_dir / name
         for name in (
+            "atomic.cpp",
             "cerr.cpp",
             "cin.cpp",
             "clog.cpp",

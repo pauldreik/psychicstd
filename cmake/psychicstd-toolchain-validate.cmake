@@ -30,6 +30,7 @@ if(NOT _psychicstd_in_try_compile AND NOT TARGET _psychicstd_runtime)
     add_library(
         _psychicstd_runtime
         STATIC
+        "${PSYCHICSTD_ROOT}/src/atomic.cpp"
         "${PSYCHICSTD_ROOT}/src/cerr.cpp"
         "${PSYCHICSTD_ROOT}/src/cin.cpp"
         "${PSYCHICSTD_ROOT}/src/clog.cpp"

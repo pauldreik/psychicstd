@@ -6,6 +6,7 @@ file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/.gitignore" "*\n")
 add_library(
     psychicstd
     STATIC
+    src/atomic.cpp
     src/cerr.cpp
     src/cin.cpp
     src/clog.cpp
