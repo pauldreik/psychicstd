@@ -1,6 +1,5 @@
 #pragma once
 #include <chrono>
-#include <errno.h>
 #include <mutex>
 
 namespace std {
@@ -9,17 +8,14 @@ enum class cv_status { no_timeout, timeout };
 
 struct condition_variable {
   constexpr condition_variable() noexcept = default;
-  ~condition_variable() { ::pthread_cond_destroy(&condition_); }
+  ~condition_variable();
   condition_variable(const condition_variable&) = delete;
   condition_variable& operator=(const condition_variable&) = delete;
 
-  void notify_one() noexcept { ::pthread_cond_signal(&condition_); }
-  void notify_all() noexcept { ::pthread_cond_broadcast(&condition_); }
+  void notify_one() noexcept;
+  void notify_all() noexcept;
 
-  void wait(unique_lock<mutex>& lock) noexcept {
-    if (::pthread_cond_wait(&condition_, lock.mutex()->native_handle()) != 0)
-      __builtin_trap();
-  }
+  void wait(unique_lock<mutex>& lock) noexcept;
   template <typename Predicate>
   void wait(unique_lock<mutex>& lock, Predicate pred) {
     while (!pred())
@@ -66,24 +62,9 @@ private:
   cv_status __wait_for(unique_lock<mutex>& lock,
                        const chrono::duration<Rep, Period>& duration) noexcept {
     long long ns = chrono::duration_cast<chrono::nanoseconds>(duration).count();
-    if (ns < 0)
-      ns = 0;
-    timespec timeout;
-    ::clock_gettime(CLOCK_REALTIME, &timeout);
-    timeout.tv_sec += ns / 1000000000LL;
-    timeout.tv_nsec += ns % 1000000000LL;
-    if (timeout.tv_nsec >= 1000000000L) {
-      ++timeout.tv_sec;
-      timeout.tv_nsec -= 1000000000L;
-    }
-    int result = ::pthread_cond_timedwait(
-        &condition_, lock.mutex()->native_handle(), &timeout);
-    if (result == 0)
-      return cv_status::no_timeout;
-    if (result == ETIMEDOUT)
-      return cv_status::timeout;
-    __builtin_trap();
+    return __wait_for_ns(lock, ns);
   }
+  cv_status __wait_for_ns(unique_lock<mutex>& lock, long long ns) noexcept;
 
   pthread_cond_t condition_ = PTHREAD_COND_INITIALIZER;
 };

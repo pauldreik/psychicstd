@@ -6,21 +6,28 @@ file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/.gitignore" "*\n")
 add_library(
     psychicstd
     STATIC
+    src/atomic.cpp
     src/cerr.cpp
     src/cin.cpp
     src/clog.cpp
+    src/condition_variable.cpp
     src/cout.cpp
+    src/filesystem.cpp
     src/ios.cpp
     src/iostream_macos.cpp
     src/istream.cpp
+    src/locale.cpp
     src/ostream.cpp
     src/random.cpp
+    src/regex.cpp
     src/sstream_instantiations.cpp
     src/stdio_streambuf.cpp
     src/stdexcept.cpp
+    src/stop_token.cpp
     src/string.cpp
     src/string_instantiations.cpp
     src/system_error.cpp
+    src/thread.cpp
 )
 add_library(psychicstd::psychicstd ALIAS psychicstd)
 set_target_properties(psychicstd PROPERTIES POSITION_INDEPENDENT_CODE ON)

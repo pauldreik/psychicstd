@@ -30,21 +30,28 @@ if(NOT _psychicstd_in_try_compile AND NOT TARGET _psychicstd_runtime)
     add_library(
         _psychicstd_runtime
         STATIC
+        "${PSYCHICSTD_ROOT}/src/atomic.cpp"
         "${PSYCHICSTD_ROOT}/src/cerr.cpp"
         "${PSYCHICSTD_ROOT}/src/cin.cpp"
         "${PSYCHICSTD_ROOT}/src/clog.cpp"
+        "${PSYCHICSTD_ROOT}/src/condition_variable.cpp"
         "${PSYCHICSTD_ROOT}/src/cout.cpp"
+        "${PSYCHICSTD_ROOT}/src/filesystem.cpp"
         "${PSYCHICSTD_ROOT}/src/ios.cpp"
         "${PSYCHICSTD_ROOT}/src/iostream_macos.cpp"
         "${PSYCHICSTD_ROOT}/src/istream.cpp"
+        "${PSYCHICSTD_ROOT}/src/locale.cpp"
         "${PSYCHICSTD_ROOT}/src/ostream.cpp"
         "${PSYCHICSTD_ROOT}/src/random.cpp"
+        "${PSYCHICSTD_ROOT}/src/regex.cpp"
         "${PSYCHICSTD_ROOT}/src/sstream_instantiations.cpp"
         "${PSYCHICSTD_ROOT}/src/stdio_streambuf.cpp"
         "${PSYCHICSTD_ROOT}/src/stdexcept.cpp"
+        "${PSYCHICSTD_ROOT}/src/stop_token.cpp"
         "${PSYCHICSTD_ROOT}/src/string.cpp"
         "${PSYCHICSTD_ROOT}/src/string_instantiations.cpp"
         "${PSYCHICSTD_ROOT}/src/system_error.cpp"
+        "${PSYCHICSTD_ROOT}/src/thread.cpp"
     )
     set_target_properties(_psychicstd_runtime PROPERTIES POSITION_INDEPENDENT_CODE ON)
     target_compile_features(_psychicstd_runtime PRIVATE cxx_std_20)

@@ -1,4 +1,5 @@
 #pragma once
+#include <__psychicstd_allocator_traits>
 #include <__psychicstd_config>
 #include <__psychicstd_equal_to>
 #include <__psychicstd_except>
@@ -7,7 +8,6 @@
 #include <__psychicstd_iterator_next>
 #include <cstddef>
 #include <initializer_list>
-#include <memory>
 #include <utility>
 
 namespace std {

@@ -1,0 +1,235 @@
+#pragma once
+#include <__psychicstd_allocator>
+#include <__psychicstd_lifetime>
+#include <cstddef>
+#include <type_traits>
+
+namespace std {
+
+inline void* align(size_t alignment, size_t size, void*& ptr,
+                   size_t& space) noexcept {
+  const auto address = reinterpret_cast<__UINTPTR_TYPE__>(ptr);
+  const auto aligned = (address + alignment - 1) & ~(alignment - 1);
+  const auto adjustment = aligned - address;
+  if (adjustment > space || size > space - adjustment)
+    return nullptr;
+  ptr = reinterpret_cast<void*>(aligned);
+  space -= adjustment;
+  return ptr;
+}
+
+namespace __detail {
+template <typename Ptr, typename U, typename = void> struct __pointer_rebind {
+  using type = U*;
+};
+template <typename Ptr, typename U>
+struct __pointer_rebind<Ptr, U, void_t<typename Ptr::template rebind<U>>> {
+  using type = typename Ptr::template rebind<U>;
+};
+} // namespace __detail
+
+// pointer_traits
+template <typename Ptr> struct pointer_traits {
+  using pointer = Ptr;
+  using element_type = typename Ptr::element_type;
+  using difference_type = ptrdiff_t;
+  template <typename U>
+  using rebind = typename __detail::__pointer_rebind<Ptr, U>::type;
+  static pointer pointer_to(element_type& r) { return Ptr::pointer_to(r); }
+};
+template <typename T> struct pointer_traits<T*> {
+  using pointer = T*;
+  using element_type = T;
+  using difference_type = ptrdiff_t;
+  template <typename U> using rebind = U*;
+  static constexpr pointer pointer_to(element_type& r) noexcept {
+    return addressof(r);
+  }
+};
+
+template <typename InputIt, typename Size, typename ForwardIt>
+constexpr ForwardIt uninitialized_copy_n(InputIt first, Size count,
+                                         ForwardIt result) {
+  for (; count > 0; --count, ++first, ++result)
+    construct_at(addressof(*result), *first);
+  return result;
+}
+
+template <typename ForwardIt, typename Size, typename T>
+constexpr ForwardIt uninitialized_fill_n(ForwardIt first, Size count,
+                                         const T& value) {
+  for (; count > 0; --count, ++first)
+    construct_at(addressof(*first), value);
+  return first;
+}
+
+namespace __detail {
+// Detect optional nested types in allocator
+template <typename A, typename = void> struct __alloc_pocca : false_type {};
+template <typename A>
+struct __alloc_pocca<A,
+                     void_t<typename A::propagate_on_container_copy_assignment>>
+    : A::propagate_on_container_copy_assignment {};
+
+template <typename A, typename = void> struct __alloc_pocma : false_type {};
+template <typename A>
+struct __alloc_pocma<A,
+                     void_t<typename A::propagate_on_container_move_assignment>>
+    : A::propagate_on_container_move_assignment {};
+
+template <typename A, typename = void> struct __alloc_pocs : false_type {};
+template <typename A>
+struct __alloc_pocs<A, void_t<typename A::propagate_on_container_swap>>
+    : A::propagate_on_container_swap {};
+
+template <typename A, typename = void> struct __alloc_iae : is_empty<A> {};
+template <typename A>
+struct __alloc_iae<A, void_t<typename A::is_always_equal>>
+    : A::is_always_equal {};
+
+template <typename A, typename = void> struct __alloc_soccc {
+  static constexpr A call(const A& a) { return a; }
+};
+template <typename A>
+struct __alloc_soccc<
+    A, void_t<decltype(declval<const A&>()
+                           .select_on_container_copy_construction())>> {
+  static constexpr A call(const A& a) {
+    return a.select_on_container_copy_construction();
+  }
+};
+
+template <typename A, typename = void> struct __alloc_max_size {
+  static constexpr size_t call(const A&) noexcept {
+    // Cap at ptrdiff_t max: the standard requires max_size() <=
+    // numeric_limits<difference_type>::max()
+    return size_t(__PTRDIFF_MAX__) / sizeof(typename A::value_type);
+  }
+};
+template <typename A>
+struct __alloc_max_size<A, void_t<decltype(declval<const A&>().max_size())>> {
+  static constexpr size_t call(const A& a) noexcept { return a.max_size(); }
+};
+
+template <typename A, typename T, typename... Args>
+concept __has_construct = requires(A& a, T* p, Args&&... args) {
+  // forward
+  a.construct(p, static_cast<Args&&>(args)...);
+};
+
+template <typename A, typename T>
+concept __has_destroy = requires(A& a, T* p) { a.destroy(p); };
+
+// Rebind: replace first template arg of Alloc with T
+template <typename Alloc, typename T> struct __rebind_first_arg;
+
+template <template <typename, typename...> class Tmpl, typename U,
+          typename... Args, typename T>
+struct __rebind_first_arg<Tmpl<U, Args...>, T> {
+  using type = Tmpl<T, Args...>;
+};
+
+template <typename Alloc, typename T, typename = void>
+struct __alloc_rebind : __rebind_first_arg<Alloc, T> {};
+
+template <typename Alloc, typename T>
+struct __alloc_rebind<Alloc, T,
+                      void_t<typename Alloc::template rebind<T>::other>> {
+  using type = typename Alloc::template rebind<T>::other;
+};
+} // namespace __detail
+
+namespace __detail {
+template <typename A, typename = void> struct __alloc_ptr {
+  using type = typename A::value_type*;
+};
+template <typename A> struct __alloc_ptr<A, void_t<typename A::pointer>> {
+  using type = typename A::pointer;
+};
+
+// Rebind a pointer type: replace first type arg with U.
+// Raw pointer T*: rebind<U> = U*. Fancy pointer Tmpl<T,...>: rebind<U> =
+// Tmpl<U,...>.
+template <typename Ptr, typename U> struct __ptr_rebind {
+  using type = U*;
+};
+template <template <typename...> class Tmpl, typename T, typename... Rest,
+          typename U>
+struct __ptr_rebind<Tmpl<T, Rest...>, U> {
+  using type = Tmpl<U, Rest...>;
+};
+
+template <typename A, typename = void> struct __alloc_cptr {
+  // No const_pointer in Alloc: rebind the pointer type to const value_type
+  using __ptr = typename __alloc_ptr<A>::type;
+  using type = typename __ptr_rebind<__ptr, const typename A::value_type>::type;
+};
+template <typename A>
+struct __alloc_cptr<A, void_t<typename A::const_pointer>> {
+  using type = typename A::const_pointer;
+};
+} // namespace __detail
+
+// allocator_traits
+template <typename Alloc> struct allocator_traits {
+  using allocator_type = Alloc;
+  using value_type = typename Alloc::value_type;
+  using pointer = typename __detail::__alloc_ptr<Alloc>::type;
+  using const_pointer = typename __detail::__alloc_cptr<Alloc>::type;
+  using void_pointer = void*;
+  using const_void_pointer = const void*;
+  using size_type = size_t;
+  using difference_type = ptrdiff_t;
+  using propagate_on_container_copy_assignment = __detail::__alloc_pocca<Alloc>;
+  using propagate_on_container_move_assignment = __detail::__alloc_pocma<Alloc>;
+  using propagate_on_container_swap = __detail::__alloc_pocs<Alloc>;
+  using is_always_equal = __detail::__alloc_iae<Alloc>;
+
+  template <typename T>
+  using rebind_alloc = typename __detail::__alloc_rebind<Alloc, T>::type;
+  template <typename T> using rebind_traits = allocator_traits<rebind_alloc<T>>;
+
+  [[nodiscard]] static constexpr pointer allocate(Alloc& a, size_type n) {
+    return a.allocate(n);
+  }
+  [[nodiscard]] static constexpr pointer allocate(Alloc& a, size_type n,
+                                                  const_void_pointer hint) {
+    if constexpr (requires { a.allocate(n, hint); })
+      return a.allocate(n, hint);
+    else
+      return a.allocate(n);
+  }
+  static constexpr void deallocate(Alloc& a, pointer p, size_type n) noexcept {
+    a.deallocate(p, n);
+  }
+  template <typename T, typename... Args>
+  static constexpr void construct(Alloc& a, T* p, Args&&... args) {
+    if constexpr (__detail::__has_construct<Alloc, T, Args...>) {
+      // forward
+      a.construct(p, static_cast<Args&&>(args)...);
+    } else {
+      // forward
+      construct_at(p, static_cast<Args&&>(args)...);
+    }
+  }
+  template <typename T> static constexpr void destroy(Alloc& a, T* p) {
+    if constexpr (__detail::__has_destroy<Alloc, T>)
+      a.destroy(p);
+    else
+      destroy_at(p);
+  }
+  static constexpr size_type max_size(const Alloc& a) noexcept {
+    return __detail::__alloc_max_size<Alloc>::call(a);
+  }
+  static constexpr Alloc select_on_container_copy_construction(const Alloc& a) {
+    return __detail::__alloc_soccc<Alloc>::call(a);
+  }
+};
+
+// to_address: obtain pointer from fancy pointer or raw pointer
+template <typename T> constexpr T* to_address(T* p) noexcept { return p; }
+template <typename Ptr> constexpr auto to_address(const Ptr& p) noexcept {
+  return to_address(p.operator->());
+}
+
+} // namespace std

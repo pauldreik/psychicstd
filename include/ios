@@ -70,41 +70,17 @@ public:
   static constexpr seekdir end = 2;
 
   fmtflags flags() const noexcept { return flags_; }
-  fmtflags flags(fmtflags f) {
-    fmtflags old = flags_;
-    flags_ = f;
-    return old;
-  }
-  fmtflags setf(fmtflags f) {
-    fmtflags old = flags_;
-    flags_ |= f;
-    return old;
-  }
-  fmtflags setf(fmtflags f, fmtflags mask) {
-    fmtflags old = flags_;
-    flags_ = (flags_ & ~mask) | f;
-    return old;
-  }
+  fmtflags flags(fmtflags f);
+  fmtflags setf(fmtflags f);
+  fmtflags setf(fmtflags f, fmtflags mask);
   void unsetf(fmtflags f) { flags_ &= ~f; }
 
   streamsize width() const noexcept { return width_; }
-  streamsize width(streamsize w) {
-    streamsize old = width_;
-    width_ = w;
-    return old;
-  }
+  streamsize width(streamsize w);
   streamsize precision() const noexcept { return prec_; }
-  streamsize precision(streamsize p) {
-    streamsize old = prec_;
-    prec_ = p;
-    return old;
-  }
+  streamsize precision(streamsize p);
   char fill() const noexcept { return fill_; }
-  char fill(char c) {
-    char old = fill_;
-    fill_ = c;
-    return old;
-  }
+  char fill(char c);
 
   iostate rdstate() const noexcept { return state_; }
   bool good() const noexcept { return state_ == goodbit; }
@@ -113,24 +89,13 @@ public:
   bool bad() const noexcept { return state_ & badbit; }
   explicit operator bool() const noexcept { return !fail(); }
   bool operator!() const noexcept { return fail(); }
-  void clear(iostate s = goodbit) {
-    state_ = s;
-    if (state_ & except_)
-      _throw_failure();
-  }
+  void clear(iostate s = goodbit);
   void setstate(iostate s) { clear(state_ | s); }
   iostate exceptions() const noexcept { return except_; }
-  void exceptions(iostate mask) {
-    except_ = mask;
-    clear(state_);
-  }
+  void exceptions(iostate mask);
 
-  locale getloc() const { return loc_; }
-  locale imbue(const locale& loc) {
-    locale old = loc_;
-    loc_ = loc;
-    return old;
-  }
+  locale getloc() const;
+  locale imbue(const locale& loc);
 
 protected:
   int _format_signed(char*, size_t, long long, unsigned long long) const;

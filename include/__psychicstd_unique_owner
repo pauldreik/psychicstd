@@ -1,0 +1,26 @@
+#pragma once
+
+namespace std {
+namespace __detail {
+
+template <typename T> class __unique_owner {
+  T* pointer_;
+
+public:
+  explicit __unique_owner(T* pointer) noexcept : pointer_(pointer) {}
+  ~__unique_owner() { delete pointer_; }
+
+  __unique_owner(const __unique_owner&) = delete;
+  __unique_owner& operator=(const __unique_owner&) = delete;
+
+  T* operator->() const noexcept { return pointer_; }
+  T* get() const noexcept { return pointer_; }
+  T* release() noexcept {
+    T* result = pointer_;
+    pointer_ = nullptr;
+    return result;
+  }
+};
+
+} // namespace __detail
+} // namespace std

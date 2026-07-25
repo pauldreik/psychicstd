@@ -36,6 +36,7 @@ set(TESTS
     test_locale
     test_map
     test_memory
+    test_memory_include_order
     test_mutex
     test_new
     test_numeric

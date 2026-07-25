@@ -1,8 +1,5 @@
 #pragma once
 #include <__psychicstd_refcount>
-#include <cstdlib>
-#include <new>
-#include <pthread.h>
 #include <type_traits>
 #include <utility>
 
@@ -17,30 +14,22 @@ namespace __stop_detail {
 struct stop_callback_base;
 
 struct stop_state {
-  pthread_mutex_t mutex_;
+  // Opaque pthread storage; the runtime library verifies capacity and
+  // alignment.
+  alignas(unsigned long) unsigned char mutex_[64];
   bool stop_requested_ = false;
   stop_callback_base* callbacks_ = nullptr;
   unsigned refs_ = 1;
   unsigned sources_ = 1;
 
-  stop_state() { pthread_mutex_init(&mutex_, nullptr); }
-  ~stop_state() { pthread_mutex_destroy(&mutex_); }
+  stop_state();
+  ~stop_state();
 
-  void add_ref() noexcept { __refcount_detail::add(&refs_); }
-  void add_source() noexcept { __refcount_detail::add(&sources_); }
-  void release_source() noexcept {
-    __atomic_sub_fetch(&sources_, 1, __ATOMIC_RELEASE);
-  }
-  bool stop_possible() const noexcept {
-    return __atomic_load_n(&stop_requested_, __ATOMIC_ACQUIRE) ||
-           __atomic_load_n(&sources_, __ATOMIC_ACQUIRE) != 0;
-  }
-  void release() noexcept {
-    if (__refcount_detail::release(&refs_)) {
-      this->~stop_state();
-      ::free(this);
-    }
-  }
+  void add_ref() noexcept;
+  void add_source() noexcept;
+  void release_source() noexcept;
+  bool stop_possible() const noexcept;
+  void release() noexcept;
 
   bool request_stop() noexcept;
 };
@@ -50,46 +39,19 @@ struct stop_callback_base {
   stop_callback_base* next_ = nullptr;
   bool registered_ = false;
   bool running_ = false;
-  pthread_cond_t done_;
+  // Opaque pthread storage; the runtime library verifies capacity and
+  // alignment.
+  alignas(unsigned long) unsigned char done_[48];
 
-  stop_callback_base() { pthread_cond_init(&done_, nullptr); }
-  virtual ~stop_callback_base() { pthread_cond_destroy(&done_); }
+  stop_callback_base();
+  virtual ~stop_callback_base();
   virtual void invoke() noexcept = 0;
 };
 
-inline void remove_callback(stop_state* state, stop_callback_base* target) {
-  stop_callback_base** link = &state->callbacks_;
-  while (*link && *link != target)
-    link = &(*link)->next_;
-  if (*link == target)
-    *link = target->next_;
-}
-
-inline bool stop_state::request_stop() noexcept {
-  pthread_mutex_lock(&mutex_);
-  if (stop_requested_) {
-    pthread_mutex_unlock(&mutex_);
-    return false;
-  }
-
-  __atomic_store_n(&stop_requested_, true, __ATOMIC_RELEASE);
-  stop_callback_base* callbacks = callbacks_;
-  callbacks_ = nullptr;
-  for (auto* cb = callbacks; cb; cb = cb->next_) {
-    cb->registered_ = false;
-    cb->running_ = true;
-  }
-  pthread_mutex_unlock(&mutex_);
-
-  for (auto* cb = callbacks; cb; cb = cb->next_) {
-    cb->invoke();
-    pthread_mutex_lock(&mutex_);
-    cb->running_ = false;
-    pthread_cond_broadcast(&cb->done_);
-    pthread_mutex_unlock(&mutex_);
-  }
-  return true;
-}
+void lock(stop_state*) noexcept;
+void unlock(stop_state*) noexcept;
+void wait(stop_callback_base*, stop_state*) noexcept;
+void remove_callback(stop_state* state, stop_callback_base* target);
 } // namespace __stop_detail
 
 class stop_token {
@@ -105,107 +67,32 @@ class stop_token {
 
 public:
   stop_token() noexcept = default;
-  stop_token(const stop_token& other) noexcept : state_(other.state_) {
-    if (state_)
-      state_->add_ref();
-  }
-  stop_token(stop_token&& other) noexcept : state_(other.state_) {
-    other.state_ = nullptr;
-  }
-  ~stop_token() {
-    if (state_)
-      state_->release();
-  }
-  stop_token& operator=(const stop_token& other) noexcept {
-    if (this != &other) {
-      if (state_)
-        state_->release();
-      state_ = other.state_;
-      if (state_)
-        state_->add_ref();
-    }
-    return *this;
-  }
-  stop_token& operator=(stop_token&& other) noexcept {
-    if (this != &other) {
-      if (state_)
-        state_->release();
-      state_ = other.state_;
-      other.state_ = nullptr;
-    }
-    return *this;
-  }
+  stop_token(const stop_token& other) noexcept;
+  stop_token(stop_token&& other) noexcept;
+  ~stop_token();
+  stop_token& operator=(const stop_token& other) noexcept;
+  stop_token& operator=(stop_token&& other) noexcept;
 
-  bool stop_possible() const noexcept {
-    return state_ && state_->stop_possible();
-  }
-  bool stop_requested() const noexcept {
-    auto* state = state_;
-    return state && __atomic_load_n(&state->stop_requested_, __ATOMIC_ACQUIRE);
-  }
+  bool stop_possible() const noexcept;
+  bool stop_requested() const noexcept;
 };
 
 class stop_source {
   __stop_detail::stop_state* state_ = nullptr;
 
 public:
-  stop_source() noexcept {
-    void* mem = ::malloc(sizeof(__stop_detail::stop_state));
-    if (mem)
-      state_ = ::new (mem) __stop_detail::stop_state;
-  }
+  stop_source() noexcept;
   explicit stop_source(nostopstate_t) noexcept {}
-  stop_source(const stop_source& other) noexcept : state_(other.state_) {
-    if (state_) {
-      state_->add_ref();
-      state_->add_source();
-    }
-  }
-  stop_source(stop_source&& other) noexcept : state_(other.state_) {
-    other.state_ = nullptr;
-  }
-  ~stop_source() {
-    if (state_) {
-      state_->release_source();
-      state_->release();
-    }
-  }
-  stop_source& operator=(const stop_source& other) noexcept {
-    if (this != &other) {
-      if (state_) {
-        state_->release_source();
-        state_->release();
-      }
-      state_ = other.state_;
-      if (state_) {
-        state_->add_ref();
-        state_->add_source();
-      }
-    }
-    return *this;
-  }
-  stop_source& operator=(stop_source&& other) noexcept {
-    if (this != &other) {
-      if (state_) {
-        state_->release_source();
-        state_->release();
-      }
-      state_ = other.state_;
-      other.state_ = nullptr;
-    }
-    return *this;
-  }
+  stop_source(const stop_source& other) noexcept;
+  stop_source(stop_source&& other) noexcept;
+  ~stop_source();
+  stop_source& operator=(const stop_source& other) noexcept;
+  stop_source& operator=(stop_source&& other) noexcept;
 
-  bool stop_possible() const noexcept { return state_ != nullptr; }
-  bool stop_requested() const noexcept {
-    auto* state = state_;
-    return state && __atomic_load_n(&state->stop_requested_, __ATOMIC_ACQUIRE);
-  }
-  bool request_stop() noexcept {
-    auto* state = state_;
-    return state && state->request_stop();
-  }
-  stop_token get_token() const noexcept { return stop_token(state_); }
+  bool stop_possible() const noexcept;
+  bool stop_requested() const noexcept;
+  bool request_stop() noexcept;
+  stop_token get_token() const noexcept;
 };
 
 template <typename Callback>
@@ -224,9 +111,9 @@ public:
       return;
 
     state->add_ref();
-    pthread_mutex_lock(&state->mutex_);
+    __stop_detail::lock(state);
     if (state->stop_requested_) {
-      pthread_mutex_unlock(&state->mutex_);
+      __stop_detail::unlock(state);
       struct __release_guard {
         __stop_detail::stop_state* state_;
         ~__release_guard() {
@@ -242,7 +129,7 @@ public:
     registered_ = true;
     next_ = state->callbacks_;
     state->callbacks_ = this;
-    pthread_mutex_unlock(&state->mutex_);
+    __stop_detail::unlock(state);
   }
 
   ~stop_callback() {
@@ -250,14 +137,14 @@ public:
     if (!state)
       return;
 
-    pthread_mutex_lock(&state->mutex_);
+    __stop_detail::lock(state);
     if (registered_) {
       remove_callback(state, this);
       registered_ = false;
     }
     while (running_)
-      pthread_cond_wait(&done_, &state->mutex_);
-    pthread_mutex_unlock(&state->mutex_);
+      __stop_detail::wait(this, state);
+    __stop_detail::unlock(state);
     state->release();
   }
 
