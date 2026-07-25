@@ -45,6 +45,7 @@ set(TESTS
     test_ranges
     test_ratio
     test_regex
+    test_scoped_allocator
     test_set
     test_span
     test_sstream
