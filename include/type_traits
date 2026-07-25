@@ -201,10 +201,21 @@ struct invoke_result_impl<Void, R C::*, Obj*&&, Args...>
 template <typename Void, typename R, typename C, typename Obj, typename... Args>
 struct invoke_result_impl<Void, R C::*, Obj* const&&, Args...>
     : invoke_result_impl<Void, R C::*, Obj*, Args...> {};
+
+// Preserve a function object's cv/ref qualification, while normalizing member
+// pointer wrappers so they reach the specializations above.
+template <typename F, typename = remove_cvref_t<F>> struct invoke_callable {
+  using type = F;
+};
+template <typename F, typename R, typename C>
+struct invoke_callable<F, R C::*> {
+  using type = R C::*;
+};
 } // namespace detail
 template <typename F, typename... Args>
 struct invoke_result
-    : detail::invoke_result_impl<void, remove_cvref_t<F>, Args...> {};
+    : detail::invoke_result_impl<
+          void, typename detail::invoke_callable<F>::type, Args...> {};
 template <typename F, typename... Args>
 using invoke_result_t = typename invoke_result<F, Args...>::type;
 

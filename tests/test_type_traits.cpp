@@ -24,6 +24,9 @@ struct NothrowCallable {
   int operator()(int) const noexcept { return 0; }
   int value = 0;
 };
+struct MutableCallable {
+  void operator()() {}
+};
 
 int main() {
   static_assert(std::is_same_v<int, int>);
@@ -55,6 +58,8 @@ int main() {
   static_assert(std::is_nothrow_invocable_v<decltype(&NothrowCallable::value),
                                             const NothrowCallable&&>);
   static_assert(!std::is_nothrow_invocable_v<int, int>);
+  static_assert(std::is_invocable_v<MutableCallable&>);
+  static_assert(!std::is_invocable_v<const MutableCallable&>);
   static_assert(std::alignment_of<int>::value == alignof(int));
   static_assert(std::alignment_of_v<int> == alignof(int));
   static_assert(std::negation_v<std::false_type>);
