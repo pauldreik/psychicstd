@@ -1,5 +1,7 @@
 #pragma once
+#include <__psychicstd_config>
 #include <__psychicstd_exception_base>
+#include <__psychicstd_traits_core>
 #include <cstddef>
 #include <typeinfo>
 
@@ -166,6 +168,54 @@ inline exception_ptr current_exception() noexcept {
 // the saved primary exception, unlike __cxa_rethrow(), which only works while
 // handling the current exception.
 #endif
+
+class nested_exception {
+  exception_ptr ptr_;
+
+public:
+  nested_exception() noexcept : ptr_(current_exception()) {}
+#ifdef __APPLE__
+  virtual ~nested_exception() noexcept = default;
+#else
+  // libsupc++ owns this ABI type's destructor, vtable, and typeinfo.
+  virtual ~nested_exception() noexcept;
+#endif
+  [[noreturn]] void rethrow_nested() const {
+    if (ptr_)
+      rethrow_exception(ptr_);
+    terminate();
+  }
+  exception_ptr nested_ptr() const noexcept { return ptr_; }
+};
+
+namespace __exception_detail {
+template <typename T> class nested : public T, public nested_exception {
+public:
+  template <typename U>
+  explicit nested(U&& value) : T(static_cast<U&&>(value)) {}
+};
+} // namespace __exception_detail
+
+template <typename T> [[noreturn]] void throw_with_nested(T&& value) {
+  (void)value;
+  using U = __psychicstd_detail::remove_cv_t<
+      __psychicstd_detail::remove_reference_t<T>>;
+  if constexpr (__is_class(U) && !__is_final(U) &&
+                !__is_base_of(nested_exception, U))
+    _PSYCHICSTD_THROW(__exception_detail::nested<U>(static_cast<T&&>(value)));
+  else
+    _PSYCHICSTD_THROW(static_cast<T&&>(value));
+}
+
+template <typename T> void rethrow_if_nested(const T& value) {
+#if _PSYCHICSTD_HAS_RTTI
+  if constexpr (__is_polymorphic(T))
+    if (const auto* nested = dynamic_cast<const nested_exception*>(&value))
+      nested->rethrow_nested();
+#else
+  (void)value;
+#endif
+}
 
 template <typename E>
 exception_ptr make_exception_ptr([[maybe_unused]] E e) noexcept {
