@@ -1103,19 +1103,6 @@ def _nlohmann() -> Project:
             jobs = f"-j{tc.jobs}"
             configure_ms = _timed(configure, src, env)
             compile_ms = _timed(["cmake", "--build", "build", jobs], src, env)
-            run_tests_ms = _timed(
-                [
-                    "ctest",
-                    "--test-dir",
-                    "build",
-                    "--output-on-failure",
-                    "-E",
-                    _NLOHMANN_TEST_EXCLUDE,
-                    jobs,
-                ],
-                src,
-                env,
-            )
 
             # Compile (but don't run) the 217 documented API examples.
             include_dir = src / "include"
@@ -1131,6 +1118,19 @@ def _nlohmann() -> Project:
                     + ["-o", str(binary)]
                 )
             examples_ms = _timed_many(example_cmds, src, env, tc.jobs)
+            run_tests_ms = _timed(
+                [
+                    "ctest",
+                    "--test-dir",
+                    "build",
+                    "--output-on-failure",
+                    "-E",
+                    _NLOHMANN_TEST_EXCLUDE,
+                    jobs,
+                ],
+                src,
+                env,
+            )
 
             return {
                 "configure": configure_ms,
