@@ -1,3 +1,4 @@
+#include <pthread.h>
 #include <sched.h>
 #include <thread>
 #include <time.h>
@@ -7,12 +8,12 @@ namespace std {
 
 namespace __thread_detail {
 
-unsigned long __id_value(pthread_t thread) noexcept {
-#ifdef __APPLE__
-  return reinterpret_cast<unsigned long>(thread);
-#else
-  return static_cast<unsigned long>(thread);
-#endif
+static_assert(__is_same(pthread_t, unsigned long),
+              "psychicstd thread handle storage does not match pthread_t");
+
+bool __create(unsigned long& handle, void* (*start)(void*),
+              void* state) noexcept {
+  return ::pthread_create(&handle, nullptr, start, state) == 0;
 }
 
 void __sleep_for(long long nanoseconds) noexcept {
@@ -65,7 +66,7 @@ void thread::detach() {
 }
 
 thread::id thread::get_id() const noexcept {
-  return joinable_ ? id(__thread_detail::__id_value(handle_)) : id();
+  return joinable_ ? id(handle_) : id();
 }
 
 unsigned thread::hardware_concurrency() noexcept {
@@ -94,9 +95,7 @@ jthread::~jthread() {
 
 namespace this_thread {
 
-thread::id get_id() noexcept {
-  return thread::id(__thread_detail::__id_value(::pthread_self()));
-}
+thread::id get_id() noexcept { return thread::id(::pthread_self()); }
 
 void yield() noexcept { ::sched_yield(); }
 

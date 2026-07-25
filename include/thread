@@ -3,7 +3,6 @@
 #include <chrono>
 #include <compare>
 #include <iosfwd>
-#include <pthread.h>
 #include <stop_token>
 #include <tuple>
 #include <type_traits>
@@ -13,7 +12,8 @@ namespace std {
 [[noreturn]] void terminate() noexcept;
 
 namespace __thread_detail {
-unsigned long __id_value(pthread_t) noexcept;
+bool __create(unsigned long& handle, void* (*start)(void*),
+              void* state) noexcept;
 void __sleep_for(long long) noexcept;
 template <typename F, typename Tuple, size_t... Is>
 constexpr decltype(auto) __invoke_from_tuple(F&& f, Tuple& args,
@@ -46,7 +46,7 @@ constexpr decltype(auto) __invoke_from_tuple_token(F&& f, Token&& token,
 
 class thread {
   friend class jthread;
-  pthread_t handle_{};
+  unsigned long handle_{};
   bool joinable_ = false;
 
   struct __state {
@@ -88,7 +88,7 @@ public:
     static_assert(is_invocable_v<Fn, decay_t<Args>...>,
                   "psychicstd::thread callable is not invocable with args");
     auto* state = new State(static_cast<F&&>(f), static_cast<Args&&>(args)...);
-    if (::pthread_create(&handle_, nullptr, __start, state) != 0) {
+    if (!__thread_detail::__create(handle_, __start, state)) {
       delete state;
       __builtin_trap();
     }
@@ -138,8 +138,7 @@ class jthread {
                   "psychicstd::jthread callable is not invocable");
     auto* state = new State(static_cast<F&&>(f), source_.get_token(),
                             static_cast<Args&&>(args)...);
-    if (::pthread_create(&thread_.handle_, nullptr, thread::__start, state) !=
-        0) {
+    if (!__thread_detail::__create(thread_.handle_, thread::__start, state)) {
       delete state;
       __builtin_trap();
     }

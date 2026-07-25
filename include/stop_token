@@ -1,6 +1,5 @@
 #pragma once
 #include <__psychicstd_refcount>
-#include <pthread.h>
 #include <type_traits>
 #include <utility>
 
@@ -15,7 +14,8 @@ namespace __stop_detail {
 struct stop_callback_base;
 
 struct stop_state {
-  pthread_mutex_t mutex_;
+  // Linux pthread storage; the runtime library verifies size and alignment.
+  alignas(unsigned long) unsigned char mutex_[40];
   bool stop_requested_ = false;
   stop_callback_base* callbacks_ = nullptr;
   unsigned refs_ = 1;
@@ -38,13 +38,17 @@ struct stop_callback_base {
   stop_callback_base* next_ = nullptr;
   bool registered_ = false;
   bool running_ = false;
-  pthread_cond_t done_;
+  // Linux pthread storage; the runtime library verifies size and alignment.
+  alignas(unsigned long) unsigned char done_[48];
 
   stop_callback_base();
   virtual ~stop_callback_base();
   virtual void invoke() noexcept = 0;
 };
 
+void lock(stop_state*) noexcept;
+void unlock(stop_state*) noexcept;
+void wait(stop_callback_base*, stop_state*) noexcept;
 void remove_callback(stop_state* state, stop_callback_base* target);
 } // namespace __stop_detail
 
@@ -105,9 +109,9 @@ public:
       return;
 
     state->add_ref();
-    pthread_mutex_lock(&state->mutex_);
+    __stop_detail::lock(state);
     if (state->stop_requested_) {
-      pthread_mutex_unlock(&state->mutex_);
+      __stop_detail::unlock(state);
       struct __release_guard {
         __stop_detail::stop_state* state_;
         ~__release_guard() {
@@ -123,7 +127,7 @@ public:
     registered_ = true;
     next_ = state->callbacks_;
     state->callbacks_ = this;
-    pthread_mutex_unlock(&state->mutex_);
+    __stop_detail::unlock(state);
   }
 
   ~stop_callback() {
@@ -131,14 +135,14 @@ public:
     if (!state)
       return;
 
-    pthread_mutex_lock(&state->mutex_);
+    __stop_detail::lock(state);
     if (registered_) {
       remove_callback(state, this);
       registered_ = false;
     }
     while (running_)
-      pthread_cond_wait(&done_, &state->mutex_);
-    pthread_mutex_unlock(&state->mutex_);
+      __stop_detail::wait(this, state);
+    __stop_detail::unlock(state);
     state->release();
   }
 

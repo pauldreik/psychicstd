@@ -1,12 +1,25 @@
 #include <cstdlib>
 #include <new>
+#include <pthread.h>
 #include <stop_token>
 
 namespace std {
 namespace __stop_detail {
 
-stop_state::stop_state() { pthread_mutex_init(&mutex_, nullptr); }
-stop_state::~stop_state() { pthread_mutex_destroy(&mutex_); }
+static_assert(sizeof(pthread_mutex_t) == sizeof(stop_state::mutex_));
+static_assert(alignof(pthread_mutex_t) <= alignof(stop_state));
+static_assert(sizeof(pthread_cond_t) == sizeof(stop_callback_base::done_));
+static_assert(alignof(pthread_cond_t) <= alignof(stop_callback_base));
+
+static pthread_mutex_t* mutex(stop_state* state) {
+  return reinterpret_cast<pthread_mutex_t*>(state->mutex_);
+}
+static pthread_cond_t* condition(stop_callback_base* callback) {
+  return reinterpret_cast<pthread_cond_t*>(callback->done_);
+}
+
+stop_state::stop_state() { pthread_mutex_init(mutex(this), nullptr); }
+stop_state::~stop_state() { pthread_mutex_destroy(mutex(this)); }
 
 void stop_state::add_ref() noexcept { __refcount_detail::add(&refs_); }
 void stop_state::add_source() noexcept { __refcount_detail::add(&sources_); }
@@ -24,8 +37,18 @@ void stop_state::release() noexcept {
   }
 }
 
-stop_callback_base::stop_callback_base() { pthread_cond_init(&done_, nullptr); }
-stop_callback_base::~stop_callback_base() { pthread_cond_destroy(&done_); }
+stop_callback_base::stop_callback_base() {
+  pthread_cond_init(condition(this), nullptr);
+}
+stop_callback_base::~stop_callback_base() {
+  pthread_cond_destroy(condition(this));
+}
+
+void lock(stop_state* state) noexcept { pthread_mutex_lock(mutex(state)); }
+void unlock(stop_state* state) noexcept { pthread_mutex_unlock(mutex(state)); }
+void wait(stop_callback_base* callback, stop_state* state) noexcept {
+  pthread_cond_wait(condition(callback), mutex(state));
+}
 
 void remove_callback(stop_state* state, stop_callback_base* target) {
   stop_callback_base** link = &state->callbacks_;
@@ -36,9 +59,9 @@ void remove_callback(stop_state* state, stop_callback_base* target) {
 }
 
 bool stop_state::request_stop() noexcept {
-  pthread_mutex_lock(&mutex_);
+  lock(this);
   if (stop_requested_) {
-    pthread_mutex_unlock(&mutex_);
+    unlock(this);
     return false;
   }
 
@@ -49,14 +72,14 @@ bool stop_state::request_stop() noexcept {
     cb->registered_ = false;
     cb->running_ = true;
   }
-  pthread_mutex_unlock(&mutex_);
+  unlock(this);
 
   for (auto* cb = callbacks; cb; cb = cb->next_) {
     cb->invoke();
-    pthread_mutex_lock(&mutex_);
+    lock(this);
     cb->running_ = false;
-    pthread_cond_broadcast(&cb->done_);
-    pthread_mutex_unlock(&mutex_);
+    pthread_cond_broadcast(condition(cb));
+    unlock(this);
   }
   return true;
 }
