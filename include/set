@@ -1,9 +1,11 @@
 #pragma once
 #include <__psychicstd_algo>
 #include <__psychicstd_ordering>
+#include <__psychicstd_ptr_index>
 #include <initializer_list>
+#include <iterator>
+#include <memory>
 #include <utility>
-#include <vector>
 
 namespace std {
 
@@ -105,8 +107,9 @@ public:
   }
   set(set&& other) noexcept(is_nothrow_move_constructible_v<Compare> &&
                             is_nothrow_move_constructible_v<Alloc>)
-      : data_(static_cast<vector<node*>&&>(other.data_)), head_(other.head_),
-        tail_(other.tail_), comp_(static_cast<Compare&&>(other.comp_)),
+      : data_(static_cast<__ptr_index<node>&&>(other.data_)),
+        head_(other.head_), tail_(other.tail_),
+        comp_(static_cast<Compare&&>(other.comp_)),
         alloc_(static_cast<Alloc&&>(other.alloc_)) {
     other.head_ = other.tail_ = nullptr;
   }
@@ -168,7 +171,7 @@ public:
     iterator result{value->next, this};
     unlink_(value);
     auto index = lower_bound_index_(value->key);
-    data_.erase(data_.begin() + index);
+    data_.erase(index);
     delete value;
     return result;
   }
@@ -246,7 +249,7 @@ public:
   }
 
 private:
-  vector<node*> data_;
+  __ptr_index<node> data_;
   node* head_ = nullptr;
   node* tail_ = nullptr;
   Compare comp_ = {};
@@ -271,19 +274,19 @@ private:
     auto index = lower_bound_index_(key);
     if (index != data_.size() && !comp_(key, data_[index]->key))
       return {{data_[index], this}, false};
-    node* value = new node(static_cast<Value&&>(key));
+    unique_ptr<node> value(new node(static_cast<Value&&>(key)));
     value->prev = index ? data_[index - 1] : nullptr;
     value->next = index == data_.size() ? nullptr : data_[index];
+    data_.insert(index, value.get());
     if (value->prev)
-      value->prev->next = value;
+      value->prev->next = value.get();
     else
-      head_ = value;
+      head_ = value.get();
     if (value->next)
-      value->next->prev = value;
+      value->next->prev = value.get();
     else
-      tail_ = value;
-    data_.insert(data_.begin() + index, value);
-    return {{value, this}, true};
+      tail_ = value.get();
+    return {{value.release(), this}, true};
   }
   void unlink_(node* value) {
     if (value->prev)
@@ -384,8 +387,9 @@ public:
   multiset(multiset&& other) noexcept(
       is_nothrow_move_constructible_v<Compare> &&
       is_nothrow_move_constructible_v<Alloc>)
-      : data_(static_cast<vector<node*>&&>(other.data_)), head_(other.head_),
-        tail_(other.tail_), comp_(static_cast<Compare&&>(other.comp_)),
+      : data_(static_cast<__ptr_index<node>&&>(other.data_)),
+        head_(other.head_), tail_(other.tail_),
+        comp_(static_cast<Compare&&>(other.comp_)),
         alloc_(static_cast<Alloc&&>(other.alloc_)) {
     other.head_ = other.tail_ = nullptr;
   }
@@ -445,7 +449,7 @@ public:
     while (data_[index] != value)
       ++index;
     unlink_(value);
-    data_.erase(data_.begin() + index);
+    data_.erase(index);
     delete value;
     return result;
   }
@@ -485,7 +489,7 @@ public:
   }
 
 private:
-  vector<node*> data_;
+  __ptr_index<node> data_;
   node* head_ = nullptr;
   node* tail_ = nullptr;
   Compare comp_ = {};
@@ -523,19 +527,19 @@ private:
   }
   template <typename Value> iterator insert_(Value&& key) {
     auto index = upper_bound_index_(key);
-    node* value = new node(static_cast<Value&&>(key));
+    unique_ptr<node> value(new node(static_cast<Value&&>(key)));
     value->prev = index ? data_[index - 1] : nullptr;
     value->next = index == data_.size() ? nullptr : data_[index];
+    data_.insert(index, value.get());
     if (value->prev)
-      value->prev->next = value;
+      value->prev->next = value.get();
     else
-      head_ = value;
+      head_ = value.get();
     if (value->next)
-      value->next->prev = value;
+      value->next->prev = value.get();
     else
-      tail_ = value;
-    data_.insert(data_.begin() + index, value);
-    return {value, this};
+      tail_ = value.get();
+    return {value.release(), this};
   }
   void unlink_(node* value) {
     if (value->prev)
