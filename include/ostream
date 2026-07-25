@@ -281,7 +281,7 @@ private:
     char buf[32];
     int n;
     if (this->flags_ & ios_base::hex) {
-      if (this->flags_ & ios_base::showbase)
+      if ((this->flags_ & ios_base::showbase) && v != 0)
         n = __builtin_snprintf(
             buf, sizeof(buf),
             (this->flags_ & ios_base::uppercase) ? "0X%llX" : "0x%llx",
@@ -292,7 +292,7 @@ private:
             (this->flags_ & ios_base::uppercase) ? "%llX" : "%llx",
             (unsigned long long)(typename make_unsigned<V>::type)v);
     } else if (this->flags_ & ios_base::oct) {
-      if (this->flags_ & ios_base::showbase)
+      if ((this->flags_ & ios_base::showbase) && v != 0)
         n = __builtin_snprintf(
             buf, sizeof(buf), "0%llo",
             (unsigned long long)(typename make_unsigned<V>::type)v);
@@ -316,7 +316,7 @@ private:
     char buf[32];
     int n;
     if (this->flags_ & ios_base::hex) {
-      if (this->flags_ & ios_base::showbase)
+      if ((this->flags_ & ios_base::showbase) && v != 0)
         n = __builtin_snprintf(buf, sizeof(buf),
                                (this->flags_ & ios_base::uppercase) ? "0X%llX"
                                                                     : "0x%llx",
@@ -327,7 +327,7 @@ private:
                                                                     : "%llx",
                                (unsigned long long)v);
     } else if (this->flags_ & ios_base::oct) {
-      if (this->flags_ & ios_base::showbase)
+      if ((this->flags_ & ios_base::showbase) && v != 0)
         n = __builtin_snprintf(buf, sizeof(buf), "0%llo",
                                (unsigned long long)v);
       else

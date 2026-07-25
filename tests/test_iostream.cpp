@@ -61,6 +61,10 @@ int main() {
   point << std::fixed << std::setprecision(0) << std::showpoint << 3.0;
   psyassert(point.str() == "3.");
 
+  std::ostringstream zero;
+  zero << std::showbase << std::hex << std::setfill('_') << std::setw(6) << 0;
+  psyassert(zero.str() == "_____0");
+
   std::istringstream booleans("true false");
   bool first = false;
   bool second = true;
