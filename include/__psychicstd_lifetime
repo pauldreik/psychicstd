@@ -1,0 +1,17 @@
+#pragma once
+#include <new>
+
+namespace std {
+
+template <typename T> constexpr T* addressof(T& value) noexcept {
+  return __builtin_addressof(value);
+}
+template <typename T> const T* addressof(const T&&) = delete;
+
+template <typename T, typename... Args>
+constexpr T* construct_at(T* location, Args&&... args) {
+  return ::new (static_cast<void*>(location)) T(static_cast<Args&&>(args)...);
+}
+template <typename T> constexpr void destroy_at(T* location) { location->~T(); }
+
+} // namespace std

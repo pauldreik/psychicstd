@@ -1,7 +1,7 @@
 #pragma once
 #include <__psychicstd_config>
+#include <__psychicstd_lifetime>
 #include <cstddef>
-#include <new>
 #include <type_traits>
 #include <typeinfo>
 
@@ -28,12 +28,6 @@ struct __pointer_rebind<Ptr, U, void_t<typename Ptr::template rebind<U>>> {
   using type = typename Ptr::template rebind<U>;
 };
 } // namespace __detail
-
-// addressof: bypass overloaded operator&
-template <typename T> constexpr T* addressof(T& r) noexcept {
-  return __builtin_addressof(r);
-}
-template <typename T> const T* addressof(const T&&) = delete;
 
 // pointer_traits
 template <typename Ptr> struct pointer_traits {
@@ -81,14 +75,6 @@ template <typename T, typename U>
 constexpr bool operator==(const allocator<T>&, const allocator<U>&) noexcept {
   return true;
 }
-
-// construct_at / destroy_at — declared before allocator_traits which uses them
-template <typename T, typename... Args>
-constexpr T* construct_at(T* p, Args&&... args) {
-  // forward
-  return ::new (static_cast<void*>(p)) T(static_cast<Args&&>(args)...);
-}
-template <typename T> constexpr void destroy_at(T* p) { p->~T(); }
 
 template <typename InputIt, typename Size, typename ForwardIt>
 constexpr ForwardIt uninitialized_copy_n(InputIt first, Size count,
