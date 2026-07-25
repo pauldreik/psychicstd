@@ -12,8 +12,10 @@ int main() {
   std::multiset<int, std::greater<int>> multiple(std::greater<int>{});
   int values[] = {1, 3, 2, 3};
   multiple.insert(values, values + 4);
-  psyassert(*multiple.begin() == 3);
+  multiple.insert(multiple.end(), 4);
+  psyassert(*multiple.begin() == 4);
   psyassert(multiple.count(3) == 2);
+  psyassert(multiple.count(4) == 1);
 
   int first = 1;
   int second = 2;

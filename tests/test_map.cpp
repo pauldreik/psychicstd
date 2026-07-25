@@ -37,6 +37,8 @@ int main() {
   psyassert(m[1] == 42);
   auto hinted = m.emplace_hint(m.end(), 2, 24);
   psyassert(hinted->second == 24);
+  m = {{3, 7}};
+  psyassert(m.size() == 1 && m[3] == 7);
 
   std::map<int, nonassignable> immutable;
   immutable.emplace(2, 2);

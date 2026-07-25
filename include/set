@@ -208,6 +208,15 @@ public:
     auto it = std::__lower_bound(data_.begin(), data_.end(), k, comp_);
     return data_.insert(data_.begin() + (it - data_.begin()), k);
   }
+  iterator insert(Key&& k) {
+    auto it = std::__lower_bound(data_.begin(), data_.end(), k, comp_);
+    return data_.insert(data_.begin() + (it - data_.begin()),
+                        static_cast<Key&&>(k));
+  }
+  iterator insert(const_iterator, const Key& k) { return insert(k); }
+  iterator insert(const_iterator, Key&& k) {
+    return insert(static_cast<Key&&>(k));
+  }
   template <typename It> void insert(It first, It last) {
     for (; first != last; ++first)
       insert(*first);

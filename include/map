@@ -24,7 +24,11 @@ class map : public __map_base<Key, T, Compare, Alloc> {
 
 public:
   using base::base;
-  using base::operator=;
+  using value_type = typename base::value_type;
+  map& operator=(initializer_list<value_type> values) {
+    base::operator=(values);
+    return *this;
+  }
   void
   swap(map& other) noexcept(noexcept(declval<base&>().swap(declval<base&>()))) {
     base::swap(other);
