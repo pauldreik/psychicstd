@@ -1317,6 +1317,8 @@ def _rdfind() -> Project:
             if fromcommit:
                 _timed(["./bootstrap.sh"], src, env)
             configure = ["./configure"]
+            if tc.build_type == "release":
+                configure.append("--disable-assert")
             if tc.ldflags:
                 configure.append(f"LDFLAGS={tc.ldflags}")
             if tc.libs:
