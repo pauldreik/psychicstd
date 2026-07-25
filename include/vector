@@ -131,6 +131,16 @@ private:
   // Slots [size_, cap_) are raw; slots [0, size_) are live objects.
   // Uses move when available, falls back to copy for non-movable types.
   constexpr void _shift_right(size_type idx, size_type n) {
+    if constexpr (is_trivially_copyable_v<T>) {
+      if (!__builtin_is_constant_evaluated()) {
+        __builtin_memmove(data_ + idx + n, data_ + idx,
+                          (size_ - idx) * sizeof(T));
+        size_type stop = idx + n < size_ ? idx + n : size_;
+        for (size_type j = idx; j < stop; ++j)
+          _destroy(data_ + j);
+        return;
+      }
+    }
     for (size_type i = size_; i-- > idx;) {
       if (i + n >= size_) {
         if constexpr (is_move_constructible_v<T>) {
@@ -164,6 +174,13 @@ private:
 
   // Shift elements [from, size_) left by n positions.
   constexpr void _shift_left(size_type from, size_type n) {
+    if constexpr (is_trivially_copyable_v<T>) {
+      if (!__builtin_is_constant_evaluated()) {
+        __builtin_memmove(data_ + from - n, data_ + from,
+                          (size_ - from) * sizeof(T));
+        return;
+      }
+    }
     for (size_type i = from; i < size_; ++i) {
       if constexpr (is_move_assignable_v<T>) {
         // move

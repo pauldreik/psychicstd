@@ -1,6 +1,14 @@
 #include "psyassert.h"
 #include <set>
 
+struct counting_less {
+  static inline int comparisons = 0;
+  bool operator()(int a, int b) const {
+    ++comparisons;
+    return a < b;
+  }
+};
+
 int main() {
   std::set<int, std::greater<int>> descending({1, 3, 2}, std::greater<int>{});
   psyassert(*descending.begin() == 3);
@@ -19,6 +27,13 @@ int main() {
   psyassert(
       (multiple == std::multiset<int, std::greater<int>>({4, 3, 3, 2, 1})));
   psyassert(!(multiple == std::multiset<int, std::greater<int>>({4, 3, 2, 1})));
+
+  std::set<int, counting_less> logarithmic_erase;
+  for (int i = 0; i < 1024; ++i)
+    logarithmic_erase.insert(i);
+  counting_less::comparisons = 0;
+  psyassert(logarithmic_erase.erase(512) == 1);
+  psyassert(counting_less::comparisons < 100);
 
   int first = 1;
   int second = 2;

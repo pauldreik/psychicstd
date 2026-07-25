@@ -116,10 +116,12 @@ public:
   size_type erase(const Key& k) {
     // Pointer keys need equality lookup: operator< on unrelated pointers is
     // not a portable ordering, while std::less<T*> must still support them.
-    for (auto it = data_.begin(); it != data_.end(); ++it) {
-      if (!comp_(*it, k) && !comp_(k, *it)) {
-        data_.erase(it);
-        return 1;
+    if constexpr (is_pointer_v<Key>) {
+      for (auto it = data_.begin(); it != data_.end(); ++it) {
+        if (!comp_(*it, k) && !comp_(k, *it)) {
+          data_.erase(it);
+          return 1;
+        }
       }
     }
     auto it = lower_bound_(k);
