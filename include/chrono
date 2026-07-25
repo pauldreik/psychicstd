@@ -127,6 +127,8 @@ template <typename ToDur, typename Rep, typename Period>
 constexpr ToDur duration_cast(const duration<Rep, Period>& d) {
   using ToRep = typename ToDur::rep;
   using ToPer = typename ToDur::period;
+  using CalcRep =
+      decltype(declval<Rep>() + declval<ToRep>() + declval<intmax_t>());
   // scale = Period / ToPer = Period::num * ToPer::den / (Period::den *
   // ToPer::num)
   constexpr auto num = Period::num * ToPer::den;
@@ -135,7 +137,9 @@ constexpr ToDur duration_cast(const duration<Rep, Period>& d) {
   if constexpr (num == den) {
     return ToDur(static_cast<ToRep>(d.count()));
   }
-  return ToDur(static_cast<ToRep>(d.count()) * num / den);
+  return ToDur(static_cast<ToRep>(static_cast<CalcRep>(d.count()) *
+                                  static_cast<CalcRep>(num) /
+                                  static_cast<CalcRep>(den)));
 }
 
 using nanoseconds = duration<long long, nano>;
