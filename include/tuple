@@ -285,8 +285,8 @@ constexpr bool operator>=(const tuple<Ts...>& a, const tuple<Ts...>& b) {
 
 // make_tuple
 template <typename... Ts>
-constexpr tuple<decay_t<Ts>...> make_tuple(Ts&&... args) {
-  return tuple<decay_t<Ts>...>(static_cast<Ts&&>(args)...);
+constexpr tuple<unwrap_ref_decay_t<Ts>...> make_tuple(Ts&&... args) {
+  return tuple<unwrap_ref_decay_t<Ts>...>(static_cast<Ts&&>(args)...);
 }
 
 // forward_as_tuple
