@@ -27,6 +27,10 @@ int main() {
   psyassert(
       (multiple == std::multiset<int, std::greater<int>>({4, 3, 3, 2, 1})));
   psyassert(!(multiple == std::multiset<int, std::greater<int>>({4, 3, 2, 1})));
+  auto stable_multiple_three = multiple.find(3);
+  multiple.insert(5);
+  multiple.erase(2);
+  psyassert(*stable_multiple_three == 3);
 
   std::set<int, counting_less> logarithmic_erase;
   for (int i = 0; i < 1024; ++i)

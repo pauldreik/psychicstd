@@ -295,6 +295,14 @@ private:
 template <typename Key, typename Compare = less<Key>,
           typename Alloc = allocator<Key>>
 class multiset {
+  struct node {
+    Key key;
+    node* prev = nullptr;
+    node* next = nullptr;
+    explicit node(const Key& value) : key(value) {}
+    explicit node(Key&& value) : key(static_cast<Key&&>(value)) {}
+  };
+
 public:
   using key_type = Key;
   using value_type = Key;
@@ -302,10 +310,54 @@ public:
   using key_compare = Compare;
   using value_compare = Compare;
   using allocator_type = Alloc;
-  using iterator = typename vector<Key>::const_iterator;
-  using const_iterator = typename vector<Key>::const_iterator;
-  using reverse_iterator = typename vector<Key>::const_reverse_iterator;
-  using const_reverse_iterator = typename vector<Key>::const_reverse_iterator;
+  using difference_type = ptrdiff_t;
+  using reference = const Key&;
+  using const_reference = const Key&;
+  class iterator {
+    friend class multiset;
+    node* node_ = nullptr;
+    const multiset* owner_ = nullptr;
+    iterator(node* value, const multiset* owner)
+        : node_(value), owner_(owner) {}
+
+  public:
+    using value_type = Key;
+    using difference_type = ptrdiff_t;
+    using pointer = const Key*;
+    using reference = const Key&;
+    using iterator_category = bidirectional_iterator_tag;
+
+    iterator() = default;
+    reference operator*() const { return node_->key; }
+    pointer operator->() const { return &node_->key; }
+    iterator& operator++() {
+      node_ = node_->next;
+      return *this;
+    }
+    iterator operator++(int) {
+      auto copy = *this;
+      ++*this;
+      return copy;
+    }
+    iterator& operator--() {
+      node_ = node_ ? node_->prev : owner_->tail_;
+      return *this;
+    }
+    iterator operator--(int) {
+      auto copy = *this;
+      --*this;
+      return copy;
+    }
+    bool operator==(const iterator& other) const {
+      return node_ == other.node_;
+    }
+    bool operator!=(const iterator& other) const {
+      return node_ != other.node_;
+    }
+  };
+  using const_iterator = iterator;
+  using reverse_iterator = std::reverse_iterator<iterator>;
+  using const_reverse_iterator = reverse_iterator;
 
   multiset() = default;
   explicit multiset(const Compare& comp) : comp_(comp) {}
@@ -320,25 +372,48 @@ public:
     for (; first != last; ++first)
       insert(*first);
   }
+  multiset(const multiset& other) : comp_(other.comp_), alloc_(other.alloc_) {
+    insert(other.begin(), other.end());
+  }
+  multiset(multiset&& other) noexcept { swap(other); }
+  ~multiset() { clear(); }
+  multiset& operator=(const multiset& other) {
+    if (this != &other) {
+      clear();
+      comp_ = other.comp_;
+      insert(other.begin(), other.end());
+    }
+    return *this;
+  }
+  multiset& operator=(multiset&& other) noexcept {
+    swap(other);
+    return *this;
+  }
 
-  iterator begin() const noexcept { return data_.begin(); }
-  iterator end() const noexcept { return data_.end(); }
-  reverse_iterator rbegin() const noexcept { return data_.rbegin(); }
-  reverse_iterator rend() const noexcept { return data_.rend(); }
+  iterator begin() const noexcept { return {head_, this}; }
+  iterator end() const noexcept { return {nullptr, this}; }
+  const_iterator cbegin() const noexcept { return begin(); }
+  const_iterator cend() const noexcept { return end(); }
+  reverse_iterator rbegin() const noexcept { return reverse_iterator(end()); }
+  reverse_iterator rend() const noexcept { return reverse_iterator(begin()); }
   bool empty() const noexcept { return data_.empty(); }
   size_type size() const noexcept { return data_.size(); }
-  void clear() noexcept { data_.clear(); }
-  void swap(multiset& other) noexcept { data_.swap(other.data_); }
+  size_type max_size() const noexcept { return data_.max_size(); }
+  void clear() noexcept {
+    for (auto* value : data_)
+      delete value;
+    data_.clear();
+    head_ = tail_ = nullptr;
+  }
+  void swap(multiset& other) noexcept {
+    data_.swap(other.data_);
+    std::swap(head_, other.head_);
+    std::swap(tail_, other.tail_);
+    std::swap(comp_, other.comp_);
+  }
 
-  iterator insert(const Key& k) {
-    auto it = std::__lower_bound(data_.begin(), data_.end(), k, comp_);
-    return data_.insert(data_.begin() + (it - data_.begin()), k);
-  }
-  iterator insert(Key&& k) {
-    auto it = std::__lower_bound(data_.begin(), data_.end(), k, comp_);
-    return data_.insert(data_.begin() + (it - data_.begin()),
-                        static_cast<Key&&>(k));
-  }
+  iterator insert(const Key& k) { return insert_(k); }
+  iterator insert(Key&& k) { return insert_(static_cast<Key&&>(k)); }
   iterator insert(const_iterator, const Key& k) { return insert(k); }
   iterator insert(const_iterator, Key&& k) {
     return insert(static_cast<Key&&>(k));
@@ -351,44 +426,114 @@ public:
     return insert(Key(static_cast<Args&&>(args)...));
   }
   iterator erase(const_iterator pos) {
-    return data_.erase(data_.begin() + (pos - data_.begin()));
+    node* value = pos.node_;
+    iterator result{value->next, this};
+    auto index = lower_bound_index_(value->key);
+    while (data_[index] != value)
+      ++index;
+    unlink_(value);
+    data_.erase(data_.begin() + index);
+    delete value;
+    return result;
   }
   iterator erase(const_iterator first, const_iterator last) {
-    return data_.erase(data_.begin() + (first - data_.begin()),
-                       data_.begin() + (last - data_.begin()));
+    while (first != last)
+      first = erase(first);
+    return last;
   }
   size_type erase(const Key& k) {
-    auto lo = std::__lower_bound(data_.begin(), data_.end(), k, comp_);
-    auto hi = std::__upper_bound(data_.begin(), data_.end(), k, comp_);
-    auto n = hi - lo;
-    data_.erase(lo, hi);
-    return n;
+    size_type result = 0;
+    auto it = lower_bound(k);
+    while (it != end() && !comp_(k, *it)) {
+      it = erase(it);
+      ++result;
+    }
+    return result;
   }
   size_type count(const Key& k) const {
-    auto lo = std::__lower_bound(data_.begin(), data_.end(), k, comp_);
-    auto hi = std::__upper_bound(data_.begin(), data_.end(), k, comp_);
-    return hi - lo;
+    return upper_bound_index_(k) - lower_bound_index_(k);
   }
   iterator find(const Key& k) const {
-    auto it = std::__lower_bound(data_.begin(), data_.end(), k, comp_);
-    if (it != data_.end() && !comp_(k, *it))
+    auto it = lower_bound(k);
+    if (it != end() && !comp_(k, *it))
       return it;
-    return data_.end();
+    return end();
   }
   iterator lower_bound(const Key& k) const {
-    return std::__lower_bound(data_.begin(), data_.end(), k, comp_);
+    auto index = lower_bound_index_(k);
+    return {index == data_.size() ? nullptr : data_[index], this};
   }
   iterator upper_bound(const Key& k) const {
-    return std::__upper_bound(data_.begin(), data_.end(), k, comp_);
+    auto index = upper_bound_index_(k);
+    return {index == data_.size() ? nullptr : data_[index], this};
   }
   pair<iterator, iterator> equal_range(const Key& k) const {
     return {lower_bound(k), upper_bound(k)};
   }
 
 private:
-  vector<Key> data_;
+  vector<node*> data_;
+  node* head_ = nullptr;
+  node* tail_ = nullptr;
   Compare comp_ = {};
   [[no_unique_address]] Alloc alloc_ = {};
+
+  size_type lower_bound_index_(const Key& key) const {
+    size_type first = 0;
+    size_type count = data_.size();
+    while (count) {
+      size_type step = count / 2;
+      size_type middle = first + step;
+      if (comp_(data_[middle]->key, key)) {
+        first = middle + 1;
+        count -= step + 1;
+      } else {
+        count = step;
+      }
+    }
+    return first;
+  }
+  size_type upper_bound_index_(const Key& key) const {
+    size_type first = 0;
+    size_type count = data_.size();
+    while (count) {
+      size_type step = count / 2;
+      size_type middle = first + step;
+      if (!comp_(key, data_[middle]->key)) {
+        first = middle + 1;
+        count -= step + 1;
+      } else {
+        count = step;
+      }
+    }
+    return first;
+  }
+  template <typename Value> iterator insert_(Value&& key) {
+    auto index = upper_bound_index_(key);
+    node* value = new node(static_cast<Value&&>(key));
+    value->prev = index ? data_[index - 1] : nullptr;
+    value->next = index == data_.size() ? nullptr : data_[index];
+    if (value->prev)
+      value->prev->next = value;
+    else
+      head_ = value;
+    if (value->next)
+      value->next->prev = value;
+    else
+      tail_ = value;
+    data_.insert(data_.begin() + index, value);
+    return {value, this};
+  }
+  void unlink_(node* value) {
+    if (value->prev)
+      value->prev->next = value->next;
+    else
+      head_ = value->next;
+    if (value->next)
+      value->next->prev = value->prev;
+    else
+      tail_ = value->prev;
+  }
 };
 
 template <typename Key, typename Compare, typename Alloc>
