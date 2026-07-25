@@ -1,4 +1,5 @@
 #pragma once
+#include <__psychicstd_allocator>
 #include <__psychicstd_config>
 #include <__psychicstd_lifetime>
 #include <cstddef>
@@ -47,34 +48,6 @@ template <typename T> struct pointer_traits<T*> {
     return addressof(r);
   }
 };
-
-// allocator
-template <typename T> struct allocator {
-  using value_type = T;
-  using size_type = size_t;
-  using difference_type = ptrdiff_t;
-  using propagate_on_container_move_assignment = true_type;
-  using is_always_equal = true_type;
-
-  constexpr allocator() noexcept = default;
-  constexpr allocator(const allocator&) noexcept = default;
-  constexpr allocator& operator=(const allocator&) noexcept = default;
-  template <typename U> constexpr allocator(const allocator<U>&) noexcept {}
-
-  [[nodiscard]] constexpr T* allocate(size_t n) {
-    return static_cast<T*>(::operator new(n * sizeof(T)));
-  }
-  constexpr void deallocate(T* p, size_t) noexcept { ::operator delete(p); }
-};
-
-template <> struct allocator<void> {
-  using value_type = void;
-};
-
-template <typename T, typename U>
-constexpr bool operator==(const allocator<T>&, const allocator<U>&) noexcept {
-  return true;
-}
 
 template <typename InputIt, typename Size, typename ForwardIt>
 constexpr ForwardIt uninitialized_copy_n(InputIt first, Size count,
