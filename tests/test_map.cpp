@@ -88,4 +88,8 @@ int main() {
   psyassert(std::next(multi.begin())->second == 20);
   psyassert((multi == std::multimap<int, int>({{1, 10}, {1, 20}})));
   psyassert(!(multi == std::multimap<int, int>({{1, 20}, {1, 10}})));
+  auto stable_multi = std::next(multi.begin());
+  multi.emplace(0, 0);
+  multi.emplace(2, 30);
+  psyassert(stable_multi->second == 20);
 }
