@@ -1,10 +1,11 @@
 #pragma once
 #include <__psychicstd_algo>
+#include <__psychicstd_allocator>
 #include <__psychicstd_ordering>
 #include <__psychicstd_ptr_index>
+#include <__psychicstd_unique_owner>
 #include <initializer_list>
 #include <iterator>
-#include <memory>
 #include <utility>
 
 namespace std {
@@ -274,7 +275,7 @@ private:
     auto index = lower_bound_index_(key);
     if (index != data_.size() && !comp_(key, data_[index]->key))
       return {{data_[index], this}, false};
-    unique_ptr<node> value(new node(static_cast<Value&&>(key)));
+    __detail::__unique_owner<node> value(new node(static_cast<Value&&>(key)));
     value->prev = index ? data_[index - 1] : nullptr;
     value->next = index == data_.size() ? nullptr : data_[index];
     data_.insert(index, value.get());
@@ -527,7 +528,7 @@ private:
   }
   template <typename Value> iterator insert_(Value&& key) {
     auto index = upper_bound_index_(key);
-    unique_ptr<node> value(new node(static_cast<Value&&>(key)));
+    __detail::__unique_owner<node> value(new node(static_cast<Value&&>(key)));
     value->prev = index ? data_[index - 1] : nullptr;
     value->next = index == data_.size() ? nullptr : data_[index];
     data_.insert(index, value.get());
