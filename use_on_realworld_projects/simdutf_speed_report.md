@@ -4,7 +4,7 @@ Compiler: `c++ (Debian 14.2.0-19) 14.2.0`. Each project is built 9 time(s) per s
 
 Parallelism: **8 jobs** (20 logical CPUs available; the memory estimate permits 18 jobs at 1.5 GiB/job). ccache was disabled.
 
-## simdutf (master260712)
+## simdutf (master260724 (strict))
 
 simdutf code is mostly simd intrinsics.
 
@@ -12,16 +12,9 @@ simdutf code is mostly simd intrinsics.
 
 | step | system (s) | psychicstd (s) | speedup | comment |
 | --- | ---: | ---: | ---: | --- |
-| compile | 9.40 | 5.72 | 🟢 1.64x [1.62x, 1.65x] | |
-| run tests | 20.75 | 18.78 | 🟢 1.11x [1.10x, 1.13x] | |
-
-### Release
-
-| step | system (s) | psychicstd (s) | speedup | comment |
-| --- | ---: | ---: | ---: | --- |
-| compile | 19.33 | 18.33 | 🟢 1.05x [1.05x, 1.06x] | |
-| run tests | 1.29 | 1.16 | 🟢 1.12x [1.10x, 1.15x] | |
+| compile | 9.45 | 5.57 | 🟢 1.70x [1.67x, 1.72x] | |
+| run tests | 20.68 | 18.89 | 🟢 1.09x [1.08x, 1.11x] | |
 
 ______________________________________________________________________
 
-Reproduce this on your machine: `scripts/compare_realworld_performance.py --compiler c++ --build-type both --reps 9 --jobs 8`
+Reproduce this on your machine: `scripts/compare_realworld_performance.py --compiler c++ --build-type debug --reps 9 --jobs 8`
