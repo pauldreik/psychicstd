@@ -24,6 +24,7 @@ add_library(
     src/string.cpp
     src/string_instantiations.cpp
     src/system_error.cpp
+    src/thread.cpp
 )
 add_library(psychicstd::psychicstd ALIAS psychicstd)
 set_target_properties(psychicstd PROPERTIES POSITION_INDEPENDENT_CODE ON)
