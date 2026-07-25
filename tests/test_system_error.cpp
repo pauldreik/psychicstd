@@ -6,6 +6,8 @@
 
 int main() {
   static_assert(std::is_error_condition_enum_v<std::errc>);
+  psyassert(std::make_error_code(std::errc::value_too_large).value() ==
+            static_cast<int>(std::errc::value_too_large));
   std::error_condition invalid = std::errc::invalid_argument;
   psyassert(invalid.value() == EINVAL);
   psyassert(invalid.category() == std::generic_category());
