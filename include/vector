@@ -68,7 +68,8 @@ private:
         __builtin_memset(p, 0, n);
         return;
       }
-    } else if constexpr (is_trivially_copyable_v<T>) {
+    } else if constexpr (is_trivially_copyable_v<T> &&
+                         is_move_assignable_v<T>) {
       if (!__builtin_is_constant_evaluated()) {
         for (size_type i = 0; i < n; ++i)
           p[i] = T();

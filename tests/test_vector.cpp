@@ -1,4 +1,5 @@
 #include "psyassert.h"
+#include <atomic>
 #include <vector>
 
 struct value {
@@ -32,6 +33,9 @@ struct resize_value {
 };
 
 int main() {
+  std::vector<std::atomic<int>> atomics(2);
+  psyassert(atomics[0].load() == 0);
+
   std::vector<char> zeroes(32);
   for (char c : zeroes)
     psyassert(c == '\0');
