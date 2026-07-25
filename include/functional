@@ -159,8 +159,7 @@ private:
         static_cast<decltype(resolved)&&>(resolved));
   }
   template <size_t... Is, typename... Args>
-  constexpr decltype(auto) __call(index_sequence<Is...>,
-                                  Args&&... args) const {
+  constexpr decltype(auto) __call(index_sequence<Is...>, Args&&... args) const {
     auto resolved = tuple<decltype(detail::__bind_arg(
         get<Is>(bound_), static_cast<Args&&>(args)...))...>(
         detail::__bind_arg(get<Is>(bound_), static_cast<Args&&>(args)...)...);

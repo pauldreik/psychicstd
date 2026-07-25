@@ -23,12 +23,12 @@ int main() {
   static_assert(std::is_same_v<decltype(std::log(1)), double>);
   static_assert(std::is_same_v<decltype(std::ldexp(1.0F, 1)), float>);
   static_assert(std::is_same_v<decltype(std::ldexp(1.0L, 1)), long double>);
+  static_assert(std::is_same_v<decltype(std::ldexp(1, 1)), double>);
   int exponent = 0;
   static_assert(std::is_same_v<decltype(std::frexp(1.0F, &exponent)), float>);
   static_assert(
       std::is_same_v<decltype(std::frexp(1.0L, &exponent)), long double>);
-  static_assert(
-      std::is_same_v<decltype(std::nexttoward(1.0F, 0.0L)), float>);
+  static_assert(std::is_same_v<decltype(std::nexttoward(1.0F, 0.0L)), float>);
   static_assert(
       std::is_same_v<decltype(std::nexttoward(1.0L, 0.0L)), long double>);
   psyassert(std::nexttoward(1.0F, 0.0L) < 1.0F);

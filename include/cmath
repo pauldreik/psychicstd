@@ -165,6 +165,11 @@ inline float ldexp(float x, int exponent) { return ::ldexpf(x, exponent); }
 inline long double ldexp(long double x, int exponent) {
   return ::ldexpl(x, exponent);
 }
+template <typename Integer>
+  requires(__builtin_classify_type(*(Integer*)nullptr) == 1)
+inline double ldexp(Integer x, int exponent) {
+  return ::ldexp(static_cast<double>(x), exponent);
+}
 inline float frexp(float x, int* exponent) { return ::frexpf(x, exponent); }
 inline long double frexp(long double x, int* exponent) {
   return ::frexpl(x, exponent);
@@ -257,9 +262,7 @@ using ::nextafterl;
 using ::nexttoward;
 using ::nexttowardf;
 using ::nexttowardl;
-inline float nexttoward(float x, long double y) {
-  return ::nexttowardf(x, y);
-}
+inline float nexttoward(float x, long double y) { return ::nexttowardf(x, y); }
 inline long double nexttoward(long double x, long double y) {
   return ::nexttowardl(x, y);
 }

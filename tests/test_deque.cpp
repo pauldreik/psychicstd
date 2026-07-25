@@ -1,5 +1,6 @@
 #include "psyassert.h"
 #include <deque>
+#include <iterator>
 
 struct value {
   int n;

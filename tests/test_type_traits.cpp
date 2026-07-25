@@ -52,9 +52,8 @@ int main() {
   static_assert(std::is_invocable_r_v<int&, ReturnsReference, int[2]>);
   static_assert(std::is_nothrow_invocable_v<NothrowCallable, int>);
   static_assert(std::is_nothrow_invocable_r_v<int, NothrowCallable, int>);
-  static_assert(
-      std::is_nothrow_invocable_v<decltype(&NothrowCallable::value),
-                                  const NothrowCallable&&>);
+  static_assert(std::is_nothrow_invocable_v<decltype(&NothrowCallable::value),
+                                            const NothrowCallable&&>);
   static_assert(!std::is_nothrow_invocable_v<int, int>);
   static_assert(std::alignment_of<int>::value == alignof(int));
   static_assert(std::alignment_of_v<int> == alignof(int));

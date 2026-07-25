@@ -38,10 +38,12 @@ static void test_duration_cast_wide_intermediate() {
   using attoseconds = duration<__int128, std::atto>;
   const auto lo = nanoseconds::min();
   const auto hi = nanoseconds::max();
-  psyassert(duration_cast<nanoseconds>(duration_cast<attoseconds>(lo)).count() ==
-            lo.count());
-  psyassert(duration_cast<nanoseconds>(duration_cast<attoseconds>(hi)).count() ==
-            hi.count());
+  psyassert(
+      duration_cast<nanoseconds>(duration_cast<attoseconds>(lo)).count() ==
+      lo.count());
+  psyassert(
+      duration_cast<nanoseconds>(duration_cast<attoseconds>(hi)).count() ==
+      hi.count());
 }
 
 static void test_duration_fractional_conversion() {

@@ -49,9 +49,9 @@ int main() {
   psyassert(v[0] == 42);
 
   std::vector<bool> bools{true, false, true};
-  psyassert(std::hash<std::vector<bool>>{}(bools) ==
-            std::hash<std::vector<bool>>{}(
-                std::vector<bool>{true, false, true}));
+  psyassert(
+      std::hash<std::vector<bool>>{}(bools) ==
+      std::hash<std::vector<bool>>{}(std::vector<bool>{true, false, true}));
 
   int n = 1;
   std::vector<value> values;

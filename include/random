@@ -302,10 +302,10 @@ public:
       return false;
     if (params.p() >= 1)
       return true;
-    const long double offset = static_cast<long double>(engine() - engine.min());
-    const long double range =
-        static_cast<long double>(engine.max()) -
-        static_cast<long double>(engine.min()) + 1;
+    const long double offset =
+        static_cast<long double>(engine() - engine.min());
+    const long double range = static_cast<long double>(engine.max()) -
+                              static_cast<long double>(engine.min()) + 1;
     return offset < params.p() * range;
   }
 
@@ -321,8 +321,7 @@ private:
 // uniform_int_distribution
 template <typename Int>
 inline constexpr Int __random_int_max =
-    static_cast<Int>(static_cast<make_unsigned_t<Int>>(-1) >>
-                     is_signed_v<Int>);
+    static_cast<Int>(static_cast<make_unsigned_t<Int>>(-1) >> is_signed_v<Int>);
 
 template <typename Int = int> class uniform_int_distribution {
 public:
@@ -334,8 +333,7 @@ public:
     Int max() const { return b; }
   };
 
-  explicit uniform_int_distribution(Int a = 0,
-                                    Int b = __random_int_max<Int>)
+  explicit uniform_int_distribution(Int a = 0, Int b = __random_int_max<Int>)
       : p_(a, b) {}
   explicit uniform_int_distribution(const param_type& p) : p_(p) {}
 

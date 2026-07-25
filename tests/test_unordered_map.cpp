@@ -1,9 +1,10 @@
 #include "psyassert.h"
+#include <cstddef>
 #include <unordered_map>
 
 struct stateful_hash {
   int state;
-  size_t operator()(int value) const { return value + state; }
+  std::size_t operator()(int value) const { return value + state; }
 };
 
 struct stateful_equal {
