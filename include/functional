@@ -140,10 +140,27 @@ template <typename F, typename... Bound> struct __bind_wrapper {
   constexpr decltype(auto) operator()(Args&&... args) {
     return __call(index_sequence_for<Bound...>{}, static_cast<Args&&>(args)...);
   }
+  template <typename... Args>
+  constexpr decltype(auto) operator()(Args&&... args) const {
+    return __call(index_sequence_for<Bound...>{}, static_cast<Args&&>(args)...);
+  }
 
 private:
   template <size_t... Is, typename... Args>
   constexpr decltype(auto) __call(index_sequence<Is...>, Args&&... args) {
+    auto resolved = tuple<decltype(detail::__bind_arg(
+        get<Is>(bound_), static_cast<Args&&>(args)...))...>(
+        detail::__bind_arg(get<Is>(bound_), static_cast<Args&&>(args)...)...);
+    return apply(
+        [this](auto&&... resolved_args) -> decltype(auto) {
+          return detail::__invoke(
+              f_, static_cast<decltype(resolved_args)>(resolved_args)...);
+        },
+        static_cast<decltype(resolved)&&>(resolved));
+  }
+  template <size_t... Is, typename... Args>
+  constexpr decltype(auto) __call(index_sequence<Is...>,
+                                  Args&&... args) const {
     auto resolved = tuple<decltype(detail::__bind_arg(
         get<Is>(bound_), static_cast<Args&&>(args)...))...>(
         detail::__bind_arg(get<Is>(bound_), static_cast<Args&&>(args)...)...);

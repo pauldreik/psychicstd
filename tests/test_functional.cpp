@@ -32,5 +32,8 @@ int main() {
           std::invoke_result_t<decltype(&member_target::value), member_target&>,
           int&>);
 
+  const auto positive = std::bind(std::less<int>{}, 0, 2);
+  psyassert(positive());
+
   (void)std::ref(no_args)();
 }
