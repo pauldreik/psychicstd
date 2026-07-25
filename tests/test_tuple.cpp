@@ -46,6 +46,7 @@ int main() {
   std::get<0>(moved_references) = 8;
   psyassert(referenced == 8);
   auto unwrapped = std::make_tuple(std::ref(referenced));
+  psyassert(unwrapped == std::tuple<int>(referenced));
   static_assert(std::is_same_v<decltype(unwrapped), std::tuple<int&>>);
   std::get<0>(unwrapped) = 9;
   psyassert(referenced == 9);

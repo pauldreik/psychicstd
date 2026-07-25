@@ -256,14 +256,16 @@ constexpr bool tuple_lt(const Tup& a, const Tup& b) {
 }
 } // namespace detail
 
-template <typename... Ts>
-constexpr bool operator==(const tuple<Ts...>& a, const tuple<Ts...>& b) {
+template <typename... Ts, typename... Us>
+  requires(sizeof...(Ts) == sizeof...(Us))
+constexpr bool operator==(const tuple<Ts...>& a, const tuple<Us...>& b) {
   return [&]<size_t... Is>(index_sequence<Is...>) {
     return ((get<Is>(a) == get<Is>(b)) && ...);
   }(make_index_sequence<sizeof...(Ts)>{});
 }
-template <typename... Ts>
-constexpr bool operator!=(const tuple<Ts...>& a, const tuple<Ts...>& b) {
+template <typename... Ts, typename... Us>
+  requires(sizeof...(Ts) == sizeof...(Us))
+constexpr bool operator!=(const tuple<Ts...>& a, const tuple<Us...>& b) {
   return !(a == b);
 }
 template <typename... Ts>
