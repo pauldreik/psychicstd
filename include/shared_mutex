@@ -1,0 +1,94 @@
+#pragma once
+#include <mutex>
+#include <pthread.h>
+
+namespace std {
+
+class shared_mutex {
+public:
+  using native_handle_type = pthread_rwlock_t*;
+
+  constexpr shared_mutex() noexcept = default;
+  ~shared_mutex() { ::pthread_rwlock_destroy(&mutex_); }
+  shared_mutex(const shared_mutex&) = delete;
+  shared_mutex& operator=(const shared_mutex&) = delete;
+
+  void lock() noexcept {
+    if (::pthread_rwlock_wrlock(&mutex_) != 0)
+      __builtin_trap();
+  }
+  bool try_lock() noexcept { return ::pthread_rwlock_trywrlock(&mutex_) == 0; }
+  void unlock() noexcept {
+    if (::pthread_rwlock_unlock(&mutex_) != 0)
+      __builtin_trap();
+  }
+  void lock_shared() noexcept {
+    if (::pthread_rwlock_rdlock(&mutex_) != 0)
+      __builtin_trap();
+  }
+  bool try_lock_shared() noexcept {
+    return ::pthread_rwlock_tryrdlock(&mutex_) == 0;
+  }
+  void unlock_shared() noexcept { unlock(); }
+  native_handle_type native_handle() noexcept { return &mutex_; }
+
+private:
+  pthread_rwlock_t mutex_ = PTHREAD_RWLOCK_INITIALIZER;
+};
+
+template <typename Mutex> class shared_lock {
+public:
+  using mutex_type = Mutex;
+
+  shared_lock() noexcept = default;
+  explicit shared_lock(Mutex& mutex) : mutex_(&mutex), owns_(true) {
+    mutex_->lock_shared();
+  }
+  shared_lock(Mutex& mutex, defer_lock_t) noexcept : mutex_(&mutex) {}
+  shared_lock(Mutex& mutex, try_to_lock_t)
+      : mutex_(&mutex), owns_(mutex.try_lock_shared()) {}
+  shared_lock(Mutex& mutex, adopt_lock_t) noexcept
+      : mutex_(&mutex), owns_(true) {}
+  ~shared_lock() {
+    if (owns_)
+      mutex_->unlock_shared();
+  }
+
+  shared_lock(const shared_lock&) = delete;
+  shared_lock& operator=(const shared_lock&) = delete;
+  shared_lock(shared_lock&& other) noexcept
+      : mutex_(other.mutex_), owns_(other.owns_) {
+    other.mutex_ = nullptr;
+    other.owns_ = false;
+  }
+  shared_lock& operator=(shared_lock&& other) noexcept {
+    if (owns_)
+      mutex_->unlock_shared();
+    mutex_ = other.mutex_;
+    owns_ = other.owns_;
+    other.mutex_ = nullptr;
+    other.owns_ = false;
+    return *this;
+  }
+
+  void lock() {
+    mutex_->lock_shared();
+    owns_ = true;
+  }
+  bool try_lock() { return owns_ = mutex_->try_lock_shared(); }
+  void unlock() {
+    mutex_->unlock_shared();
+    owns_ = false;
+  }
+  bool owns_lock() const noexcept { return owns_; }
+  explicit operator bool() const noexcept { return owns_; }
+  Mutex* mutex() const noexcept { return mutex_; }
+
+private:
+  Mutex* mutex_ = nullptr;
+  bool owns_ = false;
+};
+
+template <typename Mutex> shared_lock(Mutex&) -> shared_lock<Mutex>;
+
+} // namespace std
