@@ -1266,7 +1266,7 @@ def _rapidjson() -> Project:
 # --- rdfind ---------------------------------------------------------------
 
 
-_RDFIND_COMMIT = "c0d126c6d80d2e62c362e29194bba58546b325a1"
+_RDFIND_COMMIT = "cac59ade85de364074a5ef1898096117c21570cc"
 # rdfind's autoconf build has no build-type concept -- an -O flag is its equivalent.
 _RDFIND_OPT_FLAG = {"debug": "-O0", "release": "-O2"}
 
@@ -1279,7 +1279,7 @@ def _rdfind() -> Project:
         psychicstrictlevel = -0
         commithash = _RDFIND_COMMIT
         url = f"https://github.com/pauldreik/rdfind/archive/{commithash}.tar.gz"
-        checksum = "9a0beeb0ddc71b4eb62542e60b30744f5f7e0b38724938b62ff02b4c73183b00"
+        checksum = "49d2b1458e91168aea5540d438ac91ca0d97f651d587632d21aca3c91fae1202"
         tarball_name = f"rdfind-{commithash}.tar.gz"
         src_name = f"rdfind-{commithash}"
         proj_version = f"commit {commithash[:12]}"
