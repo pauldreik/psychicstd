@@ -22,6 +22,11 @@ int main() {
   first.swap(second);
   psyassert(first() == 2);
   psyassert(second() == 1);
+  int referred = 3;
+  std::function<int&(int*)> reference = [](int* value) -> int& {
+    return *value;
+  };
+  psyassert(&reference(&referred) == &referred);
 
   member_target target;
   psyassert(std::invoke(&member_target::value, target) == 4);
