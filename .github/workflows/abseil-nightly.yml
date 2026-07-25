@@ -1,0 +1,18 @@
+---
+name: Abseil nightly (full)
+on:
+  schedule:
+    - cron: 30 3 * * *
+  workflow_dispatch:
+jobs:
+  full:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install Ninja
+        run: sudo apt-get install -y ninja-build
+      - name: Build and test all Abseil targets with psychicstd
+        run: >-
+          python3 scripts/compare_realworld_performance.py --check-only
+          --project abseil-full --build-type debug
