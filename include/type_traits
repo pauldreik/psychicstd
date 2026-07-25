@@ -203,17 +203,8 @@ struct invoke_result_impl<Void, R C::*, Obj* const&&, Args...>
     : invoke_result_impl<Void, R C::*, Obj*, Args...> {};
 } // namespace detail
 template <typename F, typename... Args>
-struct invoke_result : detail::invoke_result_impl<void, F, Args...> {};
-template <typename R, typename C, typename... Args>
-struct invoke_result<R C::*&, Args...> : invoke_result<R C::*, Args...> {};
-template <typename R, typename C, typename... Args>
-struct invoke_result<R C::* const&, Args...> : invoke_result<R C::*, Args...> {
-};
-template <typename R, typename C, typename... Args>
-struct invoke_result<R C::*&&, Args...> : invoke_result<R C::*, Args...> {};
-template <typename R, typename C, typename... Args>
-struct invoke_result<R C::* const&&, Args...> : invoke_result<R C::*, Args...> {
-};
+struct invoke_result
+    : detail::invoke_result_impl<void, remove_cvref_t<F>, Args...> {};
 template <typename F, typename... Args>
 using invoke_result_t = typename invoke_result<F, Args...>::type;
 
