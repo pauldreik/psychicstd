@@ -164,17 +164,32 @@ inline long double log(long double x) { return ::logl(x); }
 #if _PSYCHICSTD_COMPATIBILITY_LEVEL >= _PSYCHICSTD_COMPAT_DROPIN
 template <typename T>
   requires(is_integral_v<T>)
+inline double exp(T x) {
+  return ::exp(static_cast<double>(x));
+}
+template <typename T>
+  requires(is_integral_v<T>)
+inline double log(T x) {
+  return ::log(static_cast<double>(x));
+}
+template <typename T>
+  requires(is_integral_v<T>)
 constexpr double sqrt(T x) {
   return __builtin_sqrt(static_cast<double>(x));
 }
 #else
-#if defined(__has_builtin) && __has_builtin(__is_integral)
-template <typename T>
-  requires(__is_integral(T))
-#else
 template <typename T>
   requires(__builtin_classify_type(*(T*)nullptr) == 1)
-#endif
+inline double exp(T x) {
+  return ::exp(static_cast<double>(x));
+}
+template <typename T>
+  requires(__builtin_classify_type(*(T*)nullptr) == 1)
+inline double log(T x) {
+  return ::log(static_cast<double>(x));
+}
+template <typename T>
+  requires(__builtin_classify_type(*(T*)nullptr) == 1)
 constexpr double sqrt(T x) {
   return __builtin_sqrt(static_cast<double>(x));
 }
