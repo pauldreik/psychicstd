@@ -980,13 +980,12 @@ def _eigen() -> Project:
 
 
 def _fmt() -> Project:
-    commit = "7dfacc1c6d1245631521f0822529a83f30306c71"
-    version = f"commit {commit[:12]}"
-    url = f"https://github.com/pauldreik/fmt/archive/{commit}.tar.gz"
-    checksum = "1d91b09370e4b5444358749b1c1939beac2b9aeb5db70e425885945017320bcc"
+    version = "12.1.0"
+    url = f"https://github.com/fmtlib/fmt/archive/refs/tags/{version}.tar.gz"
+    checksum = "ea7de4299689e12b6dddd392f9896f08fb0777ac7168897a244a6d6085043fea"
 
     def build(tc: Toolchain) -> dict[str, float]:
-        tarball = RW_DIR / f"fmt-{commit}.tar.gz"
+        tarball = RW_DIR / f"fmt-{version}.tar.gz"
         _fetch(url, tarball, checksum)
 
         with tempfile.TemporaryDirectory(
@@ -995,14 +994,14 @@ def _fmt() -> Project:
             work = Path(work_dir)
             with tarfile.open(tarball) as t:
                 t.extractall(work)
-            src = work / f"fmt-{commit}"
+            src = work / f"fmt-{version}"
 
             env = _env(tc)
             # fmt's tests specialize std::is_floating_point (UB but benign);
             # Apple clang 21's libc++ hard-errors on that, so the SYSTEM
             # baseline cannot build without disabling the diagnostic. No-op
             # for psychicstd, which does not restrict specialization.
-            cxxflags = tc.cxxflags + " -D_PSYCHICSTD_COMPATIBILITY_LEVEL=0"
+            cxxflags = tc.cxxflags
             if os.uname().sysname == "Darwin":
                 cxxflags += " -Wno-invalid-specialization"
             configure = [
@@ -1051,8 +1050,7 @@ def _fmt() -> Project:
         build=build,
         expected_seconds={"debug": 12, "release": 25},
         phases=("compile", "run tests"),
-        comment="fmt is built in psychicstd strict mode with locale support; "
-        "its own unit tests are run.",
+        comment="fmt is built with locale support; its own unit tests are run.",
     )
 
 
