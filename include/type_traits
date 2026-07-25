@@ -466,76 +466,11 @@ struct aligned_storage {
 // Forward declaration used by is_convertible below.
 template <typename T> struct is_function;
 
-// is_function: true for function types (not pointers or references)
-#if defined(__has_builtin) && __has_builtin(__is_function)
-template <typename T> struct is_function : bool_constant<__is_function(T)> {};
-#else
-template <typename T> struct is_function : false_type {};
-template <typename R, typename... Args>
-struct is_function<R(Args...)> : true_type {};
-template <typename R, typename... Args>
-struct is_function<R(Args..., ...)> : true_type {};
-template <typename R, typename... Args>
-struct is_function<R(Args...) const> : true_type {};
-template <typename R, typename... Args>
-struct is_function<R(Args..., ...) const> : true_type {};
-template <typename R, typename... Args>
-struct is_function<R(Args...) volatile> : true_type {};
-template <typename R, typename... Args>
-struct is_function<R(Args..., ...) volatile> : true_type {};
-template <typename R, typename... Args>
-struct is_function<R(Args...) const volatile> : true_type {};
-template <typename R, typename... Args>
-struct is_function<R(Args..., ...) const volatile> : true_type {};
-template <typename R, typename... Args>
-struct is_function<R(Args...) &> : true_type {};
-template <typename R, typename... Args>
-struct is_function<R(Args..., ...) &> : true_type {};
-template <typename R, typename... Args>
-struct is_function<R(Args...) const&> : true_type {};
-template <typename R, typename... Args>
-struct is_function<R(Args..., ...) const&> : true_type {};
-template <typename R, typename... Args>
-struct is_function<R(Args...) volatile&> : true_type {};
-template <typename R, typename... Args>
-struct is_function<R(Args..., ...) volatile&> : true_type {};
-template <typename R, typename... Args>
-struct is_function<R(Args...) const volatile&> : true_type {};
-template <typename R, typename... Args>
-struct is_function<R(Args..., ...) const volatile&> : true_type {};
-template <typename R, typename... Args>
-struct is_function<R(Args...) &&> : true_type {};
-template <typename R, typename... Args>
-struct is_function<R(Args..., ...) &&> : true_type {};
-template <typename R, typename... Args>
-struct is_function<R(Args...) const&&> : true_type {};
-template <typename R, typename... Args>
-struct is_function<R(Args..., ...) const&&> : true_type {};
-template <typename R, typename... Args>
-struct is_function<R(Args...) volatile&&> : true_type {};
-template <typename R, typename... Args>
-struct is_function<R(Args..., ...) volatile&&> : true_type {};
-template <typename R, typename... Args>
-struct is_function<R(Args...) const volatile&&> : true_type {};
-template <typename R, typename... Args>
-struct is_function<R(Args..., ...) const volatile&&> : true_type {};
-template <typename R, typename... Args>
-struct is_function<R(Args...) noexcept> : true_type {};
-template <typename R, typename... Args>
-struct is_function<R(Args..., ...) noexcept> : true_type {};
-template <typename R, typename... Args>
-struct is_function<R(Args...) const noexcept> : true_type {};
-template <typename R, typename... Args>
-struct is_function<R(Args..., ...) const noexcept> : true_type {};
-template <typename R, typename... Args>
-struct is_function<R(Args...) volatile noexcept> : true_type {};
-template <typename R, typename... Args>
-struct is_function<R(Args..., ...) volatile noexcept> : true_type {};
-template <typename R, typename... Args>
-struct is_function<R(Args...) const volatile noexcept> : true_type {};
-template <typename R, typename... Args>
-struct is_function<R(Args..., ...) const volatile noexcept> : true_type {};
-#endif
+// Adding const has no effect on a function type. References need the second
+// check because const is ignored for those as well.
+template <typename T>
+struct is_function
+    : bool_constant<!is_const<const T>::value && !is_reference<T>::value> {};
 template <typename T>
 inline constexpr bool is_function_v = is_function<T>::value;
 
