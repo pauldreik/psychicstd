@@ -195,6 +195,36 @@ inline long double nextafter(double x, long double y) {
 inline long double nextafter(long double x, double y) {
   return ::nextafterl(x, y);
 }
+template <typename I>
+  requires(__builtin_classify_type(*(I*)nullptr) == 1)
+inline float nextafter(float x, I y) {
+  return ::nextafterf(x, static_cast<float>(y));
+}
+template <typename I>
+  requires(__builtin_classify_type(*(I*)nullptr) == 1)
+inline double nextafter(double x, I y) {
+  return ::nextafter(x, static_cast<double>(y));
+}
+template <typename I>
+  requires(__builtin_classify_type(*(I*)nullptr) == 1)
+inline long double nextafter(long double x, I y) {
+  return ::nextafterl(x, static_cast<long double>(y));
+}
+template <typename I>
+  requires(__builtin_classify_type(*(I*)nullptr) == 1)
+inline double nextafter(I x, float y) {
+  return ::nextafter(static_cast<double>(x), static_cast<double>(y));
+}
+template <typename I>
+  requires(__builtin_classify_type(*(I*)nullptr) == 1)
+inline double nextafter(I x, double y) {
+  return ::nextafter(static_cast<double>(x), y);
+}
+template <typename I>
+  requires(__builtin_classify_type(*(I*)nullptr) == 1)
+inline long double nextafter(I x, long double y) {
+  return ::nextafterl(static_cast<long double>(x), y);
+}
 using ::nextafterf;
 using ::nextafterl;
 using ::nexttoward;
