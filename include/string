@@ -373,6 +373,8 @@ public:
     return data_ + idx;
   }
   iterator erase(const_iterator first, const_iterator last) {
+    if (first == last)
+      return const_cast<iterator>(first);
     size_type pos = first - data_;
     size_type n = last - first;
     erase(pos, n);

@@ -161,8 +161,13 @@ int main() {
 
   std::string empty;
   empty.erase(std::string::size_type{0});
-  empty.erase(empty.begin(), empty.end());
+  psyassert(empty.erase(empty.begin(), empty.end()) == empty.end());
   psyassert(empty.empty());
+
+  std::string unchanged = "abc";
+  psyassert(unchanged.erase(unchanged.begin() + 1, unchanged.begin() + 1) ==
+            unchanged.begin() + 1);
+  psyassert(unchanged == "abc");
 
   for (std::string::size_type i = 0; i < 1000; ++i)
     empty.append(i - empty.size(), '\0');
