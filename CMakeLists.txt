@@ -10,6 +10,7 @@ add_library(
     src/cin.cpp
     src/clog.cpp
     src/cout.cpp
+    src/filesystem.cpp
     src/ios.cpp
     src/iostream_macos.cpp
     src/istream.cpp

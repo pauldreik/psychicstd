@@ -72,6 +72,7 @@ def _runtime_library(compiler: str, include: Path) -> str:
             "cin.cpp",
             "clog.cpp",
             "cout.cpp",
+            "filesystem.cpp",
             "ios.cpp",
             "istream.cpp",
             "iostream.cpp",

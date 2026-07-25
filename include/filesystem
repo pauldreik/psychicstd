@@ -1,10 +1,7 @@
 #pragma once
-#include <__psychicstd_config>
-#include <cerrno>
 #include <cstdint>
 #include <string>
 #include <string_view>
-#include <sys/stat.h>
 #include <system_error>
 
 namespace std {
@@ -100,28 +97,10 @@ public:
   const path& path1() const noexcept { return path1_; }
 };
 
-inline bool exists(const path& p) noexcept {
-  struct stat st;
-  return ::stat(p.c_str(), &st) == 0;
-}
-
-inline bool is_directory(const path& p) noexcept {
-  struct stat st;
-  return ::stat(p.c_str(), &st) == 0 && S_ISDIR(st.st_mode);
-}
-
-inline bool is_regular_file(const path& p) noexcept {
-  struct stat st;
-  return ::stat(p.c_str(), &st) == 0 && S_ISREG(st.st_mode);
-}
-
-inline uintmax_t file_size(const path& p) {
-  struct stat st;
-  if (::stat(p.c_str(), &st) != 0)
-    _PSYCHICSTD_THROW(filesystem_error("file_size", p,
-                                       error_code(errno, generic_category())));
-  return (uintmax_t)st.st_size;
-}
+bool exists(const path&) noexcept;
+bool is_directory(const path&) noexcept;
+bool is_regular_file(const path&) noexcept;
+uintmax_t file_size(const path&);
 
 } // namespace filesystem
 } // namespace std
