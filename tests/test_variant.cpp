@@ -1,4 +1,5 @@
 #include "psyassert.h"
+#include <memory>
 #include <string>
 #include <variant>
 
@@ -10,6 +11,11 @@ using std::variant;
 using std::visit;
 
 int main() {
+  std::shared_ptr<int> mutable_pointer = std::make_shared<int>(3);
+  variant<std::shared_ptr<const int>, std::shared_ptr<const std::string>>
+      converted_pointer = mutable_pointer;
+  psyassert(**get_if<std::shared_ptr<const int>>(&converted_pointer) == 3);
+
   variant<int, std::string, double> v = 42;
   psyassert(v.index() == 0);
   psyassert(holds_alternative<int>(v));

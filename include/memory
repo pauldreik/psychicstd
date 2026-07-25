@@ -624,6 +624,7 @@ public:
   constexpr shared_ptr(nullptr_t) noexcept {}
 
   template <typename U>
+    requires(is_convertible_v<U*, T*>)
   explicit shared_ptr(U* p)
       : ptr_(p), ctrl_(new __detail::__sp_ctrl_impl<U>(p)) {
     init_esft(p);
@@ -646,6 +647,7 @@ public:
   // The previous implementation used reinterpret_cast<shared_ptr<T>&>(o) to
   // read ctrl_, which is strict-aliasing UB that GCC -O2 miscompiles.
   template <typename U>
+    requires(is_convertible_v<U*, T*>)
   shared_ptr(const shared_ptr<U>& o) noexcept : ptr_(o.ptr_), ctrl_(o.ctrl_) {
     inc();
   }
@@ -653,12 +655,15 @@ public:
   // Converting move constructor: transfer ownership without touching the
   // reference count.
   template <typename U>
+    requires(is_convertible_v<U*, T*>)
   shared_ptr(shared_ptr<U>&& o) noexcept : ptr_(o.ptr_), ctrl_(o.ctrl_) {
     o.ptr_ = nullptr;
     o.ctrl_ = nullptr;
   }
 
-  template <typename U, typename D> shared_ptr(unique_ptr<U, D>&& o) {
+  template <typename U, typename D>
+    requires(is_convertible_v<U*, T*>)
+  shared_ptr(unique_ptr<U, D>&& o) {
     U* owned = o.get();
     if (owned) {
       ctrl_ = new __detail::__sp_ctrl_del<U, D>(
