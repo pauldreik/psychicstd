@@ -133,8 +133,9 @@ private:
   constexpr void _shift_right(size_type idx, size_type n) {
     if constexpr (is_trivially_copyable_v<T>) {
       if (!__builtin_is_constant_evaluated()) {
-        __builtin_memmove(data_ + idx + n, data_ + idx,
-                          (size_ - idx) * sizeof(T));
+        if (size_ != idx)
+          __builtin_memmove(data_ + idx + n, data_ + idx,
+                            (size_ - idx) * sizeof(T));
         size_type stop = idx + n < size_ ? idx + n : size_;
         for (size_type j = idx; j < stop; ++j)
           _destroy(data_ + j);
@@ -176,8 +177,9 @@ private:
   constexpr void _shift_left(size_type from, size_type n) {
     if constexpr (is_trivially_copyable_v<T>) {
       if (!__builtin_is_constant_evaluated()) {
-        __builtin_memmove(data_ + from - n, data_ + from,
-                          (size_ - from) * sizeof(T));
+        if (size_ != from)
+          __builtin_memmove(data_ + from - n, data_ + from,
+                            (size_ - from) * sizeof(T));
         return;
       }
     }

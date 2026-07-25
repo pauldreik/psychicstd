@@ -45,6 +45,7 @@ int main() {
     psyassert(c == 0xa5);
 
   std::vector<int> v;
+  v.erase(v.begin(), v.end());
   v.push_back(42);
   psyassert(v[0] == 42);
 
