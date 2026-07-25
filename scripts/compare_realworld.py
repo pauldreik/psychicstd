@@ -84,6 +84,7 @@ def _runtime_library(compiler: str, include: Path) -> str:
             "sstream_instantiations.cpp",
             "stdio_streambuf.cpp",
             "stdexcept.cpp",
+            "stop_token.cpp",
             "system_error.cpp",
             "thread.cpp",
             "string.cpp",

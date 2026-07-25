@@ -21,6 +21,7 @@ add_library(
     src/sstream_instantiations.cpp
     src/stdio_streambuf.cpp
     src/stdexcept.cpp
+    src/stop_token.cpp
     src/string.cpp
     src/string_instantiations.cpp
     src/system_error.cpp

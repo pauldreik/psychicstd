@@ -45,6 +45,7 @@ if(NOT _psychicstd_in_try_compile AND NOT TARGET _psychicstd_runtime)
         "${PSYCHICSTD_ROOT}/src/sstream_instantiations.cpp"
         "${PSYCHICSTD_ROOT}/src/stdio_streambuf.cpp"
         "${PSYCHICSTD_ROOT}/src/stdexcept.cpp"
+        "${PSYCHICSTD_ROOT}/src/stop_token.cpp"
         "${PSYCHICSTD_ROOT}/src/string.cpp"
         "${PSYCHICSTD_ROOT}/src/string_instantiations.cpp"
         "${PSYCHICSTD_ROOT}/src/system_error.cpp"
