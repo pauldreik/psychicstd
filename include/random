@@ -67,13 +67,22 @@ public:
   static constexpr result_type default_seed = 1;
 
   explicit linear_congruential_engine(result_type seed = default_seed)
-      : state_(seed % m) {}
+      : state_(seed % m) {
+    if constexpr (c == 0)
+      if (state_ == 0)
+        state_ = 1;
+  }
   template <typename SSeq,
             typename = enable_if_t<!is_convertible_v<SSeq, result_type>>>
   explicit linear_congruential_engine(SSeq& seq) {
     seed(seq);
   }
-  void seed(result_type s = default_seed) { state_ = s % m; }
+  void seed(result_type s = default_seed) {
+    state_ = s % m;
+    if constexpr (c == 0)
+      if (state_ == 0)
+        state_ = 1;
+  }
   template <typename SSeq,
             typename = enable_if_t<!is_convertible_v<SSeq, result_type>>>
   void seed(SSeq& seq) {

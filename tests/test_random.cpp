@@ -3,6 +3,11 @@
 #include <random>
 
 int main() {
+  std::minstd_rand0 zero_seed(0);
+  std::minstd_rand0 one_seed(1);
+  psyassert(zero_seed() == 16807);
+  psyassert(one_seed() == 16807);
+
   std::random_device rd;
   std::random_device token_rd("/dev/urandom");
   auto v = rd();
