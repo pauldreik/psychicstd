@@ -3,6 +3,10 @@
 #include <string>
 
 int main() {
+  std::string default_empty;
+  default_empty.resize(0);
+  psyassert(default_empty.empty());
+
 #if defined(PSYCHICSTD_TEST_PSYCHICSTD) &&                                     \
     _PSYCHICSTD_COMPATIBILITY_LEVEL >= _PSYCHICSTD_COMPAT_DROPIN
   psyassert(isspace(' '));

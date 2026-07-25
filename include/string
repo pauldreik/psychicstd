@@ -242,6 +242,10 @@ public:
   }
 
   void resize(size_type n, Char c = Char()) {
+    if (n == 0) {
+      clear();
+      return;
+    }
     if (n < size_) {
       size_ = n;
       data_[n] = 0;
