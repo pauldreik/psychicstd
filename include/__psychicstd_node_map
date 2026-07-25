@@ -1,11 +1,12 @@
 #pragma once
+#include <__psychicstd_allocator_traits>
 #include <__psychicstd_except>
 #include <__psychicstd_iterator_core>
 #include <__psychicstd_iterator_next>
 #include <__psychicstd_ptr_index>
+#include <__psychicstd_unique_owner>
 #include <cstddef>
 #include <initializer_list>
-#include <memory>
 #include <tuple>
 #include <utility>
 
@@ -492,7 +493,7 @@ private:
     return !comp_(a, b) && !comp_(b, a);
   }
   iterator link(node* position, node* value, size_type index) {
-    unique_ptr<node> guard(value);
+    __detail::__unique_owner<node> guard(value);
     index_.insert(index, value);
     value->next = position;
     if (position) {

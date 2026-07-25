@@ -1,10 +1,10 @@
 #pragma once
+#include <__psychicstd_allocator_traits>
 #include <__psychicstd_equal_to>
 #include <__psychicstd_hash>
 #include <__psychicstd_iterator_core>
 #include <cstddef>
 #include <initializer_list>
-#include <memory>
 #include <utility>
 
 namespace std {
