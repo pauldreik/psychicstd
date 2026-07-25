@@ -9,6 +9,7 @@ add_library(
     src/cerr.cpp
     src/cin.cpp
     src/clog.cpp
+    src/condition_variable.cpp
     src/cout.cpp
     src/filesystem.cpp
     src/ios.cpp

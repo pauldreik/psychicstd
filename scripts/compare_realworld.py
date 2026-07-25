@@ -71,6 +71,7 @@ def _runtime_library(compiler: str, include: Path) -> str:
             "cerr.cpp",
             "cin.cpp",
             "clog.cpp",
+            "condition_variable.cpp",
             "cout.cpp",
             "filesystem.cpp",
             "ios.cpp",
