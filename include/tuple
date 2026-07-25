@@ -12,11 +12,11 @@ using tuple_element_t = typename tuple_element<Index, T>::type;
 namespace detail {
 template <size_t Index, typename T> struct tuple_leaf {
   T value;
-  tuple_leaf() = default;
-  explicit tuple_leaf(const T& v) : value(v) {}
-  explicit tuple_leaf(T&& v) : value(static_cast<T&&>(v)) {}
+  constexpr tuple_leaf() = default;
+  constexpr explicit tuple_leaf(const T& v) : value(v) {}
+  constexpr explicit tuple_leaf(T&& v) : value(static_cast<T&&>(v)) {}
   template <typename U>
-  explicit tuple_leaf(U&& v) : value(static_cast<U&&>(v)) {}
+  constexpr explicit tuple_leaf(U&& v) : value(static_cast<U&&>(v)) {}
 };
 // Reference-type specialisation: value is a reference, so assign through it.
 template <size_t Index, typename T> struct tuple_leaf<Index, T&> {
@@ -38,9 +38,9 @@ template <typename Indices, typename... Ts> struct tuple_impl;
 
 template <size_t... Is, typename... Ts>
 struct tuple_impl<index_sequence<Is...>, Ts...> : tuple_leaf<Is, Ts>... {
-  tuple_impl() = default;
+  constexpr tuple_impl() = default;
   template <typename... Us>
-  explicit tuple_impl(Us&&... args)
+  constexpr explicit tuple_impl(Us&&... args)
       : tuple_leaf<Is, Ts>(static_cast<Us&&>(args))... {}
 };
 } // namespace detail
@@ -51,9 +51,9 @@ class tuple
   using base = detail::tuple_impl<make_index_sequence<sizeof...(Ts)>, Ts...>;
 
 public:
-  tuple() = default;
-  tuple(const tuple&) = default;
-  tuple(tuple&&) = default;
+  constexpr tuple() = default;
+  constexpr tuple(const tuple&) = default;
+  constexpr tuple(tuple&&) = default;
   tuple& operator=(const tuple&) = default;
   tuple& operator=(tuple&&) = default;
 
@@ -79,7 +79,7 @@ public:
   // argument needing a conversion (e.g. string literal -> const char*) ties
   // with the forwarding template below and the call becomes ambiguous.
   // Never explicit: Ts is nearly always convertible to itself.
-  tuple(const Ts&... args)
+  constexpr tuple(const Ts&... args)
     requires(sizeof...(Ts) != 0 && (is_copy_constructible_v<Ts> && ...))
       : base(args...) {}
 
@@ -90,7 +90,7 @@ public:
              !(sizeof...(Us) == 1 &&
                (is_same_v<remove_cvref_t<Us>, tuple> || ...)) &&
              (is_constructible_v<Ts, Us &&> && ...))
-  explicit(!(is_convertible_v<Us, Ts> && ...)) tuple(Us&&... args)
+  constexpr explicit(!(is_convertible_v<Us, Ts> && ...)) tuple(Us&&... args)
       : base(static_cast<Us&&>(args)...) {}
 
   template <typename... Us>

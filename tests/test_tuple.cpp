@@ -40,6 +40,9 @@ std::tuple<const char*, int, bool> make_result(const char* p, int n) {
 } // namespace
 
 int main() {
+  constexpr std::tuple compile_time_tuple(1, 2, 3);
+  static_assert(std::get<1>(compile_time_tuple) == 2);
+
   int referenced = 7;
   auto references = std::forward_as_tuple(referenced);
   auto moved_references = std::move(references);
