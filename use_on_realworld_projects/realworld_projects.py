@@ -632,15 +632,16 @@ def _abseil(full: bool) -> Project:
                 *additional_library_targets,
                 *test_targets,
             ]
-            test_filter = ["-R", "^(" + "|".join(test_targets) + ")$"]
+            compile_command = (
+                ["cmake", "--build", "build", jobs]
+                if full
+                else ["ninja", "-C", "build", jobs, *compile_targets]
+            )
+            test_filter = [] if full else ["-R", "^(" + "|".join(test_targets) + ")$"]
 
             return {
                 "configure": _timed(configure, src, env),
-                "compile": _timed(
-                    ["ninja", "-C", "build", jobs, *compile_targets],
-                    src,
-                    env,
-                ),
+                "compile": _timed(compile_command, src, env),
                 "run tests": _timed(
                     [
                         "ctest",
@@ -662,8 +663,8 @@ def _abseil(full: bool) -> Project:
             {"debug": 25, "release": 35} if full else {"debug": 14, "release": 19}
         ),
         comment=(
-            "Builds all 105 library targets that currently compile with "
-            "psychicstd and runs all 193 upstream tests that both build and pass."
+            "Builds every default Abseil target and runs its complete "
+            "configured upstream test suite."
             if full
             else "Builds absl/base and runs eight small upstream base tests."
         ),
