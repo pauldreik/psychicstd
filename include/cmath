@@ -91,24 +91,26 @@ inline int fpclassify(long double x) {
   return __builtin_fpclassify(FP_NAN, FP_INFINITE, FP_NORMAL, FP_SUBNORMAL,
                               FP_ZERO, x);
 }
-#define _PSYCHICSTD_INTEGRAL_FINITE(T)                                         \
-  constexpr bool isnan(T) { return false; }                                    \
-  constexpr bool isinf(T) { return false; }                                    \
-  constexpr bool isfinite(T) { return true; }                                  \
-  constexpr int fpclassify(T x) { return x == 0 ? FP_ZERO : FP_NORMAL; }
-_PSYCHICSTD_INTEGRAL_FINITE(bool)
-_PSYCHICSTD_INTEGRAL_FINITE(char)
-_PSYCHICSTD_INTEGRAL_FINITE(signed char)
-_PSYCHICSTD_INTEGRAL_FINITE(unsigned char)
-_PSYCHICSTD_INTEGRAL_FINITE(short)
-_PSYCHICSTD_INTEGRAL_FINITE(unsigned short)
-_PSYCHICSTD_INTEGRAL_FINITE(int)
-_PSYCHICSTD_INTEGRAL_FINITE(unsigned int)
-_PSYCHICSTD_INTEGRAL_FINITE(long)
-_PSYCHICSTD_INTEGRAL_FINITE(unsigned long)
-_PSYCHICSTD_INTEGRAL_FINITE(long long)
-_PSYCHICSTD_INTEGRAL_FINITE(unsigned long long)
-#undef _PSYCHICSTD_INTEGRAL_FINITE
+template <typename T>
+  requires(__builtin_classify_type(*(T*)nullptr) == 1)
+constexpr bool isnan(T) {
+  return false;
+}
+template <typename T>
+  requires(__builtin_classify_type(*(T*)nullptr) == 1)
+constexpr bool isinf(T) {
+  return false;
+}
+template <typename T>
+  requires(__builtin_classify_type(*(T*)nullptr) == 1)
+constexpr bool isfinite(T) {
+  return true;
+}
+template <typename T>
+  requires(__builtin_classify_type(*(T*)nullptr) == 1)
+constexpr int fpclassify(T x) {
+  return x == 0 ? FP_ZERO : FP_NORMAL;
+}
 inline bool isnormal(float x) { return __builtin_isnormal(x); }
 inline bool isnormal(double x) { return __builtin_isnormal(x); }
 inline bool isnormal(long double x) { return __builtin_isnormal(x); }
