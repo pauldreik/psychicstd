@@ -1,4 +1,5 @@
 #pragma once
+#include <__psychicstd_hash>
 #include <cstddef>
 
 namespace std {
@@ -141,6 +142,15 @@ private:
   constexpr void trim() { words_[word_count - 1] &= last_mask(); }
 
   unsigned long long words_[word_count]{};
+};
+
+template <size_t N> struct hash<bitset<N>> {
+  size_t operator()(const bitset<N>& value) const noexcept {
+    size_t result = N;
+    for (size_t i = 0; i < N; ++i)
+      result = result * 33 + static_cast<size_t>(value[i]);
+    return result;
+  }
 };
 
 } // namespace std

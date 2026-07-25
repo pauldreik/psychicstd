@@ -13,6 +13,8 @@ int main() {
 
   const std::bitset<6> text_bits("101010");
   psyassert(text_bits == std::bitset<6>(42));
+  psyassert(std::hash<std::bitset<6>>{}(text_bits) ==
+            std::hash<std::bitset<6>>{}(std::bitset<6>(42)));
 
   std::bitset<633> large;
   large.set(632);

@@ -3,6 +3,7 @@
 #include <__psychicstd_contiguous_compare>
 #include <__psychicstd_contiguous_iterator>
 #include <__psychicstd_except>
+#include <__psychicstd_hash>
 #include <__psychicstd_iterator_core>
 #include <compare>
 #include <cstddef>
@@ -845,6 +846,15 @@ template <typename T, typename A>
 constexpr void swap(vector<T, A>& a, vector<T, A>& b) noexcept {
   a.swap(b);
 }
+
+template <typename A> struct hash<vector<bool, A>> {
+  size_t operator()(const vector<bool, A>& values) const noexcept {
+    size_t result = values.size();
+    for (bool value : values)
+      result = result * 33 + static_cast<size_t>(value);
+    return result;
+  }
+};
 
 // std::erase / std::erase_if (C++20)
 template <typename T, typename A, typename U>
