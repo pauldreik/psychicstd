@@ -161,6 +161,14 @@ inline float exp(float x) { return ::expf(x); }
 inline long double exp(long double x) { return ::expl(x); }
 inline float log(float x) { return ::logf(x); }
 inline long double log(long double x) { return ::logl(x); }
+inline float ldexp(float x, int exponent) { return ::ldexpf(x, exponent); }
+inline long double ldexp(long double x, int exponent) {
+  return ::ldexpl(x, exponent);
+}
+inline float frexp(float x, int* exponent) { return ::frexpf(x, exponent); }
+inline long double frexp(long double x, int* exponent) {
+  return ::frexpl(x, exponent);
+}
 #if _PSYCHICSTD_COMPATIBILITY_LEVEL >= _PSYCHICSTD_COMPAT_DROPIN
 template <typename T>
   requires(is_integral_v<T>)
