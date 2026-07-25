@@ -215,6 +215,21 @@ static void test_weak_ptr_shares_control_block() {
   psyassert(!base.lock());
 }
 
+struct VirtualBase {
+  virtual ~VirtualBase() = default;
+};
+struct VirtualDerived : virtual VirtualBase {};
+
+static void test_expired_converting_weak_ptr() {
+  std::weak_ptr<VirtualDerived> derived;
+  {
+    auto owner = std::make_shared<VirtualDerived>();
+    derived = owner;
+  }
+  std::weak_ptr<VirtualBase> base = derived;
+  psyassert(base.expired());
+}
+
 // Bug: at -O2 the old converting constructor used reinterpret_cast to read
 // ctrl_ from a shared_ptr<U>, which is strict-aliasing UB.  GCC exploited
 // the UB such that the control block was freed before m_ref could share it,
@@ -273,5 +288,6 @@ int main() {
   test_shared_ptr_custom_deleter();
   test_shared_ptr_concurrent_destruction();
   test_weak_ptr_shares_control_block();
+  test_expired_converting_weak_ptr();
   test_member_init_from_template_prvalue();
 }

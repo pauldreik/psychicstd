@@ -499,6 +499,12 @@ inline bool __sp_strong_add_if_live(__sp_ctrl* ctrl) noexcept {
   }
   return false;
 }
+inline void __sp_strong_release(__sp_ctrl* ctrl) noexcept {
+  if (__atomic_sub_fetch(&ctrl->count, 1, __ATOMIC_ACQ_REL) == 0) {
+    ctrl->destroy();
+    __sp_weak_release(ctrl);
+  }
+}
 template <typename U> struct __sp_ctrl_impl : __sp_ctrl {
   U* obj;
   explicit __sp_ctrl_impl(U* p) : obj(p) {}
@@ -594,9 +600,8 @@ template <typename T> class shared_ptr {
   }
   void dec() noexcept {
     auto* ctrl = ctrl_;
-    if (ctrl && __atomic_sub_fetch(&ctrl->count, 1, __ATOMIC_ACQ_REL) == 0) {
-      ctrl->destroy();
-      __detail::__sp_weak_release(ctrl);
+    if (ctrl) {
+      __detail::__sp_strong_release(ctrl);
       ctrl_ = nullptr;
       ptr_ = nullptr;
     }
@@ -857,9 +862,12 @@ public:
     inc();
   }
   template <typename U>
-  weak_ptr(const weak_ptr<U>& other) noexcept
-      : ptr_(other.ptr_), ctrl_(other.ctrl_) {
+  weak_ptr(const weak_ptr<U>& other) noexcept : ctrl_(other.ctrl_) {
     inc();
+    if (ctrl_ && __detail::__sp_strong_add_if_live(ctrl_)) {
+      ptr_ = static_cast<T*>(other.ptr_);
+      __detail::__sp_strong_release(ctrl_);
+    }
   }
   weak_ptr(weak_ptr&& other) noexcept : ptr_(other.ptr_), ctrl_(other.ctrl_) {
     other.ptr_ = nullptr;
