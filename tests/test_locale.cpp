@@ -50,6 +50,10 @@ int main() {
   auto copy = localized;
   localized = classic;
   psyassert(std::use_facet<std::numpunct<char>>(copy).decimal_point() == ',');
+  std::ostringstream number;
+  number.imbue(copy);
+  number << 12345.5;
+  psyassert(number.str() == "12.345,5");
 
   std::tm time{};
   time.tm_year = 124;

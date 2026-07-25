@@ -255,42 +255,10 @@ private:
     char dp = (char)np->decimal_point();
     char ts = (char)np->thousands_sep();
     basic_string<char> grp = np->grouping();
-    Char out[80];
-    int o = 0;
-    auto emit1 = [&](char c) {
-      if (o < (int)sizeof(out) - 1)
-        out[o++] = static_cast<Char>(c);
-    };
-    int i = 0;
-    if (i < n && (buf[i] == '-' || buf[i] == '+'))
-      emit1(buf[i++]);
-    int digstart = i;
-    while (i < n && buf[i] >= '0' && buf[i] <= '9')
-      ++i;
-    if (grp.empty() || !ts) {
-      for (int k = digstart; k < i; ++k)
-        emit1(buf[k]);
-    } else {
-      char tmp[40];
-      int t = 0, c = 0, gi = 0, size = (unsigned char)grp[0];
-      for (int k = i - 1; k >= digstart; --k) {
-        if (size > 0 && c == size) {
-          if (t < (int)sizeof(tmp))
-            tmp[t++] = ts;
-          c = 0;
-          if (gi + 1 < (int)grp.size())
-            size = (unsigned char)grp[++gi];
-        }
-        if (t < (int)sizeof(tmp))
-          tmp[t++] = buf[k];
-        ++c;
-      }
-      for (int k = t - 1; k >= 0; --k)
-        emit1(tmp[k]);
-    }
-    for (; i < n; ++i)
-      emit1(buf[i] == '.' ? dp : buf[i]);
-    pad_and_write(out, o);
+    char out[80];
+    int size = this->_localize_number(out, sizeof(out), buf, n, dp, ts,
+                                      grp.data(), grp.size());
+    pad_and_write(out, size);
   }
 
   template <typename V> basic_ostream& write_int(V v) {
@@ -356,95 +324,28 @@ basic_ostream<C, T>& ends(basic_ostream<C, T>& os) {
   return os;
 }
 
-// Flag manipulators (defined as free functions returning ios_base&)
-inline ios_base& boolalpha(ios_base& s) {
-  s.setf(ios_base::boolalpha);
-  return s;
-}
-inline ios_base& noboolalpha(ios_base& s) {
-  s.unsetf(ios_base::boolalpha);
-  return s;
-}
-inline ios_base& showbase(ios_base& s) {
-  s.setf(ios_base::showbase);
-  return s;
-}
-inline ios_base& noshowbase(ios_base& s) {
-  s.unsetf(ios_base::showbase);
-  return s;
-}
-inline ios_base& showpos(ios_base& s) {
-  s.setf(ios_base::showpos);
-  return s;
-}
-inline ios_base& noshowpos(ios_base& s) {
-  s.unsetf(ios_base::showpos);
-  return s;
-}
-inline ios_base& showpoint(ios_base& s) {
-  s.setf(ios_base::showpoint);
-  return s;
-}
-inline ios_base& noshowpoint(ios_base& s) {
-  s.unsetf(ios_base::showpoint);
-  return s;
-}
-inline ios_base& uppercase(ios_base& s) {
-  s.setf(ios_base::uppercase);
-  return s;
-}
-inline ios_base& nouppercase(ios_base& s) {
-  s.unsetf(ios_base::uppercase);
-  return s;
-}
-inline ios_base& skipws(ios_base& s) {
-  s.setf(ios_base::skipws);
-  return s;
-}
-inline ios_base& noskipws(ios_base& s) {
-  s.unsetf(ios_base::skipws);
-  return s;
-}
-inline ios_base& left(ios_base& s) {
-  s.setf(ios_base::left, ios_base::adjustfield);
-  return s;
-}
-inline ios_base& right(ios_base& s) {
-  s.setf(ios_base::right, ios_base::adjustfield);
-  return s;
-}
-inline ios_base& internal(ios_base& s) {
-  s.setf(ios_base::internal, ios_base::adjustfield);
-  return s;
-}
-inline ios_base& dec(ios_base& s) {
-  s.setf(ios_base::dec, ios_base::basefield);
-  return s;
-}
-inline ios_base& hex(ios_base& s) {
-  s.setf(ios_base::hex, ios_base::basefield);
-  return s;
-}
-inline ios_base& oct(ios_base& s) {
-  s.setf(ios_base::oct, ios_base::basefield);
-  return s;
-}
-inline ios_base& fixed(ios_base& s) {
-  s.setf(ios_base::fixed, ios_base::floatfield);
-  return s;
-}
-inline ios_base& scientific(ios_base& s) {
-  s.setf(ios_base::scientific, ios_base::floatfield);
-  return s;
-}
-inline ios_base& defaultfloat(ios_base& s) {
-  s.unsetf(ios_base::floatfield);
-  return s;
-}
-inline ios_base& hexfloat(ios_base& s) {
-  s.setf(ios_base::fixed | ios_base::scientific, ios_base::floatfield);
-  return s;
-}
+ios_base& boolalpha(ios_base&);
+ios_base& noboolalpha(ios_base&);
+ios_base& showbase(ios_base&);
+ios_base& noshowbase(ios_base&);
+ios_base& showpos(ios_base&);
+ios_base& noshowpos(ios_base&);
+ios_base& showpoint(ios_base&);
+ios_base& noshowpoint(ios_base&);
+ios_base& uppercase(ios_base&);
+ios_base& nouppercase(ios_base&);
+ios_base& skipws(ios_base&);
+ios_base& noskipws(ios_base&);
+ios_base& left(ios_base&);
+ios_base& right(ios_base&);
+ios_base& internal(ios_base&);
+ios_base& dec(ios_base&);
+ios_base& hex(ios_base&);
+ios_base& oct(ios_base&);
+ios_base& fixed(ios_base&);
+ios_base& scientific(ios_base&);
+ios_base& defaultfloat(ios_base&);
+ios_base& hexfloat(ios_base&);
 
 template <typename Ostream, typename T>
   requires(!is_lvalue_reference_v<Ostream> &&

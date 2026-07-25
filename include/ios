@@ -137,6 +137,10 @@ protected:
   int _format_unsigned(char*, size_t, unsigned long long) const;
   int _format_float(char*, size_t, double) const;
   int _format_long_double(char*, size_t, long double) const;
+  static int _localize_number(char* out, size_t out_size, const char* input,
+                              int input_size, char decimal_point,
+                              char thousands_sep, const char* grouping,
+                              size_t grouping_size);
 
   [[noreturn, gnu::cold, gnu::noinline]] static void _throw_failure() {
 #if defined(__cpp_exceptions)

@@ -2,6 +2,141 @@
 
 namespace std {
 
+ios_base& boolalpha(ios_base& stream) {
+  stream.setf(ios_base::boolalpha);
+  return stream;
+}
+ios_base& noboolalpha(ios_base& stream) {
+  stream.unsetf(ios_base::boolalpha);
+  return stream;
+}
+ios_base& showbase(ios_base& stream) {
+  stream.setf(ios_base::showbase);
+  return stream;
+}
+ios_base& noshowbase(ios_base& stream) {
+  stream.unsetf(ios_base::showbase);
+  return stream;
+}
+ios_base& showpos(ios_base& stream) {
+  stream.setf(ios_base::showpos);
+  return stream;
+}
+ios_base& noshowpos(ios_base& stream) {
+  stream.unsetf(ios_base::showpos);
+  return stream;
+}
+ios_base& showpoint(ios_base& stream) {
+  stream.setf(ios_base::showpoint);
+  return stream;
+}
+ios_base& noshowpoint(ios_base& stream) {
+  stream.unsetf(ios_base::showpoint);
+  return stream;
+}
+ios_base& uppercase(ios_base& stream) {
+  stream.setf(ios_base::uppercase);
+  return stream;
+}
+ios_base& nouppercase(ios_base& stream) {
+  stream.unsetf(ios_base::uppercase);
+  return stream;
+}
+ios_base& skipws(ios_base& stream) {
+  stream.setf(ios_base::skipws);
+  return stream;
+}
+ios_base& noskipws(ios_base& stream) {
+  stream.unsetf(ios_base::skipws);
+  return stream;
+}
+ios_base& left(ios_base& stream) {
+  stream.setf(ios_base::left, ios_base::adjustfield);
+  return stream;
+}
+ios_base& right(ios_base& stream) {
+  stream.setf(ios_base::right, ios_base::adjustfield);
+  return stream;
+}
+ios_base& internal(ios_base& stream) {
+  stream.setf(ios_base::internal, ios_base::adjustfield);
+  return stream;
+}
+ios_base& dec(ios_base& stream) {
+  stream.setf(ios_base::dec, ios_base::basefield);
+  return stream;
+}
+ios_base& hex(ios_base& stream) {
+  stream.setf(ios_base::hex, ios_base::basefield);
+  return stream;
+}
+ios_base& oct(ios_base& stream) {
+  stream.setf(ios_base::oct, ios_base::basefield);
+  return stream;
+}
+ios_base& fixed(ios_base& stream) {
+  stream.setf(ios_base::fixed, ios_base::floatfield);
+  return stream;
+}
+ios_base& scientific(ios_base& stream) {
+  stream.setf(ios_base::scientific, ios_base::floatfield);
+  return stream;
+}
+ios_base& defaultfloat(ios_base& stream) {
+  stream.unsetf(ios_base::floatfield);
+  return stream;
+}
+ios_base& hexfloat(ios_base& stream) {
+  stream.setf(ios_base::fixed | ios_base::scientific, ios_base::floatfield);
+  return stream;
+}
+
+int ios_base::_localize_number(char* out, size_t out_size, const char* input,
+                               int input_size, char decimal_point,
+                               char thousands_sep, const char* grouping,
+                               size_t grouping_size) {
+  int output_size = 0;
+  auto emit = [&](char value) {
+    if (static_cast<size_t>(output_size) < out_size)
+      out[output_size++] = value;
+  };
+  int input_pos = 0;
+  if (input_pos < input_size &&
+      (input[input_pos] == '-' || input[input_pos] == '+'))
+    emit(input[input_pos++]);
+  int digits_start = input_pos;
+  while (input_pos < input_size && input[input_pos] >= '0' &&
+         input[input_pos] <= '9')
+    ++input_pos;
+  if (!grouping_size || !thousands_sep) {
+    for (int i = digits_start; i < input_pos; ++i)
+      emit(input[i]);
+  } else {
+    char reversed[40];
+    int reversed_size = 0;
+    int group_count = 0;
+    size_t group_index = 0;
+    int group_size = static_cast<unsigned char>(grouping[0]);
+    for (int i = input_pos - 1; i >= digits_start; --i) {
+      if (group_size > 0 && group_count == group_size) {
+        if (reversed_size < static_cast<int>(sizeof(reversed)))
+          reversed[reversed_size++] = thousands_sep;
+        group_count = 0;
+        if (group_index + 1 < grouping_size)
+          group_size = static_cast<unsigned char>(grouping[++group_index]);
+      }
+      if (reversed_size < static_cast<int>(sizeof(reversed)))
+        reversed[reversed_size++] = input[i];
+      ++group_count;
+    }
+    for (int i = reversed_size - 1; i >= 0; --i)
+      emit(reversed[i]);
+  }
+  for (; input_pos < input_size; ++input_pos)
+    emit(input[input_pos] == '.' ? decimal_point : input[input_pos]);
+  return output_size;
+}
+
 int ios_base::_format_signed(char* buf, size_t size, long long value,
                              unsigned long long unsigned_value) const {
   if (flags_ & hex)
