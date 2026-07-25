@@ -1,3 +1,4 @@
+#include <cmath>
 #include <random>
 
 #ifdef __APPLE__
@@ -14,6 +15,11 @@ extern "C" int close(int) __asm("_close");
 #endif
 
 namespace std {
+
+double __random_detail::normal_transform(double first, double second) {
+  return ::sqrt(-2.0 * ::log(first)) *
+         ::cos(2.0 * 3.14159265358979323846 * second);
+}
 
 random_device::random_device(const char*) {}
 

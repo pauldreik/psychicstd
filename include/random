@@ -1,11 +1,14 @@
 #pragma once
-#include <cmath>
 #include <cstdint>
 #include <initializer_list>
 #include <type_traits>
 #include <vector>
 
 namespace std {
+
+namespace __random_detail {
+double normal_transform(double, double);
+}
 
 // random_device: reads from /dev/urandom
 class random_device {
@@ -341,9 +344,8 @@ public:
       u1 = u(g);
     } while (u1 == 0);
     u2 = u(g);
-    Real mag = p_.stddev * static_cast<Real>(::sqrt(-2.0 * ::log((double)u1)));
-    return mag * static_cast<Real>(
-                     ::cos(2.0 * 3.14159265358979323846 * (double)u2)) +
+    return p_.stddev * static_cast<Real>(__random_detail::normal_transform(
+                           static_cast<double>(u1), static_cast<double>(u2))) +
            p_.mean;
   }
 

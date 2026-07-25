@@ -55,6 +55,10 @@ int main() {
     psyassert(always(gen));
   }
 
+  std::normal_distribution<> normal(10.0, 2.0);
+  double normal_value = normal(gen);
+  psyassert(normal_value == normal_value);
+
   std::discrete_distribution<> d({1.0, 0.0, 0.0});
   for (int i = 0; i < 10; ++i)
     psyassert(d(gen) == 0);
