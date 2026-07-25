@@ -1,2 +1,7 @@
 #pragma once
 #include <signal.h>
+
+namespace std {
+using ::raise;
+using ::signal;
+} // namespace std
