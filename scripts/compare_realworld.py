@@ -78,6 +78,7 @@ def _runtime_library(compiler: str, include: Path) -> str:
             "iostream_macos.cpp",
             "ostream.cpp",
             "random.cpp",
+            "regex.cpp",
             "sstream_instantiations.cpp",
             "stdio_streambuf.cpp",
             "stdexcept.cpp",

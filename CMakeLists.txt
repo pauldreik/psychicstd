@@ -15,6 +15,7 @@ add_library(
     src/istream.cpp
     src/ostream.cpp
     src/random.cpp
+    src/regex.cpp
     src/sstream_instantiations.cpp
     src/stdio_streambuf.cpp
     src/stdexcept.cpp
