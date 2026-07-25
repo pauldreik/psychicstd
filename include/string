@@ -132,20 +132,20 @@ public:
   allocator_type get_allocator() const noexcept { return alloc_; }
 
   basic_string& operator=(const basic_string& o) {
-    if (this != &o) {
-      basic_string tmp(o);
-      swap(tmp);
-    }
+    if (this != &o)
+      assign(o.data_, o.size_);
     return *this;
   }
   basic_string& operator=(basic_string&& o) noexcept {
     swap(o);
     return *this;
   }
-  basic_string& operator=(const Char* s) { return *this = basic_string(s); }
-  basic_string& operator=(Char c) { return *this = basic_string(1, c); }
+  basic_string& operator=(const Char* s) {
+    return assign(s, Traits::length(s));
+  }
+  basic_string& operator=(Char c) { return assign(1, c); }
   basic_string& operator=(basic_string_view<Char> sv) {
-    return *this = basic_string(sv);
+    return assign(sv.data(), sv.size());
   }
   basic_string& assign(const basic_string& o) { return *this = o; }
   basic_string& assign(const basic_string& o, size_type pos,
@@ -155,10 +155,28 @@ public:
   }
   basic_string& assign(const Char* s) { return *this = s; }
   basic_string& assign(const Char* s, size_type n) {
-    return *this = basic_string(s, n);
+    if (n <= cap_ && data_) {
+      if (n)
+        Traits::move(data_, s, n);
+    } else {
+      Char* p = alloc(n + 1);
+      if (n)
+        Traits::copy(p, s, n);
+      dealloc(data_);
+      data_ = p;
+      cap_ = n;
+    }
+    size_ = n;
+    data_[n] = 0;
+    return *this;
   }
   basic_string& assign(size_type n, Char c) {
-    return *this = basic_string(n, c);
+    reserve(n);
+    for (size_type i = 0; i < n; ++i)
+      data_[i] = c;
+    size_ = n;
+    data_[n] = 0;
+    return *this;
   }
   template <typename It>
     requires(!is_integral_v<It>)

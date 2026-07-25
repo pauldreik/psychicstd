@@ -129,6 +129,11 @@ int main() {
   psyassert(s == "ssig");
   s.assign(source, 1, 3);
   psyassert(s == "ssi");
+  s.reserve(32);
+  const char* storage = s.data();
+  s.assign("replacement", 11);
+  psyassert(s.data() == storage);
+  psyassert(s == "replacement");
 
   s = "hello";
   psyassert(s.size() == 5);
