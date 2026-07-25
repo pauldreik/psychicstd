@@ -14,6 +14,7 @@ add_library(
     src/iostream_macos.cpp
     src/istream.cpp
     src/ostream.cpp
+    src/random.cpp
     src/sstream_instantiations.cpp
     src/stdio_streambuf.cpp
     src/stdexcept.cpp

@@ -10,20 +10,11 @@ Parallelism: **8 jobs** (20 logical CPUs available; the memory estimate permits 
 
 | step | system (s) | psychicstd (s) | speedup | comment |
 | --- | ---: | ---: | ---: | --- |
-| configure | 0.63 | 0.62 | 🟢 1.01x [1.00x, 1.02x] | |
-| compile | 28.30 | 13.82 | 🟢 2.05x [2.04x, 2.07x] | |
-| run tests | 25.89 | 22.62 | 🟡 1.14x [0.95x, 1.25x] | unicode/cbor/msgpack (slow), algorithms (unspecified tail order), cmake_fetch/cmake_import (not applicable) excluded |
-| examples | 37.97 | 13.99 | 🟢 2.71x [2.68x, 2.77x] | 217 documented API examples, compiled but not run |
-
-### Release
-
-| step | system (s) | psychicstd (s) | speedup | comment |
-| --- | ---: | ---: | ---: | --- |
-| configure | 0.63 | 0.62 | 🟢 1.01x [1.00x, 1.02x] | |
-| compile | 54.50 | 46.29 | 🟢 1.18x [1.17x, 1.19x] | |
-| run tests | 6.79 | 7.66 | 🔴 0.89x [0.66x, 0.96x] | unicode/cbor/msgpack (slow), algorithms (unspecified tail order), cmake_fetch/cmake_import (not applicable) excluded |
-| examples | 37.87 | 13.94 | 🟢 2.72x [2.71x, 2.76x] | 217 documented API examples, compiled but not run |
+| configure | 0.62 | 0.62 | 🟡 1.00x [0.99x, 1.02x] | |
+| compile | 27.44 | 13.60 | 🟢 2.02x [1.99x, 2.04x] | |
+| run tests | 25.39 | 22.76 | 🟢 1.12x [1.07x, 1.16x] | unicode/cbor/msgpack (slow), algorithms (unspecified tail order), cmake_fetch/cmake_import (not applicable) excluded |
+| examples | 36.98 | 13.98 | 🟢 2.65x [2.57x, 2.69x] | 217 documented API examples, compiled but not run |
 
 ______________________________________________________________________
 
-Reproduce this on your machine: `scripts/compare_realworld_performance.py --compiler c++ --build-type both --reps 5 --jobs 8`
+Reproduce this on your machine: `scripts/compare_realworld_performance.py --compiler c++ --build-type debug --reps 5 --jobs 8`

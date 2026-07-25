@@ -21,11 +21,20 @@ struct stop_state {
   bool stop_requested_ = false;
   stop_callback_base* callbacks_ = nullptr;
   unsigned refs_ = 1;
+  unsigned sources_ = 1;
 
   stop_state() { pthread_mutex_init(&mutex_, nullptr); }
   ~stop_state() { pthread_mutex_destroy(&mutex_); }
 
   void add_ref() noexcept { __refcount_detail::add(&refs_); }
+  void add_source() noexcept { __refcount_detail::add(&sources_); }
+  void release_source() noexcept {
+    __atomic_sub_fetch(&sources_, 1, __ATOMIC_RELEASE);
+  }
+  bool stop_possible() const noexcept {
+    return __atomic_load_n(&stop_requested_, __ATOMIC_ACQUIRE) ||
+           __atomic_load_n(&sources_, __ATOMIC_ACQUIRE) != 0;
+  }
   void release() noexcept {
     if (__refcount_detail::release(&refs_)) {
       this->~stop_state();
@@ -63,7 +72,7 @@ inline bool stop_state::request_stop() noexcept {
     return false;
   }
 
-  stop_requested_ = true;
+  __atomic_store_n(&stop_requested_, true, __ATOMIC_RELEASE);
   stop_callback_base* callbacks = callbacks_;
   callbacks_ = nullptr;
   for (auto* cb = callbacks; cb; cb = cb->next_) {
@@ -127,10 +136,12 @@ public:
     return *this;
   }
 
-  bool stop_possible() const noexcept { return state_ != nullptr; }
+  bool stop_possible() const noexcept {
+    return state_ && state_->stop_possible();
+  }
   bool stop_requested() const noexcept {
     auto* state = state_;
-    return state && state->stop_requested_;
+    return state && __atomic_load_n(&state->stop_requested_, __ATOMIC_ACQUIRE);
   }
 };
 
@@ -145,30 +156,40 @@ public:
   }
   explicit stop_source(nostopstate_t) noexcept {}
   stop_source(const stop_source& other) noexcept : state_(other.state_) {
-    if (state_)
+    if (state_) {
       state_->add_ref();
+      state_->add_source();
+    }
   }
   stop_source(stop_source&& other) noexcept : state_(other.state_) {
     other.state_ = nullptr;
   }
   ~stop_source() {
-    if (state_)
+    if (state_) {
+      state_->release_source();
       state_->release();
+    }
   }
   stop_source& operator=(const stop_source& other) noexcept {
     if (this != &other) {
-      if (state_)
+      if (state_) {
+        state_->release_source();
         state_->release();
+      }
       state_ = other.state_;
-      if (state_)
+      if (state_) {
         state_->add_ref();
+        state_->add_source();
+      }
     }
     return *this;
   }
   stop_source& operator=(stop_source&& other) noexcept {
     if (this != &other) {
-      if (state_)
+      if (state_) {
+        state_->release_source();
         state_->release();
+      }
       state_ = other.state_;
       other.state_ = nullptr;
     }
@@ -178,7 +199,7 @@ public:
   bool stop_possible() const noexcept { return state_ != nullptr; }
   bool stop_requested() const noexcept {
     auto* state = state_;
-    return state && state->stop_requested_;
+    return state && __atomic_load_n(&state->stop_requested_, __ATOMIC_ACQUIRE);
   }
   bool request_stop() noexcept {
     auto* state = state_;

@@ -1,9 +1,15 @@
 #include "psyassert.h"
 #include <atomic>
+#include <optional>
 #include <stop_token>
 #include <utility>
 
 int main() {
+  std::optional<std::stop_source> discarded_source(std::in_place);
+  std::stop_token source_less_token = discarded_source->get_token();
+  discarded_source.reset();
+  psyassert(!source_less_token.stop_possible());
+
   std::stop_source source;
   std::stop_token token = source.get_token();
   psyassert(source.stop_possible());

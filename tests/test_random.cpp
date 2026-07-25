@@ -1,5 +1,5 @@
 #include "psyassert.h"
-#include <limits>
+#include <limits> // we use limits here, so include it. no need to verify the strict includes.
 #include <random>
 
 int main() {
@@ -7,6 +7,18 @@ int main() {
   std::minstd_rand0 one_seed(1);
   psyassert(zero_seed() == 16807);
   psyassert(one_seed() == 16807);
+  zero_seed.seed();
+  zero_seed.discard(9999);
+  psyassert(zero_seed() == 1043618065);
+
+  using full_width_engine = std::linear_congruential_engine<unsigned, 0, 0, 0>;
+  full_width_engine full_width;
+  full_width();
+
+  unsigned seed_values[]{3, 5, 7};
+  std::seed_seq lcg_seed(seed_values, seed_values + 3);
+  std::linear_congruential_engine<unsigned, 5, 7, 11> seeded(lcg_seed);
+  psyassert(seeded == decltype(seeded)(4));
 
   std::random_device rd;
   std::random_device token_rd("/dev/urandom");
@@ -42,6 +54,10 @@ int main() {
     psyassert(!never(gen));
     psyassert(always(gen));
   }
+
+  std::normal_distribution<> normal(10.0, 2.0);
+  double normal_value = normal(gen);
+  psyassert(normal_value == normal_value);
 
   std::discrete_distribution<> d({1.0, 0.0, 0.0});
   for (int i = 0; i < 10; ++i)

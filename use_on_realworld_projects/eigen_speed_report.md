@@ -12,16 +12,9 @@ eigen has no configure step; a fixed subset of its test suite is compiled and ru
 
 | step | system (s) | psychicstd (s) | speedup | comment |
 | --- | ---: | ---: | ---: | --- |
-| compile | 19.67 | 10.33 | 🟢 1.90x [1.90x, 1.91x] | |
-| run tests | 0.03 | 0.02 | 🟢 1.31x [1.29x, 1.33x] | |
-
-### Release
-
-| step | system (s) | psychicstd (s) | speedup | comment |
-| --- | ---: | ---: | ---: | --- |
-| compile | 19.63 | 10.32 | 🟢 1.90x [1.90x, 1.91x] | |
-| run tests | 0.03 | 0.02 | 🟢 1.30x [1.28x, 1.33x] | |
+| compile | 19.68 | 10.40 | 🟢 1.89x [1.89x, 1.90x] | |
+| run tests | 0.03 | 0.03 | 🟢 1.29x [1.26x, 1.31x] | |
 
 ______________________________________________________________________
 
-Reproduce this on your machine: `scripts/compare_realworld_performance.py --compiler c++ --build-type both --reps 9 --jobs 8`
+Reproduce this on your machine: `scripts/compare_realworld_performance.py --compiler c++ --build-type debug --reps 9 --jobs 8`
