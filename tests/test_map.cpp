@@ -37,6 +37,8 @@ int main() {
   psyassert(m[1] == 42);
   auto hinted = m.emplace_hint(m.end(), 2, 24);
   psyassert(hinted->second == 24);
+  m = {{3, 7}};
+  psyassert(m.size() == 1 && m[3] == 7);
 
   std::map<int, nonassignable> immutable;
   immutable.emplace(2, 2);
@@ -84,4 +86,10 @@ int main() {
   multi.emplace(1, 20);
   psyassert(multi.begin()->second == 10);
   psyassert(std::next(multi.begin())->second == 20);
+  psyassert((multi == std::multimap<int, int>({{1, 10}, {1, 20}})));
+  psyassert(!(multi == std::multimap<int, int>({{1, 20}, {1, 10}})));
+  auto stable_multi = std::next(multi.begin());
+  multi.emplace(0, 0);
+  multi.emplace(2, 30);
+  psyassert(stable_multi->second == 20);
 }

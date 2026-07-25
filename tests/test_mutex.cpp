@@ -2,6 +2,7 @@
 #include <atomic>
 #include <condition_variable>
 #include <mutex>
+#include <shared_mutex>
 #include <thread>
 
 template <typename Mutex> bool try_from_another_thread(Mutex& mutex) {
@@ -21,6 +22,17 @@ int main() {
   psyassert(!try_from_another_thread(m));
   m.unlock();
   psyassert(try_from_another_thread(m));
+
+  std::shared_mutex shared;
+  std::shared_lock first_reader(shared);
+  std::shared_lock second_reader(shared, std::try_to_lock);
+  psyassert(first_reader.owns_lock());
+  psyassert(second_reader.owns_lock());
+  psyassert(!shared.try_lock());
+  second_reader.unlock();
+  first_reader.unlock();
+  psyassert(shared.try_lock());
+  shared.unlock();
 
   std::recursive_mutex recursive;
   psyassert(recursive.try_lock());

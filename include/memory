@@ -533,6 +533,7 @@ struct __esft_tag {};
 } // namespace __detail
 
 template <typename T> class shared_ptr;
+template <typename T> class weak_ptr;
 
 class bad_weak_ptr : public exception {
 public:
@@ -546,6 +547,7 @@ template <typename T> class enable_shared_from_this {
   mutable T* ptr_ = nullptr;
 
   template <typename U> friend class shared_ptr;
+  template <typename U> friend class weak_ptr;
 
   void __accept(__detail::__sp_ctrl* ctrl, T* ptr) const noexcept {
     if (!ctrl_ || __atomic_load_n(&ctrl_->count, __ATOMIC_RELAXED) == 0) {
@@ -578,6 +580,7 @@ template <typename T> class shared_ptr {
   // Allow shared_ptr<U> to read our private members directly.  Required by
   // the converting constructors and the aliasing constructor below.
   template <typename U> friend class shared_ptr;
+  template <typename U> friend class weak_ptr;
   template <typename U> friend class enable_shared_from_this;
   template <typename D, typename U>
   friend D* get_deleter(const shared_ptr<U>&) noexcept;
@@ -621,6 +624,7 @@ public:
   constexpr shared_ptr(nullptr_t) noexcept {}
 
   template <typename U>
+    requires(is_convertible_v<U*, T*>)
   explicit shared_ptr(U* p)
       : ptr_(p), ctrl_(new __detail::__sp_ctrl_impl<U>(p)) {
     init_esft(p);
@@ -643,6 +647,7 @@ public:
   // The previous implementation used reinterpret_cast<shared_ptr<T>&>(o) to
   // read ctrl_, which is strict-aliasing UB that GCC -O2 miscompiles.
   template <typename U>
+    requires(is_convertible_v<U*, T*>)
   shared_ptr(const shared_ptr<U>& o) noexcept : ptr_(o.ptr_), ctrl_(o.ctrl_) {
     inc();
   }
@@ -650,12 +655,15 @@ public:
   // Converting move constructor: transfer ownership without touching the
   // reference count.
   template <typename U>
+    requires(is_convertible_v<U*, T*>)
   shared_ptr(shared_ptr<U>&& o) noexcept : ptr_(o.ptr_), ctrl_(o.ctrl_) {
     o.ptr_ = nullptr;
     o.ctrl_ = nullptr;
   }
 
-  template <typename U, typename D> shared_ptr(unique_ptr<U, D>&& o) {
+  template <typename U, typename D>
+    requires(is_convertible_v<U*, T*>)
+  shared_ptr(unique_ptr<U, D>&& o) {
     U* owned = o.get();
     if (owned) {
       ctrl_ = new __detail::__sp_ctrl_del<U, D>(
@@ -822,18 +830,77 @@ shared_ptr<T> dynamic_pointer_cast(const shared_ptr<U>& p) noexcept {
   return q ? shared_ptr<T>(p, q) : shared_ptr<T>();
 }
 
-// weak_ptr stub (Catch2 may need this via some headers)
 template <typename T> class weak_ptr {
+  template <typename U> friend class weak_ptr;
+
+  T* ptr_ = nullptr;
+  __detail::__sp_ctrl* ctrl_ = nullptr;
+
+  void inc() noexcept {
+    if (ctrl_)
+      __detail::__sp_weak_add(ctrl_);
+  }
+  void dec() noexcept {
+    if (ctrl_)
+      __detail::__sp_weak_release(ctrl_);
+  }
+
 public:
   weak_ptr() noexcept = default;
-  weak_ptr(const shared_ptr<T>& sp) noexcept : ptr_(sp.get()) {}
-  shared_ptr<T> lock() const noexcept {
-    return ptr_ ? shared_ptr<T>(ptr_) : shared_ptr<T>();
-  }
-  bool expired() const noexcept { return ptr_ == nullptr; }
 
-private:
-  T* ptr_ = nullptr;
+  template <typename U>
+  weak_ptr(const shared_ptr<U>& sp) noexcept : ptr_(sp.ptr_), ctrl_(sp.ctrl_) {
+    inc();
+  }
+  weak_ptr(const weak_ptr& other) noexcept
+      : ptr_(other.ptr_), ctrl_(other.ctrl_) {
+    inc();
+  }
+  template <typename U>
+  weak_ptr(const weak_ptr<U>& other) noexcept
+      : ptr_(other.ptr_), ctrl_(other.ctrl_) {
+    inc();
+  }
+  weak_ptr(weak_ptr&& other) noexcept : ptr_(other.ptr_), ctrl_(other.ctrl_) {
+    other.ptr_ = nullptr;
+    other.ctrl_ = nullptr;
+  }
+  ~weak_ptr() { dec(); }
+
+  weak_ptr& operator=(const weak_ptr& other) noexcept {
+    weak_ptr(other).swap(*this);
+    return *this;
+  }
+  template <typename U> weak_ptr& operator=(const weak_ptr<U>& other) noexcept {
+    weak_ptr(other).swap(*this);
+    return *this;
+  }
+  template <typename U> weak_ptr& operator=(const shared_ptr<U>& sp) noexcept {
+    weak_ptr(sp).swap(*this);
+    return *this;
+  }
+
+  void reset() noexcept { weak_ptr().swap(*this); }
+  void swap(weak_ptr& other) noexcept {
+    T* ptr = ptr_;
+    __detail::__sp_ctrl* ctrl = ctrl_;
+    ptr_ = other.ptr_;
+    ctrl_ = other.ctrl_;
+    other.ptr_ = ptr;
+    other.ctrl_ = ctrl;
+  }
+  long use_count() const noexcept {
+    return ctrl_ ? __atomic_load_n(&ctrl_->count, __ATOMIC_RELAXED) : 0;
+  }
+  bool expired() const noexcept { return use_count() == 0; }
+  shared_ptr<T> lock() const noexcept {
+    shared_ptr<T> result;
+    if (ctrl_ && __detail::__sp_strong_add_if_live(ctrl_)) {
+      result.ptr_ = ptr_;
+      result.ctrl_ = ctrl_;
+    }
+    return result;
+  }
 };
 
 } // namespace std

@@ -42,6 +42,8 @@ int main() {
 
   auto d = std::make_optional<multiple_arguments>(10, 20);
   psyassert(d->value == 30);
+  std::optional<multiple_arguments> in_place(std::in_place, 4, 5);
+  psyassert(in_place->value == 9);
 
   std::optional<int> empty;
   bool bad_access = false;
@@ -59,8 +61,20 @@ int main() {
   psyassert(high > low);
   psyassert(low <= low);
   psyassert(high >= low);
+  psyassert(empty < 0);
+  psyassert(!(empty > 0));
+  psyassert(high > 1);
+  psyassert(1 < high);
+  psyassert(low <= 1);
+  psyassert(1 <= low);
+  psyassert(high >= 2);
+  psyassert(2 >= high);
 
   std::optional<aggregate> aggregate_value;
+  std::optional<aggregate> constructed_aggregate{{1, 2}};
+  std::optional<aggregate> single_braced{{1}};
+  psyassert(single_braced->first == 1);
+  psyassert(constructed_aggregate->second == 2);
   aggregate_value = {3, 4};
   psyassert(aggregate_value->first == 3);
   aggregate_value = {5, 6};

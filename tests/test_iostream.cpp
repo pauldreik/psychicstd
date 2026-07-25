@@ -27,6 +27,11 @@ public:
 bool iostream_was_ready_during_static_initialization();
 std::ostream* iostream_cout_from_other_translation_unit();
 
+std::ios& set_logging_defaults(std::ios& stream) {
+  stream.setf(std::ios::showbase | std::ios::boolalpha | std::ios::internal);
+  return stream;
+}
+
 int main() {
   psyassert(iostream_was_ready_during_static_initialization());
   psyassert(iostream_cout_from_other_translation_unit() == &std::cout);
@@ -60,6 +65,23 @@ int main() {
   std::ostringstream point;
   point << std::fixed << std::setprecision(0) << std::showpoint << 3.0;
   psyassert(point.str() == "3.");
+
+  std::ostringstream zero;
+  zero << std::showbase << std::hex << std::setfill('_') << std::setw(6) << 0;
+  psyassert(zero.str() == "_____0");
+
+  std::ostringstream formatting;
+  formatting << std::showpos << 77 << ' ' << std::uppercase << std::scientific
+             << 77.0 << ' ' << std::nouppercase << std::hexfloat << 77.0;
+  psyassert(formatting.str() == "+77 +7.700000E+01 +0x1.34p+6");
+
+  std::ostringstream internal;
+  internal << std::internal << std::setfill('_') << std::setw(6) << -42;
+  psyassert(internal.str() == "-___42");
+
+  std::ostringstream ios_manipulator;
+  ios_manipulator << set_logging_defaults << true;
+  psyassert(ios_manipulator.str() == "true");
 
   std::istringstream booleans("true false");
   bool first = false;

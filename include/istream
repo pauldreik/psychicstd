@@ -1,6 +1,4 @@
 #pragma once
-#include <cerrno>
-#include <cstdlib>
 #include <ios>
 #include <streambuf>
 
@@ -202,6 +200,7 @@ public:
   basic_istream& operator>>(unsigned long long& v) { return extract_int(v); }
   basic_istream& operator>>(float& v) { return extract_float(v); }
   basic_istream& operator>>(double& v) { return extract_float(v); }
+  basic_istream& operator>>(long double& v) { return extract_float(v); }
   basic_istream& operator>>(signed char& c) {
     Char ch{};
     if (operator>>(ch))
@@ -366,9 +365,9 @@ private:
     if constexpr (__is_same(V, unsigned long long) ||
                   __is_same(V, unsigned long) || __is_same(V, unsigned int) ||
                   __is_same(V, unsigned short)) {
-      v = (V)::strtoull(buf, nullptr, base);
+      v = (V)this->_parse_unsigned(buf, base);
     } else {
-      long long parsed = ::strtoll(buf, nullptr, base);
+      long long parsed = this->_parse_signed(buf, base);
       long long low = 0;
       long long high = 1;
       if constexpr (!__is_same(V, bool)) {
@@ -420,13 +419,11 @@ private:
       this->setstate(ios_base::failbit);
       return *this;
     }
-    char* end = nullptr;
-    errno = 0;
-    v = (V)::strtod(buf, &end);
-    if (end == buf || (errno == ERANGE && (v == 0 || !__builtin_isfinite(v))))
+    int consumed = 0;
+    if (!this->_parse_float(buf, v, consumed))
       this->setstate(ios_base::failbit);
-    else if (end < buf + n) {
-      for (int i = n - 1; i >= end - buf; --i)
+    else if (consumed < n) {
+      for (int i = n - 1; i >= consumed; --i)
         sb->sputbackc((Char)buf[i]);
       this->clear(this->rdstate() & ~ios_base::eofbit);
     }

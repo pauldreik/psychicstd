@@ -15,7 +15,29 @@ int main() {
   static_assert(std::is_same_v<decltype(std::sqrt(1.0F)), float>);
   static_assert(std::is_same_v<decltype(std::sqrt(1)), double>);
   static_assert(std::is_same_v<decltype(std::sqrt(1.0L)), long double>);
+  static_assert(std::is_same_v<decltype(std::exp(1.0F)), float>);
+  static_assert(std::is_same_v<decltype(std::exp(1.0L)), long double>);
+  static_assert(std::is_same_v<decltype(std::exp(1)), double>);
+  static_assert(std::is_same_v<decltype(std::log(1.0F)), float>);
+  static_assert(std::is_same_v<decltype(std::log(1.0L)), long double>);
+  static_assert(std::is_same_v<decltype(std::log(1)), double>);
+  static_assert(std::is_same_v<decltype(std::ldexp(1.0F, 1)), float>);
+  static_assert(std::is_same_v<decltype(std::ldexp(1.0L, 1)), long double>);
+  static_assert(std::is_same_v<decltype(std::ldexp(1, 1)), double>);
+  int exponent = 0;
+  static_assert(std::is_same_v<decltype(std::frexp(1.0F, &exponent)), float>);
+  static_assert(
+      std::is_same_v<decltype(std::frexp(1.0L, &exponent)), long double>);
+  static_assert(std::is_same_v<decltype(std::nexttoward(1.0F, 0.0L)), float>);
+  static_assert(
+      std::is_same_v<decltype(std::nexttoward(1.0L, 0.0L)), long double>);
+  psyassert(std::nexttoward(1.0F, 0.0L) < 1.0F);
   static_assert(std::is_same_v<decltype(std::nextafter(1.0F, 2.0F)), float>);
+  static_assert(std::is_same_v<decltype(std::nextafter(1.0, 2.0F)), double>);
+  static_assert(std::is_same_v<decltype(std::nextafter(1.0, 2)), double>);
+  static_assert(std::is_same_v<decltype(std::nextafter(1, 2.0F)), double>);
+  static_assert(
+      std::is_same_v<decltype(std::nextafter(1.0L, 2.0)), long double>);
   static_assert(std::is_same_v<decltype(std::nextafterf(1.0F, 2.0F)), float>);
   static_assert(
       std::is_same_v<decltype(std::nextafterl(1.0L, 2.0L)), long double>);

@@ -157,20 +157,52 @@ inline double abs(double x) { return ::fabs(x); }
 inline long double abs(long double x) { return ::fabsl(x); }
 inline float sqrt(float x) { return ::sqrtf(x); }
 inline long double sqrt(long double x) { return ::sqrtl(x); }
+inline float exp(float x) { return ::expf(x); }
+inline long double exp(long double x) { return ::expl(x); }
+inline float log(float x) { return ::logf(x); }
+inline long double log(long double x) { return ::logl(x); }
+inline float ldexp(float x, int exponent) { return ::ldexpf(x, exponent); }
+inline long double ldexp(long double x, int exponent) {
+  return ::ldexpl(x, exponent);
+}
+template <typename Integer>
+  requires(__builtin_classify_type(*(Integer*)nullptr) == 1)
+inline double ldexp(Integer x, int exponent) {
+  return ::ldexp(static_cast<double>(x), exponent);
+}
+inline float frexp(float x, int* exponent) { return ::frexpf(x, exponent); }
+inline long double frexp(long double x, int* exponent) {
+  return ::frexpl(x, exponent);
+}
 #if _PSYCHICSTD_COMPATIBILITY_LEVEL >= _PSYCHICSTD_COMPAT_DROPIN
+template <typename T>
+  requires(is_integral_v<T>)
+inline double exp(T x) {
+  return ::exp(static_cast<double>(x));
+}
+template <typename T>
+  requires(is_integral_v<T>)
+inline double log(T x) {
+  return ::log(static_cast<double>(x));
+}
 template <typename T>
   requires(is_integral_v<T>)
 constexpr double sqrt(T x) {
   return __builtin_sqrt(static_cast<double>(x));
 }
 #else
-#if defined(__has_builtin) && __has_builtin(__is_integral)
-template <typename T>
-  requires(__is_integral(T))
-#else
 template <typename T>
   requires(__builtin_classify_type(*(T*)nullptr) == 1)
-#endif
+inline double exp(T x) {
+  return ::exp(static_cast<double>(x));
+}
+template <typename T>
+  requires(__builtin_classify_type(*(T*)nullptr) == 1)
+inline double log(T x) {
+  return ::log(static_cast<double>(x));
+}
+template <typename T>
+  requires(__builtin_classify_type(*(T*)nullptr) == 1)
 constexpr double sqrt(T x) {
   return __builtin_sqrt(static_cast<double>(x));
 }
@@ -181,11 +213,59 @@ using ::nextafter;
 inline long double nextafter(long double x, long double y) {
   return ::nextafterl(x, y);
 }
+inline double nextafter(float x, double y) { return ::nextafter(x, y); }
+inline double nextafter(double x, float y) { return ::nextafter(x, y); }
+inline long double nextafter(float x, long double y) {
+  return ::nextafterl(x, y);
+}
+inline long double nextafter(long double x, float y) {
+  return ::nextafterl(x, y);
+}
+inline long double nextafter(double x, long double y) {
+  return ::nextafterl(x, y);
+}
+inline long double nextafter(long double x, double y) {
+  return ::nextafterl(x, y);
+}
+template <typename Integer>
+  requires(__builtin_classify_type(*(Integer*)nullptr) == 1)
+inline float nextafter(float x, Integer y) {
+  return ::nextafterf(x, static_cast<float>(y));
+}
+template <typename Integer>
+  requires(__builtin_classify_type(*(Integer*)nullptr) == 1)
+inline double nextafter(double x, Integer y) {
+  return ::nextafter(x, static_cast<double>(y));
+}
+template <typename Integer>
+  requires(__builtin_classify_type(*(Integer*)nullptr) == 1)
+inline long double nextafter(long double x, Integer y) {
+  return ::nextafterl(x, static_cast<long double>(y));
+}
+template <typename Integer>
+  requires(__builtin_classify_type(*(Integer*)nullptr) == 1)
+inline double nextafter(Integer x, float y) {
+  return ::nextafter(static_cast<double>(x), static_cast<double>(y));
+}
+template <typename Integer>
+  requires(__builtin_classify_type(*(Integer*)nullptr) == 1)
+inline double nextafter(Integer x, double y) {
+  return ::nextafter(static_cast<double>(x), y);
+}
+template <typename Integer>
+  requires(__builtin_classify_type(*(Integer*)nullptr) == 1)
+inline long double nextafter(Integer x, long double y) {
+  return ::nextafterl(static_cast<long double>(x), y);
+}
 using ::nextafterf;
 using ::nextafterl;
 using ::nexttoward;
 using ::nexttowardf;
 using ::nexttowardl;
+inline float nexttoward(float x, long double y) { return ::nexttowardf(x, y); }
+inline long double nexttoward(long double x, long double y) {
+  return ::nexttowardl(x, y);
+}
 inline long double log1p(long double x) { return ::log1pl(x); }
 inline double log1p(double x) { return ::log1p(x); }
 inline float log1p(float x) { return ::log1pf(x); }

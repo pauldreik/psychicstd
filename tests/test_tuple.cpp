@@ -1,4 +1,5 @@
 #include "psyassert.h"
+#include <functional>
 #include <string_view>
 #include <tuple>
 
@@ -44,6 +45,11 @@ int main() {
   auto moved_references = std::move(references);
   std::get<0>(moved_references) = 8;
   psyassert(referenced == 8);
+  auto unwrapped = std::make_tuple(std::ref(referenced));
+  psyassert(unwrapped == std::tuple<int>(referenced));
+  static_assert(std::is_same_v<decltype(unwrapped), std::tuple<int&>>);
+  std::get<0>(unwrapped) = 9;
+  psyassert(referenced == 9);
 
   auto r = make_result("hi", 3);
   psyassert(std::get<0>(r) == std::string_view("hi"));
@@ -54,6 +60,11 @@ int main() {
   psyassert(std::get<0>(t) == 1);
   std::get<0>(t) = 2;
   psyassert(std::get<0>(t) == 2);
+
+  std::pair<int, float> pair{3, 4.5f};
+  std::tuple<double, double> from_pair = pair;
+  psyassert(std::get<0>(from_pair) == 3.0);
+  psyassert(std::get<1>(from_pair) == 4.5);
 
   for (int i = 0; i < 2; ++i) {
     std::tuple<int, S> t2(i, S{i + 100});

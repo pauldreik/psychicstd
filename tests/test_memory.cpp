@@ -197,6 +197,24 @@ static void test_shared_ptr_concurrent_destruction() {
   psyassert(*owner == 42);
 }
 
+static void test_weak_ptr_shares_control_block() {
+  auto owner = std::make_shared<Derived>();
+  std::weak_ptr<Derived> derived = owner;
+  std::weak_ptr<Base> base = derived;
+
+  psyassert(!base.expired());
+  psyassert(base.use_count() == 1);
+  {
+    auto locked = base.lock();
+    psyassert(locked.get() == owner.get());
+    psyassert(owner.use_count() == 2);
+  }
+
+  owner.reset();
+  psyassert(base.expired());
+  psyassert(!base.lock());
+}
+
 // Bug: at -O2 the old converting constructor used reinterpret_cast to read
 // ctrl_ from a shared_ptr<U>, which is strict-aliasing UB.  GCC exploited
 // the UB such that the control block was freed before m_ref could share it,
@@ -254,5 +272,6 @@ int main() {
   test_shared_ptr_from_unique_ptr();
   test_shared_ptr_custom_deleter();
   test_shared_ptr_concurrent_destruction();
+  test_weak_ptr_shares_control_block();
   test_member_init_from_template_prvalue();
 }

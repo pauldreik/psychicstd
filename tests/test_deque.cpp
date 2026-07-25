@@ -1,5 +1,6 @@
 #include "psyassert.h"
 #include <deque>
+#include <iterator>
 
 struct value {
   int n;
@@ -17,6 +18,17 @@ struct value {
 };
 
 int main() {
+  std::deque<int> empty;
+  empty.insert(empty.end(), 1);
+  psyassert(empty.size() == 1);
+  psyassert(empty.front() == 1);
+  auto out = std::inserter(empty, empty.end());
+  *out++ = 2;
+  *out++ = 3;
+  psyassert(empty.size() == 3);
+  psyassert(empty[1] == 2);
+  psyassert(empty[2] == 3);
+
   std::deque<int> d;
   d.push_back(1);
   psyassert(d.front() == 1);

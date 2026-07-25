@@ -29,6 +29,9 @@ template <typename T> struct stateful_allocator {
 int main() {
   std::list<int> l = {1, 2, 3};
   psyassert(l.front() == 1);
+  std::list<int>::const_iterator const_begin = l.begin();
+  psyassert(l.begin() == const_begin);
+  psyassert(const_begin == l.begin());
 
   std::allocator<int> a;
   const std::list<int> la(a);

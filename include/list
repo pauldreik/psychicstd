@@ -113,6 +113,10 @@ public:
     }
     bool operator==(const const_iterator& o) const { return n == o.n; }
     bool operator!=(const const_iterator& o) const { return n != o.n; }
+    friend bool operator==(iterator a, const_iterator b) { return a.n == b.n; }
+    friend bool operator==(const_iterator a, iterator b) { return a.n == b.n; }
+    friend bool operator!=(iterator a, const_iterator b) { return !(a == b); }
+    friend bool operator!=(const_iterator a, iterator b) { return !(a == b); }
   };
 
   using reverse_iterator = std::reverse_iterator<iterator>;

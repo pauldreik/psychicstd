@@ -13,6 +13,10 @@ struct move_prefers_copy {
 int main() {
   std::pair<int, double> p{42, 3.14};
   psyassert(p.first == 42);
+  psyassert(std::get<0>(p) == 42);
+  static_assert(std::tuple_size<decltype(p)>::value == 2);
+  static_assert(
+      std::is_same_v<std::tuple_element<1, decltype(p)>::type, double>);
   std::pair<const int*, const double*> empty;
   psyassert(empty.first == nullptr);
   psyassert(empty.second == nullptr);

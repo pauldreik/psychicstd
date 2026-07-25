@@ -76,7 +76,7 @@ class unordered_map {
       _rehash(nbuckets_ * 2);
   }
 
-  void swap_(unordered_map& o) noexcept {
+  void _swap_storage(unordered_map& o) noexcept {
     Node** tb = buckets_;
     buckets_ = o.buckets_;
     o.buckets_ = tb;
@@ -86,6 +86,12 @@ class unordered_map {
     size_t ts = size_;
     size_ = o.size_;
     o.size_ = ts;
+  }
+  void swap_(unordered_map& o) noexcept {
+    _swap_storage(o);
+    std::swap(hasher_, o.hasher_);
+    std::swap(eq_, o.eq_);
+    std::swap(allocator_, o.allocator_);
   }
 
 public:
@@ -219,13 +225,24 @@ public:
     for (; first != last; ++first)
       insert(*first);
   }
-  unordered_map(const unordered_map& o) { *this = o; }
+  unordered_map(const unordered_map& o)
+      : unordered_map(
+            o.nbuckets_, o.hasher_, o.eq_,
+            allocator_traits<Allocator>::select_on_container_copy_construction(
+                o.allocator_)) {
+    for (const auto& kv : o)
+      insert(kv);
+  }
   unordered_map(const unordered_map& o, const Allocator& a)
       : unordered_map(o.nbuckets_, o.hasher_, o.eq_, a) {
     for (const auto& kv : o)
       insert(kv);
   }
   unordered_map(unordered_map&& o) noexcept { swap_(o); }
+  unordered_map(unordered_map&& o, const Allocator& a)
+      : unordered_map(o.nbuckets_, o.hasher_, o.eq_, a) {
+    _swap_storage(o);
+  }
   ~unordered_map() {
     destroy();
     delete[] buckets_;
@@ -234,6 +251,8 @@ public:
   unordered_map& operator=(const unordered_map& o) {
     if (this != &o) {
       destroy();
+      hasher_ = o.hasher_;
+      eq_ = o.eq_;
       for (size_t i = 0; i < o.nbuckets_; ++i)
         for (Node* n = o.buckets_[i]; n; n = n->next)
           insert(n->kv);
@@ -241,6 +260,7 @@ public:
     return *this;
   }
   unordered_map& operator=(unordered_map&& o) noexcept {
+    destroy();
     swap_(o);
     return *this;
   }
@@ -815,6 +835,28 @@ bool operator==(const unordered_map<Key, T, Hash, KeyEqual, Allocator>& a,
   for (const auto& kv : a) {
     auto it = b.find(kv.first);
     if (it == b.end() || !(it->second == kv.second))
+      return false;
+  }
+  return true;
+}
+
+template <typename Key, typename T, typename Hash, typename KeyEqual,
+          typename Allocator>
+bool operator==(
+    const unordered_multimap<Key, T, Hash, KeyEqual, Allocator>& a,
+    const unordered_multimap<Key, T, Hash, KeyEqual, Allocator>& b) {
+  if (a.size() != b.size())
+    return false;
+  for (const auto& kv : a) {
+    size_t matches_a = 0;
+    size_t matches_b = 0;
+    for (const auto& candidate : a)
+      if (candidate == kv)
+        ++matches_a;
+    for (const auto& candidate : b)
+      if (candidate == kv)
+        ++matches_b;
+    if (matches_a != matches_b)
       return false;
   }
   return true;

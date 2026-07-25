@@ -28,6 +28,7 @@ class random_device {
 public:
   using result_type = unsigned int;
   random_device() = default;
+  explicit random_device(const char*) {}
   random_device(const random_device&) = delete;
   random_device& operator=(const random_device&) = delete;
 
@@ -66,15 +67,51 @@ public:
   static constexpr result_type default_seed = 1;
 
   explicit linear_congruential_engine(result_type seed = default_seed)
-      : state_(seed % m) {}
-  void seed(result_type s = default_seed) { state_ = s % m; }
+      : state_(seed % m) {
+    if constexpr (c == 0)
+      if (state_ == 0)
+        state_ = 1;
+  }
+  template <typename SSeq,
+            typename = enable_if_t<!is_convertible_v<SSeq, result_type>>>
+  explicit linear_congruential_engine(SSeq& seq) {
+    seed(seq);
+  }
+  void seed(result_type s = default_seed) {
+    state_ = s % m;
+    if constexpr (c == 0)
+      if (state_ == 0)
+        state_ = 1;
+  }
+  template <typename SSeq,
+            typename = enable_if_t<!is_convertible_v<SSeq, result_type>>>
+  void seed(SSeq& seq) {
+    constexpr int word_count = m > 0xffffffffULL ? 2 : 1;
+    uint32_t words[word_count + 3]{};
+    seq.generate(words, words + word_count + 3);
+    result_type value = words[3];
+    if constexpr (word_count > 1)
+      value |= static_cast<result_type>(words[4]) << 32;
+    state_ = value % m;
+    if constexpr (c == 0)
+      if (state_ == 0)
+        state_ = 1;
+  }
 
   result_type operator()() {
     state_ = (a * state_ + c) % m;
     return state_;
   }
+  void discard(unsigned long long count) {
+    while (count--)
+      operator()();
+  }
   static constexpr result_type min() { return c == 0 ? 1 : 0; }
   static constexpr result_type max() { return m - 1; }
+  friend bool operator==(const linear_congruential_engine& lhs,
+                         const linear_congruential_engine& rhs) {
+    return lhs.state_ == rhs.state_;
+  }
 
 private:
   result_type state_;
@@ -115,6 +152,11 @@ public:
   static constexpr size_t state_size = 624;
 
   explicit mt19937(result_type seed = default_seed) { this->seed(seed); }
+  template <typename SSeq,
+            typename = enable_if_t<!is_convertible_v<SSeq, result_type>>>
+  explicit mt19937(SSeq& seq) {
+    seed(seq);
+  }
   void seed(result_type s) {
     mt_[0] = s;
     for (int i = 1; i < N; ++i)
@@ -138,8 +180,20 @@ public:
     y ^= y >> 18;
     return y;
   }
+  void discard(unsigned long long count) {
+    while (count--)
+      operator()();
+  }
   static constexpr result_type min() { return 0; }
   static constexpr result_type max() { return 0xffffffffU; }
+  friend bool operator==(const mt19937& lhs, const mt19937& rhs) {
+    if (lhs.index_ != rhs.index_)
+      return false;
+    for (int i = 0; i < N; ++i)
+      if (lhs.mt_[i] != rhs.mt_[i])
+        return false;
+    return true;
+  }
 };
 
 using default_random_engine = mt19937;
@@ -173,10 +227,25 @@ public:
   static constexpr result_type default_seed = 5489ULL;
 
   explicit mt19937_64(result_type seed = default_seed) { this->seed(seed); }
+  template <typename SSeq,
+            typename = enable_if_t<!is_convertible_v<SSeq, result_type>>>
+  explicit mt19937_64(SSeq& seq) {
+    seed(seq);
+  }
   void seed(result_type s) {
     mt_[0] = s;
     for (int i = 1; i < N; ++i)
       mt_[i] = 6364136223846793005ULL * (mt_[i - 1] ^ (mt_[i - 1] >> 62)) + i;
+    index_ = N;
+  }
+  template <typename SSeq,
+            typename = enable_if_t<!is_convertible_v<SSeq, result_type>>>
+  void seed(SSeq& seq) {
+    uint32_t words[N * 2];
+    seq.generate(words, words + N * 2);
+    for (int i = 0; i < N; ++i)
+      mt_[i] = static_cast<uint64_t>(words[i * 2]) |
+               (static_cast<uint64_t>(words[i * 2 + 1]) << 32);
     index_ = N;
   }
 
@@ -190,22 +259,91 @@ public:
     x ^= x >> 43;
     return x;
   }
+  void discard(unsigned long long count) {
+    while (count--)
+      operator()();
+  }
   static constexpr result_type min() { return 0; }
   static constexpr result_type max() { return ~uint64_t(0); }
+  friend bool operator==(const mt19937_64& lhs, const mt19937_64& rhs) {
+    if (lhs.index_ != rhs.index_)
+      return false;
+    for (int i = 0; i < N; ++i)
+      if (lhs.mt_[i] != rhs.mt_[i])
+        return false;
+    return true;
+  }
+};
+
+class bernoulli_distribution {
+public:
+  using result_type = bool;
+
+  class param_type {
+  public:
+    explicit param_type(double probability = 0.5) : probability_(probability) {}
+    double p() const { return probability_; }
+    friend bool operator==(const param_type& lhs, const param_type& rhs) {
+      return lhs.probability_ == rhs.probability_;
+    }
+
+  private:
+    double probability_;
+  };
+
+  explicit bernoulli_distribution(double probability = 0.5)
+      : params_(probability) {}
+  explicit bernoulli_distribution(const param_type& params) : params_(params) {}
+
+  void reset() {}
+  double p() const { return params_.p(); }
+  param_type param() const { return params_; }
+  void param(const param_type& params) { params_ = params; }
+  static constexpr result_type min() { return false; }
+  static constexpr result_type max() { return true; }
+
+  template <typename Engine> result_type operator()(Engine& engine) {
+    return operator()(engine, params_);
+  }
+  template <typename Engine>
+  result_type operator()(Engine& engine, const param_type& params) {
+    if (params.p() <= 0)
+      return false;
+    if (params.p() >= 1)
+      return true;
+    const long double offset =
+        static_cast<long double>(engine() - engine.min());
+    const long double range = static_cast<long double>(engine.max()) -
+                              static_cast<long double>(engine.min()) + 1;
+    return offset < params.p() * range;
+  }
+
+  friend bool operator==(const bernoulli_distribution& lhs,
+                         const bernoulli_distribution& rhs) {
+    return lhs.params_ == rhs.params_;
+  }
+
+private:
+  param_type params_;
 };
 
 // uniform_int_distribution
+template <typename Int>
+inline constexpr Int __random_int_max =
+    static_cast<Int>(static_cast<make_unsigned_t<Int>>(-1) >> is_signed_v<Int>);
+
 template <typename Int = int> class uniform_int_distribution {
 public:
   using result_type = Int;
   struct param_type {
     Int a, b;
-    param_type(Int a = 0, Int b = 1) : a(a), b(b) {}
+    param_type(Int a = 0, Int b = __random_int_max<Int>) : a(a), b(b) {}
     Int min() const { return a; }
     Int max() const { return b; }
   };
 
-  explicit uniform_int_distribution(Int a = 0, Int b = 1) : p_(a, b) {}
+  explicit uniform_int_distribution(Int a = 0, Int b = __random_int_max<Int>)
+      : p_(a, b) {}
   explicit uniform_int_distribution(const param_type& p) : p_(p) {}
 
   template <typename Engine> result_type operator()(Engine& g) {
@@ -423,6 +561,10 @@ public:
     }
   }
   size_t size() const { return n_; }
+  template <typename OutIt> void param(OutIt out) const {
+    for (size_t i = 0; i < n_; ++i)
+      *out++ = v_[i];
+  }
 
 private:
   static constexpr size_t cap_ = 1024;

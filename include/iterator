@@ -186,7 +186,7 @@ public:
   }
   insert_iterator& operator*() { return *this; }
   insert_iterator& operator++() { return *this; }
-  insert_iterator operator++(int) { return *this; }
+  insert_iterator& operator++(int) { return *this; }
 
 private:
   Container* c_;

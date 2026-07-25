@@ -8,7 +8,6 @@
 #include <initializer_list>
 #include <tuple>
 #include <utility>
-#include <vector>
 
 namespace std {
 
@@ -24,7 +23,11 @@ class map : public __map_base<Key, T, Compare, Alloc> {
 
 public:
   using base::base;
-  using base::operator=;
+  using value_type = typename base::value_type;
+  map& operator=(initializer_list<value_type> values) {
+    base::operator=(values);
+    return *this;
+  }
   void
   swap(map& other) noexcept(noexcept(declval<base&>().swap(declval<base&>()))) {
     base::swap(other);
@@ -73,161 +76,111 @@ auto operator<=>(const map<Key, T, Compare, Alloc>& a,
   return static_cast<result_t>(a.size() <=> b.size());
 }
 
-// multimap (simplified — allows duplicate keys)
+// The duplicate-key wrapper shares map's stable linked-node storage.
 template <typename Key, typename T, typename Compare = less<Key>,
           typename Alloc = allocator<pair<const Key, T>>>
-class multimap {
+class multimap : public __map_base<Key, T, Compare, Alloc> {
+  using base = __map_base<Key, T, Compare, Alloc>;
+
 public:
-  using key_type = Key;
-  using mapped_type = T;
-  using value_type = pair<const Key, T>;
-  using size_type = size_t;
-  using key_compare = Compare;
-  using allocator_type = Alloc;
-
-  using storage_type = pair<Key, T>;
-  using iterator = typename vector<storage_type>::iterator;
-  using const_iterator = typename vector<storage_type>::const_iterator;
-  using reverse_iterator = typename vector<storage_type>::reverse_iterator;
-  using const_reverse_iterator =
-      typename vector<storage_type>::const_reverse_iterator;
-
-  struct value_compare {
-    Compare comp;
-    bool operator()(const storage_type& a, const Key& b) const {
-      return comp(a.first, b);
-    }
-    bool operator()(const Key& a, const storage_type& b) const {
-      return comp(a, b.first);
-    }
-    bool operator()(const storage_type& a, const storage_type& b) const {
-      return comp(a.first, b.first);
-    }
-    template <typename K>
-    bool operator()(const storage_type& a, const K& b) const {
-      return comp(a.first, b);
-    }
-    template <typename K>
-    bool operator()(const K& a, const storage_type& b) const {
-      return comp(a, b.first);
-    }
-  };
+  using typename base::const_iterator;
+  using typename base::iterator;
+  using typename base::size_type;
+  using typename base::value_type;
 
   multimap() = default;
-  explicit multimap(const Compare& c) : comp_{c} {}
-  explicit multimap(const Alloc& a) : alloc_(a) {}
-  multimap(const Compare& c, const Alloc& a) : comp_{c}, alloc_(a) {}
-  template <typename It> multimap(It first, It last) {
+  explicit multimap(const Compare& comp) : base(comp) {}
+  explicit multimap(const Alloc& alloc) : base(alloc) {}
+  multimap(const Compare& comp, const Alloc& alloc) : base(comp, alloc) {}
+  template <typename It>
+  multimap(It first, It last, const Compare& comp = Compare(),
+           const Alloc& alloc = Alloc())
+      : base(comp, alloc) {
     for (; first != last; ++first)
       insert(*first);
   }
-  multimap(initializer_list<value_type> il) {
-    for (auto& v : il)
-      insert(v);
+  multimap(initializer_list<value_type> values, const Compare& comp = Compare(),
+           const Alloc& alloc = Alloc())
+      : base(comp, alloc) {
+    insert(values);
   }
-  multimap(initializer_list<value_type> il, const Compare& c) : comp_{c} {
-    for (auto& v : il)
-      insert(v);
+  multimap(initializer_list<value_type> values, const Alloc& alloc)
+      : base(alloc) {
+    insert(values);
+  }
+  multimap(const multimap& other)
+      : base(other.key_comp(), other.get_allocator()) {
+    insert(other.begin(), other.end());
+  }
+  multimap(multimap&&) = default;
+  multimap& operator=(const multimap& other) {
+    if (this != &other) {
+      multimap copy(other);
+      swap(copy);
+    }
+    return *this;
+  }
+  multimap& operator=(multimap&&) = default;
+  multimap& operator=(initializer_list<value_type> values) {
+    this->clear();
+    insert(values);
+    return *this;
+  }
+  void swap(multimap& other) noexcept(
+      noexcept(declval<base&>().swap(declval<base&>()))) {
+    base::swap(other);
   }
 
-  iterator begin() noexcept { return data_.begin(); }
-  iterator end() noexcept { return data_.end(); }
-  const_iterator begin() const noexcept { return data_.begin(); }
-  const_iterator end() const noexcept { return data_.end(); }
-  const_iterator cbegin() const noexcept { return data_.begin(); }
-  const_iterator cend() const noexcept { return data_.end(); }
-  reverse_iterator rbegin() noexcept { return data_.rbegin(); }
-  reverse_iterator rend() noexcept { return data_.rend(); }
-  const_reverse_iterator rbegin() const noexcept { return data_.rbegin(); }
-  const_reverse_iterator rend() const noexcept { return data_.rend(); }
-  bool empty() const noexcept { return data_.empty(); }
-  size_type size() const noexcept { return data_.size(); }
-  void clear() noexcept { data_.clear(); }
-  void swap(multimap& other) noexcept { data_.swap(other.data_); }
-
-  allocator_type get_allocator() const noexcept { return alloc_; }
-
-  iterator insert(const value_type& v) {
-    auto it = std::__upper_bound(data_.begin(), data_.end(), v.first, comp_);
-    return data_.insert(it, {v.first, v.second});
+  iterator insert(const value_type& value) {
+    return base::__emplace_multi(value);
   }
-  iterator insert(value_type&& v) {
-    auto it = std::__upper_bound(data_.begin(), data_.end(), v.first, comp_);
-    return data_.insert(it, static_cast<value_type&&>(v));
+  iterator insert(value_type&& value) {
+    return base::__emplace_multi(static_cast<value_type&&>(value));
   }
-  // Hint versions (hint ignored)
-  iterator insert(const_iterator, const value_type& v) { return insert(v); }
-  iterator insert(const_iterator, value_type&& v) {
-    return insert(static_cast<value_type&&>(v));
+  iterator insert(const_iterator, const value_type& value) {
+    return insert(value);
+  }
+  iterator insert(const_iterator, value_type&& value) {
+    return insert(static_cast<value_type&&>(value));
   }
   template <typename It> void insert(It first, It last) {
     for (; first != last; ++first)
       insert(*first);
   }
+  void insert(initializer_list<value_type> values) {
+    insert(values.begin(), values.end());
+  }
   template <typename... Args> iterator emplace(Args&&... args) {
-    return insert(value_type(static_cast<Args&&>(args)...));
+    return base::__emplace_multi(static_cast<Args&&>(args)...);
   }
-  iterator erase(const_iterator pos) { return data_.erase(pos); }
-  iterator erase(const_iterator first, const_iterator last) {
-    return data_.erase(first, last);
+  template <typename... Args>
+  iterator emplace_hint(const_iterator, Args&&... args) {
+    return emplace(static_cast<Args&&>(args)...);
   }
-  size_type erase(const Key& k) {
-    auto lo = std::__lower_bound(data_.begin(), data_.end(), k, comp_);
-    auto hi = std::__upper_bound(data_.begin(), data_.end(), k, comp_);
-    auto n = hi - lo;
-    data_.erase(lo, hi);
-    return n;
+  size_type erase(const Key& key) { return base::__erase_multi(key); }
+  size_type count(const Key& key) const {
+    auto [first, last] = this->equal_range(key);
+    size_type result = 0;
+    while (first != last) {
+      ++first;
+      ++result;
+    }
+    return result;
   }
-  size_type count(const Key& k) const {
-    auto lo = std::__lower_bound(data_.begin(), data_.end(), k, comp_);
-    auto hi = std::__upper_bound(data_.begin(), data_.end(), k, comp_);
-    return hi - lo;
-  }
-  pair<iterator, iterator> equal_range(const Key& k) {
-    return {std::__lower_bound(data_.begin(), data_.end(), k, comp_),
-            std::__upper_bound(data_.begin(), data_.end(), k, comp_)};
-  }
-  pair<const_iterator, const_iterator> equal_range(const Key& k) const {
-    return {std::__lower_bound(data_.begin(), data_.end(), k, comp_),
-            std::__upper_bound(data_.begin(), data_.end(), k, comp_)};
-  }
-  iterator lower_bound(const Key& k) {
-    return std::__lower_bound(data_.begin(), data_.end(), k, comp_);
-  }
-  const_iterator lower_bound(const Key& k) const {
-    return std::__lower_bound(data_.begin(), data_.end(), k, comp_);
-  }
-  iterator upper_bound(const Key& k) {
-    return std::__upper_bound(data_.begin(), data_.end(), k, comp_);
-  }
-  const_iterator upper_bound(const Key& k) const {
-    return std::__upper_bound(data_.begin(), data_.end(), k, comp_);
-  }
-  iterator find(const Key& k) {
-    auto it = std::__lower_bound(data_.begin(), data_.end(), k, comp_);
-    if (it != data_.end() && !comp_.comp(k, it->first))
-      return it;
-    return data_.end();
-  }
-  const_iterator find(const Key& k) const {
-    auto it = std::__lower_bound(data_.begin(), data_.end(), k, comp_);
-    if (it != data_.end() && !comp_.comp(k, it->first))
-      return it;
-    return data_.end();
-  }
-  bool contains(const Key& k) const { return find(k) != data_.end(); }
-
-  template <typename K>
-    requires requires { typename Compare::is_transparent; }
-  bool contains(const K& k) const {
-    auto it = std::__lower_bound(data_.begin(), data_.end(), k, comp_);
-    return it != data_.end() && !comp_.comp(k, it->first);
-  }
-
-private:
-  vector<storage_type> data_;
-  value_compare comp_ = {};
-  [[no_unique_address]] Alloc alloc_ = {};
+  using base::erase;
 };
+
+template <typename Key, typename T, typename Compare, typename Alloc>
+bool operator==(const multimap<Key, T, Compare, Alloc>& a,
+                const multimap<Key, T, Compare, Alloc>& b) {
+  if (a.size() != b.size())
+    return false;
+  auto ai = a.begin();
+  auto bi = b.begin();
+  for (; ai != a.end(); ++ai, ++bi)
+    if (!(*ai == *bi))
+      return false;
+  return true;
+}
 
 } // namespace std

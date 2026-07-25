@@ -3,6 +3,7 @@
 #include <__psychicstd_contiguous_compare>
 #include <__psychicstd_contiguous_iterator>
 #include <__psychicstd_except>
+#include <__psychicstd_hash>
 #include <__psychicstd_iterator_core>
 #include <compare>
 #include <cstddef>
@@ -42,16 +43,20 @@ private:
 
   // Internal helpers
 
-  // Always use std::allocator<T> for raw memory. We store alloc_ to honour
-  // get_allocator(), POCCA/POCMA/POCS, and
-  // select_on_container_copy_construction, but we don't route memory through it
-  // because custom allocators often use fancy pointer types (e.g. min_pointer)
-  // that we can't reconstruct after converting to T*. GCC 12 special-cases
-  // std::allocator<T> (in namespace std) so that its allocate/deallocate are
-  // constexpr-capable.
-  constexpr T* _alloc_mem(size_type n) { return allocator<T>{}.allocate(n); }
+  // Fancy pointers cannot be reconstructed after conversion to T*, so keep the
+  // lightweight fallback for them. Ordinary allocators must observe storage.
+  constexpr T* _alloc_mem(size_type n) {
+    if constexpr (is_same_v<typename allocator_traits<Alloc>::pointer, T*>)
+      return allocator_traits<Alloc>::allocate(alloc_, n);
+    else
+      return allocator<T>{}.allocate(n);
+  }
   constexpr void _free_mem(T* p, size_type n) noexcept {
-    if (p)
+    if (!p)
+      return;
+    if constexpr (is_same_v<typename allocator_traits<Alloc>::pointer, T*>)
+      allocator_traits<Alloc>::deallocate(alloc_, p, n);
+    else
       allocator<T>{}.deallocate(p, n);
   }
   template <typename... Args> constexpr void _construct(T* p, Args&&... args) {
@@ -68,7 +73,8 @@ private:
         __builtin_memset(p, 0, n);
         return;
       }
-    } else if constexpr (is_trivially_copyable_v<T>) {
+    } else if constexpr (is_trivially_copyable_v<T> &&
+                         is_move_assignable_v<T>) {
       if (!__builtin_is_constant_evaluated()) {
         for (size_type i = 0; i < n; ++i)
           p[i] = T();
@@ -125,6 +131,16 @@ private:
   // Slots [size_, cap_) are raw; slots [0, size_) are live objects.
   // Uses move when available, falls back to copy for non-movable types.
   constexpr void _shift_right(size_type idx, size_type n) {
+    if constexpr (is_trivially_copyable_v<T>) {
+      if (!__builtin_is_constant_evaluated()) {
+        __builtin_memmove(data_ + idx + n, data_ + idx,
+                          (size_ - idx) * sizeof(T));
+        size_type stop = idx + n < size_ ? idx + n : size_;
+        for (size_type j = idx; j < stop; ++j)
+          _destroy(data_ + j);
+        return;
+      }
+    }
     for (size_type i = size_; i-- > idx;) {
       if (i + n >= size_) {
         if constexpr (is_move_constructible_v<T>) {
@@ -158,6 +174,13 @@ private:
 
   // Shift elements [from, size_) left by n positions.
   constexpr void _shift_left(size_type from, size_type n) {
+    if constexpr (is_trivially_copyable_v<T>) {
+      if (!__builtin_is_constant_evaluated()) {
+        __builtin_memmove(data_ + from - n, data_ + from,
+                          (size_ - from) * sizeof(T));
+        return;
+      }
+    }
     for (size_type i = from; i < size_; ++i) {
       if constexpr (is_move_assignable_v<T>) {
         // move
@@ -844,6 +867,15 @@ template <typename T, typename A>
 constexpr void swap(vector<T, A>& a, vector<T, A>& b) noexcept {
   a.swap(b);
 }
+
+template <typename A> struct hash<vector<bool, A>> {
+  size_t operator()(const vector<bool, A>& values) const noexcept {
+    size_t result = values.size();
+    for (bool value : values)
+      result = result * 33 + static_cast<size_t>(value);
+    return result;
+  }
+};
 
 // std::erase / std::erase_if (C++20)
 template <typename T, typename A, typename U>

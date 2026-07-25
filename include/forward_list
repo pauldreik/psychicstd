@@ -160,6 +160,18 @@ public:
     }
     head_ = nullptr;
   }
+
+  friend bool operator==(const forward_list& a, const forward_list& b) {
+    auto ai = a.begin();
+    auto bi = b.begin();
+    while (ai != a.end() && bi != b.end()) {
+      if (!(*ai == *bi))
+        return false;
+      ++ai;
+      ++bi;
+    }
+    return ai == a.end() && bi == b.end();
+  }
 };
 
 } // namespace std

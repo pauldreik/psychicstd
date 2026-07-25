@@ -262,14 +262,24 @@ def _catch2() -> Project:
 # --- abseil ------------------------------------------------------------
 
 
-def _abseil() -> Project:
+def _abseil(full: bool) -> Project:
     version = "20260107.1"
     url = f"https://github.com/abseil/abseil-cpp/archive/refs/tags/{version}.tar.gz"
     checksum = "4314e2a7cbac89cac25a2f2322870f343d81579756ceff7f431803c2c9090195"
+    googletest_version = "1.17.0"
+    googletest_url = (
+        "https://github.com/google/googletest/releases/download/"
+        f"v{googletest_version}/googletest-{googletest_version}.tar.gz"
+    )
+    googletest_checksum = (
+        "65fab701d9829d38cb77c14acdc431d2108bfdbf8979e40eb8ae567edf10b27c"
+    )
 
     def build(tc: Toolchain) -> dict[str, float]:
         tarball = RW_DIR / f"abseil-cpp-{version}.tar.gz"
         _fetch(url, tarball, checksum)
+        googletest_tarball = RW_DIR / f"googletest-{googletest_version}.tar.gz"
+        _fetch(googletest_url, googletest_tarball, googletest_checksum)
 
         with tempfile.TemporaryDirectory(
             prefix="rw-abseil-", ignore_cleanup_errors=True
@@ -278,6 +288,9 @@ def _abseil() -> Project:
             with tarfile.open(tarball) as t:
                 t.extractall(work)
             src = work / f"abseil-cpp-{version}"
+            with tarfile.open(googletest_tarball) as t:
+                t.extractall(work)
+            googletest_src = work / f"googletest-{googletest_version}"
 
             env = _env(tc)
             configure = [
@@ -295,11 +308,11 @@ def _abseil() -> Project:
                 "-DCMAKE_CXX_STANDARD=20",
                 "-DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY",
                 "-DABSL_BUILD_TESTING=ON",
-                "-DABSL_USE_GOOGLETEST_HEAD=ON",
+                "-DABSL_LOCAL_GOOGLETEST_DIR=" + str(googletest_src),
                 "-DBUILD_SHARED_LIBS=OFF",
             ]
             jobs = f"-j{tc.jobs}"
-            base_targets = [
+            base_library_targets = [
                 "base",
                 "raw_logging_internal",
                 "spinlock_wait",
@@ -309,7 +322,7 @@ def _abseil() -> Project:
                 "strerror",
                 "tracing_internal",
             ]
-            base_targets += [
+            base_test_targets = [
                 "absl_atomic_hook_test",
                 "absl_attributes_test",
                 "absl_bit_cast_test",
@@ -319,28 +332,323 @@ def _abseil() -> Project:
                 "absl_endian_test",
                 "absl_no_destructor_test",
             ]
-            base_tests = [
-                target for target in base_targets if target.startswith("absl_")
+            additional_test_targets = (
+                [
+                    "absl_nullability_test",
+                    "absl_nullability_default_nonnull_test",
+                    "absl_nullability_traits_test",
+                    "absl_scoped_set_env_test",
+                    "absl_cmake_thread_test",
+                    "absl_fast_type_id_test",
+                    "absl_prefetch_test",
+                    "absl_optimization_test",
+                    "absl_poison_test",
+                    "absl_tracing_internal_weak_test",
+                    "absl_tracing_internal_strong_test",
+                    "absl_iterator_traits_test",
+                    "absl_algorithm_test",
+                    "absl_cleanup_test",
+                    "absl_compressed_tuple_test",
+                    "absl_test_instance_tracker_test",
+                    "absl_hashtable_control_bytes_test",
+                    "absl_raw_hash_set_resize_impl_test",
+                    "absl_non_temporal_memcpy_test",
+                    "absl_bounded_utf8_length_sequence_test",
+                    "absl_decode_rust_punycode_test",
+                    "absl_demangle_rust_test",
+                    "absl_utf8_for_code_point_test",
+                    "absl_city_test",
+                    "absl_memory_test",
+                    "absl_constexpr_testing_test",
+                    "absl_periodic_sampler_test",
+                    "absl_random_internal_traits_test",
+                    "absl_random_internal_fastmath_test",
+                    "absl_random_internal_fast_uniform_bits_test",
+                    "absl_random_internal_randen_test",
+                    "absl_random_internal_randen_slow_test",
+                    "absl_random_internal_uniform_helper_test",
+                    "absl_random_internal_wide_multiply_test",
+                    "absl_has_ostream_operator_test",
+                    "absl_utf8_test",
+                    "absl_ostringstream_test",
+                    "absl_resize_uninitialized_test",
+                    "absl_compare_test",
+                    "absl_container_memory_test",
+                    "absl_absl_exception_safety_testing_test",
+                    "absl_ascii_test",
+                    "absl_barrier_test",
+                    "absl_bind_front_test",
+                    "absl_bits_test",
+                    "absl_blocking_counter_test",
+                    "absl_borrowed_fixup_buffer_test",
+                    "absl_call_once_test",
+                    "absl_charconv_bigint_test",
+                    "absl_charset_test",
+                    "absl_chunked_queue_test",
+                    "absl_config_test",
+                    "absl_container_test",
+                    "absl_cordz_update_tracker_test",
+                    "absl_damerau_levenshtein_distance_test",
+                    "absl_exponential_biased_test",
+                    "absl_fixed_array_exception_safety_test",
+                    "absl_flags_config_test",
+                    "absl_flags_path_util_test",
+                    "absl_flags_program_name_test",
+                    "absl_flags_usage_config_test",
+                    "absl_has_absl_stringify_test",
+                    "absl_hash_policy_testing_test",
+                    "absl_hashtablez_sampler_test",
+                    "absl_inlined_vector_exception_safety_test",
+                    "absl_internal_fnmatch_test",
+                    "absl_kernel_timeout_internal_test",
+                    "absl_log_internal_structured_proto_test",
+                    "absl_low_level_hash_test",
+                    "absl_match_test",
+                    "absl_memutil_test",
+                    "absl_mutex_method_pointer_test",
+                    "absl_node_slot_policy_test",
+                    "absl_notification_test",
+                    "absl_overload_test",
+                    "absl_per_thread_sem_test",
+                    "absl_random_bernoulli_distribution_test",
+                    "absl_random_bit_gen_ref_test",
+                    "absl_random_generators_test",
+                    "absl_random_internal_pcg_engine_test",
+                    "absl_random_internal_seed_material_test",
+                    "absl_raw_logging_test",
+                    "absl_sample_recorder_test",
+                    "absl_spinlock_test",
+                    "absl_stacktrace_test",
+                    "absl_str_replace_test",
+                    "absl_strerror_test",
+                    "absl_string_constant_test",
+                    "absl_string_view_test",
+                    "absl_strip_test",
+                    "absl_substitute_test",
+                    "absl_sysinfo_test",
+                    "absl_thread_identity_test",
+                    "absl_type_traits_test",
+                    "absl_absl_check_test",
+                    "absl_absl_log_basic_test",
+                    "absl_char_formatting_test",
+                    "absl_charconv_parse_test",
+                    "absl_charconv_test",
+                    "absl_check_test",
+                    "absl_cord_data_edge_test",
+                    "absl_cord_rep_btree_navigator_test",
+                    "absl_cord_rep_btree_reader_test",
+                    "absl_cord_rep_btree_test",
+                    "absl_cord_rep_crc_test",
+                    "absl_cordz_functions_test",
+                    "absl_cordz_info_statistics_test",
+                    "absl_cordz_info_test",
+                    "absl_cordz_sample_token_test",
+                    "absl_cordz_test",
+                    "absl_cordz_update_scope_test",
+                    "absl_crc32c_test",
+                    "absl_crc_cord_state_test",
+                    "absl_crc_memcpy_test",
+                    "absl_demangle_test",
+                    "absl_die_if_null_test",
+                    "absl_escaping_test",
+                    "absl_failure_signal_handler_test",
+                    "absl_fixed_array_test",
+                    "absl_flag_test",
+                    "absl_flags_commandlineflag_test",
+                    "absl_flags_flag_test",
+                    "absl_flags_marshalling_test",
+                    "absl_flags_parse_test",
+                    "absl_flags_reflection_test",
+                    "absl_flags_sequence_lock_test",
+                    "absl_flags_usage_test",
+                    "absl_function_ref_test",
+                    "absl_hash_function_defaults_test",
+                    "absl_layout_test",
+                    "absl_leak_check_test",
+                    "absl_lifetime_test",
+                    "absl_log_basic_test",
+                    "absl_log_entry_test",
+                    "absl_log_flags_test",
+                    "absl_log_globals_test",
+                    "absl_log_internal_stderr_log_sink_test",
+                    "absl_log_macro_hygiene_test",
+                    "absl_log_modifier_methods_test",
+                    "absl_log_severity_test",
+                    "absl_log_sink_test",
+                    "absl_log_streamer_test",
+                    "absl_log_stripping_test",
+                    "absl_low_level_alloc_test",
+                    "absl_numbers_test",
+                    "absl_pow10_helper_test",
+                    "absl_random_discrete_distribution_test",
+                    "absl_random_distributions_test",
+                    "absl_random_exponential_distribution_test",
+                    "absl_random_gaussian_distribution_test",
+                    "absl_random_internal_chi_square_test",
+                    "absl_random_internal_distribution_test_util_test",
+                    "absl_random_internal_entropy_pool_test",
+                    "absl_random_internal_generate_real_test",
+                    "absl_random_internal_iostream_state_saver_test",
+                    "absl_random_internal_randen_engine_test",
+                    "absl_random_internal_randen_hwaes_test",
+                    "absl_random_log_uniform_int_distribution_test",
+                    "absl_random_mock_distributions_test",
+                    "absl_random_mocking_bit_gen_test",
+                    "absl_random_uniform_int_distribution_test",
+                    "absl_random_zipf_distribution_test",
+                    "absl_raw_hash_set_allocator_test",
+                    "absl_raw_hash_set_test",
+                    "absl_requires_test",
+                    "absl_sample_element_size_test",
+                    "absl_scoped_mock_log_test",
+                    "absl_span_test",
+                    "absl_span_test_noexceptions",
+                    "absl_stack_consumption_test",
+                    "absl_status_matchers_test",
+                    "absl_status_matchers_with_unqualified_macros_test",
+                    "absl_status_test",
+                    "absl_str_cat_test",
+                    "absl_str_format_arg_test",
+                    "absl_str_format_bind_test",
+                    "absl_str_format_checker_test",
+                    "absl_str_format_extension_test",
+                    "absl_str_format_output_test",
+                    "absl_str_format_parser_test",
+                    "absl_str_format_test",
+                    "absl_strings_append_and_overwrite_test",
+                    "absl_strings_resize_and_overwrite_test",
+                    "absl_symbolize_test",
+                    "absl_vlog_is_on_test",
+                ]
+                if full
+                else []
+            )
+            test_targets = [*base_test_targets, *additional_test_targets]
+            additional_library_targets = (
+                [
+                    "atomic_hook_test_helper",
+                    "city",
+                    "civil_time",
+                    "cordz_functions",
+                    "crc_cpu_detect",
+                    "crc_internal",
+                    "debugging_internal",
+                    "decode_rust_punycode",
+                    "demangle_internal",
+                    "demangle_rust",
+                    "exponential_biased",
+                    "flags_commandlineflag_internal",
+                    "graphcycles_internal",
+                    "int128",
+                    "leak_check",
+                    "log_internal_conditions",
+                    "log_internal_nullguard",
+                    "log_severity",
+                    "periodic_sampler",
+                    "poison",
+                    "pow10_helper",
+                    "random_internal_platform",
+                    "random_internal_randen",
+                    "random_internal_randen_hwaes",
+                    "random_internal_randen_hwaes_impl",
+                    "random_internal_randen_slow",
+                    "random_seed_gen_exception",
+                    "stack_consumption",
+                    "strings_internal",
+                    "test_instance_tracker",
+                    "time_zone",
+                    "utf8_for_code_point",
+                    "borrowed_fixup_buffer",
+                    "cordz_handle",
+                    "examine_stack",
+                    "exception_safety_testing",
+                    "failure_signal_handler",
+                    "flags_commandlineflag",
+                    "flags_config",
+                    "flags_private_handle_accessor",
+                    "flags_program_name",
+                    "hash",
+                    "hash_generator_testing",
+                    "hashtablez_sampler",
+                    "kernel_timeout_internal",
+                    "log_entry",
+                    "log_globals",
+                    "log_initialize",
+                    "log_internal_fnmatch",
+                    "log_internal_globals",
+                    "log_internal_log_sink_set",
+                    "log_internal_proto",
+                    "log_internal_structured_proto",
+                    "log_internal_test_actions",
+                    "log_internal_test_helpers",
+                    "log_internal_test_matchers",
+                    "log_sink",
+                    "per_thread_sem_test_common",
+                    "random_distributions",
+                    "random_internal_entropy_pool",
+                    "random_internal_seed_material",
+                    "random_seed_sequences",
+                    "scoped_mock_log",
+                    "spinlock_test_common",
+                    "stacktrace",
+                    "strings",
+                    "symbolize",
+                    "synchronization",
+                    "time",
+                    "time_internal_test_util",
+                    "vlog_config_internal",
+                    "cord",
+                    "cord_internal",
+                    "cordz_info",
+                    "cordz_sample_token",
+                    "crc32c",
+                    "crc_cord_state",
+                    "die_if_null",
+                    "flags_internal",
+                    "flags_marshalling",
+                    "flags_parse",
+                    "flags_reflection",
+                    "flags_usage",
+                    "flags_usage_internal",
+                    "generic_printer_internal",
+                    "hashtable_profiler",
+                    "log_flags",
+                    "log_internal_check_op",
+                    "log_internal_format",
+                    "log_internal_message",
+                    "profile_builder",
+                    "random_internal_distribution_test_util",
+                    "raw_hash_set",
+                    "status",
+                    "status_matchers",
+                    "statusor",
+                    "str_format_internal",
+                ]
+                if full
+                else []
+            )
+            compile_targets = [
+                *base_library_targets,
+                *additional_library_targets,
+                *test_targets,
             ]
-            test_filter = "^(" + "|".join(base_tests) + ")$"
-
-            def compile_base() -> float:
-                t0 = time.monotonic()
-                for target in base_targets:
-                    _run(["ninja", "-C", "build", target, jobs], src, env)
-                return (time.monotonic() - t0) * 1000.0
+            compile_command = (
+                ["cmake", "--build", "build", jobs]
+                if full
+                else ["ninja", "-C", "build", jobs, *compile_targets]
+            )
+            test_filter = [] if full else ["-R", "^(" + "|".join(test_targets) + ")$"]
 
             return {
                 "configure": _timed(configure, src, env),
-                "compile": compile_base(),
+                "compile": _timed(compile_command, src, env),
                 "run tests": _timed(
                     [
                         "ctest",
                         "--test-dir",
                         "build",
                         "--output-on-failure",
-                        "-R",
-                        test_filter,
+                        *test_filter,
                         jobs,
                     ],
                     src,
@@ -349,10 +657,17 @@ def _abseil() -> Project:
             }
 
     return Project(
-        version=version,
+        version=f"{version} (full)" if full else version,
         build=build,
-        expected_seconds={"debug": 14, "release": 19},
-        comment="Builds and runs Abseil's upstream absl/base tests.",
+        expected_seconds=(
+            {"debug": 25, "release": 35} if full else {"debug": 14, "release": 19}
+        ),
+        comment=(
+            "Builds every default Abseil target and runs its complete "
+            "configured upstream test suite."
+            if full
+            else "Builds absl/base and runs eight small upstream base tests."
+        ),
     )
 
 
@@ -789,19 +1104,6 @@ def _nlohmann() -> Project:
             jobs = f"-j{tc.jobs}"
             configure_ms = _timed(configure, src, env)
             compile_ms = _timed(["cmake", "--build", "build", jobs], src, env)
-            run_tests_ms = _timed(
-                [
-                    "ctest",
-                    "--test-dir",
-                    "build",
-                    "--output-on-failure",
-                    "-E",
-                    _NLOHMANN_TEST_EXCLUDE,
-                    jobs,
-                ],
-                src,
-                env,
-            )
 
             # Compile (but don't run) the 217 documented API examples.
             include_dir = src / "include"
@@ -817,6 +1119,19 @@ def _nlohmann() -> Project:
                     + ["-o", str(binary)]
                 )
             examples_ms = _timed_many(example_cmds, src, env, tc.jobs)
+            run_tests_ms = _timed(
+                [
+                    "ctest",
+                    "--test-dir",
+                    "build",
+                    "--output-on-failure",
+                    "-E",
+                    _NLOHMANN_TEST_EXCLUDE,
+                    jobs,
+                ],
+                src,
+                env,
+            )
 
             return {
                 "configure": configure_ms,
@@ -951,7 +1266,7 @@ def _rapidjson() -> Project:
 # --- rdfind ---------------------------------------------------------------
 
 
-_RDFIND_COMMIT = "787b01ab378c70cb6bb3ef5166525f3ff8939a23"
+_RDFIND_COMMIT = "c0d126c6d80d2e62c362e29194bba58546b325a1"
 # rdfind's autoconf build has no build-type concept -- an -O flag is its equivalent.
 _RDFIND_OPT_FLAG = {"debug": "-O0", "release": "-O2"}
 
@@ -964,7 +1279,7 @@ def _rdfind() -> Project:
         psychicstrictlevel = -0
         commithash = _RDFIND_COMMIT
         url = f"https://github.com/pauldreik/rdfind/archive/{commithash}.tar.gz"
-        checksum = "057ae066b2f7349cb84e4b48ab3ab897d88afc3005bd6d8292c95fa012467659"
+        checksum = "9a0beeb0ddc71b4eb62542e60b30744f5f7e0b38724938b62ff02b4c73183b00"
         tarball_name = f"rdfind-{commithash}.tar.gz"
         src_name = f"rdfind-{commithash}"
         proj_version = f"commit {commithash[:12]}"
@@ -1308,7 +1623,8 @@ def _opencv() -> Project:
 
 
 PROJECTS: dict[str, Project] = {
-    "abseil": _abseil(),
+    "abseil": _abseil(full=False),
+    "abseil-full": _abseil(full=True),
     "boost-asio": _boost_asio(),
     "catch2": _catch2(),
     "cmake": _cmake(),

@@ -6,6 +6,9 @@
 #include <compare>
 #include <cstddef>
 #include <iosfwd>
+#if _PSYCHICSTD_COMPATIBILITY_LEVEL >= _PSYCHICSTD_COMPAT_DROPIN
+#include <__psychicstd_minmax>
+#endif
 namespace std {
 
 template <typename Char, typename Traits = char_traits<Char>>
@@ -96,6 +99,13 @@ public:
   }
 
   constexpr size_type find(Char c, size_type pos = 0) const noexcept {
+    if constexpr (sizeof(Char) == 1) {
+      if (!__builtin_is_constant_evaluated() && pos < size_) {
+        const void* found = __builtin_memchr(
+            data_ + pos, static_cast<unsigned char>(c), size_ - pos);
+        return found ? static_cast<const Char*>(found) - data_ : npos;
+      }
+    }
     for (size_type i = pos; i < size_; ++i)
       if (data_[i] == c)
         return i;

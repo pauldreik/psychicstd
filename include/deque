@@ -67,6 +67,10 @@ private:
       _destroy(data_ + start_ + i);
   }
 
+  size_type _index(const_iterator pos) const noexcept {
+    return size_ ? static_cast<size_type>(pos.ptr_ - (data_ + start_)) : 0;
+  }
+
   static decltype(auto)
   _xfer(T& x) noexcept(is_nothrow_move_constructible_v<T>) {
     if constexpr (is_move_constructible_v<T>) {
@@ -636,7 +640,7 @@ public:
 
   template <typename... Args>
   iterator emplace(const_iterator pos, Args&&... args) {
-    size_type idx = pos.ptr_ - (data_ + start_);
+    size_type idx = _index(pos);
     // args may alias an element of *this; build the value before the
     // gap-opening shift can move or destroy its storage.
     // forward
@@ -649,7 +653,7 @@ public:
   }
 
   iterator insert(const_iterator pos, const T& v) {
-    size_type idx = pos.ptr_ - (data_ + start_);
+    size_type idx = _index(pos);
     T tmp(v);
     _make_gap(idx, 1);
     _construct(data_ + start_ + idx, _xfer(tmp));
@@ -657,7 +661,7 @@ public:
     return iterator{data_ + start_ + idx};
   }
   iterator insert(const_iterator pos, T&& v) {
-    size_type idx = pos.ptr_ - (data_ + start_);
+    size_type idx = _index(pos);
     // move
     T tmp(static_cast<T&&>(v));
     _make_gap(idx, 1);
@@ -667,7 +671,7 @@ public:
     return iterator{data_ + start_ + idx};
   }
   iterator insert(const_iterator pos, size_type n, const T& v) {
-    size_type idx = pos.ptr_ - (data_ + start_);
+    size_type idx = _index(pos);
     if (n == 0)
       return iterator{data_ + start_ + idx};
     // v may alias an element of *this; copy it before the gap-opening shift
@@ -685,7 +689,7 @@ public:
   template <typename It>
     requires(!is_integral_v<It>)
   iterator insert(const_iterator pos, It first, It last) {
-    size_type idx = pos.ptr_ - (data_ + start_);
+    size_type idx = _index(pos);
     if constexpr (!is_base_of_v<
                       forward_iterator_tag,
                       typename iterator_traits<It>::iterator_category>) {
@@ -710,13 +714,13 @@ public:
   }
 
   iterator erase(const_iterator pos) {
-    size_type idx = pos.ptr_ - (data_ + start_);
+    size_type idx = _index(pos);
     _make_erase_gap(idx, 1);
     --size_;
     return iterator{data_ + start_ + idx};
   }
   iterator erase(const_iterator first, const_iterator last) {
-    size_type idx = first.ptr_ - (data_ + start_);
+    size_type idx = _index(first);
     size_type n = last - first;
     if (n == 0)
       return iterator{data_ + start_ + idx};

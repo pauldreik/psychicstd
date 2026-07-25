@@ -32,6 +32,8 @@ template <size_t Index>
 inline constexpr in_place_index_t<Index> in_place_index{};
 
 template <typename... Ts> class tuple;
+template <size_t Index, typename T> struct tuple_element;
+template <typename T> struct tuple_size;
 
 // integer_sequence
 template <typename T, T... Is> struct integer_sequence {
@@ -166,6 +168,36 @@ template <typename T1, typename T2> struct pair {
 template <typename T1, typename T2>
 constexpr pair<decay_t<T1>, decay_t<T2>> make_pair(T1&& a, T2&& b) {
   return {std::forward<T1>(a), std::forward<T2>(b)};
+}
+
+template <typename T1, typename T2>
+struct tuple_size<pair<T1, T2>> : integral_constant<size_t, 2> {};
+template <typename T1, typename T2> struct tuple_element<0, pair<T1, T2>> {
+  using type = T1;
+};
+template <typename T1, typename T2> struct tuple_element<1, pair<T1, T2>> {
+  using type = T2;
+};
+template <size_t Index, typename T1, typename T2>
+constexpr decltype(auto) get(pair<T1, T2>& p) noexcept {
+  if constexpr (Index == 0)
+    return (p.first);
+  else
+    return (p.second);
+}
+template <size_t Index, typename T1, typename T2>
+constexpr decltype(auto) get(const pair<T1, T2>& p) noexcept {
+  if constexpr (Index == 0)
+    return (p.first);
+  else
+    return (p.second);
+}
+template <size_t Index, typename T1, typename T2>
+constexpr decltype(auto) get(pair<T1, T2>&& p) noexcept {
+  if constexpr (Index == 0)
+    return static_cast<T1&&>(p.first);
+  else
+    return static_cast<T2&&>(p.second);
 }
 
 template <typename T1, typename T2, typename U1, typename U2>

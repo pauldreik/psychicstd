@@ -3,6 +3,10 @@
 #include <string>
 
 int main() {
+  std::string default_empty;
+  default_empty.resize(0);
+  psyassert(default_empty.empty());
+
 #if defined(PSYCHICSTD_TEST_PSYCHICSTD) &&                                     \
     _PSYCHICSTD_COMPATIBILITY_LEVEL >= _PSYCHICSTD_COMPAT_DROPIN
   psyassert(isspace(' '));
@@ -129,6 +133,19 @@ int main() {
   psyassert(s == "ssig");
   s.assign(source, 1, 3);
   psyassert(s == "ssi");
+  std::string filled(64, 'x');
+  psyassert(filled.size() == 64 && filled.front() == 'x' &&
+            filled.back() == 'x');
+  filled.assign(32, 'a');
+  filled.resize(48, 'b');
+  filled.append(16, 'c');
+  psyassert(filled ==
+            std::string(32, 'a') + std::string(16, 'b') + std::string(16, 'c'));
+  s.reserve(32);
+  const char* storage = s.data();
+  s.assign("replacement", 11);
+  psyassert(s.data() == storage);
+  psyassert(s == "replacement");
 
   s = "hello";
   psyassert(s.size() == 5);
@@ -158,6 +175,20 @@ int main() {
   psyassert(
       std::erase_if(erased, [](char c) { return c == 'b' || c == 'd'; }) == 3);
   psyassert(erased == "rcr");
+
+  std::string empty;
+  empty.erase(std::string::size_type{0});
+  psyassert(empty.erase(empty.begin(), empty.end()) == empty.end());
+  psyassert(empty.empty());
+
+  std::string unchanged = "abc";
+  psyassert(unchanged.erase(unchanged.begin() + 1, unchanged.begin() + 1) ==
+            unchanged.begin() + 1);
+  psyassert(unchanged == "abc");
+
+  for (std::string::size_type i = 0; i < 1000; ++i)
+    empty.append(i - empty.size(), '\0');
+  psyassert(empty.size() == 999);
 
   // string <-> string_view in ?: must pick string_view (requires the
   // string_view ctor to be explicit per [string.cons]; hit by cmake).

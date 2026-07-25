@@ -52,12 +52,8 @@ public:
 
   scoped_allocator_adaptor() = default;
   explicit scoped_allocator_adaptor(const OuterAlloc& outer)
-      : OuterAlloc(outer) {}
+      : OuterAlloc(outer), inner_(outer) {}
 
-  template <typename... Args> void construct(value_type* p, Args&&... args) {
-    allocator_traits<OuterAlloc>::construct(outer_allocator(), p,
-                                            static_cast<Args&&>(args)...);
-  }
   template <typename T, typename... Args> void construct(T* p, Args&&... args) {
     if constexpr (uses_allocator_v<T, inner_allocator_type>) {
       if constexpr (is_constructible_v<T, allocator_arg_t,

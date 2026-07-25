@@ -4,9 +4,6 @@
 
 namespace std {
 
-// tuple_element / tuple_size — forward declarations
-template <size_t Index, typename T> struct tuple_element;
-template <typename T> struct tuple_size;
 template <size_t Index, typename T>
 using tuple_element_t = typename tuple_element<Index, T>::type;
 
@@ -108,6 +105,15 @@ public:
   tuple(tuple<Us...>&& other)
       : tuple(static_cast<tuple<Us...>&&>(other),
               make_index_sequence<sizeof...(Ts)>{}) {}
+
+  template <typename U1, typename U2>
+    requires(sizeof...(Ts) == 2)
+  tuple(const pair<U1, U2>& p) : base(p.first, p.second) {}
+
+  template <typename U1, typename U2>
+    requires(sizeof...(Ts) == 2)
+  tuple(pair<U1, U2>&& p)
+      : base(static_cast<U1&&>(p.first), static_cast<U2&&>(p.second)) {}
 
   // Heterogeneous assignment — needed for std::tie(a,b) = tuple<Us...>{...}
   // where Ts are reference types and Us are value types.
@@ -250,14 +256,16 @@ constexpr bool tuple_lt(const Tup& a, const Tup& b) {
 }
 } // namespace detail
 
-template <typename... Ts>
-constexpr bool operator==(const tuple<Ts...>& a, const tuple<Ts...>& b) {
+template <typename... Ts, typename... Us>
+  requires(sizeof...(Ts) == sizeof...(Us))
+constexpr bool operator==(const tuple<Ts...>& a, const tuple<Us...>& b) {
   return [&]<size_t... Is>(index_sequence<Is...>) {
     return ((get<Is>(a) == get<Is>(b)) && ...);
   }(make_index_sequence<sizeof...(Ts)>{});
 }
-template <typename... Ts>
-constexpr bool operator!=(const tuple<Ts...>& a, const tuple<Ts...>& b) {
+template <typename... Ts, typename... Us>
+  requires(sizeof...(Ts) == sizeof...(Us))
+constexpr bool operator!=(const tuple<Ts...>& a, const tuple<Us...>& b) {
   return !(a == b);
 }
 template <typename... Ts>
@@ -279,8 +287,8 @@ constexpr bool operator>=(const tuple<Ts...>& a, const tuple<Ts...>& b) {
 
 // make_tuple
 template <typename... Ts>
-constexpr tuple<decay_t<Ts>...> make_tuple(Ts&&... args) {
-  return tuple<decay_t<Ts>...>(static_cast<Ts&&>(args)...);
+constexpr tuple<unwrap_ref_decay_t<Ts>...> make_tuple(Ts&&... args) {
+  return tuple<unwrap_ref_decay_t<Ts>...>(static_cast<Ts&&>(args)...);
 }
 
 // forward_as_tuple
@@ -325,37 +333,6 @@ template <typename T, typename Tuple> constexpr T make_from_tuple(Tuple&& t) {
   return apply([]<typename... Args>(
                    Args&&... args) { return T(static_cast<Args&&>(args)...); },
                static_cast<Tuple&&>(t));
-}
-
-// pair tuple_element / tuple_size (for structured bindings)
-template <typename T1, typename T2>
-struct tuple_size<pair<T1, T2>> : integral_constant<size_t, 2> {};
-template <typename T1, typename T2> struct tuple_element<0, pair<T1, T2>> {
-  using type = T1;
-};
-template <typename T1, typename T2> struct tuple_element<1, pair<T1, T2>> {
-  using type = T2;
-};
-template <size_t Index, typename T1, typename T2>
-constexpr decltype(auto) get(pair<T1, T2>& p) noexcept {
-  if constexpr (Index == 0)
-    return (p.first);
-  else
-    return (p.second);
-}
-template <size_t Index, typename T1, typename T2>
-constexpr decltype(auto) get(const pair<T1, T2>& p) noexcept {
-  if constexpr (Index == 0)
-    return (p.first);
-  else
-    return (p.second);
-}
-template <size_t Index, typename T1, typename T2>
-constexpr decltype(auto) get(pair<T1, T2>&& p) noexcept {
-  if constexpr (Index == 0)
-    return static_cast<T1&&>(p.first);
-  else
-    return static_cast<T2&&>(p.second);
 }
 
 } // namespace std

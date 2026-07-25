@@ -1,0 +1,96 @@
+#pragma once
+#include <cstddef>
+#include <new>
+
+namespace std {
+
+// Contiguous pointer storage for the sorted index used by node containers.
+// Unlike vector, it does not expose an unrelated standard container through
+// <map> and <set>.
+template <typename T> class __ptr_index {
+public:
+  using size_type = size_t;
+  using iterator = T**;
+  using const_iterator = T* const*;
+
+  __ptr_index() = default;
+  __ptr_index(const __ptr_index&) = delete;
+  __ptr_index& operator=(const __ptr_index&) = delete;
+  __ptr_index(__ptr_index&& other) noexcept
+      : data_(other.data_), size_(other.size_), capacity_(other.capacity_) {
+    other.data_ = nullptr;
+    other.size_ = other.capacity_ = 0;
+  }
+  __ptr_index& operator=(__ptr_index&& other) noexcept {
+    if (this != &other) {
+      ::operator delete(data_);
+      data_ = other.data_;
+      size_ = other.size_;
+      capacity_ = other.capacity_;
+      other.data_ = nullptr;
+      other.size_ = other.capacity_ = 0;
+    }
+    return *this;
+  }
+  ~__ptr_index() { ::operator delete(data_); }
+
+  iterator begin() noexcept { return data_; }
+  iterator end() noexcept { return size_ ? data_ + size_ : data_; }
+  const_iterator begin() const noexcept { return data_; }
+  const_iterator end() const noexcept { return size_ ? data_ + size_ : data_; }
+  bool empty() const noexcept { return size_ == 0; }
+  size_type size() const noexcept { return size_; }
+  size_type max_size() const noexcept { return size_type(-1) / sizeof(T*); }
+  T*& operator[](size_type i) noexcept { return data_[i]; }
+  T* const& operator[](size_type i) const noexcept { return data_[i]; }
+
+  iterator insert(size_type index, T* value) {
+    reserve_for_one();
+    if (index != size_)
+      __builtin_memmove(data_ + index + 1, data_ + index,
+                        (size_ - index) * sizeof(T*));
+    data_[index] = value;
+    ++size_;
+    return data_ + index;
+  }
+  iterator erase(size_type index) noexcept {
+    if (index + 1 != size_)
+      __builtin_memmove(data_ + index, data_ + index + 1,
+                        (size_ - index - 1) * sizeof(T*));
+    --size_;
+    return data_ + index;
+  }
+  void clear() noexcept { size_ = 0; }
+  void swap(__ptr_index& other) noexcept {
+    T** data = data_;
+    data_ = other.data_;
+    other.data_ = data;
+    size_type size = size_;
+    size_ = other.size_;
+    other.size_ = size;
+    size_type capacity = capacity_;
+    capacity_ = other.capacity_;
+    other.capacity_ = capacity;
+  }
+
+private:
+  T** data_ = nullptr;
+  size_type size_ = 0;
+  size_type capacity_ = 0;
+
+  void reserve_for_one() {
+    if (size_ != capacity_)
+      return;
+    if (capacity_ > max_size() / 2)
+      __builtin_abort();
+    size_type capacity = capacity_ ? capacity_ * 2 : 4;
+    T** data = static_cast<T**>(::operator new(capacity * sizeof(T*)));
+    if (size_)
+      __builtin_memcpy(data, data_, size_ * sizeof(T*));
+    ::operator delete(data_);
+    data_ = data;
+    capacity_ = capacity;
+  }
+};
+
+} // namespace std

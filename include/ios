@@ -133,6 +133,20 @@ public:
   }
 
 protected:
+  int _format_signed(char*, size_t, long long, unsigned long long) const;
+  int _format_unsigned(char*, size_t, unsigned long long) const;
+  int _format_float(char*, size_t, double) const;
+  int _format_long_double(char*, size_t, long double) const;
+  static int _localize_number(char* out, size_t out_size, const char* input,
+                              int input_size, char decimal_point,
+                              char thousands_sep, const char* grouping,
+                              size_t grouping_size);
+  static long long _parse_signed(const char*, int);
+  static unsigned long long _parse_unsigned(const char*, int);
+  static bool _parse_float(const char*, float&, int&);
+  static bool _parse_float(const char*, double&, int&);
+  static bool _parse_float(const char*, long double&, int&);
+
   [[noreturn, gnu::cold, gnu::noinline]] static void _throw_failure() {
 #if defined(__cpp_exceptions)
     _throw_failure_with_exceptions();

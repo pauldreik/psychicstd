@@ -2,6 +2,7 @@
 #include <__psychicstd_except>
 #include <__psychicstd_iterator_core>
 #include <__psychicstd_iterator_next>
+#include <__psychicstd_ptr_index>
 #include <cstddef>
 #include <initializer_list>
 #include <memory>
@@ -10,7 +11,7 @@
 
 namespace std {
 
-// Fallback for mapped values that cannot be relocated by the vector-backed map.
+// Storage for mapped values that cannot be relocated.
 template <typename Key, typename T, typename Compare, typename Alloc>
 class __map_node {
   struct node {
@@ -174,6 +175,7 @@ public:
       is_nothrow_move_constructible_v<Compare> &&
       is_nothrow_move_constructible_v<Alloc>)
       : first_(other.first_), last_(other.last_), size_(other.size_),
+        index_(static_cast<__ptr_index<node>&&>(other.index_)),
         comp_(static_cast<Compare&&>(other.comp_)),
         alloc_(static_cast<Alloc&&>(other.alloc_)) {
     other.first_ = other.last_ = nullptr;
@@ -195,6 +197,7 @@ public:
       first_ = other.first_;
       last_ = other.last_;
       size_ = other.size_;
+      index_ = static_cast<__ptr_index<node>&&>(other.index_);
       comp_ = static_cast<Compare&&>(other.comp_);
       alloc_ = static_cast<Alloc&&>(other.alloc_);
       other.first_ = other.last_ = nullptr;
@@ -256,7 +259,9 @@ public:
       delete candidate;
       return {position, false};
     }
-    return {link(position.node_, candidate), true};
+    return {link(position.node_, candidate,
+                 lower_bound_index(candidate->value.first)),
+            true};
   }
   template <typename... Args>
   iterator emplace_hint(const_iterator, Args&&... args) {
@@ -289,7 +294,7 @@ public:
       return {position, false};
     node* value = new node(piecewise_construct, forward_as_tuple(key),
                            forward_as_tuple(static_cast<Args&&>(args)...));
-    return {link(position.node_, value), true};
+    return {link(position.node_, value, lower_bound_index(key)), true};
   }
   template <typename... Args>
   pair<iterator, bool> try_emplace(Key&& key, Args&&... args) {
@@ -299,7 +304,8 @@ public:
     node* value =
         new node(piecewise_construct, forward_as_tuple(static_cast<Key&&>(key)),
                  forward_as_tuple(static_cast<Args&&>(args)...));
-    return {link(position.node_, value), true};
+    return {link(position.node_, value, lower_bound_index(value->value.first)),
+            true};
   }
   template <typename... Args>
   iterator try_emplace(const_iterator, const Key& key, Args&&... args) {
@@ -362,6 +368,7 @@ public:
     }
     last_ = nullptr;
     size_ = 0;
+    index_.clear();
   }
   void swap(__map_node& other) noexcept(
       (allocator_traits<Alloc>::propagate_on_container_swap::value ||
@@ -371,6 +378,7 @@ public:
     swap(first_, other.first_);
     swap(last_, other.last_);
     swap(size_, other.size_);
+    index_.swap(other.index_);
     swap(comp_, other.comp_);
     swap(alloc_, other.alloc_);
   }
@@ -454,10 +462,28 @@ public:
     return {lower_bound(key), upper_bound(key)};
   }
 
+protected:
+  template <typename... Args> iterator __emplace_multi(Args&&... args) {
+    node* value = new node(static_cast<Args&&>(args)...);
+    auto index = upper_bound_index(value->value.first);
+    node* position = index == index_.size() ? nullptr : index_[index];
+    return link(position, value, index);
+  }
+  size_type __erase_multi(const Key& key) {
+    auto [first, last] = equal_range(key);
+    size_type result = 0;
+    while (first != last) {
+      first = erase(first);
+      ++result;
+    }
+    return result;
+  }
+
 private:
   node* first_ = nullptr;
   node* last_ = nullptr;
   size_type size_ = 0;
+  __ptr_index<node> index_;
   [[no_unique_address]] Compare comp_ = {};
   [[no_unique_address]] Alloc alloc_ = {};
 
@@ -465,7 +491,9 @@ private:
   bool equivalent(const A& a, const B& b) const {
     return !comp_(a, b) && !comp_(b, a);
   }
-  iterator link(node* position, node* value) {
+  iterator link(node* position, node* value, size_type index) {
+    unique_ptr<node> guard(value);
+    index_.insert(index, value);
     value->next = position;
     if (position) {
       value->previous = position->previous;
@@ -479,9 +507,14 @@ private:
     else
       first_ = value;
     ++size_;
+    guard.release();
     return {value, this};
   }
   void unlink(node* value) {
+    auto index = lower_bound_index(value->value.first);
+    while (index_[index] != value)
+      ++index;
+    index_.erase(index);
     if (value->previous)
       value->previous->next = value->next;
     else
@@ -494,28 +527,50 @@ private:
     --size_;
   }
   template <typename K> iterator lower_bound_impl(const K& key) {
-    node* current = first_;
-    while (current && comp_(current->value.first, key))
-      current = current->next;
-    return {current, this};
+    auto index = lower_bound_index(key);
+    return {index == index_.size() ? nullptr : index_[index], this};
   }
   template <typename K> const_iterator lower_bound_impl(const K& key) const {
-    const node* current = first_;
-    while (current && comp_(current->value.first, key))
-      current = current->next;
-    return {current, this};
+    auto index = lower_bound_index(key);
+    return {index == index_.size() ? nullptr : index_[index], this};
   }
   template <typename K> iterator upper_bound_impl(const K& key) {
-    node* current = first_;
-    while (current && !comp_(key, current->value.first))
-      current = current->next;
-    return {current, this};
+    auto index = upper_bound_index(key);
+    return {index == index_.size() ? nullptr : index_[index], this};
   }
   template <typename K> const_iterator upper_bound_impl(const K& key) const {
-    const node* current = first_;
-    while (current && !comp_(key, current->value.first))
-      current = current->next;
-    return {current, this};
+    auto index = upper_bound_index(key);
+    return {index == index_.size() ? nullptr : index_[index], this};
+  }
+  template <typename K> size_type lower_bound_index(const K& key) const {
+    size_type first = 0;
+    size_type count = index_.size();
+    while (count) {
+      size_type step = count / 2;
+      size_type middle = first + step;
+      if (comp_(index_[middle]->value.first, key)) {
+        first = middle + 1;
+        count -= step + 1;
+      } else {
+        count = step;
+      }
+    }
+    return first;
+  }
+  template <typename K> size_type upper_bound_index(const K& key) const {
+    size_type first = 0;
+    size_type count = index_.size();
+    while (count) {
+      size_type step = count / 2;
+      size_type middle = first + step;
+      if (!comp_(key, index_[middle]->value.first)) {
+        first = middle + 1;
+        count -= step + 1;
+      } else {
+        count = step;
+      }
+    }
+    return first;
   }
   template <typename K> iterator find_impl(const K& key) {
     auto found = lower_bound_impl(key);

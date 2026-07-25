@@ -5,6 +5,13 @@
 #include <system_error>
 
 int main() {
+  static_assert(std::is_error_condition_enum_v<std::errc>);
+  std::error_condition invalid = std::errc::invalid_argument;
+  psyassert(invalid.value() == EINVAL);
+  psyassert(invalid.category() == std::generic_category());
+  psyassert(std::make_error_condition(std::errc::result_out_of_range).value() ==
+            ERANGE);
+
   psyassert(&std::generic_category() == &std::generic_category());
   psyassert(&std::system_category() == &std::system_category());
   psyassert(&std::generic_category() != &std::system_category());
