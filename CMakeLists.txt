@@ -14,6 +14,7 @@ add_library(
     src/ios.cpp
     src/iostream_macos.cpp
     src/istream.cpp
+    src/locale.cpp
     src/ostream.cpp
     src/random.cpp
     src/regex.cpp

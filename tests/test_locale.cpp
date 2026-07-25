@@ -1,5 +1,6 @@
 #include "psyassert.h"
 #include <ctime>
+#include <cwchar>
 #include <locale>
 
 class passthrough_codecvt : public std::codecvt<char, char, std::mbstate_t> {

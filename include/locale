@@ -2,13 +2,22 @@
 #include <__psychicstd_config>
 #include <__psychicstd_ostreambuf_iterator>
 #include <__psychicstd_traits_core>
+#if _PSYCHICSTD_COMPATIBILITY_LEVEL >= _PSYCHICSTD_COMPAT_DROPIN
 #include <ctime>
 #include <cwchar>
+#else
+struct tm;
+#endif
 #include <string>
 
 namespace std {
 
 class ios_base;
+
+namespace __locale_detail {
+size_t format_time(char*, size_t, const char*, const ::tm*);
+size_t format_time(wchar_t*, size_t, const wchar_t*, const ::tm*);
+} // namespace __locale_detail
 
 // A small, process-local locale implementation. It supports the facet model
 // used by formatting libraries: a locale owns installed facets, derived facets
@@ -209,7 +218,7 @@ public:
   using char_type = CharT;
   using iter_type = OutIt;
 
-  iter_type put(iter_type out, ios_base&, char_type, const tm* time,
+  iter_type put(iter_type out, ios_base&, char_type, const ::tm* time,
                 const char_type* first, const char_type* last) const {
     char_type format[64]{};
     size_t n = static_cast<size_t>(last - first);
@@ -218,15 +227,13 @@ public:
     for (size_t i = 0; i < n; ++i)
       format[i] = first[i];
     char_type text[256]{};
-    if constexpr (__psychicstd_detail::is_same_v<char_type, char>)
-      ::strftime(text, sizeof(text), format, time);
-    else
-      ::wcsftime(text, sizeof(text) / sizeof(*text), format, time);
+    __locale_detail::format_time(text, sizeof(text) / sizeof(*text), format,
+                                 time);
     for (const char_type* p = text; *p; ++p)
       *out++ = *p;
     return out;
   }
-  iter_type put(iter_type out, ios_base& ios, char_type fill, const tm* time,
+  iter_type put(iter_type out, ios_base& ios, char_type fill, const ::tm* time,
                 char format, char modifier = 0) const {
     char_type spec[3] = {char_type('%'), static_cast<char_type>(format), 0};
     if (modifier) {

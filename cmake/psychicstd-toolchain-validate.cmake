@@ -38,6 +38,7 @@ if(NOT _psychicstd_in_try_compile AND NOT TARGET _psychicstd_runtime)
         "${PSYCHICSTD_ROOT}/src/ios.cpp"
         "${PSYCHICSTD_ROOT}/src/iostream_macos.cpp"
         "${PSYCHICSTD_ROOT}/src/istream.cpp"
+        "${PSYCHICSTD_ROOT}/src/locale.cpp"
         "${PSYCHICSTD_ROOT}/src/ostream.cpp"
         "${PSYCHICSTD_ROOT}/src/random.cpp"
         "${PSYCHICSTD_ROOT}/src/regex.cpp"
