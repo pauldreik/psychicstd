@@ -27,6 +27,11 @@ int main() {
   static_assert(std::is_same_v<decltype(std::frexp(1.0F, &exponent)), float>);
   static_assert(
       std::is_same_v<decltype(std::frexp(1.0L, &exponent)), long double>);
+  static_assert(
+      std::is_same_v<decltype(std::nexttoward(1.0F, 0.0L)), float>);
+  static_assert(
+      std::is_same_v<decltype(std::nexttoward(1.0L, 0.0L)), long double>);
+  psyassert(std::nexttoward(1.0F, 0.0L) < 1.0F);
   static_assert(std::is_same_v<decltype(std::nextafter(1.0F, 2.0F)), float>);
   static_assert(std::is_same_v<decltype(std::nextafter(1.0, 2.0F)), double>);
   static_assert(std::is_same_v<decltype(std::nextafter(1.0, 2)), double>);

@@ -257,6 +257,12 @@ using ::nextafterl;
 using ::nexttoward;
 using ::nexttowardf;
 using ::nexttowardl;
+inline float nexttoward(float x, long double y) {
+  return ::nexttowardf(x, y);
+}
+inline long double nexttoward(long double x, long double y) {
+  return ::nexttowardl(x, y);
+}
 inline long double log1p(long double x) { return ::log1pl(x); }
 inline double log1p(double x) { return ::log1p(x); }
 inline float log1p(float x) { return ::log1pf(x); }
