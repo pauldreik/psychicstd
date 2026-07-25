@@ -103,7 +103,13 @@ public:
   set(const set& other) : comp_(other.comp_), alloc_(other.alloc_) {
     insert(other.begin(), other.end());
   }
-  set(set&& other) noexcept { swap(other); }
+  set(set&& other) noexcept(is_nothrow_move_constructible_v<Compare> &&
+                            is_nothrow_move_constructible_v<Alloc>)
+      : data_(static_cast<vector<node*>&&>(other.data_)), head_(other.head_),
+        tail_(other.tail_), comp_(static_cast<Compare&&>(other.comp_)),
+        alloc_(static_cast<Alloc&&>(other.alloc_)) {
+    other.head_ = other.tail_ = nullptr;
+  }
   ~set() { clear(); }
   set& operator=(const set& other) {
     if (this != &other) {
@@ -375,7 +381,14 @@ public:
   multiset(const multiset& other) : comp_(other.comp_), alloc_(other.alloc_) {
     insert(other.begin(), other.end());
   }
-  multiset(multiset&& other) noexcept { swap(other); }
+  multiset(multiset&& other) noexcept(
+      is_nothrow_move_constructible_v<Compare> &&
+      is_nothrow_move_constructible_v<Alloc>)
+      : data_(static_cast<vector<node*>&&>(other.data_)), head_(other.head_),
+        tail_(other.tail_), comp_(static_cast<Compare&&>(other.comp_)),
+        alloc_(static_cast<Alloc&&>(other.alloc_)) {
+    other.head_ = other.tail_ = nullptr;
+  }
   ~multiset() { clear(); }
   multiset& operator=(const multiset& other) {
     if (this != &other) {

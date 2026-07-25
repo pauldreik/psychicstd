@@ -9,7 +9,18 @@ struct counting_less {
   }
 };
 
+struct throwing_move_less {
+  throwing_move_less() = default;
+  throwing_move_less(const throwing_move_less&) noexcept(false) {}
+  throwing_move_less(throwing_move_less&&) noexcept(false) {}
+  bool operator()(int a, int b) const { return a < b; }
+};
+
 int main() {
+  static_assert(std::is_nothrow_move_constructible_v<std::set<int>>);
+  static_assert(
+      !std::is_nothrow_move_constructible_v<std::set<int, throwing_move_less>>);
+
   std::set<int, std::greater<int>> descending({1, 3, 2}, std::greater<int>{});
   psyassert(*descending.begin() == 3);
 
