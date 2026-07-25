@@ -157,6 +157,10 @@ inline double abs(double x) { return ::fabs(x); }
 inline long double abs(long double x) { return ::fabsl(x); }
 inline float sqrt(float x) { return ::sqrtf(x); }
 inline long double sqrt(long double x) { return ::sqrtl(x); }
+inline float exp(float x) { return ::expf(x); }
+inline long double exp(long double x) { return ::expl(x); }
+inline float log(float x) { return ::logf(x); }
+inline long double log(long double x) { return ::logl(x); }
 #if _PSYCHICSTD_COMPATIBILITY_LEVEL >= _PSYCHICSTD_COMPAT_DROPIN
 template <typename T>
   requires(is_integral_v<T>)

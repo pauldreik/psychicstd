@@ -15,6 +15,10 @@ int main() {
   static_assert(std::is_same_v<decltype(std::sqrt(1.0F)), float>);
   static_assert(std::is_same_v<decltype(std::sqrt(1)), double>);
   static_assert(std::is_same_v<decltype(std::sqrt(1.0L)), long double>);
+  static_assert(std::is_same_v<decltype(std::exp(1.0F)), float>);
+  static_assert(std::is_same_v<decltype(std::exp(1.0L)), long double>);
+  static_assert(std::is_same_v<decltype(std::log(1.0F)), float>);
+  static_assert(std::is_same_v<decltype(std::log(1.0L)), long double>);
   static_assert(std::is_same_v<decltype(std::nextafter(1.0F, 2.0F)), float>);
   static_assert(std::is_same_v<decltype(std::nextafter(1.0, 2.0F)), double>);
   static_assert(std::is_same_v<decltype(std::nextafter(1.0, 2)), double>);
