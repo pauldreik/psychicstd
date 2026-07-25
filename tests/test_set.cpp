@@ -35,6 +35,13 @@ int main() {
   psyassert(logarithmic_erase.erase(512) == 1);
   psyassert(counting_less::comparisons < 100);
 
+  std::set<int> stable{1, 2, 3};
+  auto stable_three = stable.find(3);
+  stable.insert(0);
+  stable.erase(2);
+  psyassert(*stable_three == 3);
+  psyassert(--stable.end() == stable_three);
+
   int first = 1;
   int second = 2;
   std::set<int*> pointers;
