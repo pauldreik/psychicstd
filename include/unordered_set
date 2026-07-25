@@ -122,10 +122,11 @@ public:
   using const_local_iterator = const_iterator;
 
   unordered_set() = default;
-  explicit unordered_set(size_t, const Hash& h = Hash(),
+  explicit unordered_set(size_t buckets, const Hash& h = Hash(),
                          const KeyEqual& eq = KeyEqual(),
                          const Allocator& a = Allocator())
-      : hasher_(h), equal_(eq), allocator_(a) {}
+      : nbuckets_(buckets ? buckets : 1), buckets_(_alloc(nbuckets_)),
+        hasher_(h), equal_(eq), allocator_(a) {}
   unordered_set(size_t buckets, const Allocator& a)
       : unordered_set(buckets, Hash(), KeyEqual(), a) {}
   unordered_set(size_t buckets, const Hash& h, const Allocator& a)
@@ -171,7 +172,11 @@ public:
     for (; first != last; ++first)
       insert(*first);
   }
-  unordered_set(const unordered_set& o) { *this = o; }
+  unordered_set(const unordered_set& o)
+      : unordered_set(
+            o,
+            allocator_traits<Allocator>::select_on_container_copy_construction(
+                o.allocator_)) {}
   unordered_set(const unordered_set& o, const Allocator& a)
       : unordered_set(o.nbuckets_, o.hasher_, o.equal_, a) {
     for (const auto& value : o)
@@ -193,11 +198,16 @@ public:
     size_t ts = size_;
     size_ = o.size_;
     o.size_ = ts;
+    std::swap(hasher_, o.hasher_);
+    std::swap(equal_, o.equal_);
+    std::swap(allocator_, o.allocator_);
   }
 
   unordered_set& operator=(const unordered_set& o) {
     if (this != &o) {
       destroy();
+      hasher_ = o.hasher_;
+      equal_ = o.equal_;
       for (size_t i = 0; i < o.nbuckets_; ++i) {
         for (Node* n = o.buckets_[i]; n; n = n->next)
           insert(n->key);
