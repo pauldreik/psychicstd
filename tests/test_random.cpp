@@ -7,8 +7,19 @@ int main() {
   psyassert(v >= rd.min());
 
   std::mt19937 gen(1234);
+  std::mt19937 same_gen(1234);
+  psyassert(gen == same_gen);
+  same_gen();
+  psyassert(!(gen == same_gen));
   long seed = 5678;
   gen.seed(seed);
+
+  std::bernoulli_distribution never(0);
+  std::bernoulli_distribution always(1);
+  for (int i = 0; i < 10; ++i) {
+    psyassert(!never(gen));
+    psyassert(always(gen));
+  }
 
   std::discrete_distribution<> d({1.0, 0.0, 0.0});
   for (int i = 0; i < 10; ++i)

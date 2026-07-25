@@ -75,6 +75,10 @@ public:
   }
   static constexpr result_type min() { return c == 0 ? 1 : 0; }
   static constexpr result_type max() { return m - 1; }
+  friend bool operator==(const linear_congruential_engine& lhs,
+                         const linear_congruential_engine& rhs) {
+    return lhs.state_ == rhs.state_;
+  }
 
 private:
   result_type state_;
@@ -140,6 +144,14 @@ public:
   }
   static constexpr result_type min() { return 0; }
   static constexpr result_type max() { return 0xffffffffU; }
+  friend bool operator==(const mt19937& lhs, const mt19937& rhs) {
+    if (lhs.index_ != rhs.index_)
+      return false;
+    for (int i = 0; i < N; ++i)
+      if (lhs.mt_[i] != rhs.mt_[i])
+        return false;
+    return true;
+  }
 };
 
 using default_random_engine = mt19937;
@@ -192,6 +204,66 @@ public:
   }
   static constexpr result_type min() { return 0; }
   static constexpr result_type max() { return ~uint64_t(0); }
+  friend bool operator==(const mt19937_64& lhs, const mt19937_64& rhs) {
+    if (lhs.index_ != rhs.index_)
+      return false;
+    for (int i = 0; i < N; ++i)
+      if (lhs.mt_[i] != rhs.mt_[i])
+        return false;
+    return true;
+  }
+};
+
+class bernoulli_distribution {
+public:
+  using result_type = bool;
+
+  class param_type {
+  public:
+    explicit param_type(double probability = 0.5) : probability_(probability) {}
+    double p() const { return probability_; }
+    friend bool operator==(const param_type& lhs, const param_type& rhs) {
+      return lhs.probability_ == rhs.probability_;
+    }
+
+  private:
+    double probability_;
+  };
+
+  explicit bernoulli_distribution(double probability = 0.5)
+      : params_(probability) {}
+  explicit bernoulli_distribution(const param_type& params) : params_(params) {}
+
+  void reset() {}
+  double p() const { return params_.p(); }
+  param_type param() const { return params_; }
+  void param(const param_type& params) { params_ = params; }
+  static constexpr result_type min() { return false; }
+  static constexpr result_type max() { return true; }
+
+  template <typename Engine> result_type operator()(Engine& engine) {
+    return operator()(engine, params_);
+  }
+  template <typename Engine>
+  result_type operator()(Engine& engine, const param_type& params) {
+    if (params.p() <= 0)
+      return false;
+    if (params.p() >= 1)
+      return true;
+    const long double offset = static_cast<long double>(engine() - engine.min());
+    const long double range =
+        static_cast<long double>(engine.max()) -
+        static_cast<long double>(engine.min()) + 1;
+    return offset < params.p() * range;
+  }
+
+  friend bool operator==(const bernoulli_distribution& lhs,
+                         const bernoulli_distribution& rhs) {
+    return lhs.params_ == rhs.params_;
+  }
+
+private:
+  param_type params_;
 };
 
 // uniform_int_distribution
