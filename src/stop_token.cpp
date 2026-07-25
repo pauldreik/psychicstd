@@ -6,9 +6,9 @@
 namespace std {
 namespace __stop_detail {
 
-static_assert(sizeof(pthread_mutex_t) == sizeof(stop_state::mutex_));
+static_assert(sizeof(pthread_mutex_t) <= sizeof(stop_state::mutex_));
 static_assert(alignof(pthread_mutex_t) <= alignof(stop_state));
-static_assert(sizeof(pthread_cond_t) == sizeof(stop_callback_base::done_));
+static_assert(sizeof(pthread_cond_t) <= sizeof(stop_callback_base::done_));
 static_assert(alignof(pthread_cond_t) <= alignof(stop_callback_base));
 
 static pthread_mutex_t* mutex(stop_state* state) {

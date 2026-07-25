@@ -14,8 +14,9 @@ namespace __stop_detail {
 struct stop_callback_base;
 
 struct stop_state {
-  // Linux pthread storage; the runtime library verifies size and alignment.
-  alignas(unsigned long) unsigned char mutex_[40];
+  // Opaque pthread storage; the runtime library verifies capacity and
+  // alignment.
+  alignas(unsigned long) unsigned char mutex_[64];
   bool stop_requested_ = false;
   stop_callback_base* callbacks_ = nullptr;
   unsigned refs_ = 1;
@@ -38,7 +39,8 @@ struct stop_callback_base {
   stop_callback_base* next_ = nullptr;
   bool registered_ = false;
   bool running_ = false;
-  // Linux pthread storage; the runtime library verifies size and alignment.
+  // Opaque pthread storage; the runtime library verifies capacity and
+  // alignment.
   alignas(unsigned long) unsigned char done_[48];
 
   stop_callback_base();
