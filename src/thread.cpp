@@ -8,12 +8,16 @@ namespace std {
 
 namespace __thread_detail {
 
-static_assert(__is_same(pthread_t, unsigned long),
-              "psychicstd thread handle storage does not match pthread_t");
+static_assert(sizeof(pthread_t) == sizeof(unsigned long),
+              "psychicstd thread handle storage does not fit pthread_t");
 
 bool __create(unsigned long& handle, void* (*start)(void*),
               void* state) noexcept {
-  return ::pthread_create(&handle, nullptr, start, state) == 0;
+  pthread_t native_handle;
+  if (::pthread_create(&native_handle, nullptr, start, state) != 0)
+    return false;
+  __builtin_memcpy(&handle, &native_handle, sizeof(handle));
+  return true;
 }
 
 void __sleep_for(long long nanoseconds) noexcept {
@@ -24,6 +28,12 @@ void __sleep_for(long long nanoseconds) noexcept {
 }
 
 } // namespace __thread_detail
+
+static pthread_t native_handle(unsigned long handle) noexcept {
+  pthread_t result;
+  __builtin_memcpy(&result, &handle, sizeof(result));
+  return result;
+}
 
 void* thread::__start(void* pointer) noexcept {
   __state* state = static_cast<__state*>(pointer);
@@ -54,13 +64,13 @@ thread::~thread() {
 }
 
 void thread::join() {
-  if (!joinable_ || ::pthread_join(handle_, nullptr) != 0)
+  if (!joinable_ || ::pthread_join(native_handle(handle_), nullptr) != 0)
     __builtin_trap();
   joinable_ = false;
 }
 
 void thread::detach() {
-  if (!joinable_ || ::pthread_detach(handle_) != 0)
+  if (!joinable_ || ::pthread_detach(native_handle(handle_)) != 0)
     __builtin_trap();
   joinable_ = false;
 }
@@ -95,7 +105,12 @@ jthread::~jthread() {
 
 namespace this_thread {
 
-thread::id get_id() noexcept { return thread::id(::pthread_self()); }
+thread::id get_id() noexcept {
+  unsigned long value;
+  pthread_t self = ::pthread_self();
+  __builtin_memcpy(&value, &self, sizeof(value));
+  return thread::id(value);
+}
 
 void yield() noexcept { ::sched_yield(); }
 
