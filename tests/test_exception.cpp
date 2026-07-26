@@ -67,4 +67,20 @@ int main() {
   } catch (...) {
   }
   psyassert(caught_saved);
+
+  bool caught_nested = false;
+  try {
+    try {
+      throw 17;
+    } catch (...) {
+      std::throw_with_nested(std::exception());
+    }
+  } catch (const std::nested_exception& outer) {
+    try {
+      outer.rethrow_nested();
+    } catch (int value) {
+      caught_nested = value == 17;
+    }
+  }
+  psyassert(caught_nested);
 }

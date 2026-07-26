@@ -14,6 +14,7 @@ set(TESTS
     test_compare
     test_complex
     test_concepts
+    test_csignal
     test_cstddef
     test_cstdint
     test_cstdlib

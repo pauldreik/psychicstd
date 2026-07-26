@@ -1,4 +1,8 @@
 #pragma once
+#ifndef __cpp_lib_variant
+#define __cpp_lib_variant 201606L
+#endif
+
 #include <__psychicstd_config>
 #include <__psychicstd_exception_base>
 #include <__psychicstd_lifetime>
@@ -37,30 +41,31 @@ template <typename V>
 inline constexpr size_t variant_size_v = variant_size<V>::value;
 
 #if defined(__has_builtin) && __has_builtin(__type_pack_element)
-#define _PSYCHICSTD_NTH_TYPE(I, ...) __type_pack_element<I, __VA_ARGS__>
+#define _PSYCHICSTD_NTH_TYPE(Index, ...) __type_pack_element<Index, __VA_ARGS__>
 #else
-template <size_t I, typename... Ts> struct __variant_nth;
-template <size_t I, typename First, typename... Rest>
-struct __variant_nth<I, First, Rest...> : __variant_nth<I - 1, Rest...> {};
+template <size_t Index, typename... Ts> struct __variant_nth;
+template <size_t Index, typename First, typename... Rest>
+struct __variant_nth<Index, First, Rest...>
+    : __variant_nth<Index - 1, Rest...> {};
 template <typename First, typename... Rest>
 struct __variant_nth<0, First, Rest...> {
   using type = First;
 };
-#define _PSYCHICSTD_NTH_TYPE(I, ...)                                           \
-  typename __variant_nth<I, __VA_ARGS__>::type
+#define _PSYCHICSTD_NTH_TYPE(Index, ...)                                       \
+  typename __variant_nth<Index, __VA_ARGS__>::type
 #endif
 
-template <size_t I, typename V> struct variant_alternative;
-template <size_t I, typename... Ts>
-struct variant_alternative<I, variant<Ts...>> {
-  using type = _PSYCHICSTD_NTH_TYPE(I, Ts...);
+template <size_t Index, typename V> struct variant_alternative;
+template <size_t Index, typename... Ts>
+struct variant_alternative<Index, variant<Ts...>> {
+  using type = _PSYCHICSTD_NTH_TYPE(Index, Ts...);
 };
 #undef _PSYCHICSTD_NTH_TYPE
-template <size_t I, typename V> struct variant_alternative<I, const V> {
-  using type = const typename variant_alternative<I, V>::type;
+template <size_t Index, typename V> struct variant_alternative<Index, const V> {
+  using type = const typename variant_alternative<Index, V>::type;
 };
-template <size_t I, typename V>
-using variant_alternative_t = typename variant_alternative<I, V>::type;
+template <size_t Index, typename V>
+using variant_alternative_t = typename variant_alternative<Index, V>::type;
 
 namespace __variant {
 
@@ -107,23 +112,35 @@ template <typename U, typename... Ts> constexpr size_t __accepted(...) {
   return variant_npos;
 }
 
+struct __uninitialized_t {};
+
+template <typename First, typename... Rest> union __storage {
+  First first;
+  alignas(__max_align<First,
+                      Rest...>) unsigned char raw[__max_size<First, Rest...>];
+
+  constexpr __storage() : first() {}
+  constexpr explicit __storage(__uninitialized_t) : raw{} {}
+  constexpr ~__storage() {}
+};
+
 } // namespace __variant
 
 template <typename... Ts> class variant {
   static_assert(sizeof...(Ts) > 0,
                 "variant must have at least one alternative");
 
-  alignas(__variant::__max_align<
-          Ts...>) unsigned char buf_[__variant::__max_size<Ts...>];
+  __variant::__storage<Ts...> storage_;
   size_t index_ = variant_npos;
 
-  template <size_t I> using __alt = variant_alternative_t<I, variant>;
+  template <size_t Index> using __alt = variant_alternative_t<Index, variant>;
 
-  template <size_t I, typename... Args> __alt<I>& __emplace(Args&&... args) {
+  template <size_t Index, typename... Args>
+  __alt<Index>& __emplace(Args&&... args) {
     __destroy();
-    __alt<I>* p = reinterpret_cast<__alt<I>*>(buf_);
+    __alt<Index>* p = reinterpret_cast<__alt<Index>*>(storage_.raw);
     construct_at(p, static_cast<Args&&>(args)...);
-    index_ = I;
+    index_ = Index;
     return *p;
   }
 
@@ -132,7 +149,7 @@ template <typename... Ts> class variant {
       return;
     static constexpr void (*tbl[])(void*) = {
         +[](void* p) { static_cast<Ts*>(p)->~Ts(); }...};
-    tbl[index_](buf_);
+    tbl[index_](&storage_);
     index_ = variant_npos;
   }
 
@@ -142,7 +159,7 @@ template <typename... Ts> class variant {
       ::new (d) Ts(*static_cast<const Ts*>(s));
     }...};
     if (o.index_ != variant_npos)
-      tbl[o.index_](buf_, o.buf_);
+      tbl[o.index_](&storage_, &o.storage_);
     index_ = o.index_;
   }
 
@@ -151,37 +168,45 @@ template <typename... Ts> class variant {
       ::new (d) Ts(static_cast<Ts&&>(*static_cast<Ts*>(s)));
     }...};
     if (o.index_ != variant_npos)
-      tbl[o.index_](buf_, o.buf_);
+      tbl[o.index_](&storage_, &o.storage_);
     index_ = o.index_;
   }
 
 public:
   constexpr variant() noexcept(is_nothrow_default_constructible_v<__alt<0>>) {
-    ::new (buf_) __alt<0>();
     index_ = 0;
   }
 
-  variant(const variant& o) { __copy_from(o); }
-  variant(variant&& o) noexcept { __move_from(static_cast<variant&&>(o)); }
+  variant(const variant& o) : storage_(__variant::__uninitialized_t{}) {
+    __copy_from(o);
+  }
+  variant(variant&& o) noexcept : storage_(__variant::__uninitialized_t{}) {
+    __move_from(static_cast<variant&&>(o));
+  }
 
-  template <typename U, size_t I = __variant::__accepted<U, Ts...>(0),
-            typename = enable_if_t<I != variant_npos &&
+  template <typename U, size_t Index = __variant::__accepted<U, Ts...>(0),
+            typename = enable_if_t<Index != variant_npos &&
                                    !is_same_v<remove_cvref_t<U>, variant>>>
-  variant(U&& u) {
-    __emplace<I>(static_cast<U&&>(u));
+  variant(U&& u) : storage_(__variant::__uninitialized_t{}) {
+    __emplace<Index>(static_cast<U&&>(u));
   }
 
   template <typename T, typename... Args>
-  explicit variant(in_place_type_t<T>, Args&&... args) {
+  explicit variant(in_place_type_t<T>, Args&&... args)
+      : storage_(__variant::__uninitialized_t{}) {
     __emplace<__variant::__index_of<T, Ts...>()>(static_cast<Args&&>(args)...);
   }
 
-  template <size_t I, typename... Args>
-  explicit variant(in_place_index_t<I>, Args&&... args) {
-    __emplace<I>(static_cast<Args&&>(args)...);
+  template <size_t Index, typename... Args>
+  explicit variant(in_place_index_t<Index>, Args&&... args)
+      : storage_(__variant::__uninitialized_t{}) {
+    __emplace<Index>(static_cast<Args&&>(args)...);
   }
 
-  ~variant() { __destroy(); }
+  constexpr ~variant() {
+    if constexpr (!(is_trivially_destructible_v<Ts> && ...))
+      __destroy();
+  }
 
   variant& operator=(const variant& o) {
     if (this != &o) {
@@ -198,11 +223,11 @@ public:
     return *this;
   }
 
-  template <typename U, size_t I = __variant::__accepted<U, Ts...>(0),
-            typename = enable_if_t<I != variant_npos &&
+  template <typename U, size_t Index = __variant::__accepted<U, Ts...>(0),
+            typename = enable_if_t<Index != variant_npos &&
                                    !is_same_v<remove_cvref_t<U>, variant>>>
   variant& operator=(U&& u) {
-    __emplace<I>(static_cast<U&&>(u));
+    __emplace<Index>(static_cast<U&&>(u));
     return *this;
   }
 
@@ -215,8 +240,9 @@ public:
     return __emplace<__variant::__index_of<T, Ts...>()>(
         static_cast<Args&&>(args)...);
   }
-  template <size_t I, typename... Args> __alt<I>& emplace(Args&&... args) {
-    return __emplace<I>(static_cast<Args&&>(args)...);
+  template <size_t Index, typename... Args>
+  __alt<Index>& emplace(Args&&... args) {
+    return __emplace<Index>(static_cast<Args&&>(args)...);
   }
 
   void swap(variant& o) {
@@ -225,8 +251,21 @@ public:
     *this = static_cast<variant&&>(tmp);
   }
 
-  void* __raw() noexcept { return buf_; }
-  const void* __raw() const noexcept { return buf_; }
+  template <size_t Index> constexpr __alt<Index>& __get() noexcept {
+    if constexpr (Index == 0)
+      return storage_.first;
+    else
+      return *reinterpret_cast<__alt<Index>*>(&storage_);
+  }
+  template <size_t Index> constexpr const __alt<Index>& __get() const noexcept {
+    if constexpr (Index == 0)
+      return storage_.first;
+    else
+      return *reinterpret_cast<const __alt<Index>*>(&storage_);
+  }
+
+  void* __raw() noexcept { return &storage_; }
+  const void* __raw() const noexcept { return &storage_; }
 };
 
 template <typename T, typename... Ts>
@@ -234,24 +273,24 @@ constexpr bool holds_alternative(const variant<Ts...>& v) noexcept {
   return v.index() == __variant::__index_of<T, Ts...>();
 }
 
-template <size_t I, typename... Ts>
-constexpr variant_alternative_t<I, variant<Ts...>>& get(variant<Ts...>& v) {
-  if (v.index() != I)
+template <size_t Index, typename... Ts>
+constexpr variant_alternative_t<Index, variant<Ts...>>& get(variant<Ts...>& v) {
+  if (v.index() != Index)
     _PSYCHICSTD_THROW_HELPER(__throw_bad_variant_access);
-  return *reinterpret_cast<variant_alternative_t<I, variant<Ts...>>*>(
-      v.__raw());
+  return v.template __get<Index>();
 }
-template <size_t I, typename... Ts>
-constexpr variant_alternative_t<I, variant<Ts...>>&& get(variant<Ts...>&& v) {
-  return static_cast<variant_alternative_t<I, variant<Ts...>>&&>(get<I>(v));
+template <size_t Index, typename... Ts>
+constexpr variant_alternative_t<Index, variant<Ts...>>&&
+get(variant<Ts...>&& v) {
+  return static_cast<variant_alternative_t<Index, variant<Ts...>>&&>(
+      get<Index>(v));
 }
-template <size_t I, typename... Ts>
-constexpr const variant_alternative_t<I, variant<Ts...>>&
+template <size_t Index, typename... Ts>
+constexpr const variant_alternative_t<Index, variant<Ts...>>&
 get(const variant<Ts...>& v) {
-  if (v.index() != I)
+  if (v.index() != Index)
     _PSYCHICSTD_THROW_HELPER(__throw_bad_variant_access);
-  return *reinterpret_cast<const variant_alternative_t<I, variant<Ts...>>*>(
-      v.__raw());
+  return v.template __get<Index>();
 }
 
 template <typename T, typename... Ts> constexpr T& get(variant<Ts...>& v) {
@@ -266,20 +305,20 @@ constexpr const T& get(const variant<Ts...>& v) {
   return get<__variant::__index_of<T, Ts...>()>(v);
 }
 
-template <size_t I, typename... Ts>
-constexpr variant_alternative_t<I, variant<Ts...>>*
+template <size_t Index, typename... Ts>
+constexpr variant_alternative_t<Index, variant<Ts...>>*
 get_if(variant<Ts...>* v) noexcept {
-  if (!v || v->index() != I)
+  if (!v || v->index() != Index)
     return nullptr;
-  return reinterpret_cast<variant_alternative_t<I, variant<Ts...>>*>(
+  return reinterpret_cast<variant_alternative_t<Index, variant<Ts...>>*>(
       v->__raw());
 }
-template <size_t I, typename... Ts>
-constexpr const variant_alternative_t<I, variant<Ts...>>*
+template <size_t Index, typename... Ts>
+constexpr const variant_alternative_t<Index, variant<Ts...>>*
 get_if(const variant<Ts...>* v) noexcept {
-  if (!v || v->index() != I)
+  if (!v || v->index() != Index)
     return nullptr;
-  return reinterpret_cast<const variant_alternative_t<I, variant<Ts...>>*>(
+  return reinterpret_cast<const variant_alternative_t<Index, variant<Ts...>>*>(
       v->__raw());
 }
 template <typename T, typename... Ts>
@@ -292,27 +331,27 @@ constexpr const T* get_if(const variant<Ts...>* v) noexcept {
 }
 
 namespace __variant {
-template <typename R, typename Visitor, typename V, size_t... Is>
-R __visit_impl(Visitor&& vis, V&& v, index_sequence<Is...>) {
-  using Fn = R (*)(Visitor&&, V&&);
-  static constexpr Fn tbl[] = {+[](Visitor&& vis2, V&& v2) -> R {
-    return static_cast<Visitor&&>(vis2)(get<Is>(static_cast<V&&>(v2)));
-  }...};
-  return tbl[v.index()](static_cast<Visitor&&>(vis), static_cast<V&&>(v));
+template <size_t Index, typename R, typename Visitor, typename V>
+constexpr R __visit_impl(Visitor&& vis, V&& v) {
+  if (v.index() == Index)
+    return static_cast<Visitor&&>(vis)(get<Index>(static_cast<V&&>(v)));
+  if constexpr (Index + 1 < variant_size_v<remove_cvref_t<V>>)
+    return __visit_impl<Index + 1, R>(static_cast<Visitor&&>(vis),
+                                      static_cast<V&&>(v));
+  else
+    _PSYCHICSTD_THROW_HELPER(__throw_bad_variant_access);
 }
 } // namespace __variant
 
 template <typename Visitor, typename V>
-decltype(auto) visit(Visitor&& vis, V&& v) {
+constexpr decltype(auto) visit(Visitor&& vis, V&& v) {
   using R = decltype(static_cast<Visitor&&>(vis)(get<0>(static_cast<V&&>(v))));
-  constexpr size_t N = variant_size_v<remove_cvref_t<V>>;
-  return __variant::__visit_impl<R>(static_cast<Visitor&&>(vis),
-                                    static_cast<V&&>(v),
-                                    make_index_sequence<N>{});
+  return __variant::__visit_impl<0, R>(static_cast<Visitor&&>(vis),
+                                       static_cast<V&&>(v));
 }
 
 template <typename Visitor, typename V1, typename V2>
-decltype(auto) visit(Visitor&& vis, V1&& v1, V2&& v2) {
+constexpr decltype(auto) visit(Visitor&& vis, V1&& v1, V2&& v2) {
   return visit(
       [&](auto&& value1) -> decltype(auto) {
         return visit(

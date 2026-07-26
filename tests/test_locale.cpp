@@ -36,6 +36,11 @@ protected:
 };
 
 int main() {
+  static_assert(std::locale::none == 0);
+  static_assert((std::locale::all & std::locale::collate) != 0);
+  psyassert(std::isalpha('a', std::locale::classic()));
+  psyassert(!std::isalpha('1', std::locale::classic()));
+
   std::locale classic;
   psyassert(std::has_facet<std::numpunct<char>>(classic));
   auto localized = std::locale(classic, new punct);

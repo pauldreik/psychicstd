@@ -980,9 +980,9 @@ def _eigen() -> Project:
 
 
 def _fmt() -> Project:
-    version = "11.1.4"
+    version = "12.1.0"
     url = f"https://github.com/fmtlib/fmt/archive/refs/tags/{version}.tar.gz"
-    checksum = "ac366b7b4c2e9f0dde63a59b3feb5ee59b67974b14ee5dc9ea8ad78aa2c1ee1e"
+    checksum = "ea7de4299689e12b6dddd392f9896f08fb0777ac7168897a244a6d6085043fea"
 
     def build(tc: Toolchain) -> dict[str, float]:
         tarball = RW_DIR / f"fmt-{version}.tar.gz"
@@ -1048,7 +1048,7 @@ def _fmt() -> Project:
     return Project(
         version=version,
         build=build,
-        expected_seconds={"debug": 8, "release": 20},
+        expected_seconds={"debug": 12, "release": 25},
         phases=("compile", "run tests"),
         comment="fmt is built with locale support; its own unit tests are run.",
     )

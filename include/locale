@@ -24,6 +24,17 @@ size_t format_time(wchar_t*, size_t, const wchar_t*, const ::tm*);
 // are found through their base class, and copies share their facet storage.
 class locale {
 public:
+  using category = int;
+  static constexpr category none = 0;
+  static constexpr category collate = 1 << 0;
+  static constexpr category ctype = 1 << 1;
+  static constexpr category monetary = 1 << 2;
+  static constexpr category numeric = 1 << 3;
+  static constexpr category time = 1 << 4;
+  static constexpr category messages = 1 << 5;
+  static constexpr category all =
+      collate | ctype | monetary | numeric | time | messages;
+
   class facet {
   public:
     virtual ~facet() = default;
@@ -268,6 +279,11 @@ template <typename Facet> const Facet& use_facet(const locale& loc) {
   // implemented here, a default-constructed instance is the classic facet.
   static const Facet classic_facet{};
   return classic_facet;
+}
+
+template <typename Char> bool isalpha(Char c, const locale&) {
+  return (c >= Char('a') && c <= Char('z')) ||
+         (c >= Char('A') && c <= Char('Z'));
 }
 
 } // namespace std

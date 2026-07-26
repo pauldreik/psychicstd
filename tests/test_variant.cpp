@@ -1,7 +1,13 @@
 #include "psyassert.h"
 #include <memory>
 #include <string>
+#define I 42
 #include <variant>
+#undef I
+
+#if __cpp_lib_variant < 201606L
+#error "__cpp_lib_variant must advertise the C++17 baseline"
+#endif
 
 using std::get;
 using std::get_if;
@@ -11,6 +17,11 @@ using std::variant;
 using std::visit;
 
 int main() {
+  constexpr variant<monostate, char> compile_time_variant;
+  static_assert(compile_time_variant.index() == 0);
+  static_assert(visit([](const auto&) { return 7; }, compile_time_variant) ==
+                7);
+
   std::shared_ptr<int> mutable_pointer = std::make_shared<int>(3);
   variant<std::shared_ptr<const int>, std::shared_ptr<const std::string>>
       converted_pointer = mutable_pointer;
