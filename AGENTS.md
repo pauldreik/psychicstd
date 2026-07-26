@@ -74,7 +74,9 @@ useful during the edit-compile-debug cycle.
 
 - Keep changes distinct. Prefer small, focused commits over mixed refactors.
   Use a terse, specific commit subject and put rationale or implementation
-  detail in the commit body.
+  detail in the commit body. Wrap commit body lines at 80 columns.
+- When a change logically belongs to an earlier unmerged commit, use a fixup
+  and autosquash it instead of adding a follow-up commit.
 - Use the repository formatting scripts relevant to files you touch:
   `run_clang_format.sh`, `run_cmake_format.sh`, `run_markdown_format.sh`,
   `run_python_lint.sh`, `run_shell_format.sh`, and `run_yaml_format.sh`.
