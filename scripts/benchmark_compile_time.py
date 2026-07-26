@@ -157,7 +157,7 @@ def emoji(ratio: float) -> str:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("compiler", nargs="?", default="g++")
+    parser.add_argument("compiler", nargs="?", default="c++")
     parser.add_argument(
         "--include",
         type=Path,

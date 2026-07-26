@@ -21,7 +21,7 @@ sanitizer flags, actually runs the executables, and gates on a baseline.
 
 ## Prerequisites
 
-- `g++` with ASan/UBSan (the default on Linux).
+- `c++` with ASan/UBSan.
 
 - A libc++ test checkout. A sparse clone is enough (this is what CI does):
 
@@ -121,7 +121,7 @@ INC=include
 SUP=$LLVM_ROOT/libcxx/test/support
 T=$LLVM_ROOT/libcxx/test/std/containers/unord/unord.set/erase_const_iter.pass.cpp
 
-g++ -std=c++23 -fsanitize=address,undefined -fno-sanitize-recover=all -g \
+c++ -std=c++23 -fsanitize=address,undefined -fno-sanitize-recover=all -g \
     -nostdinc++ -isystem "$INC" -I"$SUP" "$T" -o /tmp/t
 ASAN_OPTIONS=abort_on_error=1 UBSAN_OPTIONS=print_stacktrace=1:halt_on_error=1 /tmp/t
 ```
@@ -137,6 +137,6 @@ libstdc++ — that difference is the bug.
 
 ## Caveat
 
-The baseline is compiler/environment sensitive: a different `g++` version can
+The baseline is compiler/environment sensitive: a different compiler version can
 change which tests pass. Regenerate it in an environment close to CI, and if CI
 reports env-only differences, reconcile with `--update-baseline`.

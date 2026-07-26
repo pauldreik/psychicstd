@@ -392,8 +392,8 @@ def main() -> int:
     )
     ap.add_argument(
         "--compiler",
-        default="g++",
-        help="C++ compiler for all measurements (default: g++)",
+        default="c++",
+        help="C++ compiler for all measurements (default: c++)",
     )
     ap.add_argument(
         "--include",

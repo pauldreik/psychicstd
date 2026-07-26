@@ -131,7 +131,7 @@ DIM = "\033[2m"
 BOLD = "\033[1m"
 RESET = "\033[0m"
 
-CXX = os.environ.get("CXX", "g++")
+CXX = os.environ.get("CXX", "c++")
 
 
 def run_cmd(cmd: list[str], timeout: int = 20) -> tuple[bool, str]:

@@ -82,9 +82,9 @@ def main() -> None:
         epilog=(
             "example:\n"
             "  # 1. produce the two inputs (same machine; swap only the include dir)\n"
-            "  scripts/benchmark_compile_time.py g++ --include /path/to/main/include "
+            "  scripts/benchmark_compile_time.py c++ --include /path/to/main/include "
             "--json base.json\n"
-            "  scripts/benchmark_compile_time.py g++ --json head.json\n"
+            "  scripts/benchmark_compile_time.py c++ --json head.json\n"
             "  # 2. compare them; markdown goes to stdout\n"
             "  scripts/_benchmark_diff.py --base base.json --head head.json > diff.md\n"
         ),

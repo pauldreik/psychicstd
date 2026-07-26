@@ -11,7 +11,7 @@ runs, so the numbers are reproducible.
 Usage:
   scripts/compare_compile_time_to_ref.py [compiler] [ref]
 
-  compiler   C++ compiler to benchmark with   (default: g++)
+  compiler   C++ compiler to benchmark with   (default: c++)
   ref        git ref to compare against       (default: origin/main)
 
 Env:
@@ -39,13 +39,13 @@ def main() -> int:
         description="Compare compile-time performance of the working tree vs a git ref.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="examples:\n"
-        "  scripts/compare_compile_time_to_ref.py                 # g++ vs origin/main\n"
-        "  scripts/compare_compile_time_to_ref.py g++ origin/main\n"
+        "  scripts/compare_compile_time_to_ref.py                 # c++ vs origin/main\n"
+        "  scripts/compare_compile_time_to_ref.py c++ origin/main\n"
         "  scripts/compare_compile_time_to_ref.py clang++-21 HEAD~1\n"
         "  BENCH_N=10 scripts/compare_compile_time_to_ref.py      # more reps, tighter CIs\n",
     )
     ap.add_argument(
-        "compiler", nargs="?", default="g++", help="C++ compiler (default: g++)"
+        "compiler", nargs="?", default="c++", help="C++ compiler (default: c++)"
     )
     ap.add_argument(
         "ref",
