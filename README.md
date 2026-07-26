@@ -237,16 +237,17 @@ include(FetchContent)
 FetchContent_Declare(
     psychicstd
     GIT_REPOSITORY https://github.com/pauldreik/psychicstd.git
-    GIT_TAG 203533b27ee2487a1ad3f1417ad13376acbbe5ff
+    GIT_TAG main
 )
 FetchContent_MakeAvailable(psychicstd)
 
 target_link_libraries(your_target PRIVATE psychicstd::psychicstd)
 ```
 
-Update `GIT_TAG` to the psychicstd commit you want to use. Tests and benchmarks
-default to off when psychicstd is fetched. Linking the target supplies the
-replacement headers, static runtime, and required ABI-library flags.
+Pin `GIT_TAG` to a specific psychicstd commit when reproducible dependency
+resolution is important. Tests and benchmarks default to off when psychicstd is
+fetched. Linking the target supplies the replacement headers, static runtime,
+and required ABI-library flags.
 
 Every target containing C++ sources, including fetched dependencies, must use
 the same standard library. Link `psychicstd::psychicstd` to each such target or
@@ -260,35 +261,51 @@ profile: [`tests/conan_project/psychic.profile`](tests/conan_project/psychic.pro
 It composes with your existing host profile and injects the psychicstd toolchain
 without selecting a compiler or adding dependency-specific flags.
 
-Apply it to the host context so your app and its linked C++ dependencies are
-built with the same standard library choice. Keep the normal build profile for
-tools that run while building:
+Apply the overlay to the host context so your application and its linked C++
+dependencies use the same standard library. You can compose the profiles
+directly on the command line. Conan applies repeated host profiles in order, so
+put the psychicstd overlay last:
 
 ```bash
 conan install . \
-    -pr:h=your-host.profile \
-    -pr:h=/path/to/psychic.profile \
-    -pr:b=your-build.profile \
+    --profile:host=your-host.profile \
+    --profile:host=/path/to/psychic.profile \
+    --profile:build=your-build.profile \
     --build=missing
 ```
 
-Append the psychic profile last in the host context. File-based composition
-works too:
+Alternatively, create a wrapper host profile, for example
+`psychic-host.profile`, that includes both profiles in the same order:
 
 ```text
+include(your-host.profile)
 include(/path/to/psychic.profile)
 ```
 
-The example in `tests/conan_project/` uses `fmt` to show a real third-party
-dependency built this way. The profile does not overwrite sanitizer flags, so
-ASan and UBSan keep working the way Conan or your project already configures
-them. Supported compilers are the same as the toolchain-overlay path: Clang
-and GCC 13+ on Linux.
+Then pass that single composed host profile to Conan:
+
+```bash
+conan install . \
+    --profile:host=psychic-host.profile \
+    --profile:build=your-build.profile \
+    --build=missing
+```
+
+The host profile controls the application and the libraries linked into it. The
+build profile controls tools that run during the build, so it normally remains
+unchanged.
+
+The example in [`tests/conan_project/`](tests/conan_project/) uses `fmt` to show
+a real third-party dependency built this way. The profile does not overwrite
+sanitizer flags, so ASan and UBSan keep working the way Conan or your project
+already configures them. Supported compilers are the same as the
+toolchain-overlay path: Clang and GCC 13+ on Linux.
 
 The overlay includes the psychicstd release version in Conan package IDs, so
-Conan does not reuse binaries built with the normal standard library. For local
-experiments, consider setting `CONAN_HOME` to a separate directory to keep
-psychicstd-built packages out of your normal Conan cache.
+Conan does not confuse binaries built with psychicstd with those built with the
+normal standard library. For local experiments, consider setting `CONAN_HOME`
+to a separate directory to keep psychicstd-built packages out of your normal
+Conan cache.
 
 ### Notes for all configurations
 
@@ -335,7 +352,8 @@ The default build covers the library itself — no third-party code, no network 
 
 ### Testing on real-world projects
 
-Correctness in practice is verified by compiling — and running the test suites of — actual third-party projects against psychicstd. The scripts in [`use_on_realworld_projects/`](use_on_realworld_projects/) clone, build, and run Abseil, Boost.Asio, Catch2, cppcheck, Eigen, fmt, GoogleTest, nlohmann JSON, OpenCV, RapidJSON, rdfind, and simdutf. The CMake recipe builds its supported upstream KWSys and utility targets. These recipes produce the speedup reports linked at the top of this README.
+Correctness in practice is verified by compiling — and running the test suites of — actual third-party projects against psychicstd.
+This is what is used to decide on what to implement in the library - there is no need to make the library slower by implementing things noone uses (yes I am talking about you, valarray).
 
 ### Benchmarks
 
