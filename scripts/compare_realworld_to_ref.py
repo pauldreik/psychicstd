@@ -7,11 +7,11 @@ It builds the project three ways on one host -- with libstdc++ (a noise proxy),
 with the reference's psychicstd headers, and with the working tree's -- swapping
 only the include dir. Running both sides on one runner cancels absolute host
 speed, so the comparison is meaningful even though CI runners vary. The markdown
-is produced by tools/bench_diff.py, so it looks exactly like the compile-time
+is produced by scripts/_benchmark_diff.py, so it looks exactly like the compile-time
 perf diff, but per phase.
 
 Usage:
-  scripts/compare_realworld.py [project] [--ref REF] [--compiler CXX]
+  scripts/compare_realworld_to_ref.py [project] [--ref REF] [--compiler CXX]
       [--build-type {debug,release}]
       [--reps N | --time-budget DURATION] [--max-reps N]
 """
@@ -401,7 +401,7 @@ def main() -> int:
         subprocess.run(
             [
                 sys.executable,
-                str(REPO / "tools" / "bench_diff.py"),
+                str(REPO / "scripts" / "_benchmark_diff.py"),
                 "--base",
                 str(base_json),
                 "--head",
@@ -411,7 +411,7 @@ def main() -> int:
                 "--what",
                 f"{args.project} build time with psychicstd",
                 "--reproduce",
-                f"scripts/compare_realworld.py {args.project} "
+                f"scripts/compare_realworld_to_ref.py {args.project} "
                 f"--build-type {args.build_type} --reps {reps}"
                 + (" --enable-ccache" if args.enable_ccache else ""),
             ],

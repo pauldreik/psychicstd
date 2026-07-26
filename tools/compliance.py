@@ -15,9 +15,9 @@ Conformance is shown as x/y/z/w where:
 Cache stores individual per-test results; incremental runs only run uncached tests.
 
 Usage:
-  python3 tools/compliance.py                     # check all headers (up to N_SAMPLE new tests each)
-  python3 tools/compliance.py map                 # re-check only map
-  python3 tools/compliance.py --sample 50 vector  # run up to 50 new tests for vector
+  tools/compliance.py                     # check all headers (up to N_SAMPLE new tests each)
+  tools/compliance.py map                 # re-check only map
+  tools/compliance.py --sample 50 vector  # run up to 50 new tests for vector
 """
 
 import argparse

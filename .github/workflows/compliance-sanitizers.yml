@@ -19,7 +19,7 @@ jobs:
       - name: Run libcxx suite under ASan/UBSan
         env:
           LLVM_ROOT: ${{ github.workspace }}/llvm-project
-        run: python3 tools/compliance.py --sanitize --sample 25
+        run: tools/compliance.py --sanitize --sample 25
       - name: Rename cache
         if: always()
         run: mv .compliance_cache.sanitize.json sanitize_base_cache.json

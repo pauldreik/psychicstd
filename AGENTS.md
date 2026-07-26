@@ -68,7 +68,7 @@ useful during the edit-compile-debug cycle.
   and UBSan variants. For Conan changes, run `tests/conan_project/run.sh` when
   Conan and its remotes are available.
 - For fmt, verify the real-world recipe with:
-  `python3 scripts/compare_realworld_performance.py --build-type release --reps 1 --project fmt`.
+  `python3 scripts/benchmark_realworld.py --build-type release --reps 1 --project fmt`.
 
 ## Repository hygiene
 

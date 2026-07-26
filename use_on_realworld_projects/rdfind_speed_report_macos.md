@@ -24,4 +24,4 @@ rdfind is an autoconf based project. It uses psychic strict mode.
 
 ______________________________________________________________________
 
-Reproduce this on your machine: `scripts/compare_realworld_performance.py --compiler /usr/bin/clang++ --build-type both --reps 7`
+Reproduce this on your machine: `scripts/benchmark_realworld.py --compiler /usr/bin/clang++ --build-type both --reps 7`

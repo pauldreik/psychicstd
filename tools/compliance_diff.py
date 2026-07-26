@@ -8,7 +8,7 @@ PR's psychicstd headers.  Because both caches contain the same test files, the
 comparison is always on an identical corpus - no intersection logic needed.
 
 Usage:
-  python3 tools/compliance_diff.py --base base_cache.json --head head_cache.json
+  tools/compliance_diff.py --base base_cache.json --head head_cache.json
 """
 
 import argparse

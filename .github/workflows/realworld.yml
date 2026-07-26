@@ -20,7 +20,7 @@ jobs:
         run: sudo apt-get build-dep -y rdfind
       - name: Build and benchmark rdfind with psychicstd
         run: >-
-          python3 scripts/compare_realworld_performance.py --project rdfind
+          scripts/benchmark_realworld.py --project rdfind
           --build-type both --reps 3
           --output use_on_realworld_projects/rdfind_speed_report.md
       - name: Upload speed report
@@ -42,7 +42,7 @@ jobs:
         run: sudo apt-get install -y ninja-build
       - name: Build and test simdutf with psychicstd
         run: >-
-          python3 scripts/compare_realworld_performance.py --project simdutf
+          scripts/benchmark_realworld.py --project simdutf
           --build-type debug --reps 1
           --output use_on_realworld_projects/simdutf_speed_report.md
       - name: Upload speed report
@@ -59,7 +59,7 @@ jobs:
         run: sudo apt-get install -y ninja-build
       - name: Build and test CMake with psychicstd
         run: >-
-          python3 scripts/compare_realworld_performance.py --check-only
+          scripts/benchmark_realworld.py --check-only
           --project cmake --build-type both
   googletest:
     runs-on: ubuntu-latest
@@ -69,7 +69,7 @@ jobs:
         run: sudo apt-get install -y ninja-build
       - name: Build and test GoogleTest with psychicstd
         run: >-
-          python3 scripts/compare_realworld_performance.py --check-only
+          scripts/benchmark_realworld.py --check-only
           --project googletest --build-type debug
   abseil:
     runs-on: ubuntu-latest
@@ -80,7 +80,7 @@ jobs:
         run: sudo apt-get install -y ninja-build
       - name: Build and test Abseil base with psychicstd
         run: >-
-          python3 scripts/compare_realworld_performance.py --check-only
+          scripts/benchmark_realworld.py --check-only
           --project abseil --build-type debug
   boost-asio:
     runs-on: ubuntu-latest
@@ -89,7 +89,7 @@ jobs:
       - uses: actions/checkout@v7
       - name: Build and test Boost.Asio with psychicstd
         run: >-
-          python3 scripts/compare_realworld_performance.py
+          scripts/benchmark_realworld.py
           --check-only --project boost-asio
           --build-type debug
   nlohmann:
@@ -102,7 +102,7 @@ jobs:
         run: sudo apt-get install -y ninja-build
       - name: Build nlohmann JSON examples with psychicstd
         run: >-
-          python3 scripts/compare_realworld_performance.py --project nlohmann
+          scripts/benchmark_realworld.py --project nlohmann
           --build-type debug --reps 1
           --output use_on_realworld_projects/nlohmann_speed_report.md
       - name: Upload speed report
@@ -120,7 +120,7 @@ jobs:
         run: sudo apt-get install -y ninja-build
       - name: Build and test OpenCV with psychicstd
         run: >-
-          python3 scripts/compare_realworld_performance.py --check-only
+          scripts/benchmark_realworld.py --check-only
           --project opencv --build-type release
   rapidjson:
     runs-on: ubuntu-latest
@@ -131,7 +131,7 @@ jobs:
         run: sudo apt-get install -y ninja-build
       - name: Build and run RapidJSON examples with psychicstd
         run: >-
-          python3 scripts/compare_realworld_performance.py --check-only
+          scripts/benchmark_realworld.py --check-only
           --project rapidjson --build-type debug
   fmt:
     runs-on: ubuntu-latest
@@ -143,7 +143,7 @@ jobs:
         run: sudo apt-get install -y ninja-build
       - name: Build and test fmt with psychicstd
         run: >-
-          python3 scripts/compare_realworld_performance.py --project fmt
+          scripts/benchmark_realworld.py --project fmt
           --build-type debug --reps 1
           --output use_on_realworld_projects/fmt_speed_report.md
       - name: Upload speed report
@@ -162,7 +162,7 @@ jobs:
         run: sudo apt-get install -y ninja-build
       - name: Build and test Catch2 with psychicstd
         run: >-
-          python3 scripts/compare_realworld_performance.py --project catch2
+          scripts/benchmark_realworld.py --project catch2
           --build-type debug --reps 1
           --output use_on_realworld_projects/catch2_speed_report.md
       - name: Upload speed report
@@ -179,7 +179,7 @@ jobs:
         run: pipx install mdformat
       - name: Build and benchmark Eigen tests with psychicstd
         run: >-
-          python3 scripts/compare_realworld_performance.py --project eigen
+          scripts/benchmark_realworld.py --project eigen
           --build-type debug --reps 1
           --output use_on_realworld_projects/eigen_speed_report.md
       - name: Upload speed report
@@ -196,7 +196,7 @@ jobs:
         run: pipx install mdformat
       - name: Build and benchmark cppcheck with psychicstd
         run: >-
-          python3 scripts/compare_realworld_performance.py --project cppcheck
+          scripts/benchmark_realworld.py --project cppcheck
           --build-type debug --reps 1
           --output use_on_realworld_projects/cppcheck_speed_report.md
       - name: Upload speed report

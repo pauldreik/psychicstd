@@ -434,7 +434,14 @@ def main() -> int:
     ap.add_argument(
         "--output",
         type=Path,
-        help="Write markdown output to this file as well as stdout",
+        default=REPO / "include_weight.md",
+        help="Write markdown output to this file as well as stdout "
+        "(default: include_weight.md)",
+    )
+    ap.add_argument(
+        "--enable-ccache",
+        action="store_true",
+        help="leave ccache enabled for a fast, non-representative smoke test",
     )
     args = ap.parse_args()
 
@@ -453,7 +460,8 @@ def main() -> int:
             ap.error(f"unknown public header(s): {', '.join(unknown)}")
         headers = sorted(set(args.headers))
 
-    os.environ["CCACHE_DISABLE"] = "1"
+    if not args.enable_ccache:
+        os.environ["CCACHE_DISABLE"] = "1"
 
     rows, version = _measure(
         args.compiler, include_dir, args.std, args.reps, headers=headers
@@ -461,7 +469,7 @@ def main() -> int:
     table = _render(rows, args.sort, args.ascending)
 
     reproduce = [
-        "scripts/measure_include_cost.py",
+        "scripts/benchmark_header_cost.py",
         f"--compiler={shlex.quote(args.compiler)}",
         f"--reps={args.reps}",
         f"--std={shlex.quote(args.std)}",
@@ -473,8 +481,10 @@ def main() -> int:
         reproduce.append(f"--include={shlex.quote(str(include_dir))}")
     for header in headers or []:
         reproduce.append(f"--header={shlex.quote(header)}")
+    if args.enable_ccache:
+        reproduce.append("--enable-ccache")
     reproduce_line = " ".join(reproduce)
-    if args.output is not None:
+    if args.output.resolve() != (REPO / "include_weight.md").resolve():
         reproduce_line += f" --output={shlex.quote(str(args.output))}"
 
     report = [
@@ -489,6 +499,12 @@ def main() -> int:
         f"Standard: `{args.std}`\n",
         f"Repetitions per header: `{args.reps}`\n",
         f"Headers: `{', '.join(headers)}`\n" if headers else "",
+        (
+            "**ccache was enabled, so these smoke-test timings are not "
+            "representative.**\n"
+            if args.enable_ccache
+            else ""
+        ),
         "",
         (
             f"{GREEN} whole CI above 1x (reliably faster) · "
@@ -501,7 +517,7 @@ def main() -> int:
         "",
         "---",
         "Reproduce on your machine:",
-        f"python3 {reproduce_line}",
+        reproduce_line,
         "",
     ]
     text = "\n".join(report)

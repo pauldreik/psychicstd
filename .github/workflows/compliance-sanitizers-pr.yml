@@ -35,21 +35,21 @@ jobs:
           # Seed with the main corpus so we test the same files, then recheck
           # them all under sanitizers with the PR's psychicstd headers.
           cp sanitize_base_cache.json .compliance_cache.sanitize.json
-          python3 tools/compliance.py --sanitize --recheck
+          tools/compliance.py --sanitize --recheck
       - name: Run fresh sanitizer sweep (no baseline to compare against)
         if: steps.baseline.outcome != 'success'
         continue-on-error: true
         env:
           LLVM_ROOT: ${{ github.workspace }}/llvm-project
-        run: python3 tools/compliance.py --sanitize
+        run: tools/compliance.py --sanitize
       - name: Generate diff table
         if: steps.baseline.outcome == 'success'
         run: |
-          python3 tools/compliance_diff.py \
+          tools/compliance_diff.py \
             --base sanitize_base_cache.json \
             --head .compliance_cache.sanitize.json \
             --title "Sanitizer diff (ASan/UBSan)" \
-            --reproduce "LLVM_ROOT=\$PWD/llvm-project cp sanitize_base_cache.json .compliance_cache.sanitize.json && python3 tools/compliance.py --sanitize --recheck" \
+            --reproduce "LLVM_ROOT=\$PWD/llvm-project cp sanitize_base_cache.json .compliance_cache.sanitize.json && tools/compliance.py --sanitize --recheck" \
             > diff.md
           cat diff.md
       - name: Post sanitizer diff as PR comment

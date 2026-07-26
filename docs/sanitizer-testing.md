@@ -41,13 +41,13 @@ sanitizer flags, actually runs the executables, and gates on a baseline.
 
 ```bash
 # Full sweep, all headers (what CI runs)
-python3 tools/compliance.py --sanitize
+tools/compliance.py --sanitize
 
 # One or more headers
-python3 tools/compliance.py --sanitize unordered_set deque
+tools/compliance.py --sanitize unordered_set deque
 
 # More tests per header (default is 15)
-python3 tools/compliance.py --sanitize --sample 40 vector
+tools/compliance.py --sanitize --sample 40 vector
 ```
 
 `--sanitize` uses its own cache (`.compliance_cache.sanitize.json`) and output
@@ -92,7 +92,7 @@ means a new bug slipped in.
 1. Re-run that header and confirm it now passes:
 
    ```bash
-   python3 tools/compliance.py --sanitize --recheck unordered_set
+   tools/compliance.py --sanitize --recheck unordered_set
    ```
 
    The gate will report it under **now PASS**.
@@ -100,7 +100,7 @@ means a new bug slipped in.
 1. Refresh the baseline and commit it with the fix:
 
    ```bash
-   python3 tools/compliance.py --sanitize --update-baseline
+   tools/compliance.py --sanitize --update-baseline
    git add tools/compliance_sanitize_baseline.txt
    ```
 

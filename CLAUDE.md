@@ -25,15 +25,15 @@ Compile-time benchmarks (requires `build` target first):
 ```bash
 cmake --build build --target bench
 # or directly:
-python3 benchmarks/compile_time/run_bench.py
+scripts/benchmark_compile_time.py
 ```
 
 Standards compliance testing (requires an llvm-project checkout):
 
 ```bash
-python3 tools/compliance.py            # all headers
-python3 tools/compliance.py map        # one header
-python3 tools/compliance.py --sample 50 vector  # 50 new sampled tests
+tools/compliance.py            # all headers
+tools/compliance.py map        # one header
+tools/compliance.py --sample 50 vector  # 50 new sampled tests
 ```
 
 ## Formatting
