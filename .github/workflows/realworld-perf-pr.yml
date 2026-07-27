@@ -15,6 +15,7 @@ jobs:
           - catch2
           - cppcheck
           - eigen
+          - flatbuffers
           - fmt
 #          - nlohmann  # too slow to run on a MR
           - rdfind

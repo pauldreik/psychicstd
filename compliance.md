@@ -1,6 +1,6 @@
 # Compliance
 
-Last updated: 2026-07-12 21:51
+Last updated: 2026-07-27 14:16
 
 ## Conformance
 
@@ -51,16 +51,16 @@ One libcxx test file (the first that passes the system STL) is compiled once wit
 | 🟡 | `exception` | 🟡 9/21/21/21 | 90 ms | 56 ms | 🟢 1.6× | 109 |
 | 🟡 | `forward_list` | 🟡 13/64/83/83 | 607 ms | 66 ms | 🟢 9.1× | 165 |
 | 🟡 | `fstream` | 🟡 7/33/65/65 | 535 ms | 153 ms | 🟢 3.5× | 258 |
-| 🟡 | `functional` | 🟡 30/123/152/152 | 184 ms | 44 ms | 🟢 4.2× | 358 |
+| 🟡 | `functional` | 🟡 30/123/152/152 | 214 ms | 53 ms | 🟢 4.1× | 369 |
 | ⬜ | `initializer_list` | ⬜ 0/0/0/0 | n/a | n/a | ⬜ n/a | 37 |
 | 🟡 | `iomanip` | 🟡 44/123/129/129 | 540 ms | 168 ms | 🟢 3.2× | 103 |
 | 🔴 | `iostream` | 🔴 0/1/1/1 | n/a | n/a | ⬜ n/a | 60 |
 | 🟡 | `istream` | 🟡 6/56/58/58 | 566 ms | 91 ms | 🟢 6.2× | 337 |
-| 🟡 | `iterator` | 🟡 47/206/294/294 | 306 ms | 72 ms | 🟢 4.3× | 663 |
+| 🟡 | `iterator` | 🟡 61/206/294/294 | 388 ms | 98 ms | 🟢 4.0× | 451 |
 | 🟢 | `limits` | 🟢 36/36/37/37 | 50 ms | 44 ms | 🟡 1.1× | 320 |
 | 🟡 | `list` | 🟡 6/12/86/86 | 543 ms | 67 ms | 🟢 8.0× | 454 |
-| 🟡 | `map` | 🟡 22/26/86/86 | 339 ms | 80 ms | 🟢 4.2× | 702 |
-| 🟡 | `memory` | 🟡 32/147/188/188 | 573 ms | 51 ms | 🟢 11.2× | 626 |
+| 🟢 | `map` | 🟢 26/26/86/86 | 330 ms | 105 ms | 🟢 3.2× | 208 |
+| 🟡 | `memory` | 🟡 49/148/188/188 | 681 ms | 75 ms | 🟢 9.1× | 650 |
 | 🟡 | `mutex` | 🟡 7/87/108/108 | 663 ms | 37 ms | 🟢 18.1× | 87 |
 | 🟡 | `new` | 🟡 21/49/52/52 | 80 ms | 59 ms | 🟢 1.4× | 28 |
 | 🟡 | `numeric` | 🟡 1/29/43/43 | 447 ms | 45 ms | 🟢 10.0× | 109 |
@@ -70,7 +70,7 @@ One libcxx test file (the first that passes the system STL) is compiled once wit
 | 🔴 | `ranges` | 🔴 0/398/581/581 | n/a | n/a | ⬜ n/a | 163 |
 | 🟡 | `ratio` | 🟡 7/13/13/13 | 63 ms | 36 ms | 🟢 1.7× | 71 |
 | 🟡 | `regex` | 🟡 13/146/171/171 | 2043 ms | 31 ms | 🟢 65.8× | 133 |
-| 🟡 | `set` | 🟡 3/23/69/69 | 551 ms | 65 ms | 🟢 8.4× | 204 |
+| 🟡 | `set` | 🟡 4/23/69/69 | 618 ms | 94 ms | 🟢 6.6× | 565 |
 | 🟡 | `sstream` | 🟡 12/57/87/87 | 604 ms | 176 ms | 🟢 3.4× | 222 |
 | 🟡 | `stack` | 🟡 16/33/36/36 | 236 ms | 73 ms | 🟢 3.2× | 45 |
 | 🟢 | `stdexcept` | 🟢 9/9/9/9 | 215 ms | 107 ms | 🟢 2.0× | 6 |

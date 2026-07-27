@@ -20,6 +20,11 @@ struct bidirectional_iterator {
   }
 };
 
+struct derived_reverse_iterator : std::reverse_iterator<int*> {
+  using std::reverse_iterator<int*>::reverse_iterator;
+  int* underlying() const { return current; }
+};
+
 int main() {
   std::vector<int> v = {1, 2, 3};
   psyassert(*std::begin(v) == 1);
@@ -31,4 +36,7 @@ int main() {
   bidirectional_iterator it{bidirectional_values + 2};
   std::advance(it, -2);
   psyassert(it.value == bidirectional_values);
+
+  derived_reverse_iterator reverse(values + 2);
+  psyassert(reverse.underlying() == values + 2);
 }
