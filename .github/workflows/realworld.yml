@@ -102,6 +102,18 @@ jobs:
           scripts/benchmark_realworld.py
           --check-only --project boost-test
           --build-type debug
+  bitcoin:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install Ninja
+        run: sudo apt-get install -y ninja-build
+      - name: Build Bitcoin Core crypto library with psychicstd
+        run: >-
+          scripts/benchmark_realworld.py
+          --check-only --project bitcoin
+          --build-type debug
   electron:
     runs-on: ubuntu-latest
     steps:
