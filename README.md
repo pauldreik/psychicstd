@@ -7,23 +7,23 @@ It is not complete. It is not fully compliant. But it is good enough to quickly 
 | Project | Compile time speedup | comment |
 |-------------------------------------------------------------|-----------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------|
 | [Abseil](https://abseil.io/) | [2.15x](use_on_realworld_projects/abseil_speed_report.md) | Builds `absl/base` and eight small upstream base tests. |
-| [Boost.Asio](https://www.boost.org/libs/asio/) | [2.13x](use_on_realworld_projects/boost-asio_speed_report.md) | |
-| [catch2](https://github.com/catchorg/Catch2) | [3.55x](use_on_realworld_projects/catch2_speed_report.md) | |
-| [cmake](https://cmake.org/) | [3.05x](use_on_realworld_projects/cmake_speed_report.md) | Uses a compiler wrapper to build. |
+| [Boost.Asio](https://www.boost.org/libs/asio/) | [2.15x](use_on_realworld_projects/boost-asio_speed_report.md) | |
+| [catch2](https://github.com/catchorg/Catch2) | [3.51x](use_on_realworld_projects/catch2_speed_report.md) | |
+| [cmake](https://cmake.org/) | [3.08x](use_on_realworld_projects/cmake_speed_report.md) | Uses a compiler wrapper to build. |
 | [cppcheck](https://github.com/cppcheck-opensource/cppcheck) | [2.03x](use_on_realworld_projects/cppcheck_speed_report.md)| |
-| [eigen](https://gitlab.com/libeigen/eigen) | [1.89x](use_on_realworld_projects/eigen_speed_report.md) | |
+| [eigen](https://gitlab.com/libeigen/eigen) | [1.91x](use_on_realworld_projects/eigen_speed_report.md) | |
 | [fmt](https://github.com/fmtlib/fmt) | [1.64x](use_on_realworld_projects/fmt_speed_report.md) | |
-| [googletest](https://github.com/google/googletest) | [1.55x](use_on_realworld_projects/googletest_speed_report.md) | |
+| [googletest](https://github.com/google/googletest) | [1.56x](use_on_realworld_projects/googletest_speed_report.md) | |
 | [nlohmann json](https://json.nlohmann.me/) | [2.02x](use_on_realworld_projects/nlohmann_speed_report.md) | Uncovered a reliance on implementation-specific behaviour, fixed in [PR #5236](https://github.com/nlohmann/json/pull/5236). |
-| [OpenCV](https://opencv.org/) | [1.79x](use_on_realworld_projects/opencv_speed_report.md) | Builds the core and imgproc modules and their tests. |
-| [rapidjson](https://github.com/Tencent/rapidjson/) | [1.25x](use_on_realworld_projects/rapidjson_speed_report.md) | Not using much of the standard library, little speedup expected. |
-| [rdfind](https://rdfind.pauldreik.se/) | [4.15x](use_on_realworld_projects/rdfind_speed_report.md) | Runs in psychic strict mode, see "Compatibility levels" further down this document. Strict mode uncovered code relying on transitive includes. |
-| [simdutf](https://github.com/simdutf/simdutf) | [1.70x](use_on_realworld_projects/simdutf_speed_report.md) | Mostly SIMD intrinsics. [Strict mode uncovered missing includes](https://github.com/simdutf/simdutf/pull/998). Strict mode is faster than drop-in mode: 1.69x vs 1.67x|
-| [wordcounter](benchmarks/compile_time/bench_wordcounter.cpp)| [5.56x](speed.md) | [demo program using STL](benchmarks/compile_time/bench_wordcounter.cpp). Counts word occurrences in text files. |
+| [OpenCV](https://opencv.org/) | [1.83x](use_on_realworld_projects/opencv_speed_report.md) | Builds the core and imgproc modules and their tests. |
+| [rapidjson](https://github.com/Tencent/rapidjson/) | [1.24x](use_on_realworld_projects/rapidjson_speed_report.md) | Not using much of the standard library, little speedup expected. |
+| [rdfind](https://rdfind.pauldreik.se/) | [4.12x](use_on_realworld_projects/rdfind_speed_report.md) | Runs in psychic strict mode, see "Compatibility levels" further down this document. Strict mode uncovered code relying on transitive includes. |
+| [simdutf](https://github.com/simdutf/simdutf) | [1.69x](use_on_realworld_projects/simdutf_speed_report.md) | Mostly SIMD intrinsics. [Strict mode uncovered missing includes](https://github.com/simdutf/simdutf/pull/998). Strict mode is faster than drop-in mode: 1.69x vs 1.67x|
+| [wordcounter](examples/wordcounter.cpp)| [3.46x](compile_time.md) | Example application using the STL. Counts word occurrences in text files. |
 
-Find the scripts validating the build and generating the above number in the [use_on_realworld_projects/](use_on_realworld_projects) directory. Platform-wide measurements are available for [Linux](speed.md) and [macOS](speed_macos.md), including separate process-startup results for [Linux](startup.md) and [macOS](startup_macos.md).
+The real-world project recipes and reports live in [use_on_realworld_projects/](use_on_realworld_projects). Focused compile-time and compiler-memory measurements are in [compile_time.md](compile_time.md), with separate process-startup results for [Linux](startup.md) and [macOS](startup_macos.md).
 
-Static linking also avoids the `libstdc++.so.6` and `libm.so.6` dependencies. A representative Linux program measured [1.70x faster exec-to-exit](startup.md), including loading, initialization, and its small fixed workload.
+Static linking also avoids the `libstdc++.so.6` and `libm.so.6` dependencies. A representative Linux program measured [1.66x faster exec-to-exit](startup.md), including loading, initialization, and its small fixed workload.
 
 Once you have coded for a while, switch to a real quality standard library (typically libstdc++ or libc++) and test and build real releases - psychicstd is just intended for speeding up the development.
 
@@ -114,6 +114,8 @@ These are the goals, in order
 - **Faster compilation** — If it is not faster to compile than real implementations like libstdc++, this project has very little value.
 - **Sufficiently compliant to the C++ standard** — it should be correct enough to be useful. For example, `std::string` does not need to use small string optimization, which simplifies the implementation.
 - **Support C++20**
+
+Performance is measured primarily from debug builds of the real-world projects on the current Debian Stable compiler (GCC 14).
 
 ## Non-goals
 
@@ -235,16 +237,17 @@ include(FetchContent)
 FetchContent_Declare(
     psychicstd
     GIT_REPOSITORY https://github.com/pauldreik/psychicstd.git
-    GIT_TAG 203533b27ee2487a1ad3f1417ad13376acbbe5ff
+    GIT_TAG main
 )
 FetchContent_MakeAvailable(psychicstd)
 
 target_link_libraries(your_target PRIVATE psychicstd::psychicstd)
 ```
 
-Update `GIT_TAG` to the psychicstd commit you want to use. Tests and benchmarks
-default to off when psychicstd is fetched. Linking the target supplies the
-replacement headers, static runtime, and required ABI-library flags.
+Pin `GIT_TAG` to a specific psychicstd commit when reproducible dependency
+resolution is important. Tests and benchmarks default to off when psychicstd is
+fetched. Linking the target supplies the replacement headers, static runtime,
+and required ABI-library flags.
 
 Every target containing C++ sources, including fetched dependencies, must use
 the same standard library. Link `psychicstd::psychicstd` to each such target or
@@ -258,35 +261,51 @@ profile: [`tests/conan_project/psychic.profile`](tests/conan_project/psychic.pro
 It composes with your existing host profile and injects the psychicstd toolchain
 without selecting a compiler or adding dependency-specific flags.
 
-Apply it to the host context so your app and its linked C++ dependencies are
-built with the same standard library choice. Keep the normal build profile for
-tools that run while building:
+Apply the overlay to the host context so your application and its linked C++
+dependencies use the same standard library. You can compose the profiles
+directly on the command line. Conan applies repeated host profiles in order, so
+put the psychicstd overlay last:
 
 ```bash
 conan install . \
-    -pr:h=your-host.profile \
-    -pr:h=/path/to/psychic.profile \
-    -pr:b=your-build.profile \
+    --profile:host=your-host.profile \
+    --profile:host=/path/to/psychic.profile \
+    --profile:build=your-build.profile \
     --build=missing
 ```
 
-Append the psychic profile last in the host context. File-based composition
-works too:
+Alternatively, create a wrapper host profile, for example
+`psychic-host.profile`, that includes both profiles in the same order:
 
 ```text
+include(your-host.profile)
 include(/path/to/psychic.profile)
 ```
 
-The example in `tests/conan_project/` uses `fmt` to show a real third-party
-dependency built this way. The profile does not overwrite sanitizer flags, so
-ASan and UBSan keep working the way Conan or your project already configures
-them. Supported compilers are the same as the toolchain-overlay path: Clang
-and GCC 13+ on Linux.
+Then pass that single composed host profile to Conan:
+
+```bash
+conan install . \
+    --profile:host=psychic-host.profile \
+    --profile:build=your-build.profile \
+    --build=missing
+```
+
+The host profile controls the application and the libraries linked into it. The
+build profile controls tools that run during the build, so it normally remains
+unchanged.
+
+The example in [`tests/conan_project/`](tests/conan_project/) uses `fmt` to show
+a real third-party dependency built this way. The profile does not overwrite
+sanitizer flags, so ASan and UBSan keep working the way Conan or your project
+already configures them. Supported compilers are the same as the
+toolchain-overlay path: Clang and GCC 13+ on Linux.
 
 The overlay includes the psychicstd release version in Conan package IDs, so
-Conan does not reuse binaries built with the normal standard library. For local
-experiments, consider setting `CONAN_HOME` to a separate directory to keep
-psychicstd-built packages out of your normal Conan cache.
+Conan does not confuse binaries built with psychicstd with those built with the
+normal standard library. For local experiments, consider setting `CONAN_HOME`
+to a separate directory to keep psychicstd-built packages out of your normal
+Conan cache.
 
 ### Notes for all configurations
 
@@ -333,33 +352,34 @@ The default build covers the library itself — no third-party code, no network 
 
 ### Testing on real-world projects
 
-Correctness in practice is verified by compiling — and running the test suites of — actual third-party projects against psychicstd. The scripts in [`use_on_realworld_projects/`](use_on_realworld_projects/) clone, build, and run Abseil, Boost.Asio, Catch2, cppcheck, Eigen, fmt, GoogleTest, nlohmann JSON, OpenCV, RapidJSON, rdfind, and simdutf. The CMake recipe builds its supported upstream KWSys and utility targets. These recipes produce the speedup reports linked at the top of this README.
+Correctness in practice is verified by compiling — and running the test suites of — actual third-party projects against psychicstd.
+This is what is used to decide on what to implement in the library - there is no need to make the library slower by implementing things noone uses (yes I am talking about you, valarray).
 
 ### Benchmarks
 
-Since this library is all about compilation speed, there is benchmarking to measure compilation speed.
+Benchmarks are central to be able to reason about performance. Claims have to be backed up!
 
-```bash
-cmake --build build --target bench
-# or directly:
-python3 benchmarks/compile_time/run_bench.py
-# quicker run with three compilations per file:
-python3 benchmarks/compile_time/run_bench.py --reps 3
-```
+The benchmarks are listed in order of importance:
 
-View the results by inspecting [speed.md](speed.md).
+| name | command | what it measures |
+|---|---|---|
+| Real-world projects | [`scripts/benchmark_realworld.py`](scripts/benchmark_realworld.py) | Complete third-party project builds with the platform standard library and psychicstd. This is the primary benchmark. |
+| Header compile cost | [`scripts/benchmark_header_cost.py`](scripts/benchmark_header_cost.py) | Every public header in isolation, including strict and drop-in modes. This helps locate parsing and transitive-include costs. Results are written to [include_weight.md](include_weight.md). |
+| Focused compile time | [`scripts/benchmark_compile_time.py`](scripts/benchmark_compile_time.py) | Stable example and focused workloads, measuring both elapsed compilation time and peak compiler RSS. Results are written to [compile_time.md](compile_time.md). |
+| Startup time | `cmake -B build/ -S . -DCMAKE_BUILD_TYPE=Debug`<br>`cmake --build build/ --target startup_bench` | Exec-to-exit time for a representative small program. Results are written to [startup.md](startup.md). |
 
-The include cost for every individual public header is available in [include_weight.md](include_weight.md).
+Run [`./run_benchmarks.sh QUICK`](run_benchmarks.sh) on an otherwise idle
+machine for Debug-only real-world measurements with an estimated one-hour time
+budget. [`./run_benchmarks.sh FULL`](run_benchmarks.sh) measures both Debug and
+Release with three repetitions each. Both modes regenerate every report and
+disable ccache automatically.
 
-There is also a benchmark for process startup time (exec-to-exit time, not an isolated dynamic-linker measurement — see the note above):
+Compiler memory matters because it controls how many compiler jobs can run in parallel and whether a development build starts swapping. In an uncached GCC 14 measurement, psychicstd used roughly half the peak compiler memory:
 
-```bash
-cmake --build build --target startup_bench
-# or directly:
-python3 benchmarks/startup_time/run_bench.py <path-to-system-binary> <path-to-psychicstd-binary>
-```
-
-View the results by inspecting [startup.md](startup.md).
+| workload | libstdc++ peak RSS | psychicstd peak RSS | reduction |
+|---|---:|---:|---:|
+| [Word counter](examples/wordcounter.cpp) | 114.5 MiB | 49.8 MiB | 57% |
+| [`<iostream>` test](benchmarks/compile_time/bench_iostream.cpp) | 71.6 MiB | 37.0 MiB | 48% |
 
 For a deeper look at *why* psychicstd compiles faster, see the per-header case studies, which use clang's `-ftime-trace` to break down where the time goes:
 
@@ -378,10 +398,10 @@ Running these tests takes a very long time - they are extensive! For that reason
 
 Note that those tests are sometimes libc++ specific - there is not necessarily anything wrong just because a particular test does not pass.
 
-Psychicstd prioritizes getting real projects running (that is: compiling and passing their unit tests) rather than maximizing the score on the libc++ tests.
+Psychicstd prioritizes getting real projects running (that is: compiling and passing their unit tests) rather than maximizing the score on the libc++ tests. Run [`tools/compliance.py`](tools/compliance.py) with:
 
 ```bash
-python3 tools/compliance.py
+tools/compliance.py
 ```
 
 It samples up to 15 libcxx test files per header, runs them against both the system STL (as a baseline filter) and psychicstd, and updates `compliance.md` with per-header results. Each header gets two indicators:
@@ -392,6 +412,6 @@ It samples up to 15 libcxx test files per header, runs them against both the sys
 See the results in [compliance.md](compliance.md).
 
 The same suite can be run under AddressSanitizer and UndefinedBehaviorSanitizer
-(`python3 tools/compliance.py --sanitize`) to catch memory bugs, UB, and
+([`tools/compliance.py`](tools/compliance.py) `--sanitize`) to catch memory bugs, UB, and
 behavioral divergence, gated against a baseline of known failures. See
 [docs/sanitizer-testing.md](docs/sanitizer-testing.md).

@@ -3,7 +3,7 @@
 
 Each recipe fetches a project and times its build phases -- configure, compile,
 run tests -- under a given toolchain (compiler + flags). The perf-diff driver
-(scripts/compare_realworld.py) runs a recipe with main's headers and the PR's
+(scripts/compare_realworld_to_ref.py) runs a recipe with main's headers and the PR's
 headers on one host to show how a change affects real build times.
 
 Add a project by writing a `_name() -> Project` factory function -- it returns

@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """Regenerate the real-world speed reports linked from README.md.
 
-Runs compare_realworld_performance.py for every report linked from the project
+Runs benchmark_realworld.py for every report linked from the project
 table at the top of README.md, then updates each link's text with the generated
 compilation speedup. With --build-type both, the README uses the Debug result.
 Project links and hand-written comments are left unchanged.
 
 Usage:
-  scripts/generate_realworld_reports.py [--compiler CXX]
+  scripts/generate_realworld_benchmark_reports.py [--compiler CXX]
       [--build-type {debug,release,both}]
       [--reps N | --time-budget DURATION] [--max-reps N]
       [--jobs N] [--order {readme,speed}] [--plan-only] [--enable-ccache]
@@ -34,7 +34,7 @@ REPO = _git_toplevel()
 sys.path.insert(0, str(REPO / "use_on_realworld_projects"))
 import realworld_projects as rw
 
-PERF_SCRIPT = REPO / "scripts" / "compare_realworld_performance.py"
+PERF_SCRIPT = REPO / "scripts" / "benchmark_realworld.py"
 README = REPO / "README.md"
 REPORT_LINK = re.compile(
     r"\[(?P<speed>[^]]+)\]\("

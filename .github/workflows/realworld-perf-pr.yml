@@ -35,10 +35,12 @@ jobs:
         if: matrix.project == 'rdfind'
         run: sudo apt-get build-dep -y rdfind
       - name: Compare build time (PR vs main)
-        run: >-
-          python3 scripts/compare_realworld.py ${{ matrix.project }}
-          --time-budget 10m --max-reps 10
-          | tee diff.md
+        shell: bash
+        run: |
+          set -o pipefail
+          scripts/compare_realworld_to_ref.py ${{ matrix.project }} \
+            --time-budget 10m --max-reps 10 |
+            tee diff.md
       - name: Post realworld perf diff as PR comment
         uses: marocchino/sticky-pull-request-comment@v3
         with:

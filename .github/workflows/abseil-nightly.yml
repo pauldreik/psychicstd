@@ -14,5 +14,5 @@ jobs:
         run: sudo apt-get install -y ninja-build
       - name: Build and test all Abseil targets with psychicstd
         run: >-
-          python3 scripts/compare_realworld_performance.py --check-only
+          scripts/benchmark_realworld.py --check-only
           --project abseil-full --build-type debug

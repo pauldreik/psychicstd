@@ -10,7 +10,7 @@ psychicstd_enable_warnings(bench_startup_psychicstd)
 add_custom_target(
     startup_bench
     COMMAND
-        python3 ${CMAKE_CURRENT_SOURCE_DIR}/run_bench.py $<TARGET_FILE:bench_startup_system>
+        ${CMAKE_SOURCE_DIR}/scripts/_benchmark_startup_time.py $<TARGET_FILE:bench_startup_system>
         $<TARGET_FILE:bench_startup_psychicstd>
     DEPENDS bench_startup_system bench_startup_psychicstd
     COMMENT "Running startup-time benchmark"

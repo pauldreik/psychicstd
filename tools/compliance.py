@@ -15,9 +15,9 @@ Conformance is shown as x/y/z/w where:
 Cache stores individual per-test results; incremental runs only run uncached tests.
 
 Usage:
-  python3 tools/compliance.py                     # check all headers (up to N_SAMPLE new tests each)
-  python3 tools/compliance.py map                 # re-check only map
-  python3 tools/compliance.py --sample 50 vector  # run up to 50 new tests for vector
+  tools/compliance.py                     # check all headers (up to N_SAMPLE new tests each)
+  tools/compliance.py map                 # re-check only map
+  tools/compliance.py --sample 50 vector  # run up to 50 new tests for vector
 """
 
 import argparse
@@ -51,7 +51,7 @@ SEED = 42
 SPEED_GREEN = 1.2
 SPEED_RED = 0.8
 
-CXX = os.environ.get("CXX", "g++")
+CXX = os.environ.get("CXX", "c++")
 CXX_CMD = shlex.split(CXX)
 AR = os.environ.get("AR", "ar")
 RUNTIME_ARCHIVE: Path | None = None
@@ -510,7 +510,7 @@ def _print_failing(headers: list[str], cache: dict) -> None:
         example = failing[0][0]
         print("\n  Quick test (psychicstd):")
         print(
-            f"  g++ -std=c++23 -nostdinc++ -I{PSYCHICSTD} -I{SUPPORT_DIR} "
+            f"  {CXX} -std=c++23 -nostdinc++ -I{PSYCHICSTD} -I{SUPPORT_DIR} "
             f"{example} /path/to/libpsychicstd.a -o /tmp/t && /tmp/t"
         )
     if not any_printed:

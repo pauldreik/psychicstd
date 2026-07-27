@@ -9,13 +9,13 @@ meaningful even though CI runners vary. This is exactly what the perf-pr CI job
 runs, so the numbers are reproducible.
 
 Usage:
-  scripts/compare_performance.py [compiler] [ref]
+  scripts/compare_compile_time_to_ref.py [compiler] [ref]
 
-  compiler   C++ compiler to benchmark with   (default: g++)
+  compiler   C++ compiler to benchmark with   (default: c++)
   ref        git ref to compare against       (default: origin/main)
 
 Env:
-  BENCH_N    reps per file (median); inherited by run_bench.py (CI uses 5)
+  BENCH_N    reps per workload (median); inherited by benchmark_compile_time.py
 
 The markdown diff is printed to stdout; all progress goes to stderr. Nothing is
 left behind (the temporary worktree and result files are cleaned up).
@@ -39,13 +39,13 @@ def main() -> int:
         description="Compare compile-time performance of the working tree vs a git ref.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="examples:\n"
-        "  scripts/compare_performance.py                 # g++ vs origin/main\n"
-        "  scripts/compare_performance.py g++ origin/main\n"
-        "  scripts/compare_performance.py clang++-21 HEAD~1\n"
-        "  BENCH_N=10 scripts/compare_performance.py      # more reps, tighter CIs\n",
+        "  scripts/compare_compile_time_to_ref.py                 # c++ vs origin/main\n"
+        "  scripts/compare_compile_time_to_ref.py c++ origin/main\n"
+        "  scripts/compare_compile_time_to_ref.py clang++-21 HEAD~1\n"
+        "  BENCH_N=10 scripts/compare_compile_time_to_ref.py      # more reps, tighter CIs\n",
     )
     ap.add_argument(
-        "compiler", nargs="?", default="g++", help="C++ compiler (default: g++)"
+        "compiler", nargs="?", default="c++", help="C++ compiler (default: c++)"
     )
     ap.add_argument(
         "ref",
@@ -58,12 +58,13 @@ def main() -> int:
         "--reps",
         type=int,
         default=None,
-        help="reps per file (median): more = tighter confidence intervals but "
-        "slower. Default: run_bench's default (10), or $BENCH_N if set.",
+        help="reps per workload (median): more = tighter confidence intervals "
+        "but slower. Default: benchmark_compile_time.py's default (10), or "
+        "$BENCH_N if set.",
     )
     args = ap.parse_args()
 
-    # run_bench.py reads the rep count from $BENCH_N; --reps sets it for both runs.
+    # benchmark_compile_time.py reads BENCH_N; --reps sets it for both runs.
     child_env = os.environ.copy()
     if args.reps is not None:
         child_env["BENCH_N"] = str(args.reps)
@@ -73,8 +74,8 @@ def main() -> int:
             ["git", "rev-parse", "--show-toplevel"], capture_output=True, text=True
         ).stdout.strip()
     )
-    run_bench = repo / "benchmarks" / "compile_time" / "run_bench.py"
-    bench_diff = repo / "tools" / "bench_diff.py"
+    run_bench = repo / "scripts" / "benchmark_compile_time.py"
+    bench_diff = repo / "scripts" / "_benchmark_diff.py"
 
     tmp = Path(tempfile.mkdtemp(prefix="psychicstd-perf-"))
     worktree = tmp / "ref"
@@ -94,6 +95,7 @@ def main() -> int:
                     sys.executable,
                     str(run_bench),
                     args.compiler,
+                    "--include",
                     str(include_dir),
                     "--json",
                     str(out),
@@ -115,7 +117,7 @@ def main() -> int:
                 "--head",
                 str(head_json),
                 "--reproduce",
-                "scripts/compare_performance.py "
+                "scripts/compare_compile_time_to_ref.py "
                 + (f"--reps {args.reps} " if args.reps is not None else "")
                 + f"{args.compiler} {args.ref}",
             ],

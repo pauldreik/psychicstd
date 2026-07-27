@@ -21,7 +21,7 @@ sanitizer flags, actually runs the executables, and gates on a baseline.
 
 ## Prerequisites
 
-- `g++` with ASan/UBSan (the default on Linux).
+- `c++` with ASan/UBSan.
 
 - A libc++ test checkout. A sparse clone is enough (this is what CI does):
 
@@ -41,13 +41,13 @@ sanitizer flags, actually runs the executables, and gates on a baseline.
 
 ```bash
 # Full sweep, all headers (what CI runs)
-python3 tools/compliance.py --sanitize
+tools/compliance.py --sanitize
 
 # One or more headers
-python3 tools/compliance.py --sanitize unordered_set deque
+tools/compliance.py --sanitize unordered_set deque
 
 # More tests per header (default is 15)
-python3 tools/compliance.py --sanitize --sample 40 vector
+tools/compliance.py --sanitize --sample 40 vector
 ```
 
 `--sanitize` uses its own cache (`.compliance_cache.sanitize.json`) and output
@@ -92,7 +92,7 @@ means a new bug slipped in.
 1. Re-run that header and confirm it now passes:
 
    ```bash
-   python3 tools/compliance.py --sanitize --recheck unordered_set
+   tools/compliance.py --sanitize --recheck unordered_set
    ```
 
    The gate will report it under **now PASS**.
@@ -100,7 +100,7 @@ means a new bug slipped in.
 1. Refresh the baseline and commit it with the fix:
 
    ```bash
-   python3 tools/compliance.py --sanitize --update-baseline
+   tools/compliance.py --sanitize --update-baseline
    git add tools/compliance_sanitize_baseline.txt
    ```
 
@@ -121,7 +121,7 @@ INC=include
 SUP=$LLVM_ROOT/libcxx/test/support
 T=$LLVM_ROOT/libcxx/test/std/containers/unord/unord.set/erase_const_iter.pass.cpp
 
-g++ -std=c++23 -fsanitize=address,undefined -fno-sanitize-recover=all -g \
+c++ -std=c++23 -fsanitize=address,undefined -fno-sanitize-recover=all -g \
     -nostdinc++ -isystem "$INC" -I"$SUP" "$T" -o /tmp/t
 ASAN_OPTIONS=abort_on_error=1 UBSAN_OPTIONS=print_stacktrace=1:halt_on_error=1 /tmp/t
 ```
@@ -137,6 +137,6 @@ libstdc++ — that difference is the bug.
 
 ## Caveat
 
-The baseline is compiler/environment sensitive: a different `g++` version can
+The baseline is compiler/environment sensitive: a different compiler version can
 change which tests pass. Regenerate it in an environment close to CI, and if CI
 reports env-only differences, reconcile with `--update-baseline`.

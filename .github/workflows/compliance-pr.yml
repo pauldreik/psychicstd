@@ -34,19 +34,19 @@ jobs:
           # Seed with the baseline corpus so we test the same files, then
           # recheck them all with the PR's psychicstd headers.
           cp base_cache.json .compliance_cache.json
-          python3 tools/compliance.py --recheck
+          tools/compliance.py --recheck
       - name: Run fresh compliance (no baseline to compare against)
         if: steps.baseline.outcome != 'success'
         env:
           LLVM_ROOT: ${{ github.workspace }}/llvm-project
-        run: python3 tools/compliance.py
+        run: tools/compliance.py
       - name: Generate diff table
         if: steps.baseline.outcome == 'success'
         run: |
-          python3 tools/compliance_diff.py \
+          tools/compliance_diff.py \
             --base base_cache.json \
             --head .compliance_cache.json \
-            --reproduce "LLVM_ROOT=\$PWD/llvm-project cp base_cache.json .compliance_cache.json && python3 tools/compliance.py --recheck" \
+            --reproduce "LLVM_ROOT=\$PWD/llvm-project cp base_cache.json .compliance_cache.json && tools/compliance.py --recheck" \
             > diff.md
           cat diff.md
       - name: Post compliance diff as PR comment

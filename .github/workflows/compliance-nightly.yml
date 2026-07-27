@@ -25,5 +25,5 @@ jobs:
       - name: Full libcxx suite under ASan/UBSan
         env:
           LLVM_ROOT: ${{ github.workspace }}/llvm-project
-        run: python3 tools/compliance.py --sanitize --sample 100000 --cxxflags=-O2
-          --timeout 180
+        run: tools/compliance.py --sanitize --sample 100000 --cxxflags=-O2 --timeout
+          180
