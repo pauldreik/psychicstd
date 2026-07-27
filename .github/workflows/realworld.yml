@@ -224,6 +224,15 @@ jobs:
         with:
           name: cppcheck-speed-report
           path: use_on_realworld_projects/cppcheck_speed_report.md
+  tensorflow:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build TensorFlow core platform libraries with psychicstd
+        run: >-
+          scripts/benchmark_realworld.py --check-only
+          --project tensorflow --build-type debug
   ctre:
     runs-on: ubuntu-latest
     steps:
