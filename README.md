@@ -20,6 +20,7 @@ It is not complete. It is not fully compliant. But it is good enough to quickly 
 | [Electron](https://www.electronjs.org/) | [3.63x](use_on_realworld_projects/electron_speed_report.md) | Builds and tests a focused slice of Electron's startup and command-line handling without a Chromium checkout. |
 | [FlatBuffers](https://flatbuffers.dev/) | [2.16x](use_on_realworld_projects/flatbuffers_speed_report.md) | Builds the compiler, library, samples, and C++ test suite. |
 | [fmt](https://github.com/fmtlib/fmt) | [1.64x](use_on_realworld_projects/fmt_speed_report.md) | |
+| [Godot Engine](https://godotengine.org/) | [1.06x](use_on_realworld_projects/godot_speed_report.md) | Builds the core static library with SCons; rendering, window-system, audio, and optional engine modules are disabled. |
 | [googletest](https://github.com/google/googletest) | [1.56x](use_on_realworld_projects/googletest_speed_report.md) | |
 | [llama.cpp](https://github.com/ggml-org/llama.cpp) | [1.45x](use_on_realworld_projects/llama.cpp_speed_report.md) | Builds `ggml-base` and `ggml-cpu` and compiles model-architecture and hyperparameter handling; excludes accelerator backends, tools, examples, server, and tests. |
 | [nlohmann json](https://json.nlohmann.me/) | [2.02x](use_on_realworld_projects/nlohmann_speed_report.md) | Uncovered a reliance on implementation-specific behaviour, fixed in [PR #5236](https://github.com/nlohmann/json/pull/5236). |
