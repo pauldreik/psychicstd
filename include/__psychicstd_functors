@@ -82,6 +82,20 @@ template <typename T = void> struct negate {
   constexpr T operator()(const T& a) const { return -a; }
 };
 
+// Bitwise functors
+template <typename T = void> struct bit_and {
+  constexpr T operator()(const T& a, const T& b) const { return a & b; }
+};
+template <typename T = void> struct bit_or {
+  constexpr T operator()(const T& a, const T& b) const { return a | b; }
+};
+template <typename T = void> struct bit_xor {
+  constexpr T operator()(const T& a, const T& b) const { return a ^ b; }
+};
+template <typename T = void> struct bit_not {
+  constexpr T operator()(const T& a) const { return ~a; }
+};
+
 // Logical functors
 template <typename T = void> struct logical_and {
   constexpr bool operator()(const T& a, const T& b) const { return a && b; }

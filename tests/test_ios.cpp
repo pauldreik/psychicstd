@@ -17,4 +17,13 @@ int main() {
   psyassert(std::ios_base::goodbit == 0);
   std::ios ios(nullptr);
   psyassert(!ios.rdbuf());
+  int first_word = std::ios_base::xalloc();
+  int second_word = std::ios_base::xalloc();
+  psyassert(first_word != second_word);
+  psyassert(ios.iword(first_word) == 0);
+  psyassert(ios.pword(second_word) == nullptr);
+  ios.iword(first_word) = 42;
+  ios.pword(second_word) = &ios;
+  psyassert(ios.iword(first_word) == 42);
+  psyassert(ios.pword(second_word) == &ios);
 }

@@ -46,6 +46,13 @@ int main() {
 
   const auto positive = std::bind(std::less<int>{}, 0, 2);
   psyassert(positive());
+  const auto subtract = std::bind(std::minus<int>{}, std::placeholders::_2,
+                                  std::placeholders::_1);
+  psyassert(subtract(3, 8) == 5);
+  psyassert(std::bit_and<unsigned>{}(6, 3) == 2);
+  psyassert(std::bit_or<unsigned>{}(4, 1) == 5);
+  psyassert(std::bit_xor<unsigned>{}(6, 3) == 5);
+  psyassert(std::bit_not<unsigned>{}(0) == ~0U);
 
   (void)std::ref(no_args)();
 }
