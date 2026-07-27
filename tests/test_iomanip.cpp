@@ -22,4 +22,11 @@ int main() {
   std::string roundtrip;
   quoted_in >> std::quoted(roundtrip);
   psyassert(roundtrip == text);
+
+  std::istringstream words("abcdef next");
+  char first[5]{};
+  char second[8]{};
+  words >> std::setw(5) >> first >> second;
+  psyassert(std::string(first) == "abcd");
+  psyassert(std::string(second) == "ef");
 }

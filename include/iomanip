@@ -18,6 +18,12 @@ basic_ostream<Char, Traits>& operator<<(basic_ostream<Char, Traits>& os,
   os.width(m.n);
   return os;
 }
+template <typename Char, typename Traits>
+basic_istream<Char, Traits>& operator>>(basic_istream<Char, Traits>& is,
+                                        _setw m) {
+  is.width(m.n);
+  return is;
+}
 
 // setfill
 template <typename Char> struct _setfill {

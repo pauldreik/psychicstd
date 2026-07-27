@@ -133,6 +133,17 @@ int main() {
   psyassert(s == "ssig");
   s.assign(source, 1, 3);
   psyassert(s == "ssi");
+  char copied[8] = {};
+  psyassert(source.copy(copied, 3, 1) == 3);
+  psyassert(std::string(copied, 3) == "ssi");
+  psyassert(source.copy(copied, 8, 4) == 2);
+  bool copy_threw = false;
+  try {
+    (void)source.copy(copied, 1, source.size() + 1);
+  } catch (const std::out_of_range&) {
+    copy_threw = true;
+  }
+  psyassert(copy_threw);
   std::string filled(64, 'x');
   psyassert(filled.size() == 64 && filled.front() == 'x' &&
             filled.back() == 'x');

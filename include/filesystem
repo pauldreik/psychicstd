@@ -64,6 +64,9 @@ public:
     return pos == __str::npos ? path() : path_.substr(0, pos);
   }
 
+  path lexically_relative(const path& base) const;
+  path& replace_extension(const path& replacement = path());
+
   path& operator/=(const path& p) {
     if (!p.empty()) {
       if (!path_.empty() && path_.back() != '/')
@@ -85,6 +88,69 @@ public:
 private:
   __str path_;
 };
+
+enum class directory_options : unsigned char {
+  none = 0,
+  follow_directory_symlink = 1,
+  skip_permission_denied = 2,
+};
+
+constexpr directory_options operator|(directory_options lhs,
+                                      directory_options rhs) noexcept {
+  return static_cast<directory_options>(static_cast<unsigned char>(lhs) |
+                                        static_cast<unsigned char>(rhs));
+}
+
+class directory_entry {
+public:
+  directory_entry() = default;
+  explicit directory_entry(filesystem::path p)
+      : path_(static_cast<filesystem::path&&>(p)) {}
+
+  const filesystem::path& path() const noexcept { return path_; }
+
+private:
+  filesystem::path path_;
+};
+
+class recursive_directory_iterator {
+  struct _state;
+
+public:
+  recursive_directory_iterator() noexcept = default;
+  explicit recursive_directory_iterator(
+      const path&, directory_options = directory_options::none);
+  recursive_directory_iterator(const recursive_directory_iterator&) noexcept;
+  recursive_directory_iterator(recursive_directory_iterator&& other) noexcept;
+  recursive_directory_iterator&
+  operator=(const recursive_directory_iterator&) noexcept;
+  recursive_directory_iterator&
+  operator=(recursive_directory_iterator&& other) noexcept;
+  ~recursive_directory_iterator();
+
+  const directory_entry& operator*() const noexcept;
+  const directory_entry* operator->() const noexcept;
+  recursive_directory_iterator& operator++();
+
+  friend bool operator==(const recursive_directory_iterator& lhs,
+                         const recursive_directory_iterator& rhs) noexcept {
+    return lhs.state_ == rhs.state_;
+  }
+
+private:
+  void release() noexcept;
+  _state* state_ = nullptr;
+};
+
+inline recursive_directory_iterator
+begin(recursive_directory_iterator iter) noexcept {
+  return iter;
+}
+
+inline recursive_directory_iterator
+end(const recursive_directory_iterator&) noexcept {
+  return {};
+}
 
 class filesystem_error : public system_error {
   path path1_;
