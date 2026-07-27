@@ -85,13 +85,13 @@ public:
   using iterator_category = typename iterator_traits<It>::iterator_category;
 
   constexpr reverse_iterator() = default;
-  constexpr explicit reverse_iterator(It it) : current_(it) {}
+  constexpr explicit reverse_iterator(It it) : current(it) {}
   template <typename U>
   constexpr reverse_iterator(const reverse_iterator<U>& other)
-      : current_(other.base()) {}
-  constexpr It base() const { return current_; }
+      : current(other.base()) {}
+  constexpr It base() const { return current; }
   constexpr reference operator*() const {
-    It tmp = current_;
+    It tmp = current;
     return *--tmp;
   }
   constexpr pointer operator->() const {
@@ -101,40 +101,40 @@ public:
     return *(*this + n);
   }
   constexpr reverse_iterator& operator++() {
-    --current_;
+    --current;
     return *this;
   }
   constexpr reverse_iterator operator++(int) {
     auto copy = *this;
-    --current_;
+    --current;
     return copy;
   }
   constexpr reverse_iterator& operator--() {
-    ++current_;
+    ++current;
     return *this;
   }
   constexpr reverse_iterator operator--(int) {
     auto copy = *this;
-    ++current_;
+    ++current;
     return copy;
   }
   constexpr reverse_iterator operator+(difference_type n) const {
-    return reverse_iterator(current_ - n);
+    return reverse_iterator(current - n);
   }
   constexpr reverse_iterator operator-(difference_type n) const {
-    return reverse_iterator(current_ + n);
+    return reverse_iterator(current + n);
   }
   constexpr reverse_iterator& operator+=(difference_type n) {
-    current_ -= n;
+    current -= n;
     return *this;
   }
   constexpr reverse_iterator& operator-=(difference_type n) {
-    current_ += n;
+    current += n;
     return *this;
   }
 
-private:
-  It current_;
+protected:
+  It current;
 };
 
 template <typename It>

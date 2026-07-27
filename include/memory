@@ -183,6 +183,12 @@ private:
   D del_;
 };
 
+template <typename T1, typename D1, typename T2, typename D2>
+bool operator==(const unique_ptr<T1, D1>& a,
+                const unique_ptr<T2, D2>& b) noexcept {
+  return a.get() == b.get();
+}
+
 template <typename T, typename... Args>
 unique_ptr<T> make_unique(Args&&... args)
     // Constrained per [unique.ptr.create]; without this, make_unique<T[]>(n)

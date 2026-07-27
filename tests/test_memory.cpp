@@ -76,6 +76,20 @@ static void test_forwarding() {
   psyassert(arr[0] == 0 && arr[15] == 0);
 }
 
+static void test_unique_ptr_equality() {
+  auto first = std::make_unique<Derived>();
+  std::unique_ptr<Base> alias(first.get());
+  psyassert(first == alias);
+  alias.release();
+
+  auto second = std::make_unique<Derived>();
+  psyassert(first != second);
+
+  std::unique_ptr<int[]> array1(new int[1]);
+  std::unique_ptr<int[]> array2;
+  psyassert(array1 != array2);
+}
+
 static void test_allocate_shared() {
   int allocations = 0;
   {
@@ -279,6 +293,7 @@ int main() {
   psyassert(void_shared.get() == nullptr);
 
   test_forwarding();
+  test_unique_ptr_equality();
   test_allocate_shared();
   test_converting_copy_ctor();
   test_converting_ctor_from_prvalue();

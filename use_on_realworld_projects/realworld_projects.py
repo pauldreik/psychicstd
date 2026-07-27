@@ -976,6 +976,77 @@ def _eigen() -> Project:
     )
 
 
+# --- flatbuffers ------------------------------------------------------
+
+
+def _flatbuffers() -> Project:
+    version = "25.12.19"
+    url = f"https://github.com/google/flatbuffers/archive/refs/tags/v{version}.tar.gz"
+    checksum = "f81c3162b1046fe8b84b9a0dbdd383e24fdbcf88583b9cb6028f90d04d90696a"
+
+    def build(tc: Toolchain) -> dict[str, float]:
+        tarball = RW_DIR / f"flatbuffers-v{version}.tar.gz"
+        _fetch(url, tarball, checksum)
+
+        with tempfile.TemporaryDirectory(
+            prefix="rw-flatbuffers-", ignore_cleanup_errors=True
+        ) as work_dir:
+            work = Path(work_dir)
+            with tarfile.open(tarball) as t:
+                t.extractall(work)
+            src = work / f"flatbuffers-{version}"
+
+            # sample_binary.cpp relies on a transitive declaration of printf.
+            sample = src / "samples" / "sample_binary.cpp"
+            sample.write_text("#include <cstdio>\n" + sample.read_text())
+
+            env = _env(tc)
+            configure = [
+                "cmake",
+                "-S",
+                ".",
+                "-B",
+                "build",
+                "-GNinja",
+                "-DCMAKE_BUILD_TYPE=" + tc.build_type.capitalize(),
+                "-DCMAKE_CXX_COMPILER=" + tc.cxx,
+                "-DCMAKE_CXX_FLAGS=" + tc.cxxflags,
+                "-DCMAKE_EXE_LINKER_FLAGS=" + tc.ldflags,
+                "-DCMAKE_CXX_STANDARD_LIBRARIES=" + tc.libs,
+                "-DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY",
+                "-DFLATBUFFERS_CPP_STD=20",
+                "-DFLATBUFFERS_BUILD_TESTS=ON",
+                "-DFLATBUFFERS_BUILD_GRPCTEST=OFF",
+                "-DFLATBUFFERS_BUILD_BENCHMARKS=OFF",
+                "-DFLATBUFFERS_BUILD_SHAREDLIB=OFF",
+                "-DFLATBUFFERS_INSTALL=OFF",
+            ]
+            jobs = f"-j{tc.jobs}"
+            return {
+                "configure": _timed(configure, src, env),
+                "compile": _timed(["cmake", "--build", "build", jobs], src, env),
+                "run tests": _timed(
+                    [
+                        "ctest",
+                        "--test-dir",
+                        "build",
+                        "--output-on-failure",
+                        jobs,
+                    ],
+                    src,
+                    env,
+                ),
+            }
+
+    return Project(
+        version=version,
+        build=build,
+        expected_seconds={"debug": 30, "release": 30},
+        comment="Builds the FlatBuffers compiler, library, samples, and upstream "
+        "C++ test suite.",
+    )
+
+
 # --- fmt --------------------------------------------------------------
 
 
@@ -1632,6 +1703,7 @@ PROJECTS: dict[str, Project] = {
     "cmake": _cmake(),
     "cppcheck": _cppcheck(),
     "eigen": _eigen(),
+    "flatbuffers": _flatbuffers(),
     "fmt": _fmt(),
     "googletest": _googletest(),
     "nlohmann": _nlohmann(),
