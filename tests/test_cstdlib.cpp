@@ -68,6 +68,8 @@ int main() {
   std::lldiv_t lld = std::lldiv(7LL, -2LL);
   psyassert(lld.quot == -3 && lld.rem == 1);
   psyassert(std::abs(-5) == 5);
+  psyassert(std::labs(-5L) == 5L);
+  psyassert(std::llabs(-5LL) == 5LL);
 
   // Names only <stdlib.h> provides (not part of std) must still work.
   psyassert(::setenv("PSYCHICSTD_TEST_VAR", "1", 1) == 0);

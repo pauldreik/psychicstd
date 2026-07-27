@@ -36,6 +36,10 @@ private:
   pthread_rwlock_t mutex_ = PTHREAD_RWLOCK_INITIALIZER;
 };
 
+// The non-timed locking surface is identical. Timed locking operations are
+// intentionally omitted for now.
+class shared_timed_mutex : public shared_mutex {};
+
 template <typename Mutex> class shared_lock {
 public:
   using mutex_type = Mutex;

@@ -34,6 +34,11 @@ int main() {
   psyassert(shared.try_lock());
   shared.unlock();
 
+  std::shared_timed_mutex shared_timed;
+  shared_timed.lock_shared();
+  psyassert(!shared_timed.try_lock());
+  shared_timed.unlock_shared();
+
   std::recursive_mutex recursive;
   psyassert(recursive.try_lock());
   psyassert(recursive.try_lock());
