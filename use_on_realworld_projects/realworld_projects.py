@@ -1408,6 +1408,71 @@ def _rapidjson() -> Project:
     )
 
 
+# --- react native ------------------------------------------------------
+
+
+def _react_native() -> Project:
+    version = "0.83.8"
+    url = (
+        f"https://github.com/facebook/react-native/archive/refs/tags/v{version}.tar.gz"
+    )
+    checksum = "615329ab197c4ca25d571d2ebaae19edd58bea5a1a226bb5a6f714e31d2b4354"
+
+    def build(tc: Toolchain) -> dict[str, float]:
+        tarball = RW_DIR / f"react-native-v{version}.tar.gz"
+        _fetch(url, tarball, checksum)
+
+        with tempfile.TemporaryDirectory(
+            prefix="rw-react-native-", ignore_cleanup_errors=True
+        ) as work_dir:
+            work = Path(work_dir)
+            with tarfile.open(tarball) as t:
+                t.extractall(work)
+            src = work / f"react-native-{version}"
+            yoga = src / "packages/react-native/ReactCommon/yoga/yoga"
+
+            env = _env(tc)
+            configure = [
+                "cmake",
+                "-S",
+                str(yoga),
+                "-B",
+                "build",
+                "-GNinja",
+                "-DCMAKE_BUILD_TYPE=" + tc.build_type.capitalize(),
+                "-DCMAKE_CXX_COMPILER=" + tc.cxx,
+                "-DCMAKE_CXX_FLAGS=" + tc.cxxflags,
+                "-DCMAKE_CXX_STANDARD_LIBRARIES=" + tc.libs,
+                "-DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY",
+            ]
+            jobs = f"-j{tc.jobs}"
+            return {
+                "configure": _timed(configure, src, env),
+                "compile": _timed(
+                    [
+                        "cmake",
+                        "--build",
+                        "build",
+                        "--target",
+                        "yogacore",
+                        jobs,
+                    ],
+                    src,
+                    env,
+                ),
+            }
+
+    return Project(
+        version=version,
+        build=build,
+        expected_seconds={"debug": 10, "release": 12},
+        phases=("compile",),
+        comment="Builds React Native's self-contained Yoga layout engine from "
+        "ReactCommon; the full platform build requires Android or Apple SDKs "
+        "and prebuilt native dependencies.",
+    )
+
+
 # --- rdfind ---------------------------------------------------------------
 
 
@@ -1932,6 +1997,7 @@ PROJECTS: dict[str, Project] = {
     "nlohmann": _nlohmann(),
     "opencv": _opencv(),
     "rapidjson": _rapidjson(),
+    "react-native": _react_native(),
     "rdfind": _rdfind(),
     "simdutf-dropin": _simdutf(strict=False, strict_label="drop-in"),
     "simdutf": _simdutf(strict=True, strict_label="strict"),
