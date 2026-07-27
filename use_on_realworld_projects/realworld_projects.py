@@ -891,6 +891,65 @@ def _cppcheck() -> Project:
     )
 
 
+# --- ctre ---------------------------------------------------------------
+
+
+def _ctre() -> Project:
+    version = "3.11.0"
+    url = (
+        "https://github.com/hanickadot/compile-time-regular-expressions/"
+        f"archive/refs/tags/v{version}.tar.gz"
+    )
+    checksum = "7d4b30d0bdd8864a47cceb2ab8e7c4d1846f0ec62383f8c45122435d32f19530"
+
+    def build(tc: Toolchain) -> dict[str, float]:
+        tarball = RW_DIR / f"ctre-v{version}.tar.gz"
+        _fetch(url, tarball, checksum)
+
+        with tempfile.TemporaryDirectory(
+            prefix="rw-ctre-", ignore_cleanup_errors=True
+        ) as work_dir:
+            work = Path(work_dir)
+            with tarfile.open(tarball) as t:
+                t.extractall(work)
+            src = work / f"compile-time-regular-expressions-{version}"
+
+            env = _env(tc)
+            configure = [
+                "cmake",
+                "-S",
+                ".",
+                "-B",
+                "build",
+                "-GNinja",
+                "-DCMAKE_BUILD_TYPE=" + tc.build_type.capitalize(),
+                "-DCMAKE_CXX_COMPILER=" + tc.cxx,
+                "-DCMAKE_CXX_FLAGS=" + tc.cxxflags,
+                "-DCMAKE_EXE_LINKER_FLAGS=" + tc.ldflags,
+                "-DCMAKE_CXX_STANDARD_LIBRARIES=" + tc.libs,
+                "-DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY",
+                "-DCTRE_BUILD_TESTS=ON",
+                "-DCTRE_BUILD_PACKAGE=OFF",
+            ]
+            jobs = f"-j{tc.jobs}"
+            return {
+                "configure": _timed(configure, src, env),
+                "compile": _timed(
+                    ["cmake", "--build", "build", "--target", "ctre-test", jobs],
+                    src,
+                    env,
+                ),
+            }
+
+    return Project(
+        version=version,
+        build=build,
+        expected_seconds={"debug": 5, "release": 5},
+        phases=("compile",),
+        comment="Builds every upstream CTRE compile-time test.",
+    )
+
+
 # --- eigen ------------------------------------------------------------
 
 _EIGEN_TEST_LIST = (
@@ -1702,6 +1761,7 @@ PROJECTS: dict[str, Project] = {
     "catch2": _catch2(),
     "cmake": _cmake(),
     "cppcheck": _cppcheck(),
+    "ctre": _ctre(),
     "eigen": _eigen(),
     "flatbuffers": _flatbuffers(),
     "fmt": _fmt(),

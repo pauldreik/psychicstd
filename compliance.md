@@ -1,6 +1,6 @@
 # Compliance
 
-Last updated: 2026-07-27 14:16
+Last updated: 2026-07-27 14:55
 
 ## Conformance
 
@@ -76,7 +76,7 @@ One libcxx test file (the first that passes the system STL) is compiled once wit
 | 🟢 | `stdexcept` | 🟢 9/9/9/9 | 215 ms | 107 ms | 🟢 2.0× | 6 |
 | 🟡 | `streambuf` | 🟡 24/35/37/37 | 235 ms | 106 ms | 🟢 2.2× | 167 |
 | 🟡 | `string` | 🟡 5/26/227/227 | 431 ms | 70 ms | 🟢 6.1× | 986 |
-| 🟡 | `string_view` | 🟡 15/79/88/88 | 210 ms | 66 ms | 🟢 3.2× | 243 |
+| 🟡 | `string_view` | 🟡 26/79/88/88 | 263 ms | 74 ms | 🟢 3.5× | 339 |
 | 🟡 | `thread` | 🟡 30/270/318/318 | 648 ms | 39 ms | 🟢 16.7× | 141 |
 | 🟡 | `tuple` | 🟡 8/74/89/89 | 338 ms | 46 ms | 🟢 7.4× | 313 |
 | 🟡 | `type_traits` | 🟡 75/134/149/149 | 47 ms | 40 ms | 🟡 1.2× | 831 |

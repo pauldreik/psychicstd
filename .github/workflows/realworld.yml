@@ -224,3 +224,13 @@ jobs:
         with:
           name: cppcheck-speed-report
           path: use_on_realworld_projects/cppcheck_speed_report.md
+  ctre:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install ninja
+        run: sudo apt-get install -y ninja-build
+      - name: Build CTRE compile-time tests with psychicstd
+        run: >-
+          scripts/benchmark_realworld.py --check-only
+          --project ctre --build-type debug

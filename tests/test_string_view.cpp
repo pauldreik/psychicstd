@@ -9,6 +9,23 @@
   } while (0)
 
 int main() {
+  using namespace std::string_view_literals;
+  static_assert("narrow"sv == std::string_view("narrow"));
+  static_assert(L"wide"sv == std::wstring_view(L"wide"));
+  static_assert(u8"utf8"sv == std::u8string_view(u8"utf8"));
+  static_assert(u"utf16"sv == std::u16string_view(u"utf16"));
+  static_assert(U"utf32"sv == std::u32string_view(U"utf32"));
+  static_assert(L"ab"sv != L"ac"sv);
+  static_assert(u8"ab"sv != u8"ac"sv);
+  static_assert(u"ab"sv != u"ac"sv);
+  static_assert(U"ab"sv != U"ac"sv);
+  static_assert(L"wide"sv.starts_with(L"wid"sv));
+  static_assert(u"utf16"sv.ends_with(u"16"sv));
+  static_assert(U"ab"sv.compare(U"ac"sv) < 0);
+#ifdef PSYCHICSTD_TEST_PSYCHICSTD
+  static_assert(__cpp_lib_char8_t >= 201811L);
+#endif
+
 #if !defined(PSYCHICSTD_TEST_PSYCHICSTD) ||                                    \
     _PSYCHICSTD_COMPATIBILITY_LEVEL >= _PSYCHICSTD_COMPAT_DROPIN
   psyassert(std::min(2, 3) == 2);
