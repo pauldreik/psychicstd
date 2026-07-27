@@ -178,6 +178,10 @@ inline float frexp(float x, int* exponent) { return ::frexpf(x, exponent); }
 inline long double frexp(long double x, int* exponent) {
   return ::frexpl(x, exponent);
 }
+inline float modf(float x, float* integral) { return ::modff(x, integral); }
+inline long double modf(long double x, long double* integral) {
+  return ::modfl(x, integral);
+}
 inline float fma(float x, float y, float z) { return ::fmaf(x, y, z); }
 inline long double fma(long double x, long double y, long double z) {
   return ::fmal(x, y, z);

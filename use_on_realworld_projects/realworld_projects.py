@@ -736,6 +736,77 @@ def _googletest() -> Project:
     )
 
 
+# --- godot -------------------------------------------------------------
+
+
+def _godot() -> Project:
+    version = "4.6.3-stable"
+    url = f"https://github.com/godotengine/godot/archive/refs/tags/{version}.tar.gz"
+    checksum = "fa22b5f974125057087c9ef725eae582dbc5e39385dc377e8d5dbc295b367e1c"
+
+    def build(tc: Toolchain) -> dict[str, float]:
+        tarball = RW_DIR / f"godot-{version}.tar.gz"
+        _fetch(url, tarball, checksum)
+
+        with tempfile.TemporaryDirectory(
+            prefix="rw-godot-", ignore_cleanup_errors=True
+        ) as work_dir:
+            work = Path(work_dir)
+            with tarfile.open(tarball) as t:
+                t.extractall(work)
+            src = work / f"godot-{version}"
+            wrapper_name = (
+                "clang++"
+                if any("clang++" in Path(arg).name for arg in shlex.split(tc.cxx))
+                else "cxx"
+            )
+            wrapper = _compiler_wrapper(work / wrapper_name, tc)
+            target = (
+                "template_debug" if tc.build_type == "debug" else "template_release"
+            )
+            suffix = f"linuxbsd.{target}.x86_64"
+            if wrapper_name == "clang++":
+                suffix += ".llvm"
+            env = _env(tc)
+            command = [
+                "scons",
+                f"-j{tc.jobs}",
+                "platform=linuxbsd",
+                "arch=x86_64",
+                "target=" + target,
+                "debug_symbols=no",
+                "modules_enabled_by_default=no",
+                "disable_3d=yes",
+                "vulkan=no",
+                "opengl3=no",
+                "x11=no",
+                "wayland=no",
+                "sdl=no",
+                "accesskit=no",
+                "alsa=no",
+                "pulseaudio=no",
+                "dbus=no",
+                "speechd=no",
+                "fontconfig=no",
+                "udev=no",
+                "use_static_cpp=no",
+                "progress=no",
+                "import_env_vars=CCACHE_DIR,CCACHE_TEMPDIR,CCACHE_DISABLE",
+                "CXX=" + str(wrapper),
+                f"bin/obj/core/libcore.{suffix}.a",
+            ]
+            return {"compile": _timed(command, src, env)}
+
+    return Project(
+        version=version,
+        build=build,
+        expected_seconds={"debug": 120, "release": 120},
+        phases=("compile",),
+        comment="Builds Godot's core static library with SCons; rendering, "
+        "window-system, audio, and optional engine modules are disabled.",
+    )
+
+
 # --- cmake -------------------------------------------------------------
 
 
@@ -2501,6 +2572,7 @@ PROJECTS: dict[str, Project] = {
     "electron": _electron(),
     "flatbuffers": _flatbuffers(),
     "fmt": _fmt(),
+    "godot": _godot(),
     "googletest": _googletest(),
     "llama.cpp": _llama_cpp(),
     "nlohmann": _nlohmann(),

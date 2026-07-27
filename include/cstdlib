@@ -121,12 +121,14 @@ using ::div_t;
 using ::exit;
 using ::free;
 using ::getenv;
+using ::labs;
 #ifndef _PSYCHICSTD_CSTDLIB_MIN_DECLS
 using ::ldiv;
 using ::ldiv_t;
 using ::lldiv;
 using ::lldiv_t;
 #endif
+using ::llabs;
 using ::malloc;
 using ::mblen;
 using ::mbstowcs;

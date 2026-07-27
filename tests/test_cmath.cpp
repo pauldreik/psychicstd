@@ -28,6 +28,10 @@ int main() {
   static_assert(std::is_same_v<decltype(std::frexp(1.0F, &exponent)), float>);
   static_assert(
       std::is_same_v<decltype(std::frexp(1.0L, &exponent)), long double>);
+  float integral = 0.0F;
+  static_assert(std::is_same_v<decltype(std::modf(1.5F, &integral)), float>);
+  psyassert(std::modf(1.5F, &integral) == 0.5F);
+  psyassert(integral == 1.0F);
   static_assert(std::is_same_v<decltype(std::fma(1.0F, 2.0F, 3.0F)), float>);
   static_assert(
       std::is_same_v<decltype(std::fma(1.0L, 2.0L, 3.0L)), long double>);
