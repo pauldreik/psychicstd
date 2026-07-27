@@ -45,10 +45,21 @@ else
 fi
 
 run_and_format() {
+  local command=("$@")
   local status=0
-  "$@" || status=$?
+  "${command[@]}"
+  status=$?
+  if [[ ${status} -ne 0 ]]; then
+    echo "ERROR: command failed: ${command[*]}" >&2
+    return "${status}"
+  fi
   ./run_markdown_format.sh
-  return "${status}"
+  status=$?
+  if [[ ${status} -ne 0 ]]; then
+    echo "ERROR: run_markdown_format.sh failed after: ${command[*]}" >&2
+    return "${status}"
+  fi
+  return 0
 }
 
 echo "==> Real-world project benchmarks"
@@ -64,5 +75,8 @@ echo "==> Process startup benchmark"
 cmake -B build/ -S . -DCMAKE_BUILD_TYPE=Debug
 run_and_format env "${startup_samples[@]}" cmake --build build/ \
   --target startup_bench "${cmake_parallel[@]}"
+
+echo "==> Sync README benchmark snippets"
+run_and_format scripts/update_readme_from_benchmarks.py
 
 echo "All benchmark reports updated."

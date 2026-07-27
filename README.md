@@ -4,6 +4,8 @@ This is a **highly experimental** C++ standard library optimized for compilation
 
 It is not complete. It is not fully compliant. But it is good enough to quickly iterate on code. Here are some real world projects that compile and pass their unit tests with psychicstd. The number in the second column indicates the speedup relative to the platform standard library for the compilation phase (1x means same speed, higher is better):
 
+<!-- README_BENCHMARK:realworld-speedups:start -->
+
 | Project | Compile time speedup | comment |
 |-------------------------------------------------------------|-----------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------|
 | [Abseil](https://abseil.io/) | [2.15x](use_on_realworld_projects/abseil_speed_report.md) | Builds `absl/base` and eight small upstream base tests. |
@@ -18,12 +20,18 @@ It is not complete. It is not fully compliant. But it is good enough to quickly 
 | [OpenCV](https://opencv.org/) | [1.83x](use_on_realworld_projects/opencv_speed_report.md) | Builds the core and imgproc modules and their tests. |
 | [rapidjson](https://github.com/Tencent/rapidjson/) | [1.24x](use_on_realworld_projects/rapidjson_speed_report.md) | Not using much of the standard library, little speedup expected. |
 | [rdfind](https://rdfind.pauldreik.se/) | [4.12x](use_on_realworld_projects/rdfind_speed_report.md) | Runs in psychic strict mode, see "Compatibility levels" further down this document. Strict mode uncovered code relying on transitive includes. |
-| [simdutf](https://github.com/simdutf/simdutf) | [1.69x](use_on_realworld_projects/simdutf_speed_report.md) | Mostly SIMD intrinsics. [Strict mode uncovered missing includes](https://github.com/simdutf/simdutf/pull/998). Strict mode is faster than drop-in mode: 1.69x vs 1.67x|
+| [simdutf](https://github.com/simdutf/simdutf) | [1.69x](use_on_realworld_projects/simdutf_speed_report.md) | Mostly SIMD intrinsics. [Strict mode uncovered missing includes](https://github.com/simdutf/simdutf/pull/998). |
 | [wordcounter](examples/wordcounter.cpp)| [3.69x](compile_time.md) | Example application using the STL. Counts word occurrences in text files. |
+
+<!-- README_BENCHMARK:realworld-speedups:end -->
 
 The real-world project recipes and reports live in [use_on_realworld_projects/](use_on_realworld_projects). Focused compile-time and compiler-memory measurements are in [compile_time.md](compile_time.md), with separate process-startup results for [Linux](startup.md) and [macOS](startup_macos.md).
 
+<!-- README_BENCHMARK:startup-speedup:start -->
+
 Static linking also avoids the `libstdc++.so.6` and `libm.so.6` dependencies. A representative Linux program measured [1.66x faster exec-to-exit](startup.md), including loading, initialization, and its small fixed workload.
+
+<!-- README_BENCHMARK:startup-speedup:end -->
 
 Once you have coded for a while, switch to a real quality standard library (typically libstdc++ or libc++) and test and build real releases - psychicstd is just intended for speeding up the development.
 
@@ -376,10 +384,14 @@ disable ccache automatically.
 
 Compiler memory matters because it controls how many compiler jobs can run in parallel and whether a development build starts swapping. In an uncached GCC 14 measurement, psychicstd used roughly half the peak compiler memory:
 
+<!-- README_BENCHMARK:benchmark-peak-rss:start -->
+
 | workload | libstdc++ peak RSS | psychicstd peak RSS | reduction |
 |---|---:|---:|---:|
-| [Word counter](examples/wordcounter.cpp) | 114.5 MiB | 49.8 MiB | 57% |
-| [`<iostream>` test](benchmarks/compile_time/bench_iostream.cpp) | 71.6 MiB | 37.0 MiB | 48% |
+| [wordcounter](examples/wordcounter.cpp) | 114.1 MiB | 49.5 MiB | 57% |
+| [`<iostream>` test](benchmarks/compile_time/bench_iostream.cpp) | 71.4 MiB | 36.8 MiB | 48% |
+
+<!-- README_BENCHMARK:benchmark-peak-rss:end -->
 
 For a deeper look at *why* psychicstd compiles faster, see the per-header case studies, which use clang's `-ftime-trace` to break down where the time goes:
 
