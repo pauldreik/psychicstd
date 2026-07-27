@@ -200,8 +200,9 @@ def _build_matrix(
     build: Callable[[rw.Toolchain], dict[str, float]],
     reps: int,
     project: str,
+    phases: tuple[str, ...] | None = None,
 ) -> dict[str, dict[str, list[float]]]:
-    phases = rw.PROJECTS[project].phases
+    phases = phases or rw.PROJECTS[project].phases
     samples: dict[str, dict[str, list[float]]] = {
         name: {p: [] for p in phases} for name in variants
     }
@@ -341,7 +342,9 @@ def main() -> int:
     else:
         reps = args.reps if args.reps is not None else 3
 
-    build = rw.PROJECTS[args.project].build
+    project = rw.PROJECTS[args.project]
+    build = project.performance_build or project.build
+    phases = project.performance_phases or project.phases
     jobs = parallelism.jobs
 
     with tempfile.TemporaryDirectory(
@@ -378,7 +381,7 @@ def main() -> int:
                     jobs,
                 ),
             }
-            samples = _build_matrix(variants, build, reps, args.project)
+            samples = _build_matrix(variants, build, reps, args.project, phases)
         finally:
             subprocess.run(
                 ["git", "worktree", "remove", "--force", str(worktree)],
@@ -387,7 +390,6 @@ def main() -> int:
                 check=False,
             )
 
-        phases = rw.PROJECTS[args.project].phases
         ver = compiler_version(args.compiler)
         base_json = tmp / "base.json"
         head_json = tmp / "head.json"

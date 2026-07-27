@@ -102,6 +102,10 @@ class Project:
     expected_seconds estimates one build() invocation for each build type;
     expected_jobs records the parallelism used to obtain those estimates.
     The report generator uses both fields to allocate a global time budget.
+
+    performance_build optionally provides a smaller build for performance
+    diffs, with performance_phases naming its reported phases. Regular
+    benchmarks and compile checks continue to use build().
     """
 
     version: str
@@ -111,6 +115,8 @@ class Project:
     phases: tuple[str, ...] = PHASES
     comment: str = ""
     comments: dict[str, str] = field(default_factory=dict)
+    performance_build: Callable[[Toolchain], dict[str, float]] | None = None
+    performance_phases: tuple[str, ...] | None = None
 
 
 def _run(cmd: list[str], cwd: Path, env: dict[str, str]) -> None:
@@ -832,7 +838,7 @@ def _cppcheck() -> Project:
     url = f"https://github.com/cppcheck-opensource/cppcheck/archive/refs/tags/{version}.tar.gz"
     checksum = "f028ff75ca5372738f3737c8b3e8611426a6526b6aea2ef01301ab0f5902f044"
 
-    def build(tc: Toolchain) -> dict[str, float]:
+    def build_impl(tc: Toolchain, run_tests: bool) -> dict[str, float]:
         tarball = RW_DIR / f"cppcheck-{version}.tar.gz"
         _fetch(url, tarball, checksum)
 
@@ -866,11 +872,11 @@ def _cppcheck() -> Project:
                 "LDFLAGS=" + tc.ldflags,
                 "LIBS=" + tc.libs,
             ]
-            return {
-                "compile": _timed(["make", "all", *make_args], src, env),
+            timings = {"compile": _timed(["make", "all", *make_args], src, env)}
+            if run_tests:
                 # This test hard-codes libstdc++'s vector::at diagnostic;
                 # psychicstd intentionally does not promise that wording.
-                "run tests": _timed(
+                timings["run tests"] = _timed(
                     [
                         "./testrunner",
                         "-x",
@@ -878,12 +884,20 @@ def _cppcheck() -> Project:
                     ],
                     src,
                     env,
-                ),
-            }
+                )
+            return timings
+
+    def build(tc: Toolchain) -> dict[str, float]:
+        return build_impl(tc, run_tests=True)
+
+    def performance_build(tc: Toolchain) -> dict[str, float]:
+        return build_impl(tc, run_tests=False)
 
     return Project(
         version=version,
         build=build,
+        performance_build=performance_build,
+        performance_phases=("compile",),
         expected_seconds={"debug": 15, "release": 15},
         phases=("compile", "run tests"),
         comment="the complete native Makefile build is compiled and linked; "
