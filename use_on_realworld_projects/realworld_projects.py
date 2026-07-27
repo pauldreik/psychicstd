@@ -1999,6 +1999,102 @@ def _boost_test() -> Project:
     )
 
 
+# --- llama.cpp -----------------------------------------------------------
+
+
+def _llama_cpp() -> Project:
+    version = "b9637"
+    url = f"https://github.com/ggml-org/llama.cpp/archive/refs/tags/{version}.tar.gz"
+    checksum = "762283319feb3de30886dc850d42f0e426b06600e7f9639d34e06506597309ca"
+
+    def build(tc: Toolchain) -> dict[str, float]:
+        tarball = RW_DIR / f"llama.cpp-{version}.tar.gz"
+        _fetch(url, tarball, checksum)
+
+        with tempfile.TemporaryDirectory(
+            prefix="rw-llama-cpp-", ignore_cleanup_errors=True
+        ) as work_dir:
+            work = Path(work_dir)
+            with tarfile.open(tarball) as t:
+                t.extractall(work)
+            src = work / f"llama.cpp-{version}"
+
+            # <cmath> guarantees these classifiers in std; their presence in
+            # the global namespace is implementation-dependent.
+            ops = src / "ggml" / "src" / "ggml-cpu" / "ops.cpp"
+            ops_text = ops.read_text()
+            ops.write_text(
+                ops_text.replace("isnan(", "std::isnan(").replace(
+                    "isinf(", "std::isinf("
+                )
+            )
+
+            env = _env(tc)
+            wrapper = _compiler_wrapper(work / "cxx", tc)
+            configure = [
+                "cmake",
+                "-S",
+                ".",
+                "-B",
+                "build",
+                "-GNinja",
+                "-DCMAKE_BUILD_TYPE=" + tc.build_type.capitalize(),
+                "-DCMAKE_CXX_COMPILER=" + str(wrapper),
+                "-DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY",
+                "-DBUILD_SHARED_LIBS=OFF",
+                "-DLLAMA_BUILD_COMMON=OFF",
+                "-DLLAMA_BUILD_TESTS=OFF",
+                "-DLLAMA_BUILD_TOOLS=OFF",
+                "-DLLAMA_BUILD_EXAMPLES=OFF",
+                "-DLLAMA_BUILD_SERVER=OFF",
+                "-DGGML_CPU=ON",
+                "-DGGML_OPENMP=OFF",
+                "-DGGML_NATIVE=OFF",
+                "-DGGML_CCACHE=OFF",
+            ]
+            jobs = f"-j{tc.jobs}"
+            configure_ms = _timed(configure, src, env)
+            compile_ms = _timed(
+                [
+                    "cmake",
+                    "--build",
+                    "build",
+                    "--target",
+                    "ggml-cpu",
+                    jobs,
+                ],
+                src,
+                env,
+            )
+            compile_ms += _timed(
+                [
+                    "cmake",
+                    "--build",
+                    "build",
+                    "--target",
+                    "src/CMakeFiles/llama.dir/llama-arch.cpp.o",
+                    "src/CMakeFiles/llama.dir/llama-hparams.cpp.o",
+                    jobs,
+                ],
+                src,
+                env,
+            )
+            return {
+                "configure": configure_ms,
+                "compile": compile_ms,
+            }
+
+    return Project(
+        version=version,
+        build=build,
+        expected_seconds={"debug": 10, "release": 10},
+        phases=("compile",),
+        comment="Builds llama.cpp's ggml-base and ggml-cpu libraries and compiles "
+        "its model-architecture and hyperparameter implementations; accelerator "
+        "backends, tools, examples, server, and tests are excluded.",
+    )
+
+
 # --- opencv --------------------------------------------------------------
 
 
@@ -2131,6 +2227,7 @@ PROJECTS: dict[str, Project] = {
     "flatbuffers": _flatbuffers(),
     "fmt": _fmt(),
     "googletest": _googletest(),
+    "llama.cpp": _llama_cpp(),
     "nlohmann": _nlohmann(),
     "opencv": _opencv(),
     "rapidjson": _rapidjson(),
