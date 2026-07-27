@@ -16,6 +16,7 @@ It is not complete. It is not fully compliant. But it is good enough to quickly 
 | [cppcheck](https://github.com/cppcheck-opensource/cppcheck) | [2.03x](use_on_realworld_projects/cppcheck_speed_report.md)| |
 | [CTRE](https://github.com/hanickadot/compile-time-regular-expressions) | [1.13x](use_on_realworld_projects/ctre_speed_report.md) | Builds every upstream compile-time test. |
 | [eigen](https://gitlab.com/libeigen/eigen) | [1.91x](use_on_realworld_projects/eigen_speed_report.md) | |
+| [Electron](https://www.electronjs.org/) | [3.63x](use_on_realworld_projects/electron_speed_report.md) | Builds and tests a focused slice of Electron's startup and command-line handling without a Chromium checkout. |
 | [FlatBuffers](https://flatbuffers.dev/) | [2.16x](use_on_realworld_projects/flatbuffers_speed_report.md) | Builds the compiler, library, samples, and C++ test suite. |
 | [fmt](https://github.com/fmtlib/fmt) | [1.64x](use_on_realworld_projects/fmt_speed_report.md) | |
 | [googletest](https://github.com/google/googletest) | [1.56x](use_on_realworld_projects/googletest_speed_report.md) | |

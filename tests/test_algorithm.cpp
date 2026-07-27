@@ -40,6 +40,14 @@ static_assert(constexpr_nth_element());
 
 int main() {
   {
+    int values[] = {1, 3, 5};
+    psyassert(
+        std::ranges::none_of(values, [](int value) { return value % 2 == 0; }));
+    psyassert(!std::ranges::none_of(values, values + 3,
+                                    [](int value) { return value == 3; }));
+  }
+
+  {
     int values[] = {1, 2, 3, 4};
     int calls = 0;
     auto pred = [&](int value) {

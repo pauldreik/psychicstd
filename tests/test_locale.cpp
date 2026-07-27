@@ -40,6 +40,8 @@ int main() {
   static_assert((std::locale::all & std::locale::collate) != 0);
   psyassert(std::isalpha('a', std::locale::classic()));
   psyassert(!std::isalpha('1', std::locale::classic()));
+  psyassert(std::isspace(' ', std::locale::classic()));
+  psyassert(!std::isspace('x', std::locale::classic()));
 
   std::locale classic;
   psyassert(std::has_facet<std::numpunct<char>>(classic));

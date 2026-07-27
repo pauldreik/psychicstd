@@ -1846,6 +1846,199 @@ def _tensorflow() -> Project:
     )
 
 
+# --- electron ------------------------------------------------------------
+
+
+_ELECTRON_OPT_FLAG = {"debug": "-O0", "release": "-O2"}
+
+
+def _electron() -> Project:
+    version = "43.2.0"
+    url = f"https://github.com/electron/electron/archive/refs/tags/v{version}.tar.gz"
+    checksum = "eba2128a73febacedf89fabc9dc7ceb9f12bfd4d5a4470acb8ddc247b0da90f5"
+
+    def build(tc: Toolchain) -> dict[str, float]:
+        tarball = RW_DIR / f"electron-v{version}.tar.gz"
+        _fetch(url, tarball, checksum)
+
+        with tempfile.TemporaryDirectory(
+            prefix="rw-electron-", ignore_cleanup_errors=True
+        ) as work_dir:
+            work = Path(work_dir)
+            with tarfile.open(tarball) as t:
+                t.extractall(work)
+            src = work / f"electron-{version}"
+            driver = work / "driver"
+            for directory in (
+                "base",
+                "base/containers",
+                "base/strings",
+                "build",
+                "sandbox/policy",
+                "shell/common",
+            ):
+                driver.joinpath(directory).mkdir(parents=True, exist_ok=True)
+
+            driver.joinpath("base/command_line.h").write_text(
+                """#pragma once
+#include <set>
+#include <string>
+#include <string_view>
+#include <utility>
+#include <vector>
+
+namespace base {
+#define BUILDFLAG(flag) BUILDFLAG_INTERNAL_##flag()
+#define BUILDFLAG_INTERNAL_IS_LINUX() 1
+#define BUILDFLAG_INTERNAL_IS_WIN() 0
+#define DCHECK(condition) ((void)sizeof(condition))
+#define UNSAFE_BUFFERS(expression) (expression)
+
+class CommandLine {
+ public:
+  using StringVector = std::vector<std::string>;
+  using StringViewType = std::string_view;
+  using CharType = char;
+
+  CommandLine() = default;
+  explicit CommandLine(StringVector args) : args_(std::move(args)) {}
+
+  bool HasSwitch(std::string_view name) const {
+    return switches_.contains(std::string{name});
+  }
+  void AppendSwitch(std::string_view name) {
+    switches_.emplace(name);
+  }
+  const StringVector& argv() const { return args_; }
+
+  static CommandLine* ForCurrentProcess() {
+    static CommandLine current(StringVector{"electron", "from-current-process"});
+    return &current;
+  }
+
+ private:
+  StringVector args_;
+  std::set<std::string> switches_;
+};
+}  // namespace base
+"""
+            )
+            driver.joinpath("base/no_destructor.h").write_text(
+                """#pragma once
+
+namespace base {
+template <typename T>
+class NoDestructor {
+ public:
+  NoDestructor() = default;
+  T& operator*() { return value_; }
+  const T& operator*() const { return value_; }
+
+ private:
+  T value_;
+};
+}  // namespace base
+"""
+            )
+            driver.joinpath("base/containers/to_vector.h").write_text("#pragma once\n")
+            driver.joinpath("base/strings/utf_string_conversions.h").write_text(
+                "#pragma once\n"
+            )
+            driver.joinpath("build/build_config.h").write_text("#pragma once\n")
+            driver.joinpath("sandbox/policy/switches.h").write_text(
+                """#pragma once
+#include <string_view>
+
+namespace sandbox::policy::switches {
+inline constexpr std::string_view kNoSandbox = "no-sandbox";
+}  // namespace sandbox::policy::switches
+"""
+            )
+            driver.joinpath("shell/common/options_switches.h").write_text(
+                """#pragma once
+#include <string_view>
+
+namespace electron::switches {
+inline constexpr std::string_view kEnableSandbox = "enable-sandbox";
+}  // namespace electron::switches
+"""
+            )
+            driver.joinpath("main.cc").write_text(
+                """#include "shell/app/command_line_args.h"
+#include "shell/common/electron_command_line.h"
+
+#include <cassert>
+#include <string>
+#include <vector>
+
+int main() {
+  using Args = std::vector<std::string>;
+  assert(electron::CheckCommandLineArguments(Args{"electron", "app.js"}));
+  assert(electron::CheckCommandLineArguments(Args{"electron", "app:test"}));
+  assert(!electron::CheckCommandLineArguments(
+      Args{"electron", "app:test", "--gpu-launcher=cmd"}));
+  assert(electron::CheckCommandLineArguments(
+      Args{"electron", "app:test", "--", "--gpu-launcher=cmd"}));
+  assert(electron::CheckCommandLineArguments(
+      Args{"electron", "c:", "--safe-after-drive-path"}));
+  assert(electron::CheckCommandLineArguments(
+      Args{"electron", "not a scheme:", "--safe"}));
+
+  base::CommandLine defaults;
+  assert(electron::IsSandboxEnabled(&defaults));
+  base::CommandLine disabled;
+  disabled.AppendSwitch("no-sandbox");
+  assert(!electron::IsSandboxEnabled(&disabled));
+  disabled.AppendSwitch("enable-sandbox");
+  assert(electron::IsSandboxEnabled(&disabled));
+
+  const char* original[] = {"electron", "app.js", "--inspect"};
+  electron::ElectronCommandLine::Init(3, original);
+  assert((electron::ElectronCommandLine::AsUtf8() ==
+          Args{"electron", "app.js", "--inspect"}));
+  electron::ElectronCommandLine::InitializeFromCommandLine();
+  assert((electron::ElectronCommandLine::AsUtf8() ==
+          Args{"electron", "from-current-process"}));
+}
+"""
+            )
+
+            env = _env(tc)
+            binary = work / "electron-command-line-tests"
+            compile = [
+                tc.cxx,
+                *shlex.split(tc.cxxflags),
+                _ELECTRON_OPT_FLAG[tc.build_type],
+                "-I",
+                str(driver),
+                "-I",
+                str(src),
+                str(src / "shell/app/command_line_args.cc"),
+                str(src / "shell/common/electron_command_line.cc"),
+                str(driver / "main.cc"),
+                *shlex.split(tc.ldflags),
+                *shlex.split(tc.libs),
+                "-o",
+                str(binary),
+            ]
+            return {
+                "compile": _timed(compile, src, env),
+                "run tests": _timed([str(binary)], src, env),
+            }
+
+    return Project(
+        version=version,
+        build=build,
+        expected_seconds={"debug": 3, "release": 3},
+        phases=("compile", "run tests"),
+        comment="Builds Electron's core command-line validation and original "
+        "argument storage unchanged, then runs focused checks for the "
+        "protocol-handler argument guard, sandbox switches, and Linux command "
+        "line initialization. Small Chromium interface shims keep this initial "
+        "slice independent of the full Chromium checkout.",
+    )
+
+
 # --- boost asio ----------------------------------------------------------
 
 
@@ -2224,6 +2417,7 @@ PROJECTS: dict[str, Project] = {
     "cppcheck": _cppcheck(),
     "ctre": _ctre(),
     "eigen": _eigen(),
+    "electron": _electron(),
     "flatbuffers": _flatbuffers(),
     "fmt": _fmt(),
     "googletest": _googletest(),
