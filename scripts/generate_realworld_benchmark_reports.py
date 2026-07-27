@@ -225,6 +225,7 @@ def main() -> int:
             file=sys.stderr,
         )
     if args.plan_only:
+        _print_plan(projects, reps, costs)
         return 0
 
     for project, output in reports:
