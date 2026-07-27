@@ -102,6 +102,14 @@ jobs:
           scripts/benchmark_realworld.py
           --check-only --project boost-test
           --build-type debug
+  electron:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build and test Electron core with psychicstd
+        run: >-
+          scripts/benchmark_realworld.py --check-only
+          --project electron --build-type debug
   llama-cpp:
     runs-on: ubuntu-latest
     timeout-minutes: 30

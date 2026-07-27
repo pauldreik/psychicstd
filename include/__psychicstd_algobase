@@ -132,6 +132,26 @@ constexpr bool none_of(It first, It last, Pred pred) {
   return true;
 }
 
+namespace ranges {
+// The common iterator/sentinel and range forms. Projections are intentionally
+// omitted until a real-world user needs them.
+struct __none_of_fn {
+  template <typename It, typename Sent, typename Pred>
+  constexpr bool operator()(It first, Sent last, Pred pred) const {
+    for (; first != last; ++first)
+      if (pred(*first))
+        return false;
+    return true;
+  }
+
+  template <typename Range, typename Pred>
+  constexpr bool operator()(Range&& range, Pred pred) const {
+    return (*this)(std::begin(range), std::end(range), pred);
+  }
+};
+inline constexpr __none_of_fn none_of{};
+} // namespace ranges
+
 // for_each
 template <typename It, typename F>
 constexpr F for_each(It first, It last, F f) {

@@ -286,4 +286,8 @@ template <typename Char> bool isalpha(Char c, const locale&) {
          (c >= Char('A') && c <= Char('Z'));
 }
 
+template <typename Char> bool isspace(Char c, const locale&) {
+  return c == Char(' ') || (c >= Char('\t') && c <= Char('\r'));
+}
+
 } // namespace std
