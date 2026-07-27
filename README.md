@@ -19,7 +19,7 @@ It is not complete. It is not fully compliant. But it is good enough to quickly 
 | [rapidjson](https://github.com/Tencent/rapidjson/) | [1.24x](use_on_realworld_projects/rapidjson_speed_report.md) | Not using much of the standard library, little speedup expected. |
 | [rdfind](https://rdfind.pauldreik.se/) | [4.12x](use_on_realworld_projects/rdfind_speed_report.md) | Runs in psychic strict mode, see "Compatibility levels" further down this document. Strict mode uncovered code relying on transitive includes. |
 | [simdutf](https://github.com/simdutf/simdutf) | [1.69x](use_on_realworld_projects/simdutf_speed_report.md) | Mostly SIMD intrinsics. [Strict mode uncovered missing includes](https://github.com/simdutf/simdutf/pull/998). Strict mode is faster than drop-in mode: 1.69x vs 1.67x|
-| [wordcounter](examples/wordcounter.cpp)| [3.46x](compile_time.md) | Example application using the STL. Counts word occurrences in text files. |
+| [wordcounter](examples/wordcounter.cpp)| [3.69x](compile_time.md) | Example application using the STL. Counts word occurrences in text files. |
 
 The real-world project recipes and reports live in [use_on_realworld_projects/](use_on_realworld_projects). Focused compile-time and compiler-memory measurements are in [compile_time.md](compile_time.md), with separate process-startup results for [Linux](startup.md) and [macOS](startup_macos.md).
 
