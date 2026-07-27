@@ -1,6 +1,6 @@
 # Compliance
 
-Last updated: 2026-07-27 14:55
+Last updated: 2026-07-27 16:41
 
 ## Conformance
 
@@ -35,7 +35,7 @@ One libcxx test file (the first that passes the system STL) is compiled once wit
 | 🟡 | `ciso646` | 🟡 4/7/29/29 | 50 ms | 40 ms | 🟢 1.2× | 2 |
 | 🟢 | `climits` | 🟢 38/38/115/115 | 46 ms | 43 ms | 🟡 1.1× | 2 |
 | 🟡 | `clocale` | 🟡 4/7/29/29 | 56 ms | 39 ms | 🟢 1.4× | 8 |
-| 🟡 | `cmath` | 🟡 1/3/12/12 | 525 ms | 44 ms | 🟢 11.8× | 150 |
+| 🟡 | `cmath` | 🟡 1/3/12/12 | 453 ms | 51 ms | 🟢 8.9× | 283 |
 | 🟡 | `compare` | 🟡 1/8/14/14 | 57 ms | 38 ms | 🟢 1.5× | 249 |
 | 🟡 | `complex` | 🟡 34/71/86/86 | 574 ms | 56 ms | 🟢 10.2× | 159 |
 | 🟡 | `concepts` | 🟡 1/4/35/35 | 65 ms | 178 ms | 🔴 0.4× | 255 |

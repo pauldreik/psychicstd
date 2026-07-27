@@ -16,6 +16,7 @@ real-world build recipes (currently spread across the test_*.sh scripts).
 import hashlib
 import os
 import shlex
+import shutil
 import subprocess
 import tarfile
 import tempfile
@@ -101,6 +102,10 @@ class Project:
     expected_seconds estimates one build() invocation for each build type;
     expected_jobs records the parallelism used to obtain those estimates.
     The report generator uses both fields to allocate a global time budget.
+
+    performance_build optionally provides a smaller build for performance
+    diffs, with performance_phases naming its reported phases. Regular
+    benchmarks and compile checks continue to use build().
     """
 
     version: str
@@ -110,6 +115,8 @@ class Project:
     phases: tuple[str, ...] = PHASES
     comment: str = ""
     comments: dict[str, str] = field(default_factory=dict)
+    performance_build: Callable[[Toolchain], dict[str, float]] | None = None
+    performance_phases: tuple[str, ...] | None = None
 
 
 def _run(cmd: list[str], cwd: Path, env: dict[str, str]) -> None:
@@ -831,7 +838,7 @@ def _cppcheck() -> Project:
     url = f"https://github.com/cppcheck-opensource/cppcheck/archive/refs/tags/{version}.tar.gz"
     checksum = "f028ff75ca5372738f3737c8b3e8611426a6526b6aea2ef01301ab0f5902f044"
 
-    def build(tc: Toolchain) -> dict[str, float]:
+    def build_impl(tc: Toolchain, run_tests: bool) -> dict[str, float]:
         tarball = RW_DIR / f"cppcheck-{version}.tar.gz"
         _fetch(url, tarball, checksum)
 
@@ -865,11 +872,11 @@ def _cppcheck() -> Project:
                 "LDFLAGS=" + tc.ldflags,
                 "LIBS=" + tc.libs,
             ]
-            return {
-                "compile": _timed(["make", "all", *make_args], src, env),
+            timings = {"compile": _timed(["make", "all", *make_args], src, env)}
+            if run_tests:
                 # This test hard-codes libstdc++'s vector::at diagnostic;
                 # psychicstd intentionally does not promise that wording.
-                "run tests": _timed(
+                timings["run tests"] = _timed(
                     [
                         "./testrunner",
                         "-x",
@@ -877,12 +884,20 @@ def _cppcheck() -> Project:
                     ],
                     src,
                     env,
-                ),
-            }
+                )
+            return timings
+
+    def build(tc: Toolchain) -> dict[str, float]:
+        return build_impl(tc, run_tests=True)
+
+    def performance_build(tc: Toolchain) -> dict[str, float]:
+        return build_impl(tc, run_tests=False)
 
     return Project(
         version=version,
         build=build,
+        performance_build=performance_build,
+        performance_phases=("compile",),
         expected_seconds={"debug": 15, "release": 15},
         phases=("compile", "run tests"),
         comment="the complete native Makefile build is compiled and linked; "
@@ -1548,6 +1563,154 @@ def _simdutf(strict: bool, strict_label: str) -> Project:
     )
 
 
+# --- tensorflow ---------------------------------------------------------
+
+
+_TENSORFLOW_PLATFORM_TARGETS = (
+    "//tensorflow/core/platform:cpu_feature_guard",
+    "//tensorflow/core/platform:env_time",
+    "//tensorflow/core/platform:fingerprint",
+    "//tensorflow/core/platform:platform_strings",
+    "//tensorflow/core/platform:stringprintf",
+)
+
+
+def _tensorflow() -> Project:
+    version = "2.21.0"
+    url = (
+        f"https://github.com/tensorflow/tensorflow/archive/refs/tags/v{version}.tar.gz"
+    )
+    checksum = "ef3568bb4865d6c1b2564fb5689c19b6b9a5311572cd1f2ff9198636a8520921"
+    bazel_version = "7.7.0"
+    bazel_url = (
+        "https://github.com/bazelbuild/bazel/releases/download/"
+        f"{bazel_version}/bazel-{bazel_version}-linux-x86_64"
+    )
+    bazel_checksum = "fe7e799cbc9140f986b063e06800a3d4c790525075c877d00a7112669824acbf"
+
+    def build(tc: Toolchain) -> dict[str, float]:
+        tarball = RW_DIR / f"tensorflow-v{version}.tar.gz"
+        _fetch(url, tarball, checksum)
+        bazel = RW_DIR / f"bazel-{bazel_version}-linux-x86_64"
+        _fetch(bazel_url, bazel, bazel_checksum)
+        bazel.chmod(0o755)
+
+        with tempfile.TemporaryDirectory(
+            prefix="rw-tensorflow-", ignore_cleanup_errors=True
+        ) as work_dir:
+            work = Path(work_dir)
+            with tarfile.open(tarball) as t:
+                t.extractall(work)
+            src = work / f"tensorflow-{version}"
+            output_base = work / "bazel-output"
+            output_user_root = work / "bazel-user"
+            repository_cache = RW_DIR / ".tensorflow-bazel-repository-cache"
+            repository_cache.mkdir(exist_ok=True)
+
+            flags = shlex.split(tc.cxxflags)
+            cxxflags: list[str] = []
+            psychicstd_include: Path | None = None
+            i = 0
+            while i < len(flags):
+                if flags[i] == "-isystem" and i + 1 < len(flags):
+                    psychicstd_include = Path(flags[i + 1])
+                    i += 2
+                elif flags[i].startswith("-isystem") and len(flags[i]) > 8:
+                    psychicstd_include = Path(flags[i][8:])
+                    i += 1
+                else:
+                    cxxflags.append(flags[i])
+                    i += 1
+
+            env = _env(tc)
+            cxx = Path(shutil.which(shlex.split(tc.cxx)[0]) or tc.cxx)
+            compiler_candidates = []
+            if "clang++" in cxx.name:
+                compiler_candidates.append(
+                    cxx.with_name(cxx.name.replace("clang++", "clang"))
+                )
+            if "g++" in cxx.name:
+                compiler_candidates.append(
+                    cxx.with_name(cxx.name.replace("g++", "gcc"))
+                )
+            if cxx.name == "c++":
+                compiler_candidates.append(cxx.with_name("cc"))
+            compiler = str(
+                next(
+                    (
+                        candidate
+                        for candidate in compiler_candidates
+                        if candidate.exists()
+                    ),
+                    cxx,
+                )
+            )
+            bazel_prefix = [
+                str(bazel),
+                "--batch",
+                "--output_user_root=" + str(output_user_root),
+                "--output_base=" + str(output_base),
+            ]
+            bazel_options = [
+                "--config=clang_local",
+                "--jobs=" + str(tc.jobs),
+                "--local_resources=memory=" + str(tc.jobs * 1536),
+                "--repository_cache=" + str(repository_cache),
+                "--action_env=CC=" + compiler,
+                "--repo_env=CC=" + compiler,
+                "--noshow_progress",
+                *(["--config=dbg"] if tc.build_type == "debug" else []),
+                *("--cxxopt=" + flag for flag in cxxflags),
+            ]
+
+            if psychicstd_include is not None:
+                overlay = src / "psychicstd-overlay"
+                shutil.copytree(psychicstd_include, overlay / "include")
+                include_env = str(overlay / "include")
+                bazel_options.extend(
+                    [
+                        "--action_env=CPLUS_INCLUDE_PATH=" + include_env,
+                        "--repo_env=CPLUS_INCLUDE_PATH=" + include_env,
+                    ]
+                )
+
+            configure_ms = _timed(
+                [
+                    *bazel_prefix,
+                    "fetch",
+                    *bazel_options,
+                    *_TENSORFLOW_PLATFORM_TARGETS,
+                ],
+                src,
+                env,
+            )
+
+            # Snappy uses std::less_equal without including <functional>.
+            snappy = output_base / "external" / "snappy" / "snappy.cc"
+            snappy.write_text("#include <functional>\n" + snappy.read_text())
+
+            compile_ms = _timed(
+                [
+                    *bazel_prefix,
+                    "build",
+                    *bazel_options,
+                    *_TENSORFLOW_PLATFORM_TARGETS,
+                ],
+                src,
+                env,
+            )
+            return {"configure": configure_ms, "compile": compile_ms}
+
+    return Project(
+        version=version,
+        build=build,
+        expected_seconds={"debug": 60, "release": 60},
+        phases=("compile",),
+        comment="Builds a focused set of TensorFlow core platform/base libraries "
+        "with Bazel; Python, CUDA, kernels, and the full framework are excluded.",
+    )
+
+
 # --- boost asio ----------------------------------------------------------
 
 
@@ -1772,4 +1935,5 @@ PROJECTS: dict[str, Project] = {
     "rdfind": _rdfind(),
     "simdutf-dropin": _simdutf(strict=False, strict_label="drop-in"),
     "simdutf": _simdutf(strict=True, strict_label="strict"),
+    "tensorflow": _tensorflow(),
 }

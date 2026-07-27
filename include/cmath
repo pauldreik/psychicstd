@@ -143,6 +143,8 @@ using ::cosf;
 using ::expf;
 using ::fabsf;
 using ::floorf;
+using ::fmaf;
+using ::fmal;
 using ::fmodf;
 using ::hypotf;
 using ::lgammaf;
@@ -175,6 +177,10 @@ inline double ldexp(Integer x, int exponent) {
 inline float frexp(float x, int* exponent) { return ::frexpf(x, exponent); }
 inline long double frexp(long double x, int* exponent) {
   return ::frexpl(x, exponent);
+}
+inline float fma(float x, float y, float z) { return ::fmaf(x, y, z); }
+inline long double fma(long double x, long double y, long double z) {
+  return ::fmal(x, y, z);
 }
 #if _PSYCHICSTD_COMPATIBILITY_LEVEL >= _PSYCHICSTD_COMPAT_DROPIN
 template <typename T>
