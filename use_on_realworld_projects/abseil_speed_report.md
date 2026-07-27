@@ -12,10 +12,18 @@ Builds absl/base and runs eight small upstream base tests.
 
 | step | system (s) | psychicstd (s) | speedup | comment |
 | --- | ---: | ---: | ---: | --- |
-| configure | 1.27 | 1.26 | 🟡 1.00x [1.00x, 1.01x] | |
-| compile | 3.71 | 1.72 | 🟢 2.15x [2.12x, 2.18x] | |
-| run tests | 0.28 | 0.17 | 🟢 1.62x [1.61x, 1.66x] | |
+| configure | 1.27 | 1.28 | 🟡 0.99x [0.99x, 1.00x] | |
+| compile | 3.68 | 1.71 | 🟢 2.15x [2.11x, 2.21x] | |
+| run tests | 0.28 | 0.17 | 🟢 1.61x [1.60x, 1.63x] | |
+
+### Release
+
+| step | system (s) | psychicstd (s) | speedup | comment |
+| --- | ---: | ---: | ---: | --- |
+| configure | 1.31 | 1.34 | 🟡 0.98x [0.96x, 1.02x] | |
+| compile | 6.85 | 5.45 | 🟢 1.26x [1.23x, 1.27x] | |
+| run tests | 0.05 | 0.06 | 🔴 0.79x [0.78x, 0.81x] | |
 
 ______________________________________________________________________
 
-Reproduce this on your machine: `scripts/compare_realworld_performance.py --compiler c++ --build-type debug --reps 9 --jobs 8`
+Reproduce this on your machine: `scripts/benchmark_realworld.py --compiler c++ --build-type both --reps 9 --jobs 8`
