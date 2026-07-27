@@ -1086,6 +1086,8 @@ def _eigen() -> Project:
             main_h.write_text(text)
 
             env = _env(tc)
+            # Keep randomized tests reproducible across benchmark variants.
+            env["EIGEN_SEED"] = "1"
             cxxflags = [
                 *tc.cxxflags.split(),
                 "-I",
