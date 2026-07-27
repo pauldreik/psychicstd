@@ -2,9 +2,9 @@
 """Regenerate the real-world speed reports linked from README.md.
 
 Runs benchmark_realworld.py for every report linked from the project
-table at the top of README.md, then updates each link's text with the generated
-compilation speedup. With --build-type both, the README uses the Debug result.
-Project links and hand-written comments are left unchanged.
+table at the top of README.md.
+Project links and hand-written comments are left unchanged; readme benchmark
+snippets are synchronized afterwards by scripts/update_readme_from_benchmarks.py.
 
 Usage:
   scripts/generate_realworld_benchmark_reports.py [--compiler CXX]
@@ -41,7 +41,6 @@ REPORT_LINK = re.compile(
     r"(?P<path>use_on_realworld_projects/(?P<project>[^/)]+)_speed_report\.md)"
     r"\)"
 )
-COMPILE_ROW = re.compile(r"^\| compile \|.*?\|[^|]*?([0-9]+(?:\.[0-9]+)?)x(?: |\|)")
 
 
 def _duration(value: str) -> float:
@@ -129,29 +128,6 @@ def _linked_reports(readme: str) -> list[tuple[str, Path]]:
             reports.append((project, REPO / match.group("path")))
             seen.add(project)
     return reports
-
-
-def _compile_speedup(report: str, build_type: str) -> str:
-    in_build_type = False
-    for line in report.splitlines():
-        if line.startswith("### "):
-            in_build_type = line == f"### {build_type.title()}"
-        elif in_build_type:
-            match = COMPILE_ROW.match(line)
-            if match:
-                return match.group(1) + "x"
-    raise ValueError(f"report has no {build_type} compile speedup row")
-
-
-def _update_readme(readme: str, speedups: dict[str, str]) -> str:
-    def replace(match: re.Match[str]) -> str:
-        project = match.group("project")
-        speedup = speedups.get(project)
-        if speedup is None:
-            return match.group(0)
-        return f"[{speedup}]({match.group('path')})"
-
-    return REPORT_LINK.sub(replace, readme)
 
 
 def main() -> int:
@@ -248,12 +224,9 @@ def main() -> int:
             f"this run will use {args.jobs}",
             file=sys.stderr,
         )
-    _print_plan(projects, reps, costs)
     if args.plan_only:
         return 0
 
-    speedups = {}
-    readme_build_type = "debug" if args.build_type == "both" else args.build_type
     for project, output in reports:
         print(f"=== {project} -> {output} ===", file=sys.stderr)
         subprocess.run(
@@ -276,12 +249,6 @@ def main() -> int:
             + (["--enable-ccache"] if args.enable_ccache else []),
             check=True,
         )
-        speedups[project] = _compile_speedup(output.read_text(), readme_build_type)
-        # Save completed results during long runs. Re-read first so edits made
-        # while a benchmark was running remain intact.
-        README.write_text(_update_readme(README.read_text(), speedups))
-
-    print(f"=== updated compile speedups in {README} ===", file=sys.stderr)
     return 0
 
 
