@@ -1408,6 +1408,141 @@ def _rapidjson() -> Project:
     )
 
 
+# --- react native ------------------------------------------------------
+
+
+def _react_native() -> Project:
+    version = "0.83.8"
+    url = (
+        f"https://github.com/facebook/react-native/archive/refs/tags/v{version}.tar.gz"
+    )
+    checksum = "615329ab197c4ca25d571d2ebaae19edd58bea5a1a226bb5a6f714e31d2b4354"
+    fast_float_version = "8.0.0"
+    fast_float_url = (
+        "https://github.com/fastfloat/fast_float/"
+        f"archive/refs/tags/v{fast_float_version}.tar.gz"
+    )
+    fast_float_checksum = (
+        "f312f2dc34c61e665f4b132c0307d6f70ad9420185fa831911bc24408acf625d"
+    )
+    googletest_version = "1.16.0"
+    googletest_url = (
+        "https://github.com/google/googletest/"
+        f"archive/refs/tags/v{googletest_version}.tar.gz"
+    )
+    googletest_checksum = (
+        "78c676fc63881529bf97bf9d45948d905a66833fbfa5318ea2cd7478cb98f399"
+    )
+
+    def build(tc: Toolchain) -> dict[str, float]:
+        tarball = RW_DIR / f"react-native-v{version}.tar.gz"
+        _fetch(url, tarball, checksum)
+        fast_float_tarball = RW_DIR / f"fast_float-v{fast_float_version}.tar.gz"
+        _fetch(fast_float_url, fast_float_tarball, fast_float_checksum)
+        googletest_tarball = RW_DIR / f"googletest-{googletest_version}.tar.gz"
+        _fetch(googletest_url, googletest_tarball, googletest_checksum)
+
+        with tempfile.TemporaryDirectory(
+            prefix="rw-react-native-", ignore_cleanup_errors=True
+        ) as work_dir:
+            work = Path(work_dir)
+            for archive in (tarball, fast_float_tarball, googletest_tarball):
+                with tarfile.open(archive) as t:
+                    t.extractall(work)
+            src = work / f"react-native-{version}"
+            fast_float = work / f"fast_float-{fast_float_version}"
+            googletest = work / f"googletest-{googletest_version}"
+            driver = work / "driver"
+            driver.mkdir()
+            driver.joinpath("CMakeLists.txt").write_text(
+                """cmake_minimum_required(VERSION 3.20)
+project(react_native_host_core LANGUAGES CXX)
+
+set(REACT_COMMON_DIR "${RN_SOURCE}/packages/react-native/ReactCommon")
+
+add_library(fast_float INTERFACE)
+target_include_directories(fast_float INTERFACE "${FAST_FLOAT_SOURCE}/include")
+# The selected CSS and oscompat sources do not use these targets' symbols.
+add_library(glog INTERFACE)
+add_library(react_debug INTERFACE)
+add_library(react_utils INTERFACE)
+
+add_subdirectory("${REACT_COMMON_DIR}/yoga/yoga" yoga)
+add_subdirectory("${REACT_COMMON_DIR}/oscompat" oscompat)
+add_subdirectory("${REACT_COMMON_DIR}/react/renderer/css" css)
+add_subdirectory("${GTEST_SOURCE}" googletest)
+
+file(GLOB CSS_TESTS
+  "${REACT_COMMON_DIR}/react/renderer/css/tests/*.cpp"
+)
+list(FILTER CSS_TESTS EXCLUDE REGEX
+  "CSS(Color|Keyword|Length)Test.cpp$"
+)
+add_executable(react_renderer_css_tests ${CSS_TESTS})
+target_link_libraries(
+  react_renderer_css_tests
+  PRIVATE gtest_main react_renderer_css
+)
+
+add_custom_target(
+  react_native_core
+  DEPENDS yogacore oscompat react_renderer_css_tests
+)
+"""
+            )
+
+            env = _env(tc)
+            wrapper = _compiler_wrapper(work / "cxx", tc, ("-DGTEST_HAS_CXXABI_H_=1",))
+            configure = [
+                "cmake",
+                "-S",
+                str(driver),
+                "-B",
+                "build",
+                "-GNinja",
+                "-DCMAKE_BUILD_TYPE=" + tc.build_type.capitalize(),
+                "-DCMAKE_CXX_COMPILER=" + str(wrapper),
+                "-DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY",
+                "-DRN_SOURCE=" + str(src),
+                "-DFAST_FLOAT_SOURCE=" + str(fast_float),
+                "-DGTEST_SOURCE=" + str(googletest),
+            ]
+            jobs = f"-j{tc.jobs}"
+            return {
+                "configure": _timed(configure, src, env),
+                "compile": _timed(
+                    [
+                        "cmake",
+                        "--build",
+                        "build",
+                        "--target",
+                        "react_native_core",
+                        jobs,
+                    ],
+                    src,
+                    env,
+                ),
+                "run tests": _timed(
+                    [str(src / "build" / "react_renderer_css_tests")],
+                    src,
+                    env,
+                ),
+            }
+
+    return Project(
+        version=version,
+        build=build,
+        expected_seconds={"debug": 20, "release": 30},
+        phases=("compile", "run tests"),
+        comment="Builds Yoga, oscompat, and React renderer CSS tests from "
+        "ReactCommon, then runs 302 CSS tests. Three files with 10 "
+        "compile-time-only tests are excluded because psychicstd's compact "
+        "variant does not support constexpr construction. The full platform "
+        "build requires Android or Apple SDKs, generated code, Hermes, fbjni, "
+        "and the remaining native dependencies.",
+    )
+
+
 # --- rdfind ---------------------------------------------------------------
 
 
@@ -1932,6 +2067,7 @@ PROJECTS: dict[str, Project] = {
     "nlohmann": _nlohmann(),
     "opencv": _opencv(),
     "rapidjson": _rapidjson(),
+    "react-native": _react_native(),
     "rdfind": _rdfind(),
     "simdutf-dropin": _simdutf(strict=False, strict_label="drop-in"),
     "simdutf": _simdutf(strict=True, strict_label="strict"),

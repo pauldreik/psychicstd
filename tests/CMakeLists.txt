@@ -8,6 +8,7 @@ set(TESTS
     test_any
     test_array
     test_atomic
+    test_bit
     test_bitset
     test_chrono
     test_cmath

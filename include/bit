@@ -10,4 +10,24 @@ constexpr To bit_cast(const From& from) noexcept {
   return __builtin_bit_cast(To, from);
 }
 
+template <typename T>
+  requires(is_integral_v<T> && is_unsigned_v<T> &&
+           !is_same_v<remove_cv_t<T>, bool>)
+constexpr int bit_width(T value) noexcept {
+  if (value == 0)
+    return 0;
+  if constexpr (sizeof(T) <= sizeof(unsigned long long)) {
+    return static_cast<int>(
+        sizeof(unsigned long long) * __CHAR_BIT__ -
+        __builtin_clzll(static_cast<unsigned long long>(value)));
+  } else {
+    int width = 0;
+    while (value != 0) {
+      ++width;
+      value >>= 1;
+    }
+    return width;
+  }
+}
+
 } // namespace std

@@ -35,6 +35,11 @@ struct basic_string_view {
   constexpr basic_string_view() noexcept : data_(nullptr), size_(0) {}
   constexpr basic_string_view(const Char* s, size_type n) noexcept
       : data_(s), size_(n) {}
+  template <typename End>
+    requires(__psychicstd_detail::is_same_v<End, Char*> ||
+             __psychicstd_detail::is_same_v<End, const Char*>)
+  constexpr basic_string_view(const Char* first, End last) noexcept
+      : data_(first), size_(last - first) {}
   constexpr basic_string_view(const Char* s) noexcept
       : data_(s), size_(_length(s)) {}
   constexpr basic_string_view(nullptr_t) = delete;

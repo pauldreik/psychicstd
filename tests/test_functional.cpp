@@ -14,6 +14,11 @@ struct member_target {
 };
 
 int main() {
+  int identity_value = 42;
+  static_assert(
+      std::is_same_v<decltype(std::identity{}(identity_value)), int&>);
+  psyassert(&std::identity{}(identity_value) == &identity_value);
+
   auto h = std::hash<const char*>{};
   psyassert(h("hello") != 0);
 
