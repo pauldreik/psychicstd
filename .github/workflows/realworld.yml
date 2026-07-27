@@ -102,6 +102,18 @@ jobs:
           scripts/benchmark_realworld.py
           --check-only --project boost-test
           --build-type debug
+  llama-cpp:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install Ninja
+        run: sudo apt-get install -y ninja-build
+      - name: Build llama.cpp CPU libraries and model metadata
+        run: >-
+          scripts/benchmark_realworld.py
+          --check-only --project llama.cpp
+          --build-type debug
   nlohmann:
     runs-on: ubuntu-latest
     steps:
