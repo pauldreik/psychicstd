@@ -2192,6 +2192,86 @@ def _boost_test() -> Project:
     )
 
 
+# --- bitcoin core --------------------------------------------------------
+
+
+def _bitcoin() -> Project:
+    version = "31.0"
+    url = f"https://github.com/bitcoin/bitcoin/archive/refs/tags/v{version}.tar.gz"
+    checksum = "884fd15f195df3d36ab9c7d8854be16c53d9e7596ec001c283626e0fc1837e67"
+
+    def build(tc: Toolchain) -> dict[str, float]:
+        tarball = RW_DIR / f"bitcoin-v{version}.tar.gz"
+        _fetch(url, tarball, checksum)
+
+        with tempfile.TemporaryDirectory(
+            prefix="rw-bitcoin-", ignore_cleanup_errors=True
+        ) as work_dir:
+            work = Path(work_dir)
+            with tarfile.open(tarball) as t:
+                t.extractall(work)
+            src = work / f"bitcoin-{version}"
+            crypto_cmake = src / "src" / "crypto" / "CMakeLists.txt"
+            crypto_text = crypto_cmake.read_text()
+            for source in ("muhash.cpp", "siphash.cpp"):
+                crypto_text = crypto_text.replace(f"  {source}\n", "")
+            crypto_cmake.write_text(crypto_text)
+            driver = work / "driver"
+            driver.mkdir()
+            driver.joinpath("CMakeLists.txt").write_text(
+                """cmake_minimum_required(VERSION 3.22)
+project(bitcoin_crypto LANGUAGES CXX)
+
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+add_library(core_interface INTERFACE)
+include_directories("${BITCOIN_SOURCE}/src")
+add_subdirectory("${BITCOIN_SOURCE}/src/crypto" crypto)
+"""
+            )
+
+            env = _env(tc)
+            wrapper = _compiler_wrapper(work / "cxx", tc)
+            configure = [
+                "cmake",
+                "-S",
+                str(driver),
+                "-B",
+                "build",
+                "-GNinja",
+                "-DCMAKE_BUILD_TYPE=" + tc.build_type.capitalize(),
+                "-DCMAKE_CXX_COMPILER=" + str(wrapper),
+                "-DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY",
+                "-DBITCOIN_SOURCE=" + str(src),
+            ]
+            jobs = f"-j{tc.jobs}"
+            return {
+                "configure": _timed(configure, src, env),
+                "compile": _timed(
+                    [
+                        "cmake",
+                        "--build",
+                        "build",
+                        "--target",
+                        "bitcoin_crypto",
+                        jobs,
+                    ],
+                    src,
+                    env,
+                ),
+            }
+
+    return Project(
+        version=version,
+        build=build,
+        expected_seconds={"debug": 10, "release": 10},
+        phases=("compile",),
+        comment="Builds Bitcoin Core's bitcoin_crypto primitives except MuHash "
+        "and SipHash, whose include chains require charconv; node, wallet, GUI, "
+        "networking, and external dependencies are excluded.",
+    )
+
+
 # --- llama.cpp -----------------------------------------------------------
 
 
@@ -2410,6 +2490,7 @@ def _opencv() -> Project:
 PROJECTS: dict[str, Project] = {
     "abseil": _abseil(full=False),
     "abseil-full": _abseil(full=True),
+    "bitcoin": _bitcoin(),
     "boost-asio": _boost_asio(),
     "boost-test": _boost_test(),
     "catch2": _catch2(),

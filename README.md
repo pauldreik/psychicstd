@@ -9,6 +9,7 @@ It is not complete. It is not fully compliant. But it is good enough to quickly 
 | Project | Compile time speedup | comment |
 |-------------------------------------------------------------|-----------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------|
 | [Abseil](https://abseil.io/) | [2.15x](use_on_realworld_projects/abseil_speed_report.md) | Builds `absl/base` and eight small upstream base tests. |
+| [Bitcoin Core](https://github.com/bitcoin/bitcoin) | [2.06x](use_on_realworld_projects/bitcoin_speed_report.md) | Builds 14 crypto primitives plus memory cleansing; excludes MuHash and SipHash because they require `<charconv>`. |
 | [Boost.Asio](https://www.boost.org/libs/asio/) | [2.15x](use_on_realworld_projects/boost-asio_speed_report.md) | |
 | [Boost.Test](https://www.boost.org/libs/test/) | [1.59x](use_on_realworld_projects/boost-test_speed_report.md) | Builds and runs three upstream header-only smoke tests. |
 | [catch2](https://github.com/catchorg/Catch2) | [3.51x](use_on_realworld_projects/catch2_speed_report.md) | |
