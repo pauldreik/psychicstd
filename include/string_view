@@ -1,4 +1,5 @@
 #pragma once
+#include <__psychicstd_char_traits>
 #include <__psychicstd_config>
 #include <__psychicstd_except>
 #include <__psychicstd_iterator_core>
@@ -6,6 +7,9 @@
 #include <compare>
 #include <cstddef>
 #include <iosfwd>
+#ifndef __cpp_lib_char8_t
+#define __cpp_lib_char8_t 201907L
+#endif
 #if _PSYCHICSTD_COMPATIBILITY_LEVEL >= _PSYCHICSTD_COMPAT_DROPIN
 #include <__psychicstd_minmax>
 #endif
@@ -233,7 +237,7 @@ public:
 
   constexpr int compare(basic_string_view o) const noexcept {
     size_type n = size_ < o.size_ ? size_ : o.size_;
-    int r = n ? __builtin_memcmp(data_, o.data_, n) : 0;
+    int r = n ? Traits::compare(data_, o.data_, n) : 0;
     if (r != 0)
       return r;
     if (size_ < o.size_)
@@ -257,12 +261,12 @@ public:
 
   constexpr bool starts_with(basic_string_view sv) const noexcept {
     return size_ >= sv.size_ &&
-           (sv.size_ == 0 || __builtin_memcmp(data_, sv.data_, sv.size_) == 0);
+           (sv.size_ == 0 || Traits::compare(data_, sv.data_, sv.size_) == 0);
   }
   constexpr bool ends_with(basic_string_view sv) const noexcept {
     return size_ >= sv.size_ &&
-           (sv.size_ == 0 || __builtin_memcmp(data_ + size_ - sv.size_,
-                                              sv.data_, sv.size_) == 0);
+           (sv.size_ == 0 ||
+            Traits::compare(data_ + size_ - sv.size_, sv.data_, sv.size_) == 0);
   }
   constexpr bool contains(basic_string_view sv) const noexcept {
     return find(sv) != npos;
@@ -283,8 +287,7 @@ template <typename C, typename T>
 constexpr bool operator==(
     basic_string_view<C, T> a,
     __psychicstd_detail::type_identity_t<basic_string_view<C, T>> b) noexcept {
-  return a.size() == b.size() &&
-         (a.size() == 0 || __builtin_memcmp(a.data(), b.data(), a.size()) == 0);
+  return a.size() == b.size() && a.compare(b) == 0;
 }
 template <typename C, typename T>
 constexpr auto operator<=>(
@@ -308,6 +311,18 @@ inline namespace string_view_literals {
 #endif
 #pragma GCC diagnostic ignored "-Wliteral-suffix"
 constexpr string_view operator""sv(const char* s, size_t n) noexcept {
+  return {s, n};
+}
+constexpr wstring_view operator""sv(const wchar_t* s, size_t n) noexcept {
+  return {s, n};
+}
+constexpr u8string_view operator""sv(const char8_t* s, size_t n) noexcept {
+  return {s, n};
+}
+constexpr u16string_view operator""sv(const char16_t* s, size_t n) noexcept {
+  return {s, n};
+}
+constexpr u32string_view operator""sv(const char32_t* s, size_t n) noexcept {
   return {s, n};
 }
 #pragma GCC diagnostic pop

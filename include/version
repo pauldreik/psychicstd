@@ -48,6 +48,11 @@
 // C++20 library features
 // ---------------------------------------------------------------------------
 
+// char8_t library support (<string>/<string_view>)
+#ifndef __cpp_lib_char8_t
+#define __cpp_lib_char8_t 201907L
+#endif
+
 // std::partial_ordering, std::weak_ordering, std::strong_ordering,
 // std::compare_three_way, synth-three-way (<compare>)
 #ifndef __cpp_lib_three_way_comparison
