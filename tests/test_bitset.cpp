@@ -13,6 +13,9 @@ int main() {
 
   const std::bitset<6> text_bits("101010");
   psyassert(text_bits == std::bitset<6>(42));
+  psyassert(text_bits.to_ulong() == 42);
+  psyassert(text_bits.to_ullong() == 42);
+  psyassert(std::bitset<6>(0).none());
   psyassert(std::hash<std::bitset<6>>{}(text_bits) ==
             std::hash<std::bitset<6>>{}(std::bitset<6>(42)));
 

@@ -28,6 +28,7 @@ It is not complete. It is not fully compliant. But it is good enough to quickly 
 | [rapidjson](https://github.com/Tencent/rapidjson/) | [1.24x](use_on_realworld_projects/rapidjson_speed_report.md) | Not using much of the standard library, little speedup expected. |
 | [rdfind](https://rdfind.pauldreik.se/) | [4.12x](use_on_realworld_projects/rdfind_speed_report.md) | Runs in psychic strict mode, see "Compatibility levels" further down this document. Strict mode uncovered code relying on transitive includes. |
 | [simdutf](https://github.com/simdutf/simdutf) | [1.69x](use_on_realworld_projects/simdutf_speed_report.md) | Mostly SIMD intrinsics. [Strict mode uncovered missing includes](https://github.com/simdutf/simdutf/pull/998). |
+| [Tesseract](https://github.com/tesseract-ocr/tesseract) | [2.19x](use_on_realworld_projects/tesseract_speed_report.md) | Builds the OCR library and command-line program using the system Leptonica package. |
 | [TensorFlow](https://www.tensorflow.org/) | [2.39x](use_on_realworld_projects/tensorflow_speed_report.md) | Builds a focused set of core platform/base libraries; excludes Python, CUDA, kernels, and the full framework. |
 | [wordcounter](examples/wordcounter.cpp)| [3.69x](compile_time.md) | Example application using the STL. Counts word occurrences in text files. |
 

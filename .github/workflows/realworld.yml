@@ -278,6 +278,17 @@ jobs:
         with:
           name: cppcheck-speed-report
           path: use_on_realworld_projects/cppcheck_speed_report.md
+  tesseract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install Tesseract build dependencies
+        run: sudo apt-get install -y libleptonica-dev ninja-build
+      - name: Build and test Tesseract with psychicstd
+        run: >-
+          scripts/benchmark_realworld.py --check-only
+          --project tesseract --build-type debug
   tensorflow:
     runs-on: ubuntu-latest
     timeout-minutes: 30

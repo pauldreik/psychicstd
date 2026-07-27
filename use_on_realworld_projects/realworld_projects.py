@@ -1086,6 +1086,8 @@ def _eigen() -> Project:
             main_h.write_text(text)
 
             env = _env(tc)
+            # Keep randomized tests reproducible across benchmark variants.
+            env["EIGEN_SEED"] = "1"
             cxxflags = [
                 *tc.cxxflags.split(),
                 "-I",
@@ -1766,6 +1768,78 @@ def _simdutf(strict: bool, strict_label: str) -> Project:
         expected_seconds={"debug": 27, "release": 20},
         phases=("compile", "run tests"),
         comment="simdutf code is mostly simd intrinsics.",
+    )
+
+
+# --- tesseract -----------------------------------------------------------
+
+
+def _tesseract() -> Project:
+    version = "5.5.2"
+    url = (
+        f"https://github.com/tesseract-ocr/tesseract/archive/refs/tags/{version}.tar.gz"
+    )
+    checksum = "6235ea0dae45ea137f59c09320406f5888383741924d98855bd2ce0d16b54f21"
+
+    def build(tc: Toolchain) -> dict[str, float]:
+        tarball = RW_DIR / f"tesseract-{version}.tar.gz"
+        _fetch(url, tarball, checksum)
+
+        with tempfile.TemporaryDirectory(
+            prefix="rw-tesseract-", ignore_cleanup_errors=True
+        ) as work_dir:
+            work = Path(work_dir)
+            with tarfile.open(tarball) as t:
+                t.extractall(work)
+            src = work / f"tesseract-{version}"
+
+            env = _env(tc)
+            configure = [
+                "cmake",
+                "-S",
+                ".",
+                "-B",
+                "build",
+                "-GNinja",
+                "-DCMAKE_BUILD_TYPE=" + tc.build_type.capitalize(),
+                "-DCMAKE_CXX_COMPILER=" + tc.cxx,
+                "-DCMAKE_CXX_STANDARD=20",
+                "-DCMAKE_CXX_FLAGS=" + tc.cxxflags,
+                "-DCMAKE_EXE_LINKER_FLAGS=" + tc.ldflags,
+                "-DCMAKE_CXX_STANDARD_LIBRARIES=" + tc.libs,
+                "-DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY",
+                "-DBUILD_SHARED_LIBS=OFF",
+                "-DBUILD_TRAINING_TOOLS=OFF",
+                "-DBUILD_TESTS=OFF",
+                "-DGRAPHICS_DISABLED=ON",
+                "-DDISABLED_LEGACY_ENGINE=OFF",
+                "-DDISABLE_ARCHIVE=ON",
+                "-DDISABLE_CURL=ON",
+                "-DOPENMP_BUILD=OFF",
+            ]
+            jobs = f"-j{tc.jobs}"
+            return {
+                "configure": _timed(configure, src, env),
+                "compile": _timed(
+                    ["cmake", "--build", "build", "--target", "tesseract", jobs],
+                    src,
+                    env,
+                ),
+                "run tests": _timed(
+                    [str(src / "build" / "bin" / "tesseract"), "--version"],
+                    src,
+                    env,
+                ),
+            }
+
+    return Project(
+        version=version,
+        build=build,
+        expected_seconds={"debug": 60, "release": 60},
+        phases=("compile", "run tests"),
+        comment="Builds the Tesseract OCR library and command-line program, "
+        "then runs its version check. Training tools, ScrollView graphics, "
+        "libarchive, libcurl, and OpenMP are disabled; Leptonica is required.",
     )
 
 
@@ -2582,5 +2656,6 @@ PROJECTS: dict[str, Project] = {
     "rdfind": _rdfind(),
     "simdutf-dropin": _simdutf(strict=False, strict_label="drop-in"),
     "simdutf": _simdutf(strict=True, strict_label="strict"),
+    "tesseract": _tesseract(),
     "tensorflow": _tensorflow(),
 }

@@ -226,6 +226,9 @@ public:
       c = Traits::to_char_type(ic);
     return *this;
   }
+  template <size_t N> basic_istream& operator>>(Char (&value)[N]) {
+    return extract_chars(value, N);
+  }
   basic_istream& operator>>(basic_streambuf<Char, Traits>* sb) {
     if (!sb) {
       this->setstate(ios_base::failbit);
@@ -271,6 +274,8 @@ protected:
 
 private:
   streamsize gcount_ = 0;
+
+  basic_istream& extract_chars(Char*, size_t);
 
   basic_istream& extract_bool(bool& v) {
     if (!(this->flags() & ios_base::boolalpha)) {
