@@ -96,8 +96,16 @@ public:
 // --- std::bind / placeholders (minimal) ---
 
 namespace placeholders {
-struct __ph1 {};
-inline constexpr __ph1 _1{};
+template <size_t N> struct __placeholder {};
+inline constexpr __placeholder<0> _1{};
+inline constexpr __placeholder<1> _2{};
+inline constexpr __placeholder<2> _3{};
+inline constexpr __placeholder<3> _4{};
+inline constexpr __placeholder<4> _5{};
+inline constexpr __placeholder<5> _6{};
+inline constexpr __placeholder<6> _7{};
+inline constexpr __placeholder<7> _8{};
+inline constexpr __placeholder<8> _9{};
 } // namespace placeholders
 
 namespace detail {
@@ -123,9 +131,54 @@ template <typename T, typename... Rest>
 constexpr T& __bind_arg(reference_wrapper<T> ref, Rest&&...) {
   return ref.get();
 }
-template <typename Arg, typename... Rest>
-constexpr Arg&& __bind_arg(placeholders::__ph1, Arg&& a, Rest&&...) {
-  return static_cast<Arg&&>(a);
+template <typename A0, typename... Rest>
+constexpr A0&& __bind_arg(placeholders::__placeholder<0>, A0&& a0, Rest&&...) {
+  return static_cast<A0&&>(a0);
+}
+template <typename A0, typename A1, typename... Rest>
+constexpr A1&& __bind_arg(placeholders::__placeholder<1>, A0&&, A1&& a1,
+                          Rest&&...) {
+  return static_cast<A1&&>(a1);
+}
+template <typename A0, typename A1, typename A2, typename... Rest>
+constexpr A2&& __bind_arg(placeholders::__placeholder<2>, A0&&, A1&&, A2&& a2,
+                          Rest&&...) {
+  return static_cast<A2&&>(a2);
+}
+template <typename A0, typename A1, typename A2, typename A3, typename... Rest>
+constexpr A3&& __bind_arg(placeholders::__placeholder<3>, A0&&, A1&&, A2&&,
+                          A3&& a3, Rest&&...) {
+  return static_cast<A3&&>(a3);
+}
+template <typename A0, typename A1, typename A2, typename A3, typename A4,
+          typename... Rest>
+constexpr A4&& __bind_arg(placeholders::__placeholder<4>, A0&&, A1&&, A2&&,
+                          A3&&, A4&& a4, Rest&&...) {
+  return static_cast<A4&&>(a4);
+}
+template <typename A0, typename A1, typename A2, typename A3, typename A4,
+          typename A5, typename... Rest>
+constexpr A5&& __bind_arg(placeholders::__placeholder<5>, A0&&, A1&&, A2&&,
+                          A3&&, A4&&, A5&& a5, Rest&&...) {
+  return static_cast<A5&&>(a5);
+}
+template <typename A0, typename A1, typename A2, typename A3, typename A4,
+          typename A5, typename A6, typename... Rest>
+constexpr A6&& __bind_arg(placeholders::__placeholder<6>, A0&&, A1&&, A2&&,
+                          A3&&, A4&&, A5&&, A6&& a6, Rest&&...) {
+  return static_cast<A6&&>(a6);
+}
+template <typename A0, typename A1, typename A2, typename A3, typename A4,
+          typename A5, typename A6, typename A7, typename... Rest>
+constexpr A7&& __bind_arg(placeholders::__placeholder<7>, A0&&, A1&&, A2&&,
+                          A3&&, A4&&, A5&&, A6&&, A7&& a7, Rest&&...) {
+  return static_cast<A7&&>(a7);
+}
+template <typename A0, typename A1, typename A2, typename A3, typename A4,
+          typename A5, typename A6, typename A7, typename A8, typename... Rest>
+constexpr A8&& __bind_arg(placeholders::__placeholder<8>, A0&&, A1&&, A2&&,
+                          A3&&, A4&&, A5&&, A6&&, A7&&, A8&& a8, Rest&&...) {
+  return static_cast<A8&&>(a8);
 }
 
 template <typename F, typename... Bound> struct __bind_wrapper {

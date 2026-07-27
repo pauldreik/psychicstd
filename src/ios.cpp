@@ -2,6 +2,11 @@
 
 namespace std {
 
+int ios_base::xalloc() {
+  static int next;
+  return __atomic_fetch_add(&next, 1, __ATOMIC_RELAXED);
+}
+
 ios_base::fmtflags ios_base::flags(fmtflags f) {
   fmtflags old = flags_;
   flags_ = f;

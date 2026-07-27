@@ -1933,6 +1933,72 @@ def _boost_asio() -> Project:
     )
 
 
+# --- boost test ----------------------------------------------------------
+
+
+def _boost_test() -> Project:
+    version = "1.91.0"
+    url = f"https://archives.boost.io/release/{version}/source/boost_1_91_0.tar.gz"
+    checksum = "5734305f40a76c30f951c9abd409a45a2a19fb546efe4162119250bbe4d3a463"
+
+    def build(tc: Toolchain) -> dict[str, float]:
+        tarball = RW_DIR / f"boost_{version.replace('.', '_')}.tar.gz"
+        _fetch(url, tarball, checksum)
+
+        with tempfile.TemporaryDirectory(
+            prefix="rw-boost-test-", ignore_cleanup_errors=True
+        ) as work_dir:
+            work = Path(work_dir)
+            with tarfile.open(tarball) as t:
+                t.extractall(work)
+            src = work / f"boost_{version.replace('.', '_')}"
+
+            env = _env(tc)
+            test_dir = src / "libs" / "test" / "test"
+            test_sources = [
+                Path("smoke-ts/basic-smoke-test.cpp"),
+                Path("smoke-ts/basic-smoke-test2.cpp"),
+                Path("usage-variants-ts/single-header-test.cpp"),
+            ]
+            build_dir = work / "boost-test-build"
+            build_dir.mkdir()
+            common = [
+                tc.cxx,
+                *shlex.split(tc.cxxflags),
+                "-I",
+                str(src),
+                "-DBOOST_ALL_NO_LIB=1",
+                "-DBOOST_NO_AUTO_PTR=1",
+                "-DBOOST_NO_CXX98_BINDERS=1",
+                "-pthread",
+            ]
+            commands = [
+                [
+                    *common,
+                    str(test_dir / name),
+                    "-o",
+                    str(build_dir / name.stem),
+                    *shlex.split(tc.ldflags),
+                    *shlex.split(tc.libs),
+                ]
+                for name in test_sources
+            ]
+            compile_ms = _timed_many(commands, test_dir, env, tc.jobs)
+            t0 = time.monotonic()
+            for name in test_sources:
+                _run([str(build_dir / name.stem)], test_dir, env)
+            run_ms = (time.monotonic() - t0) * 1000.0
+            return {"compile": compile_ms, "run tests": run_ms}
+
+    return Project(
+        version=version,
+        build=build,
+        expected_seconds={"debug": 30, "release": 30},
+        phases=("compile", "run tests"),
+        comment="Builds and runs Boost.Test's three upstream header-only smoke tests.",
+    )
+
+
 # --- opencv --------------------------------------------------------------
 
 
@@ -2056,6 +2122,7 @@ PROJECTS: dict[str, Project] = {
     "abseil": _abseil(full=False),
     "abseil-full": _abseil(full=True),
     "boost-asio": _boost_asio(),
+    "boost-test": _boost_test(),
     "catch2": _catch2(),
     "cmake": _cmake(),
     "cppcheck": _cppcheck(),

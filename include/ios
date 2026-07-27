@@ -96,6 +96,13 @@ public:
 
   locale getloc() const;
   locale imbue(const locale& loc);
+  static int xalloc();
+  long& iword(int index) noexcept {
+    return iwords_[index >= 0 && index < _word_count ? index : _word_count];
+  }
+  void*& pword(int index) noexcept {
+    return pwords_[index >= 0 && index < _word_count ? index : _word_count];
+  }
 
 protected:
   int _format_signed(char*, size_t, long long, unsigned long long) const;
@@ -136,6 +143,10 @@ protected:
   iostate except_ = goodbit;
   char fill_;
   locale loc_;
+  // Keep per-stream extension storage inline; excess indices share a sink.
+  static constexpr int _word_count = 16;
+  long iwords_[_word_count + 1] = {};
+  void* pwords_[_word_count + 1] = {};
 };
 
 template <typename Char, typename Traits> class basic_ios : public ios_base {
@@ -190,6 +201,10 @@ public:
       width_ = rhs.width_;
       prec_ = rhs.prec_;
       fill_ = rhs.fill_;
+      for (int i = 0; i < _word_count; ++i) {
+        iwords_[i] = rhs.iwords_[i];
+        pwords_[i] = rhs.pwords_[i];
+      }
     }
     return *this;
   }
