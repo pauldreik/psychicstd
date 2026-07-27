@@ -9,6 +9,14 @@
 
 namespace std {
 
+struct identity {
+  using is_transparent = void;
+
+  template <typename T> constexpr T&& operator()(T&& value) const noexcept {
+    return static_cast<T&&>(value);
+  }
+};
+
 // function<R(Args...)> — type-erased callable
 template <typename> class function;
 

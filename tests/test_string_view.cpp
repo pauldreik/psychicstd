@@ -9,6 +9,12 @@
   } while (0)
 
 int main() {
+  static constexpr char iterator_source[] = "view";
+  constexpr std::string_view iterator_view(iterator_source,
+                                           iterator_source + 4);
+  static_assert(iterator_view == "view");
+  static_assert(std::string_view(iterator_source, 0).empty());
+
   using namespace std::string_view_literals;
   static_assert("narrow"sv == std::string_view("narrow"));
   static_assert(L"wide"sv == std::wstring_view(L"wide"));

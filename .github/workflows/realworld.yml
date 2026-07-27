@@ -249,7 +249,7 @@ jobs:
       - uses: actions/checkout@v7
       - name: Install ninja
         run: sudo apt-get install -y ninja-build
-      - name: Build React Native Yoga core with psychicstd
+      - name: Build React Native host core with psychicstd
         run: >-
           scripts/benchmark_realworld.py --check-only
           --project react-native --build-type both
