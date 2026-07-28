@@ -172,6 +172,13 @@ class directory_iterator {
   struct _state;
 
 public:
+  struct _postfix_proxy {
+    directory_entry entry;
+
+    const directory_entry& operator*() const noexcept { return entry; }
+    const directory_entry* operator->() const noexcept { return &entry; }
+  };
+
   directory_iterator() noexcept = default;
   explicit directory_iterator(const path&);
   directory_iterator(const path&, error_code&);
@@ -184,6 +191,11 @@ public:
   const directory_entry& operator*() const noexcept;
   const directory_entry* operator->() const noexcept;
   directory_iterator& operator++();
+  _postfix_proxy operator++(int) {
+    _postfix_proxy previous{**this};
+    ++*this;
+    return previous;
+  }
   directory_iterator& increment(error_code&);
 
   friend bool operator==(const directory_iterator& lhs,
@@ -205,6 +217,12 @@ inline recursive_directory_iterator
 end(const recursive_directory_iterator&) noexcept {
   return {};
 }
+
+inline directory_iterator begin(directory_iterator iter) noexcept {
+  return iter;
+}
+
+inline directory_iterator end(directory_iterator) noexcept { return {}; }
 
 class filesystem_error : public system_error {
   path path1_;

@@ -22,6 +22,27 @@ bool missing_path_error(int value) noexcept {
   return value == ENOENT || value == ENOTDIR;
 }
 
+class directory_handle {
+public:
+  explicit directory_handle(DIR* handle) noexcept : handle_(handle) {}
+  ~directory_handle() {
+    if (handle_)
+      ::closedir(handle_);
+  }
+
+  DIR* get() const noexcept { return handle_; }
+  explicit operator bool() const noexcept { return handle_; }
+
+  int close() noexcept {
+    DIR* handle = handle_;
+    handle_ = nullptr;
+    return ::closedir(handle);
+  }
+
+private:
+  DIR* handle_;
+};
+
 void append_utf8(string& output, char32_t value) {
   if (value <= 0x7f) {
     output.push_back(static_cast<char>(value));
@@ -129,7 +150,7 @@ static bool has_option(directory_options options,
 static void add_directory_entries(const path& directory,
                                   directory_options options,
                                   vector<directory_entry>& entries) {
-  DIR* handle = ::opendir(directory.c_str());
+  directory_handle handle(::opendir(directory.c_str()));
   if (!handle) {
     if (has_option(options, directory_options::skip_permission_denied))
       return;
@@ -138,7 +159,7 @@ static void add_directory_entries(const path& directory,
                                        error_code(errno, generic_category())));
   }
 
-  while (dirent* item = ::readdir(handle)) {
+  while (dirent* item = ::readdir(handle.get())) {
     string_view name(item->d_name);
     if (name == "." || name == "..")
       continue;
@@ -158,13 +179,18 @@ static void add_directory_entries(const path& directory,
     if (S_ISDIR(status.st_mode))
       add_directory_entries(child, options, entries);
   }
-  ::closedir(handle);
 }
 
 recursive_directory_iterator::recursive_directory_iterator(
     const path& directory, directory_options options) {
   state_ = new _state;
-  add_directory_entries(directory, options, state_->entries);
+  _PSYCHICSTD_TRY {
+    add_directory_entries(directory, options, state_->entries);
+  }
+  _PSYCHICSTD_CATCH(...) {
+    release();
+    _PSYCHICSTD_RETHROW;
+  }
   if (state_->entries.empty())
     release();
 }
@@ -235,21 +261,22 @@ struct directory_iterator::_state {
 
 static bool read_directory(const path& directory,
                            vector<directory_entry>& entries, error_code& ec) {
-  DIR* handle = ::opendir(directory.c_str());
+  directory_handle handle(::opendir(directory.c_str()));
   if (!handle) {
     set_error(ec);
     return false;
   }
 
   errno = 0;
-  while (dirent* item = ::readdir(handle)) {
+  while (dirent* item = ::readdir(handle.get())) {
     string_view name(item->d_name);
     if (name != "." && name != "..")
       entries.emplace_back(directory / path(name));
     errno = 0;
   }
-  const int read_error = errno;
-  ::closedir(handle);
+  int read_error = errno;
+  if (handle.close() != 0 && !read_error)
+    read_error = errno;
   if (read_error) {
     set_error(ec, read_error);
     return false;
@@ -261,9 +288,15 @@ static bool read_directory(const path& directory,
 directory_iterator::directory_iterator(const path& directory) {
   error_code ec;
   state_ = new _state;
-  if (!read_directory(directory, state_->entries, ec)) {
+  _PSYCHICSTD_TRY {
+    if (!read_directory(directory, state_->entries, ec)) {
+      release();
+      _PSYCHICSTD_THROW(filesystem_error("directory_iterator", directory, ec));
+    }
+  }
+  _PSYCHICSTD_CATCH(...) {
     release();
-    _PSYCHICSTD_THROW(filesystem_error("directory_iterator", directory, ec));
+    _PSYCHICSTD_RETHROW;
   }
   if (state_->entries.empty())
     release();
@@ -271,9 +304,15 @@ directory_iterator::directory_iterator(const path& directory) {
 
 directory_iterator::directory_iterator(const path& directory, error_code& ec) {
   state_ = new _state;
-  if (!read_directory(directory, state_->entries, ec) ||
-      state_->entries.empty())
+  _PSYCHICSTD_TRY {
+    if (!read_directory(directory, state_->entries, ec) ||
+        state_->entries.empty())
+      release();
+  }
+  _PSYCHICSTD_CATCH(...) {
     release();
+    _PSYCHICSTD_RETHROW;
+  }
 }
 
 directory_iterator::directory_iterator(const directory_iterator& other) noexcept
@@ -423,8 +462,16 @@ uintmax_t file_size(const path& value, error_code& ec) noexcept {
 path temp_directory_path(error_code& ec) {
   const char* value = ::getenv("TMPDIR");
   path result(value && *value ? value : "/tmp");
-  if (!is_directory(result, ec))
+  struct stat status;
+  if (::stat(result.c_str(), &status) != 0) {
+    set_error(ec);
     return {};
+  }
+  if (!S_ISDIR(status.st_mode)) {
+    set_error(ec, ENOTDIR);
+    return {};
+  }
+  clear_error(ec);
   return result;
 }
 
