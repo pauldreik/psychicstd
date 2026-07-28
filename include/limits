@@ -53,8 +53,8 @@ template <typename T> struct numeric_limits {
   static constexpr int max_exponent10 = 0;
   static constexpr float_denorm_style has_denorm = denorm_absent;
   static constexpr float_round_style round_style = round_toward_zero;
-  static constexpr T(min)() noexcept { return T(); }
-  static constexpr T(max)() noexcept { return T(); }
+  static constexpr T min() noexcept { return T(); }
+  static constexpr T max() noexcept { return T(); }
   static constexpr T lowest() noexcept { return T(); }
   static constexpr T epsilon() noexcept { return T(); }
   static constexpr T round_error() noexcept { return T(); }
@@ -102,8 +102,8 @@ template <typename T> struct __int_limits_base {
     static constexpr bool is_modulo = (MOD);                                   \
     static constexpr int digits = (BITS);                                      \
     static constexpr int digits10 = (BITS) * 30103 / 100000;                   \
-    static constexpr T(min)() noexcept { return static_cast<T>(MIN); }         \
-    static constexpr T(max)() noexcept { return static_cast<T>(MAX); }         \
+    static constexpr T min() noexcept { return static_cast<T>(MIN); }          \
+    static constexpr T max() noexcept { return static_cast<T>(MAX); }          \
     static constexpr T lowest() noexcept { return static_cast<T>(MIN); }       \
   };
 
@@ -147,8 +147,8 @@ template <> struct numeric_limits<__int128> : __int_limits_base<__int128> {
   static constexpr bool is_modulo = false;
   static constexpr int digits = 127;
   static constexpr int digits10 = 38;
-  static constexpr __int128(min)() noexcept { return ((__int128)1) << 127; }
-  static constexpr __int128(max)() noexcept { return ~(((__int128)1) << 127); }
+  static constexpr __int128 min() noexcept { return ((__int128)1) << 127; }
+  static constexpr __int128 max() noexcept { return ~(((__int128)1) << 127); }
   static constexpr __int128 lowest() noexcept { return ((__int128)1) << 127; }
 };
 template <>
@@ -158,8 +158,8 @@ struct numeric_limits<unsigned __int128>
   static constexpr bool is_modulo = true;
   static constexpr int digits = 128;
   static constexpr int digits10 = 38;
-  static constexpr unsigned __int128(min)() noexcept { return 0; }
-  static constexpr unsigned __int128(max)() noexcept {
+  static constexpr unsigned __int128 min() noexcept { return 0; }
+  static constexpr unsigned __int128 max() noexcept {
     return ~(unsigned __int128)(0);
   }
   static constexpr unsigned __int128 lowest() noexcept { return 0; }
@@ -190,8 +190,8 @@ template <> struct numeric_limits<float> {
   static constexpr int max_exponent10 = __FLT_MAX_10_EXP__;
   static constexpr float_denorm_style has_denorm = denorm_present;
   static constexpr float_round_style round_style = round_to_nearest;
-  static constexpr float(min)() noexcept { return __FLT_MIN__; }
-  static constexpr float(max)() noexcept { return __FLT_MAX__; }
+  static constexpr float min() noexcept { return __FLT_MIN__; }
+  static constexpr float max() noexcept { return __FLT_MAX__; }
   static constexpr float lowest() noexcept { return -__FLT_MAX__; }
   static constexpr float epsilon() noexcept { return __FLT_EPSILON__; }
   static constexpr float round_error() noexcept { return 0.5f; }
@@ -227,8 +227,8 @@ template <> struct numeric_limits<double> {
   static constexpr int max_exponent10 = __DBL_MAX_10_EXP__;
   static constexpr float_denorm_style has_denorm = denorm_present;
   static constexpr float_round_style round_style = round_to_nearest;
-  static constexpr double(min)() noexcept { return __DBL_MIN__; }
-  static constexpr double(max)() noexcept { return __DBL_MAX__; }
+  static constexpr double min() noexcept { return __DBL_MIN__; }
+  static constexpr double max() noexcept { return __DBL_MAX__; }
   static constexpr double lowest() noexcept { return -__DBL_MAX__; }
   static constexpr double epsilon() noexcept { return __DBL_EPSILON__; }
   static constexpr double round_error() noexcept { return 0.5; }
@@ -265,8 +265,8 @@ template <> struct numeric_limits<long double> {
   static constexpr int max_exponent10 = __LDBL_MAX_10_EXP__;
   static constexpr float_denorm_style has_denorm = denorm_present;
   static constexpr float_round_style round_style = round_to_nearest;
-  static constexpr long double(min)() noexcept { return __LDBL_MIN__; }
-  static constexpr long double(max)() noexcept { return __LDBL_MAX__; }
+  static constexpr long double min() noexcept { return __LDBL_MIN__; }
+  static constexpr long double max() noexcept { return __LDBL_MAX__; }
   static constexpr long double lowest() noexcept { return -__LDBL_MAX__; }
   static constexpr long double epsilon() noexcept { return __LDBL_EPSILON__; }
   static constexpr long double round_error() noexcept { return 0.5L; }
