@@ -1,5 +1,5 @@
 #pragma once
-#include <chrono>
+#include <__psychicstd_chrono_core>
 #include <cstdint>
 #include <string>
 #include <string_view>
