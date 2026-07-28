@@ -339,3 +339,13 @@ jobs:
       - name: Build pocketfft with psychicstd
         run: scripts/benchmark_realworld.py --check-only --project pocketfft --build-type
           debug
+  pybind11:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install build dependencies
+        run: sudo apt-get install -y ninja-build python3-dev
+      - name: Build and test pybind11 with psychicstd
+        run: >-
+          scripts/benchmark_realworld.py --check-only
+          --project pybind11 --build-type debug

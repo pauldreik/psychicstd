@@ -2818,6 +2818,87 @@ def _opencv() -> Project:
     )
 
 
+# --- pybind11 ------------------------------------------------------------
+
+
+def _pybind11() -> Project:
+    version = "3.0.4"
+    url = f"https://github.com/pybind/pybind11/archive/refs/tags/v{version}.tar.gz"
+    checksum = "74b6a2c2b4573a400cafb6ecbf60c98df300cd3d0041296b913d02b2cbbb2676"
+
+    def build(tc: Toolchain) -> dict[str, float]:
+        tarball = RW_DIR / f"pybind11-v{version}.tar.gz"
+        _fetch(url, tarball, checksum)
+
+        with tempfile.TemporaryDirectory(
+            prefix="rw-pybind11-", ignore_cleanup_errors=True
+        ) as work_dir:
+            work = Path(work_dir)
+            with tarfile.open(tarball) as t:
+                t.extractall(work)
+            src = work / f"pybind11-{version}"
+            test_src = src / "tests" / "test_cmake_build" / "subdirectory_function"
+            python = shutil.which("python3") or "python3"
+
+            env = _env(tc)
+            # pybind11 allows custom standard libraries to provide the ABI tag
+            # used to isolate its process-global internals.
+            cxxflags = tc.cxxflags
+            if "-nostdinc++" in tc.cxxflags:
+                cxxflags += r" -DPYBIND11_BUILD_ABI=\"_psychicstd\""
+            configure = [
+                "cmake",
+                "-S",
+                ".",
+                "-B",
+                "build",
+                "-GNinja",
+                "-DCMAKE_BUILD_TYPE=" + tc.build_type.capitalize(),
+                "-DCMAKE_CXX_COMPILER=" + tc.cxx,
+                "-DCMAKE_CXX_FLAGS=" + cxxflags,
+                "-DCMAKE_SHARED_LINKER_FLAGS=" + tc.ldflags,
+                "-DCMAKE_MODULE_LINKER_FLAGS=" + tc.ldflags,
+                "-DCMAKE_CXX_STANDARD_LIBRARIES=" + tc.libs,
+                "-DCMAKE_CXX_STANDARD=20",
+                "-DPYBIND11_FINDPYTHON=ON",
+                "-DPython_EXECUTABLE=" + python,
+                "-Dpybind11_SOURCE_DIR=" + str(src),
+            ]
+            jobs = f"-j{tc.jobs}"
+            return {
+                "configure": _timed(configure, test_src, env),
+                "compile": _timed(
+                    [
+                        "cmake",
+                        "--build",
+                        "build",
+                        "--target",
+                        "test_subdirectory_function",
+                        jobs,
+                    ],
+                    test_src,
+                    env,
+                ),
+                "run tests": _timed(
+                    [
+                        python,
+                        str(src / "tests" / "test_cmake_build" / "test.py"),
+                        "subdirectory_function",
+                    ],
+                    test_src,
+                    {**env, "PYTHONPATH": str(test_src / "build")},
+                ),
+            }
+
+    return Project(
+        version=version,
+        build=build,
+        expected_seconds={"debug": 3, "release": 3},
+        comment="Builds pybind11's upstream CMake extension test, then imports "
+        "the module in Python and calls its bound C++ function.",
+    )
+
+
 PROJECTS: dict[str, Project] = {
     "abseil": _abseil(full=False),
     "abseil-full": _abseil(full=True),
@@ -2841,6 +2922,7 @@ PROJECTS: dict[str, Project] = {
     "nlohmann": _nlohmann(),
     "opencv": _opencv(),
     "pocketfft": _pocketfft(),
+    "pybind11": _pybind11(),
     "rapidjson": _rapidjson(),
     "react-native": _react_native(),
     "rdfind": _rdfind(),
