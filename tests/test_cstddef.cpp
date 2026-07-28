@@ -1,5 +1,6 @@
 #include <cstddef>
 
+static_assert(__cpp_lib_byte >= 201603L);
 static_assert(sizeof(std::size_t) == sizeof(void*));
 static_assert(sizeof(std::ptrdiff_t) == sizeof(void*));
 static_assert(sizeof(std::byte) == 1);

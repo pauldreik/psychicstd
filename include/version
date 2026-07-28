@@ -44,6 +44,11 @@
 #define __cpp_lib_is_invocable 201703L
 #endif
 
+// std::variant (<variant>)
+#ifndef __cpp_lib_variant
+#define __cpp_lib_variant 201606L
+#endif
+
 // ---------------------------------------------------------------------------
 // C++20 library features
 // ---------------------------------------------------------------------------
