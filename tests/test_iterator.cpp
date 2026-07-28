@@ -26,6 +26,9 @@ struct derived_reverse_iterator : std::reverse_iterator<int*> {
 };
 
 int main() {
+  std::initializer_list<int> init_values{1, 2, 3};
+  psyassert(std::data(init_values) == init_values.begin());
+
 #if !defined(PSYCHICSTD_TEST_PSYCHICSTD) ||                                    \
     _PSYCHICSTD_COMPATIBILITY_LEVEL >= _PSYCHICSTD_COMPAT_DROPIN
   static_assert(std::input_iterator<int*>);

@@ -14,6 +14,8 @@ struct member_target {
 };
 
 int main() {
+  psyassert(std::divides<>{}(8.0, 2.0) == 4.0);
+
   int identity_value = 42;
   static_assert(
       std::is_same_v<decltype(std::identity{}(identity_value)), int&>);
