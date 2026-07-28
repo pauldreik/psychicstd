@@ -48,6 +48,16 @@ int main() {
   psyassert(l.size() == 5);
   psyassert(l.back() == 5);
 
+  std::list<int> middle = {1, 4};
+  std::list<int> inserted = {2, 3};
+  int* inserted_first = &inserted.front();
+  int* inserted_last = &inserted.back();
+  middle.splice(++middle.begin(), inserted);
+  psyassert(inserted.empty());
+  psyassert((middle == std::list<int>{1, 2, 3, 4}));
+  psyassert(&*++middle.begin() == inserted_first);
+  psyassert(&*std::next(middle.begin(), 2) == inserted_last);
+
   auto reverse = l.rbegin();
   psyassert(*reverse++ == 5);
   psyassert(*reverse == 4);
