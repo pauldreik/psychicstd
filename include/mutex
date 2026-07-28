@@ -131,4 +131,19 @@ private:
   bool owns_;
 };
 
+template <typename Lock1, typename Lock2>
+void lock(Lock1& first, Lock2& second) {
+  for (;;) {
+    first.lock();
+    if (second.try_lock())
+      return;
+    first.unlock();
+
+    second.lock();
+    if (first.try_lock())
+      return;
+    second.unlock();
+  }
+}
+
 } // namespace std

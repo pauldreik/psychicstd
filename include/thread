@@ -7,6 +7,10 @@
 #include <tuple>
 #include <type_traits>
 
+#ifdef __APPLE__
+struct _opaque_pthread_t;
+#endif
+
 namespace std {
 
 [[noreturn]] void terminate() noexcept;
@@ -68,6 +72,12 @@ class thread {
   static void* __start(void*) noexcept;
 
 public:
+#ifdef __APPLE__
+  using native_handle_type = _opaque_pthread_t*;
+#else
+  using native_handle_type = unsigned long;
+#endif
+
   class id {
     unsigned long val_ = 0;
     friend class thread;
@@ -103,6 +113,13 @@ public:
   void join();
   void detach();
   id get_id() const noexcept;
+  native_handle_type native_handle() noexcept {
+#ifdef __APPLE__
+    return reinterpret_cast<native_handle_type>(handle_);
+#else
+    return handle_;
+#endif
+  }
   static unsigned hardware_concurrency() noexcept;
 };
 
