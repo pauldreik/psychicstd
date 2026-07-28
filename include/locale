@@ -13,6 +13,7 @@ struct tm;
 namespace std {
 
 class ios_base;
+[[noreturn, gnu::cold, gnu::noinline]] void __throw_bad_cast();
 
 namespace __locale_detail {
 size_t format_time(char*, size_t, const char*, const ::tm*);
@@ -186,19 +187,35 @@ protected:
   virtual result do_out(state_type&, const Intern* from, const Intern* from_end,
                         const Intern*& from_next, E* to, E* to_end,
                         E*& to_next) const {
-    return convert(from, from_end, from_next, to, to_end, to_next);
+    if constexpr (__psychicstd_detail::is_same_v<Intern, E>) {
+      from_next = from;
+      to_next = to;
+      return noconv;
+    } else {
+      return convert(from, from_end, from_next, to, to_end, to_next);
+    }
   }
   virtual result do_in(state_type&, const E* from, const E* from_end,
                        const E*& from_next, Intern* to, Intern* to_end,
                        Intern*& to_next) const {
-    return convert(from, from_end, from_next, to, to_end, to_next);
+    if constexpr (__psychicstd_detail::is_same_v<Intern, E>) {
+      from_next = from;
+      to_next = to;
+      return noconv;
+    } else {
+      return convert(from, from_end, from_next, to, to_end, to_next);
+    }
   }
   virtual result do_unshift(state_type&, E* to, E*, E*& to_next) const {
     to_next = to;
     return noconv;
   }
   virtual int do_encoding() const noexcept {
-    return __psychicstd_detail::is_same_v<Intern, E> ? 1 : 0;
+    if constexpr (__psychicstd_detail::is_same_v<Intern, char16_t> ||
+                  __psychicstd_detail::is_same_v<Intern, char32_t>)
+      return 0;
+    else
+      return 1;
   }
   virtual bool do_always_noconv() const noexcept {
     return __psychicstd_detail::is_same_v<Intern, E>;
@@ -283,10 +300,13 @@ template <typename Facet> bool has_facet(const locale& loc) {
 template <typename Facet> const Facet& use_facet(const locale& loc) {
   if (const Facet* facet = loc.template _facet<Facet>())
     return *facet;
-  // Standard facets are present in every locale. For the small set of facets
-  // implemented here, a default-constructed instance is the classic facet.
-  static const Facet classic_facet{};
-  return classic_facet;
+  if constexpr (__default_locale_facet<Facet>::value) {
+    // Implemented standard facets are present in every locale.
+    static const Facet classic_facet{};
+    return classic_facet;
+  } else {
+    __throw_bad_cast();
+  }
 }
 
 template <typename Char> bool isalpha(Char c, const locale&) {
