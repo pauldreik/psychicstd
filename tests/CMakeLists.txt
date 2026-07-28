@@ -71,6 +71,7 @@ set(TESTS
     test_valarray
     test_variant
     test_vector
+    test_version
 )
 
 foreach(t ${TESTS})

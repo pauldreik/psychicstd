@@ -1,4 +1,8 @@
 #pragma once
+#ifndef __cpp_lib_uncaught_exceptions
+#define __cpp_lib_uncaught_exceptions 201411L
+#endif
+
 #include <__psychicstd_config>
 #include <__psychicstd_exception_base>
 #include <__psychicstd_traits_core>

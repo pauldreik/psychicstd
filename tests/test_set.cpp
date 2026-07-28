@@ -57,6 +57,23 @@ int main() {
   psyassert(*stable_three == 3);
   psyassert(--stable.end() == stable_three);
 
+  std::set<int> range{0, 1, 2, 3, 4, 5};
+  auto after_range = range.erase(range.find(1), range.find(5));
+  psyassert(after_range == range.find(5));
+  psyassert(range.size() == 2);
+  psyassert(*range.begin() == 0);
+  psyassert(*--range.end() == 5);
+
+  std::multiset<int> duplicate_range{1, 2, 2, 2, 3};
+  auto duplicate_first = duplicate_range.lower_bound(2);
+  ++duplicate_first;
+  auto after_duplicates =
+      duplicate_range.erase(duplicate_first, duplicate_range.lower_bound(3));
+  psyassert(after_duplicates == duplicate_range.find(3));
+  psyassert(duplicate_range.count(2) == 1);
+  psyassert(duplicate_range.erase(2) == 1);
+  psyassert(duplicate_range.count(2) == 0);
+
   int first = 1;
   int second = 2;
   std::set<int*> pointers;

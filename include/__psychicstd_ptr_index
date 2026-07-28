@@ -60,6 +60,13 @@ public:
     --size_;
     return data_ + index;
   }
+  iterator erase(size_type first, size_type last) noexcept {
+    if (last != size_)
+      __builtin_memmove(data_ + first, data_ + last,
+                        (size_ - last) * sizeof(T*));
+    size_ -= last - first;
+    return data_ + first;
+  }
   void clear() noexcept { size_ = 0; }
   void swap(__ptr_index& other) noexcept {
     T** data = data_;

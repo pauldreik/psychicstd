@@ -1,11 +1,16 @@
 #pragma once
 #include <__psychicstd_char_traits>
 #include <__psychicstd_config>
+#if _PSYCHICSTD_COMPATIBILITY_LEVEL >= _PSYCHICSTD_COMPAT_DROPIN
+#include <locale>
+#include <system_error>
+#else
+#include <__psychicstd_locale_core>
+#include <__psychicstd_system_error_core>
+#endif
 #include <cerrno>
 #include <cstddef>
 #include <iosfwd>
-#include <locale>
-#include <system_error>
 
 namespace std {
 
@@ -113,6 +118,9 @@ protected:
                               int input_size, char decimal_point,
                               char thousands_sep, const char* grouping,
                               size_t grouping_size);
+  int _localize_number_with_locale(char* out, size_t out_size,
+                                   const char* input, int input_size,
+                                   int character_kind) const;
   static bool _parse_signed(const char*, int, size_t, long long&);
   static bool _parse_unsigned(const char*, int, size_t, unsigned long long&);
   static bool _parse_float(const char*, float&, int&);

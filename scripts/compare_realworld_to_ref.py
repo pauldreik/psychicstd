@@ -57,15 +57,18 @@ BUILD_TYPES = ("debug", "release")
 _runtime_dirs: list[tempfile.TemporaryDirectory[str]] = []
 
 
-def _runtime_library(compiler: str, include: Path) -> str:
-    """Build the compiled psychicstd component outside measured phases.
+def _runtime_sources(include: Path) -> list[Path]:
+    root = include.parent
+    manifest = root / "cmake" / "psychicstd-runtime-sources.txt"
+    if manifest.is_file():
+        names = (
+            line.strip() for line in manifest.read_text(encoding="utf-8").splitlines()
+        )
+        return [root / name for name in names if name and not name.startswith("#")]
 
-    The include directory may belong to a reference worktree predating the
-    compiled library, in which case its header-only implementation needs no
-    library.
-    """
-    source_dir = include.parent / "src"
-    sources = [
+    # References predating the manifest still need to be benchmarkable.
+    source_dir = root / "src"
+    return [
         source_dir / name
         for name in (
             "atomic.cpp",
@@ -94,6 +97,16 @@ def _runtime_library(compiler: str, include: Path) -> str:
         )
         if (source_dir / name).is_file()
     ]
+
+
+def _runtime_library(compiler: str, include: Path) -> str:
+    """Build the compiled psychicstd component outside measured phases.
+
+    The include directory may belong to a reference worktree predating the
+    compiled library, in which case its header-only implementation needs no
+    library.
+    """
+    sources = _runtime_sources(include)
     if not sources:
         return ""
 

@@ -1,4 +1,8 @@
 #pragma once
+#ifndef __cpp_lib_byte
+#define __cpp_lib_byte 201603L
+#endif
+
 #include <stddef.h>
 namespace std {
 using ::max_align_t;

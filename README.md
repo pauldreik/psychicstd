@@ -51,10 +51,14 @@ Once you have coded for a while, switch to a real quality standard library (typi
 
 ## How complete is it?
 
-Completeness varies by header, development has been guided what is needed to get realworld
-projects to compile. The `std::string` header is perhaps the most used header and to
-investigate the complementess I counted the number of public member functios to see what
-is missing. It has **45 distinct public `basic_string` method names**, the same count as libstdc++: psychicstd is missing `copy` but adds C++23's `contains`. See the [`std::string` completeness case study](casestudies/string_completeness/stringcompletenesscasestudy.md) for details. Note that a present method name is not full compliance — see [compliance.md](compliance.md) for behavioral coverage.
+Completeness varies by header; development has been guided by what real-world
+projects need to compile. To investigate `std::string`, perhaps the most-used
+header, I counted its public member function names. It has **45 distinct public
+`basic_string` method names**, the same count as libstdc++: psychicstd is
+missing `copy` but adds C++23's `contains`. See the
+[`std::string` completeness case study](casestudies/string_completeness/stringcompletenesscasestudy.md)
+for details. A present method name does not imply full compliance — see
+[compliance.md](compliance.md) for behavioral coverage.
 
 Some facilities are omitted deliberately when their practical value does not
 justify the compile-time cost. For example, `<iostream>` provides the commonly
@@ -65,13 +69,17 @@ every user pay for unused compliance.
 
 ## Why?
 
-Slow compilation is one of the pain points of C++. Modules are supposed to help, but it is not yet ready. Also, even if modules solve the slow parsing of include files problem, standard libraries are typically optimized for runtime performance. Psychichstd does not care about runtime performance - it is all about compilation speed.
+Slow compilation is one of the pain points of C++. Modules are supposed to
+help, but they are not ready yet. Even if modules solve slow header parsing,
+standard libraries are typically optimized for runtime performance. psychicstd
+does not care about runtime performance — it is all about compilation speed.
 
 I got the idea when I read about the [pystd](https://github.com/jpakkane/pystd) project from Jussi Pakkanen, which has completely different goals but got me thinking.
 
-Writing a standard library is a massive undertaking and super hard with lots of corner cases. Three factors in combination makes it possible anyway:
+Writing a standard library is a massive undertaking with lots of corner cases.
+Three factors in combination make it possible anyway:
 
-- AI assisted coding
+- AI-assisted coding
 - the excellent libc++ test suite
 - no demands on portability, runtime performance, ABI stability etc
 
@@ -134,7 +142,7 @@ These are the goals, in order
 - **Useful in practice** — code should compile, link, and run well enough to support a normal development workflow.
 - **Free of UB** — projects that are UB free, shall be UB free also when using psychic.
 - **Faster compilation** — If it is not faster to compile than real implementations like libstdc++, this project has very little value.
-- **Sufficiently compliant to the C++ standard** — it should be correct enough to be useful. For example, `std::string` does not need to use small string optimization, which simplifies the implementation.
+- **Sufficiently compliant with the C++ standard** — it should be correct enough to be useful. For example, `std::string` does not need to use small string optimization, which simplifies the implementation.
 - **Support C++20**
 
 Performance is measured primarily from debug builds of the real-world projects on the current Debian Stable compiler (GCC 14).
@@ -158,7 +166,8 @@ All code and text should be auto formatted. Use the following:
 - `run_shell_format.sh`
 - `run_yaml_format.sh` (formats with yamlfix)
 
-Unit tests should pass. The compliance test need not, getting 100% compliance is utopic.
+Unit tests should pass. The compliance test need not; 100% compliance is
+unrealistic.
 
 ## Use in your project
 
@@ -375,11 +384,14 @@ The default build covers the library itself — no third-party code, no network 
 ### Testing on real-world projects
 
 Correctness in practice is verified by compiling — and running the test suites of — actual third-party projects against psychicstd.
-This is what is used to decide on what to implement in the library - there is no need to make the library slower by implementing things noone uses (yes I am talking about you, valarray).
+This is what is used to decide what to implement in the library — there is no
+need to make it slower by implementing things no one uses (yes, I am talking
+about you, valarray).
 
 ### Benchmarks
 
-Benchmarks are central to be able to reason about performance. Claims have to be backed up!
+Benchmarks are central to reasoning about performance. Claims have to be backed
+up!
 
 The benchmarks are listed in order of importance:
 
@@ -393,8 +405,8 @@ The benchmarks are listed in order of importance:
 Run [`./run_benchmarks.sh QUICK`](run_benchmarks.sh) on an otherwise idle
 machine for Debug-only real-world measurements with an estimated one-hour time
 budget. [`./run_benchmarks.sh FULL`](run_benchmarks.sh) measures both Debug and
-Release with three repetitions each. Both modes regenerate every report and
-disable ccache automatically.
+Release with a six-hour budget, capped at nine repetitions per project. Both
+modes regenerate every report and disable ccache automatically.
 
 Compiler memory matters because it controls how many compiler jobs can run in parallel and whether a development build starts swapping. In an uncached GCC 14 measurement, psychicstd used roughly half the peak compiler memory:
 

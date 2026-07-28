@@ -48,4 +48,26 @@ int main() {
   std::deque<value> other;
   other.swap(moved);
   psyassert(other.size() == 3);
+
+  std::deque<int> erased{1, 2, 3, 2, 4};
+  psyassert(std::erase(erased, 2) == 2);
+  psyassert((erased == std::deque<int>{1, 3, 4}));
+
+  int predicate_calls = 0;
+  psyassert(std::erase_if(erased, [&](int item) {
+              ++predicate_calls;
+              return item != 3;
+            }) == 2);
+  psyassert(predicate_calls == 3);
+  psyassert((erased == std::deque<int>{3}));
+
+  std::deque<value> erased_values;
+  erased_values.emplace_back(n);
+  erased_values.emplace_back(n);
+  erased_values.emplace_back(n);
+  erased_values[1].n = 2;
+  psyassert(std::erase_if(erased_values,
+                          [](const value& item) { return item.n == 1; }) == 2);
+  psyassert(erased_values.size() == 1);
+  psyassert(erased_values[0].n == 2);
 }

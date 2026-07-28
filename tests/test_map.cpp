@@ -77,6 +77,13 @@ int main() {
   psyassert(!node_map.contains(2));
   static_assert(noexcept(node_map.swap(node_map)));
 
+  std::map<int, int> range{{0, 0}, {1, 1}, {2, 2}, {3, 3}, {4, 4}, {5, 5}};
+  auto after_range = range.erase(range.find(1), range.find(5));
+  psyassert(after_range == range.find(5));
+  psyassert(range.size() == 2);
+  psyassert(range.begin()->first == 0);
+  psyassert(range.rbegin()->first == 5);
+
   std::map<int, partially_ordered> partial_a{{1, {-1}}};
   std::map<int, partially_ordered> partial_b{{1, {1}}};
   psyassert((partial_a <=> partial_b) == std::partial_ordering::unordered);
@@ -92,4 +99,15 @@ int main() {
   multi.emplace(0, 0);
   multi.emplace(2, 30);
   psyassert(stable_multi->second == 20);
+
+  std::multimap<int, int> duplicate_range{
+      {1, 10}, {2, 20}, {2, 21}, {2, 22}, {3, 30}};
+  auto duplicate_first = duplicate_range.lower_bound(2);
+  ++duplicate_first;
+  auto after_duplicates =
+      duplicate_range.erase(duplicate_first, duplicate_range.lower_bound(3));
+  psyassert(after_duplicates == duplicate_range.find(3));
+  psyassert(duplicate_range.count(2) == 1);
+  psyassert(duplicate_range.erase(2) == 1);
+  psyassert(duplicate_range.count(2) == 0);
 }

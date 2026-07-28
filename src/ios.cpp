@@ -1,4 +1,5 @@
 #include <ios>
+#include <locale>
 
 namespace std {
 
@@ -60,6 +61,34 @@ locale ios_base::imbue(const locale& loc) {
   locale old = loc_;
   loc_ = loc;
   return old;
+}
+
+int ios_base::_localize_number_with_locale(char* out, size_t out_size,
+                                           const char* input, int input_size,
+                                           int character_kind) const {
+  auto localize = [&]<typename Char>() {
+    const auto* facet = loc_._facet<numpunct<Char>>();
+    if (!facet)
+      return 0;
+    string grouping = facet->grouping();
+    return _localize_number(out, out_size, input, input_size,
+                            static_cast<char>(facet->decimal_point()),
+                            static_cast<char>(facet->thousands_sep()),
+                            grouping.data(), grouping.size());
+  };
+  switch (character_kind) {
+  case 1:
+    return localize.template operator()<char>();
+  case 2:
+    return localize.template operator()<wchar_t>();
+  case 3:
+    return localize.template operator()<char8_t>();
+  case 4:
+    return localize.template operator()<char16_t>();
+  case 5:
+    return localize.template operator()<char32_t>();
+  }
+  return 0;
 }
 
 ios_base::failure::failure(const string& message)

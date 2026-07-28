@@ -2,6 +2,8 @@
 #include <exception>
 #include <new>
 
+static_assert(__cpp_lib_uncaught_exceptions >= 201411L);
+
 #if defined(__SANITIZE_ADDRESS__)
 #define PSYCHICSTD_TEST_WITH_ASAN 1
 #elif defined(__has_feature)

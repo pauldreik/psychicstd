@@ -1,0 +1,118 @@
+#pragma once
+#include <__psychicstd_config>
+
+namespace std {
+
+// A small, process-local locale implementation. Facet types live in <locale>
+// so stream headers only parse the ownership core needed by ios_base.
+class locale {
+public:
+  using category = int;
+  static constexpr category none = 0;
+  static constexpr category collate = 1 << 0;
+  static constexpr category ctype = 1 << 1;
+  static constexpr category monetary = 1 << 2;
+  static constexpr category numeric = 1 << 3;
+  static constexpr category time = 1 << 4;
+  static constexpr category messages = 1 << 5;
+  static constexpr category all =
+      collate | ctype | monetary | numeric | time | messages;
+
+  class facet {
+  public:
+    virtual ~facet() = default;
+    facet(const facet&) = delete;
+    facet& operator=(const facet&) = delete;
+
+  protected:
+    facet() = default;
+  };
+  class id {};
+
+  locale() noexcept = default;
+  locale(const char*) noexcept {}
+  locale(const locale& o) noexcept : rep_(o.rep_) {
+    if (rep_)
+      ++rep_->refs;
+  }
+  locale& operator=(const locale& o) noexcept {
+    if (rep_ != o.rep_) {
+      if (o.rep_)
+        ++o.rep_->refs;
+      _release();
+      rep_ = o.rep_;
+    }
+    return *this;
+  }
+  ~locale() { _release(); }
+
+  // Install f into a copy of other. Inherited facets remain shared.
+  template <typename Facet>
+  locale(const locale& other, Facet* f)
+      : rep_(new _rep(f, other.rep_ ? other.rep_->head : nullptr)) {}
+
+  static const locale& classic() {
+    static locale c;
+    return c;
+  }
+  static locale global(const locale& loc) {
+    locale& g = _global();
+    locale prev = g;
+    g = loc;
+    return prev;
+  }
+
+  bool operator==(const locale& o) const noexcept { return rep_ == o.rep_; }
+  bool operator!=(const locale& o) const noexcept { return rep_ != o.rep_; }
+  bool _has_facets() const noexcept { return rep_; }
+
+  template <typename F> const F* _facet() const {
+#if _PSYCHICSTD_HAS_RTTI
+    for (_node* node = rep_ ? rep_->head : nullptr; node; node = node->next)
+      if (const auto* facet = dynamic_cast<const F*>(node->value))
+        return facet;
+#else
+    (void)sizeof(F);
+#endif
+    return nullptr;
+  }
+
+private:
+  struct _node {
+    long refs = 1;
+    facet* value;
+    _node* next;
+
+    _node(facet* f, _node* n) : value(f), next(n) {
+      if (next)
+        ++next->refs;
+    }
+  };
+  struct _rep {
+    long refs = 1;
+    _node* head = nullptr;
+    explicit _rep(facet* f, _node* inherited) : head(new _node(f, inherited)) {}
+    ~_rep() { _release_node(head); }
+
+  private:
+    static void _release_node(_node* node) noexcept {
+      if (node && --node->refs == 0) {
+        _node* next = node->next;
+        delete node->value;
+        delete node;
+        _release_node(next);
+      }
+    }
+  };
+  _rep* rep_ = nullptr;
+  void _release() noexcept {
+    if (rep_ && --rep_->refs == 0)
+      delete rep_;
+  }
+  static locale& _global() {
+    static locale g;
+    return g;
+  }
+};
+
+} // namespace std

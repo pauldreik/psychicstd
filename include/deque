@@ -810,28 +810,21 @@ auto operator<=>(const deque<T, A>& a, const deque<T, A>& b)
 // std::erase / std::erase_if (C++20)
 template <typename T, typename A, typename U>
 typename deque<T, A>::size_type erase(deque<T, A>& c, const U& value) {
-  typename deque<T, A>::size_type n = 0;
-  auto it = c.begin();
-  while (it != c.end()) {
-    if (*it == value) {
-      it = c.erase(it);
-      ++n;
-    } else
-      ++it;
-  }
-  return n;
+  return erase_if(c, [&](const T& item) { return item == value; });
 }
 template <typename T, typename A, typename Pred>
 typename deque<T, A>::size_type erase_if(deque<T, A>& c, Pred pred) {
-  typename deque<T, A>::size_type n = 0;
+  auto out = c.begin();
   auto it = c.begin();
-  while (it != c.end()) {
-    if (pred(*it)) {
-      it = c.erase(it);
-      ++n;
-    } else
-      ++it;
+  for (; it != c.end(); ++it) {
+    if (pred(*it))
+      continue;
+    if (out != it)
+      *out = static_cast<T&&>(*it);
+    ++out;
   }
+  const auto n = c.end() - out;
+  c.erase(out, c.end());
   return n;
 }
 
