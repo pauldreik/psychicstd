@@ -9,6 +9,55 @@
 
 namespace std::chrono {
 
+// Keep <filesystem> light; psychicstd duration bounds support builtin reps.
+template <typename Rep> struct __duration_unsigned {
+  using type = make_unsigned_t<Rep>;
+};
+template <> struct __duration_unsigned<__int128> {
+  using type = unsigned __int128;
+};
+template <> struct __duration_unsigned<unsigned __int128> {
+  using type = unsigned __int128;
+};
+
+template <typename Rep> constexpr Rep __duration_min() {
+  if constexpr (is_same_v<Rep, float>)
+    return -__FLT_MAX__;
+  else if constexpr (is_same_v<Rep, double>)
+    return -__DBL_MAX__;
+  else if constexpr (is_same_v<Rep, long double>)
+    return -__LDBL_MAX__;
+  else if constexpr (is_same_v<Rep, bool> || is_unsigned_v<Rep> ||
+                     is_same_v<Rep, unsigned __int128>)
+    return Rep(0);
+  else if constexpr (is_integral_v<Rep> || is_same_v<Rep, __int128>) {
+    using U = typename __duration_unsigned<Rep>::type;
+    constexpr U max = (U(1) << (sizeof(Rep) * __CHAR_BIT__ - 1)) - 1;
+    return static_cast<Rep>(-static_cast<Rep>(max) - 1);
+  } else
+    return Rep();
+}
+
+template <typename Rep> constexpr Rep __duration_max() {
+  if constexpr (is_same_v<Rep, float>)
+    return __FLT_MAX__;
+  else if constexpr (is_same_v<Rep, double>)
+    return __DBL_MAX__;
+  else if constexpr (is_same_v<Rep, long double>)
+    return __LDBL_MAX__;
+  else if constexpr (is_same_v<Rep, bool>)
+    return true;
+  else if constexpr (is_integral_v<Rep> || is_same_v<Rep, __int128> ||
+                     is_same_v<Rep, unsigned __int128>) {
+    using U = typename __duration_unsigned<Rep>::type;
+    if constexpr (is_unsigned_v<Rep> || is_same_v<Rep, unsigned __int128>)
+      return static_cast<Rep>(~U(0));
+    else
+      return static_cast<Rep>((U(1) << (sizeof(Rep) * __CHAR_BIT__ - 1)) - 1);
+  } else
+    return Rep();
+}
+
 template <typename Rep, typename Period = ratio<1>> class duration {
 public:
   using rep = Rep;
@@ -42,14 +91,8 @@ public:
   }
 
   static constexpr duration zero() { return duration(0); }
-  static constexpr duration min() {
-    return duration(Rep(-1) < Rep(0) ? Rep(-1) << (sizeof(Rep) * 8 - 1)
-                                     : Rep(0));
-  }
-  static constexpr duration max() {
-    return duration(Rep(-1) < Rep(0) ? ~(Rep(-1) << (sizeof(Rep) * 8 - 1))
-                                     : Rep(-1));
-  }
+  static constexpr duration min() { return duration(__duration_min<Rep>()); }
+  static constexpr duration max() { return duration(__duration_max<Rep>()); }
 
 private:
   Rep rep_{};
@@ -242,8 +285,7 @@ struct file_clock;
 
 template <typename Duration>
 using sys_time = time_point<system_clock, Duration>;
-template <typename Duration>
-using file_time = time_point<file_clock, Duration>;
+template <typename Duration> using file_time = time_point<file_clock, Duration>;
 
 struct file_clock {
   using duration = nanoseconds;
@@ -258,7 +300,8 @@ struct file_clock {
   }
 
   template <typename Duration>
-  static file_time<Duration> from_sys(const sys_time<Duration>& value) noexcept {
+  static file_time<Duration>
+  from_sys(const sys_time<Duration>& value) noexcept {
     return file_time<Duration>(value.time_since_epoch());
   }
 };
