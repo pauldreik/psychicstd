@@ -43,9 +43,9 @@ macOS 14.4 and newer is also supported.
 - Code built with psychicstd must not accidentally link libstdc++. Keep the
   `-nostdinc++`, `-nostdlib++`/GCC-12 fallback, `-lsupc++`, and
   `-fvisibility=hidden` arrangements coherent.
-- When adding or removing runtime `.cpp` files, update every explicit source
-  list: `CMakeLists.txt`, `cmake/psychicstd-toolchain-validate.cmake`, and the
-  runtime builder in `scripts/compare_realworld_to_ref.py`.
+- When adding or removing runtime `.cpp` files, update the canonical
+  `cmake/psychicstd-runtime-sources.txt` manifest. The top-level build,
+  distributable toolchain, and real-world benchmark driver all read it.
 
 ## Conan integration
 
