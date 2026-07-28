@@ -278,7 +278,8 @@ public:
   template <typename Operation>
   void resize_and_overwrite(size_type count, Operation operation) {
     reserve(count);
-    size_ = static_cast<size_type>(operation(data(), count));
+    size_ = static_cast<size_type>(
+        static_cast<Operation&&>(operation)(data(), count));
     data()[size_] = Char();
   }
 
