@@ -94,5 +94,7 @@ __throw_out_of_range(const char* message);
 __throw_invalid_argument(const char* message);
 [[noreturn, gnu::cold, gnu::noinline]] void
 __throw_runtime_error(const char* message);
+[[noreturn, gnu::cold, gnu::noinline]] void
+__throw_overflow_error(const char* message);
 
 } // namespace std

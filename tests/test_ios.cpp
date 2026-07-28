@@ -17,6 +17,22 @@ int main() {
   psyassert(std::ios_base::goodbit == 0);
   std::ios ios(nullptr);
   psyassert(!ios.rdbuf());
+  psyassert(ios.bad());
+  ios.exceptions(std::ios::eofbit);
+  try {
+    ios.exceptions(std::ios::badbit);
+    psyassert(false);
+  } catch (const std::ios::failure&) {
+  }
+  std::ios null_ios(nullptr);
+  null_ios.clear();
+  psyassert(null_ios.bad());
+  auto initial_flags = null_ios.flags();
+  auto old_flags =
+      null_ios.setf(std::ios::right | std::ios::hex, std::ios::adjustfield);
+  psyassert(old_flags == initial_flags);
+  psyassert(null_ios.flags() ==
+            ((initial_flags & ~std::ios::adjustfield) | std::ios::right));
   int first_word = std::ios_base::xalloc();
   int second_word = std::ios_base::xalloc();
   psyassert(first_word != second_word);

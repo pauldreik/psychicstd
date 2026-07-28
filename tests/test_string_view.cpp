@@ -9,6 +9,11 @@
   } while (0)
 
 int main() {
+  static_assert([] {
+    char local[] = "view";
+    return std::string_view(local) == "view";
+  }());
+
   static constexpr char iterator_source[] = "view";
   constexpr std::string_view iterator_view(iterator_source,
                                            iterator_source + 4);

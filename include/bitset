@@ -1,4 +1,5 @@
 #pragma once
+#include <__psychicstd_except>
 #include <__psychicstd_hash>
 #include <cstddef>
 
@@ -49,7 +50,11 @@ public:
   reference operator[](size_t pos) noexcept {
     return reference(&words_[pos / word_bits], pos % word_bits);
   }
-  constexpr bool test(size_t pos) const { return (*this)[pos]; }
+  constexpr bool test(size_t pos) const {
+    if (pos >= N)
+      _PSYCHICSTD_THROW_HELPER(__throw_out_of_range, "bitset::test");
+    return (*this)[pos];
+  }
   constexpr size_t size() const noexcept { return N; }
 
   bitset& set() noexcept {
@@ -59,6 +64,7 @@ public:
     return *this;
   }
   bitset& set(size_t pos, bool value = true) {
+    check_position(pos, "bitset::set");
     (*this)[pos] = value;
     return *this;
   }
@@ -68,6 +74,7 @@ public:
     return *this;
   }
   bitset& reset(size_t pos) {
+    check_position(pos, "bitset::reset");
     (*this)[pos] = false;
     return *this;
   }
@@ -78,6 +85,7 @@ public:
     return *this;
   }
   bitset& flip(size_t pos) {
+    check_position(pos, "bitset::flip");
     words_[pos / word_bits] ^= 1ULL << (pos % word_bits);
     return *this;
   }
@@ -104,9 +112,18 @@ public:
     return result;
   }
   constexpr unsigned long to_ulong() const {
-    return static_cast<unsigned long>(words_[0]);
+    auto value = to_ullong();
+    auto result = static_cast<unsigned long>(value);
+    if (static_cast<unsigned long long>(result) != value)
+      _PSYCHICSTD_THROW_HELPER(__throw_overflow_error, "bitset::to_ulong");
+    return result;
   }
-  constexpr unsigned long long to_ullong() const { return words_[0]; }
+  constexpr unsigned long long to_ullong() const {
+    for (size_t i = 1; i < word_count; ++i)
+      if (words_[i])
+        _PSYCHICSTD_THROW_HELPER(__throw_overflow_error, "bitset::to_ullong");
+    return words_[0];
+  }
 
   bitset& operator|=(const bitset& other) noexcept {
     for (size_t i = 0; i < word_count; ++i)
@@ -135,6 +152,11 @@ public:
   }
 
 private:
+  static constexpr void check_position(size_t pos, const char* operation) {
+    if (pos >= N)
+      _PSYCHICSTD_THROW_HELPER(__throw_out_of_range, operation);
+  }
+
   static constexpr unsigned long long last_mask() {
     if constexpr (N == 0)
       return 0;

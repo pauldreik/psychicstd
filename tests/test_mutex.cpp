@@ -3,6 +3,7 @@
 #include <condition_variable>
 #include <mutex>
 #include <shared_mutex>
+#include <system_error>
 #include <thread>
 
 template <typename Mutex> bool try_from_another_thread(Mutex& mutex) {
@@ -33,6 +34,33 @@ int main() {
   first_reader.unlock();
   psyassert(shared.try_lock());
   shared.unlock();
+
+  std::shared_lock<std::shared_mutex> deferred(shared, std::defer_lock);
+  deferred.lock();
+  bool relock_threw = false;
+  try {
+    (void)deferred.try_lock();
+  } catch (const std::system_error& error) {
+    relock_threw = error.code() == std::errc::resource_deadlock_would_occur;
+  }
+  psyassert(relock_threw);
+  deferred.unlock();
+  bool reunlock_threw = false;
+  try {
+    deferred.unlock();
+  } catch (const std::system_error& error) {
+    reunlock_threw = error.code() == std::errc::operation_not_permitted;
+  }
+  psyassert(reunlock_threw);
+
+  std::shared_lock<std::shared_mutex> empty;
+  bool empty_threw = false;
+  try {
+    empty.lock();
+  } catch (const std::system_error& error) {
+    empty_threw = error.code() == std::errc::operation_not_permitted;
+  }
+  psyassert(empty_threw);
 
   std::shared_timed_mutex shared_timed;
   shared_timed.lock_shared();

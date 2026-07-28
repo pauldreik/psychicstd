@@ -2,6 +2,7 @@
 #include <ctime>
 #include <cwchar>
 #include <locale>
+#include <typeinfo>
 
 class passthrough_codecvt : public std::codecvt<char, char, std::mbstate_t> {
 public:
@@ -35,7 +36,25 @@ protected:
   string_type do_grouping() const override { return "\3"; }
 };
 
+struct missing_facet : std::locale::facet {
+  inline static std::locale::id id;
+};
+
 int main() {
+  psyassert((std::use_facet<std::codecvt<char16_t, char8_t, std::mbstate_t>>(
+                 std::locale::classic())
+                 .max_length() == 4));
+  psyassert((std::use_facet<std::codecvt<char, char, std::mbstate_t>>(
+                 std::locale::classic())
+                 .always_noconv()));
+  psyassert((std::use_facet<std::codecvt<wchar_t, char, std::mbstate_t>>(
+                 std::locale::classic())
+                 .encoding() == 1));
+  try {
+    (void)std::use_facet<missing_facet>(std::locale::classic());
+    psyassert(false);
+  } catch (const std::bad_cast&) {
+  }
   static_assert(std::locale::none == 0);
   static_assert((std::locale::all & std::locale::collate) != 0);
   psyassert(std::isalpha('a', std::locale::classic()));

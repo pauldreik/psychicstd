@@ -4,12 +4,36 @@
 
 namespace std {
 
-long long ios_base::_parse_signed(const char* input, int base) {
-  return ::strtoll(input, nullptr, base);
+bool ios_base::_parse_signed(const char* input, int base, size_t bytes,
+                             long long& value) {
+  long long low = 0;
+  long long high = 1;
+  if (bytes) {
+    high = bytes == sizeof(long long)
+               ? __LONG_LONG_MAX__
+               : static_cast<long long>((1ULL << (bytes * 8 - 1)) - 1);
+    low = -high - 1;
+  }
+  errno = 0;
+  value = ::strtoll(input, nullptr, base);
+  if (errno == ERANGE || value < low || value > high) {
+    value = input[0] == '-' ? low : high;
+    return false;
+  }
+  return true;
 }
 
-unsigned long long ios_base::_parse_unsigned(const char* input, int base) {
-  return ::strtoull(input, nullptr, base);
+bool ios_base::_parse_unsigned(const char* input, int base, size_t bytes,
+                               unsigned long long& value) {
+  auto high =
+      bytes == sizeof(unsigned long long) ? ~0ULL : (1ULL << (bytes * 8)) - 1;
+  errno = 0;
+  value = ::strtoull(input, nullptr, base);
+  if (errno == ERANGE || value > high) {
+    value = high;
+    return false;
+  }
+  return true;
 }
 
 template <typename Float, typename Parse>

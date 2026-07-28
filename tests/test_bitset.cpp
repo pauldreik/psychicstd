@@ -1,5 +1,6 @@
 #include "psyassert.h"
 #include <bitset>
+#include <stdexcept>
 #include <type_traits>
 
 int main() {
@@ -27,4 +28,31 @@ int main() {
   psyassert(large.count() == 632);
   large.reset();
   psyassert(large.none());
+
+  try {
+    (void)large.test(large.size());
+    psyassert(false);
+  } catch (const std::out_of_range&) {
+  }
+  try {
+    large.set(large.size());
+    psyassert(false);
+  } catch (const std::out_of_range&) {
+  }
+  try {
+    large.reset(large.size());
+    psyassert(false);
+  } catch (const std::out_of_range&) {
+  }
+  try {
+    large.flip(large.size());
+    psyassert(false);
+  } catch (const std::out_of_range&) {
+  }
+  large.set(632);
+  try {
+    (void)large.to_ullong();
+    psyassert(false);
+  } catch (const std::overflow_error&) {
+  }
 }
