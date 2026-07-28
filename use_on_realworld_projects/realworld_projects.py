@@ -1371,6 +1371,105 @@ def _nlohmann() -> Project:
     )
 
 
+# --- small header-only projects ---------------------------------------
+
+
+def _single_source_project(
+    name: str,
+    version: str,
+    url: str,
+    checksum: str,
+    source_dir: str,
+    source_files: tuple[str, ...],
+    include_dirs: tuple[str, ...],
+    run_args: tuple[str, ...] = (),
+    extra_cxxflags: tuple[str, ...] = (),
+    run_binary: bool = True,
+) -> Project:
+    """Compile small upstream examples/tests individually.
+
+    This keeps header-only projects representative without adding a second
+    build-system recipe whose own machinery would dominate the measurement.
+    """
+
+    def build(tc: Toolchain) -> dict[str, float]:
+        tarball = RW_DIR / f"{name}-{version}.tar.gz"
+        _fetch(url, tarball, checksum)
+        with tempfile.TemporaryDirectory(prefix=f"rw-{name}-") as work_dir:
+            work = Path(work_dir)
+            with tarfile.open(tarball) as archive:
+                archive.extractall(work)
+            src = work / source_dir
+            env = _env(tc)
+            includes = ["-I" + str(src / d) for d in include_dirs]
+            compile_ms = 0.0
+            run_ms = 0.0
+            for index, relative in enumerate(source_files):
+                binary = work / f"example-{index}"
+                command = [
+                    tc.cxx,
+                    *tc.cxxflags.split(),
+                    *extra_cxxflags,
+                    *includes,
+                    str(src / relative),
+                ]
+                command += tc.ldflags.split() + tc.libs.split() + ["-o", str(binary)]
+                compile_ms += _timed(command, src, env)
+                if run_binary:
+                    run_ms += _timed([str(binary), *run_args], src, env)
+            result = {"compile": compile_ms}
+            if run_binary:
+                result["run tests"] = run_ms
+            return result
+
+    return Project(
+        version=version,
+        build=build,
+        expected_seconds={"debug": 10, "release": 10},
+        phases=("compile", "run tests") if run_binary else ("compile",),
+    )
+
+
+def _inipp() -> Project:
+    return _single_source_project(
+        "inipp",
+        "1.0.13",
+        "https://github.com/mcmtroffaes/inipp/archive/refs/tags/1.0.13.tar.gz",
+        "656c5d82db48f4da8ed70482839ad0da95ea1d576a3c890c272e9b9e0fb89571",
+        "inipp-1.0.13",
+        ("unittest/headertest.cpp",),
+        ("inipp",),
+    )
+
+
+def _cxxopts() -> Project:
+    return _single_source_project(
+        "cxxopts",
+        "3.3.1",
+        "https://github.com/jarro2783/cxxopts/archive/refs/tags/v3.3.1.tar.gz",
+        "3bfc70542c521d4b55a46429d808178916a579b28d048bd8c727ee76c39e2072",
+        "cxxopts-3.3.1",
+        ("src/example.cpp",),
+        ("include",),
+        ("--help",),
+        ("-DCXXOPTS_NO_REGEX",),
+        run_binary=False,
+    )
+
+
+def _pocketfft() -> Project:
+    commit = "c90e55b3d529f8efa40ed01a20de22405f45fc65"
+    return _single_source_project(
+        "pocketfft",
+        commit[:12],
+        f"https://github.com/mreineck/pocketfft/archive/{commit}.tar.gz",
+        "2d90016da31a8cc1dd0ac0c89c1f2fb55df8f4ccc3f0386dcfbad09ac6d1c3ba",
+        f"pocketfft-{commit}",
+        ("pocketfft_demo.cc",),
+        (".",),
+    )
+
+
 # --- rapidjson ---------------------------------------------------------
 
 
@@ -2648,9 +2747,12 @@ PROJECTS: dict[str, Project] = {
     "fmt": _fmt(),
     "godot": _godot(),
     "googletest": _googletest(),
+    "inipp": _inipp(),
+    "cxxopts": _cxxopts(),
     "llama.cpp": _llama_cpp(),
     "nlohmann": _nlohmann(),
     "opencv": _opencv(),
+    "pocketfft": _pocketfft(),
     "rapidjson": _rapidjson(),
     "react-native": _react_native(),
     "rdfind": _rdfind(),

@@ -318,4 +318,8 @@ template <typename Char> bool isspace(Char c, const locale&) {
   return c == Char(' ') || (c >= Char('\t') && c <= Char('\r'));
 }
 
+template <typename Char> bool isalnum(Char c, const locale& loc) {
+  return isalpha(c, loc) || (c >= Char('0') && c <= Char('9'));
+}
+
 } // namespace std

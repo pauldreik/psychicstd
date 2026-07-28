@@ -225,49 +225,19 @@ using ::nextafter;
 inline long double nextafter(long double x, long double y) {
   return ::nextafterl(x, y);
 }
-inline double nextafter(float x, double y) { return ::nextafter(x, y); }
-inline double nextafter(double x, float y) { return ::nextafter(x, y); }
-inline long double nextafter(float x, long double y) {
-  return ::nextafterl(x, y);
-}
-inline long double nextafter(long double x, float y) {
-  return ::nextafterl(x, y);
-}
-inline long double nextafter(double x, long double y) {
-  return ::nextafterl(x, y);
-}
-inline long double nextafter(long double x, double y) {
-  return ::nextafterl(x, y);
-}
-template <typename Integer>
-  requires(__builtin_classify_type(*(Integer*)nullptr) == 1)
-inline float nextafter(float x, Integer y) {
-  return ::nextafterf(x, static_cast<float>(y));
-}
-template <typename Integer>
-  requires(__builtin_classify_type(*(Integer*)nullptr) == 1)
-inline double nextafter(double x, Integer y) {
-  return ::nextafter(x, static_cast<double>(y));
-}
-template <typename Integer>
-  requires(__builtin_classify_type(*(Integer*)nullptr) == 1)
-inline long double nextafter(long double x, Integer y) {
-  return ::nextafterl(x, static_cast<long double>(y));
-}
-template <typename Integer>
-  requires(__builtin_classify_type(*(Integer*)nullptr) == 1)
-inline double nextafter(Integer x, float y) {
-  return ::nextafter(static_cast<double>(x), static_cast<double>(y));
-}
-template <typename Integer>
-  requires(__builtin_classify_type(*(Integer*)nullptr) == 1)
-inline double nextafter(Integer x, double y) {
-  return ::nextafter(static_cast<double>(x), y);
-}
-template <typename Integer>
-  requires(__builtin_classify_type(*(Integer*)nullptr) == 1)
-inline long double nextafter(Integer x, long double y) {
-  return ::nextafterl(static_cast<long double>(x), y);
+template <typename T, typename U>
+  requires((__builtin_classify_type(*(T*)nullptr) == 1 ||
+            __builtin_classify_type(*(T*)nullptr) == 8) &&
+           (__builtin_classify_type(*(U*)nullptr) == 1 ||
+            __builtin_classify_type(*(U*)nullptr) == 8))
+inline auto nextafter(T x, U y) {
+  if constexpr (__is_same(T, long double) || __is_same(U, long double))
+    return ::nextafterl(static_cast<long double>(x),
+                        static_cast<long double>(y));
+  else if constexpr (__is_same(T, float) && __is_same(U, float))
+    return ::nextafterf(x, y);
+  else
+    return ::nextafter(static_cast<double>(x), static_cast<double>(y));
 }
 using ::nextafterf;
 using ::nextafterl;

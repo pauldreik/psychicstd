@@ -318,3 +318,24 @@ jobs:
         run: >-
           scripts/benchmark_realworld.py --check-only
           --project react-native --build-type both
+  inipp:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build inipp with psychicstd
+        run: scripts/benchmark_realworld.py --check-only --project inipp --build-type
+          debug
+  cxxopts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build cxxopts with psychicstd
+        run: scripts/benchmark_realworld.py --check-only --project cxxopts --build-type
+          debug
+  pocketfft:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build pocketfft with psychicstd
+        run: scripts/benchmark_realworld.py --check-only --project pocketfft --build-type
+          debug

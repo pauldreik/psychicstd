@@ -44,6 +44,7 @@ int main() {
   static_assert(std::is_same_v<decltype(std::nextafter(1.0, 2.0F)), double>);
   static_assert(std::is_same_v<decltype(std::nextafter(1.0, 2)), double>);
   static_assert(std::is_same_v<decltype(std::nextafter(1, 2.0F)), double>);
+  static_assert(std::is_same_v<decltype(std::nextafter(1L, 2)), double>);
   static_assert(
       std::is_same_v<decltype(std::nextafter(1.0L, 2.0)), long double>);
   static_assert(std::is_same_v<decltype(std::nextafterf(1.0F, 2.0F)), float>);
