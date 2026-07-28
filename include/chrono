@@ -104,23 +104,28 @@ constexpr auto operator-(const duration<R1, P1>& a, const duration<R2, P2>& b) {
   return CD(CD(a).count() - CD(b).count());
 }
 template <typename Rep, typename Period, typename Scalar>
+  requires is_arithmetic_v<Scalar>
 constexpr duration<Rep, Period> operator*(const duration<Rep, Period>& d,
                                           Scalar s) {
   return duration<Rep, Period>(static_cast<Rep>(d.count() * s));
 }
 template <typename Scalar, typename Rep, typename Period>
+  requires is_arithmetic_v<Scalar>
 constexpr duration<Rep, Period> operator*(Scalar s,
                                           const duration<Rep, Period>& d) {
   return d * s;
 }
 template <typename Rep, typename Period, typename Scalar>
+  requires is_arithmetic_v<Scalar>
 constexpr duration<Rep, Period> operator/(const duration<Rep, Period>& d,
                                           Scalar s) {
   return duration<Rep, Period>(static_cast<Rep>(d.count() / s));
 }
 template <typename R1, typename P1, typename R2, typename P2>
 constexpr auto operator/(const duration<R1, P1>& a, const duration<R2, P2>& b) {
-  return a.count() / b.count();
+  using CD =
+      duration<decltype(declval<R1>() / declval<R2>()), ratio_gcd<P1, P2>>;
+  return CD(a).count() / CD(b).count();
 }
 
 template <typename ToDur, typename Rep, typename Period>
@@ -275,3 +280,51 @@ template <> struct treat_as_floating_point<float> : true_type {};
 template <> struct treat_as_floating_point<double> : true_type {};
 template <> struct treat_as_floating_point<long double> : true_type {};
 } // namespace std::chrono
+
+namespace std {
+inline namespace literals {
+inline namespace chrono_literals {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wliteral-suffix"
+constexpr chrono::hours operator""h(unsigned long long value) {
+  return chrono::hours(static_cast<int>(value));
+}
+constexpr chrono::duration<long double, ratio<3600>>
+operator""h(long double value) {
+  return chrono::duration<long double, ratio<3600>>(value);
+}
+constexpr chrono::minutes operator""min(unsigned long long value) {
+  return chrono::minutes(static_cast<int>(value));
+}
+constexpr chrono::duration<long double, ratio<60>>
+operator""min(long double value) {
+  return chrono::duration<long double, ratio<60>>(value);
+}
+constexpr chrono::seconds operator""s(unsigned long long value) {
+  return chrono::seconds(static_cast<long long>(value));
+}
+constexpr chrono::duration<long double> operator""s(long double value) {
+  return chrono::duration<long double>(value);
+}
+constexpr chrono::milliseconds operator""ms(unsigned long long value) {
+  return chrono::milliseconds(static_cast<long long>(value));
+}
+constexpr chrono::duration<long double, milli> operator""ms(long double value) {
+  return chrono::duration<long double, milli>(value);
+}
+constexpr chrono::microseconds operator""us(unsigned long long value) {
+  return chrono::microseconds(static_cast<long long>(value));
+}
+constexpr chrono::duration<long double, micro> operator""us(long double value) {
+  return chrono::duration<long double, micro>(value);
+}
+constexpr chrono::nanoseconds operator""ns(unsigned long long value) {
+  return chrono::nanoseconds(static_cast<long long>(value));
+}
+constexpr chrono::duration<long double, nano> operator""ns(long double value) {
+  return chrono::duration<long double, nano>(value);
+}
+#pragma GCC diagnostic pop
+} // namespace chrono_literals
+} // namespace literals
+} // namespace std
