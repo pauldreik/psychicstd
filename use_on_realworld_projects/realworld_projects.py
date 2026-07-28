@@ -2612,6 +2612,93 @@ def _llama_cpp() -> Project:
     )
 
 
+# --- libcamera -----------------------------------------------------------
+
+
+def _libcamera() -> Project:
+    version = "0.7.2"
+    url = (
+        "https://gitlab.freedesktop.org/camera/libcamera/"
+        f"-/archive/v{version}/libcamera-v{version}.tar.gz"
+    )
+    checksum = "64881a4bafbda02f34861153d8f0d42be9ff46f5598408f9b585b07a10c448c9"
+
+    def build(tc: Toolchain) -> dict[str, float]:
+        tarball = RW_DIR / f"libcamera-v{version}.tar.gz"
+        _fetch(url, tarball, checksum)
+
+        with tempfile.TemporaryDirectory(
+            prefix="rw-libcamera-", ignore_cleanup_errors=True
+        ) as work_dir:
+            work = Path(work_dir)
+            with tarfile.open(tarball) as t:
+                t.extractall(work)
+            src = work / f"libcamera-v{version}"
+
+            # Upstream only recognizes libc++ and libstdc++. Its choice only
+            # affects a disabled Python test, so use the libstdc++ path for
+            # psychicstd too.
+            meson_file = src / "meson.build"
+            meson_text = meson_file.read_text()
+            meson_text = meson_text.replace(
+                "else\n    error('C++ standard library cannot be detected')\nendif",
+                "else\n    cxx_stdlib = 'libstdc++'\nendif",
+            )
+            meson_file.write_text(meson_text)
+            class_cpp = src / "src" / "libcamera" / "base" / "class.cpp"
+            class_cpp.write_text("#include <utility>\n" + class_cpp.read_text())
+            log_cpp = src / "src" / "libcamera" / "base" / "log.cpp"
+            log_cpp.write_text("#include <cctype>\n" + log_cpp.read_text())
+            clock_cpp = src / "src" / "libcamera" / "clock_recovery.cpp"
+            clock_cpp.write_text("#include <cmath>\n" + clock_cpp.read_text())
+            ipa_proxy = src / "src" / "libcamera" / "ipa_proxy.cpp"
+            ipa_proxy.write_text("#include <cctype>\n" + ipa_proxy.read_text())
+
+            env = _env(tc)
+            wrapper = _compiler_wrapper(work / "cxx", tc)
+            env["CXX"] = str(wrapper)
+            configure = [
+                "meson",
+                "setup",
+                "build",
+                "--buildtype=" + tc.build_type,
+                "--default-library=static",
+                "-Dwerror=false",
+                "-Dpipelines=uvcvideo",
+                "-Dipas=",
+                "-Dandroid=disabled",
+                "-Dcam=disabled",
+                "-Ddocumentation=disabled",
+                "-Dgstreamer=disabled",
+                "-Dlc-compliance=disabled",
+                "-Dlibdw=disabled",
+                "-Dlibunwind=disabled",
+                "-Dpycamera=disabled",
+                "-Dqcam=disabled",
+                "-Dsoftisp-gpu=disabled",
+                "-Dtest=false",
+                "-Dtracing=disabled",
+                "-Dudev=disabled",
+                "-Dv4l2=disabled",
+            ]
+            jobs = f"-j{tc.jobs}"
+            return {
+                "configure": _timed(configure, src, env),
+                "compile": _timed(["ninja", "-C", "build", jobs], src, env),
+            }
+
+    return Project(
+        version=version,
+        build=build,
+        expected_seconds={"debug": 6, "release": 8},
+        expected_jobs=14,
+        phases=("compile",),
+        comment="Builds libcamera's core libraries and UVC pipeline handler; "
+        "hardware-dependent applications, optional integrations, bindings, "
+        "and tests are disabled.",
+    )
+
+
 # --- opencv --------------------------------------------------------------
 
 
@@ -2749,6 +2836,7 @@ PROJECTS: dict[str, Project] = {
     "googletest": _googletest(),
     "inipp": _inipp(),
     "cxxopts": _cxxopts(),
+    "libcamera": _libcamera(),
     "llama.cpp": _llama_cpp(),
     "nlohmann": _nlohmann(),
     "opencv": _opencv(),

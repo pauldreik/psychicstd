@@ -29,7 +29,7 @@ void __sleep_for(long long nanoseconds) noexcept {
 
 } // namespace __thread_detail
 
-static pthread_t native_handle(unsigned long handle) noexcept {
+static pthread_t to_native_handle(unsigned long handle) noexcept {
   pthread_t result;
   __builtin_memcpy(&result, &handle, sizeof(result));
   return result;
@@ -64,13 +64,13 @@ thread::~thread() {
 }
 
 void thread::join() {
-  if (!joinable_ || ::pthread_join(native_handle(handle_), nullptr) != 0)
+  if (!joinable_ || ::pthread_join(to_native_handle(handle_), nullptr) != 0)
     __builtin_trap();
   joinable_ = false;
 }
 
 void thread::detach() {
-  if (!joinable_ || ::pthread_detach(native_handle(handle_)) != 0)
+  if (!joinable_ || ::pthread_detach(to_native_handle(handle_)) != 0)
     __builtin_trap();
   joinable_ = false;
 }

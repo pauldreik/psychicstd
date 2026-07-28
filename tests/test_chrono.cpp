@@ -70,6 +70,16 @@ static void test_integral_is_finite() {
 }
 
 int main() {
+  using namespace std::chrono_literals;
+  static_assert(2h == std::chrono::hours(2));
+  static_assert(3min == std::chrono::minutes(3));
+  static_assert(4s == std::chrono::seconds(4));
+  static_assert(5ms == std::chrono::milliseconds(5));
+  static_assert(6us == std::chrono::microseconds(6));
+  static_assert(7ns == std::chrono::nanoseconds(7));
+  static_assert(10ms / 2ms == 5);
+  static_assert(2s / 500ms == 4);
+
   test_duration_cast_identity();
   test_duration_cast_down();
   test_duration_cast_up();

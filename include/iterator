@@ -133,6 +133,10 @@ template <typename C> constexpr auto data(const C& c) -> decltype(c.data()) {
 template <typename T, size_t N> constexpr T* data(T (&a)[N]) noexcept {
   return a;
 }
+template <typename T>
+constexpr const T* data(initializer_list<T> values) noexcept {
+  return values.begin();
+}
 
 // back_insert_iterator / back_inserter
 template <typename Container> class back_insert_iterator {

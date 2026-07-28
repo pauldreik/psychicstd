@@ -33,6 +33,7 @@ int main() {
   std::atomic<int> ran(0);
   std::thread thread_worker([&] { ++ran; });
   psyassert(thread_worker.joinable());
+  psyassert(thread_worker.native_handle() != std::thread::native_handle_type{});
   thread_worker.join();
   psyassert(ran == 1);
   worker member_worker{&ran};

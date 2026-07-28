@@ -22,6 +22,7 @@ It is not complete. It is not fully compliant. But it is good enough to quickly 
 | [fmt](https://github.com/fmtlib/fmt) | [1.63x](use_on_realworld_projects/fmt_speed_report.md) | |
 | [Godot Engine](https://godotengine.org/) | [1.09x](use_on_realworld_projects/godot_speed_report.md) | Builds the core static library with SCons; rendering, window-system, audio, and optional engine modules are disabled. |
 | [googletest](https://github.com/google/googletest) | [1.58x](use_on_realworld_projects/googletest_speed_report.md) | |
+| [libcamera](https://libcamera.org/) | [5.12x](use_on_realworld_projects/libcamera_speed_report.md) | Builds the core libraries and UVC pipeline handler; hardware-dependent applications, optional integrations, bindings, and tests are disabled. |
 | [llama.cpp](https://github.com/ggml-org/llama.cpp) | [1.53x](use_on_realworld_projects/llama.cpp_speed_report.md) | Builds `ggml-base` and `ggml-cpu` and compiles model-architecture and hyperparameter handling; excludes accelerator backends, tools, examples, server, and tests. |
 | [nlohmann json](https://json.nlohmann.me/) | [2.05x](use_on_realworld_projects/nlohmann_speed_report.md) | Uncovered a reliance on implementation-specific behaviour, fixed in [PR #5236](https://github.com/nlohmann/json/pull/5236). |
 | [cxxopts](https://github.com/jarro2783/cxxopts) | [2.77x](use_on_realworld_projects/cxxopts_speed_report.md) | Compiles the upstream example with cxxopts' documented no-regex fallback. |

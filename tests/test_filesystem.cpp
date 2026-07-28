@@ -2,6 +2,7 @@
 #include <filesystem>
 #include <fstream>
 #include <queue>
+#include <sstream>
 #include <string>
 #include <string_view>
 #include <sys/stat.h>
@@ -16,6 +17,11 @@ int main() {
   psyassert(p1.extension() == fs::path(".txt"));
   psyassert(p1.parent_path() == fs::path("/tmp/some/dir"));
   psyassert(p1.string() == "/tmp/some/dir/file.txt");
+  std::string converted = p1;
+  psyassert(converted == p1.string());
+  std::ostringstream path_stream;
+  path_stream << p1;
+  psyassert(path_stream.str() == '"' + p1.string() + '"');
 
   fs::path p2 = std::string("noext");
   psyassert(p2.extension().empty());
