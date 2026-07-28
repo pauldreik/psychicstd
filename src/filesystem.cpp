@@ -1,10 +1,91 @@
 #include <cerrno>
+#include <cstdio>
+#include <cstdlib>
 #include <dirent.h>
 #include <filesystem>
+#include <limits.h>
 #include <sys/stat.h>
+#include <unistd.h>
 #include <vector>
 
 namespace std::filesystem {
+
+namespace {
+
+void clear_error(error_code& ec) noexcept { ec = error_code(); }
+
+void set_error(error_code& ec, int value = errno) noexcept {
+  ec = error_code(value, generic_category());
+}
+
+bool missing_path_error(int value) noexcept {
+  return value == ENOENT || value == ENOTDIR;
+}
+
+void append_utf8(string& output, char32_t value) {
+  if (value <= 0x7f) {
+    output.push_back(static_cast<char>(value));
+  } else if (value <= 0x7ff) {
+    output.push_back(static_cast<char>(0xc0 | (value >> 6)));
+    output.push_back(static_cast<char>(0x80 | (value & 0x3f)));
+  } else if (value <= 0xffff) {
+    output.push_back(static_cast<char>(0xe0 | (value >> 12)));
+    output.push_back(static_cast<char>(0x80 | ((value >> 6) & 0x3f)));
+    output.push_back(static_cast<char>(0x80 | (value & 0x3f)));
+  } else {
+    output.push_back(static_cast<char>(0xf0 | (value >> 18)));
+    output.push_back(static_cast<char>(0x80 | ((value >> 12) & 0x3f)));
+    output.push_back(static_cast<char>(0x80 | ((value >> 6) & 0x3f)));
+    output.push_back(static_cast<char>(0x80 | (value & 0x3f)));
+  }
+}
+
+template <typename Output> Output decode_utf8(string_view input) {
+  Output result;
+  for (size_t i = 0; i < input.size();) {
+    unsigned char first = static_cast<unsigned char>(input[i++]);
+    char32_t value = first;
+    unsigned continuation = 0;
+    if ((first & 0xe0) == 0xc0) {
+      value = first & 0x1f;
+      continuation = 1;
+    } else if ((first & 0xf0) == 0xe0) {
+      value = first & 0x0f;
+      continuation = 2;
+    } else if ((first & 0xf8) == 0xf0) {
+      value = first & 0x07;
+      continuation = 3;
+    }
+    while (continuation-- && i < input.size())
+      value = (value << 6) | (static_cast<unsigned char>(input[i++]) & 0x3f);
+    result.push_back(static_cast<typename Output::value_type>(value));
+  }
+  return result;
+}
+
+} // namespace
+
+string path::from_wstring(wstring_view value) {
+  std::string result;
+  for (wchar_t character : value)
+    append_utf8(result, static_cast<char32_t>(character));
+  return result;
+}
+
+string path::from_u32string(u32string_view value) {
+  std::string result;
+  for (char32_t character : value)
+    append_utf8(result, character);
+  return result;
+}
+
+auto path::wstring() const -> std::wstring {
+  return decode_utf8<std::wstring>(path_);
+}
+
+auto path::u32string() const -> std::u32string {
+  return decode_utf8<std::u32string>(path_);
+}
 
 path path::lexically_relative(const path& base) const {
   if (path_ == base.path_)
@@ -146,9 +227,130 @@ void recursive_directory_iterator::release() noexcept {
   state_ = nullptr;
 }
 
+struct directory_iterator::_state {
+  unsigned references = 1;
+  vector<directory_entry> entries;
+  size_t position = 0;
+};
+
+static bool read_directory(const path& directory,
+                           vector<directory_entry>& entries, error_code& ec) {
+  DIR* handle = ::opendir(directory.c_str());
+  if (!handle) {
+    set_error(ec);
+    return false;
+  }
+
+  errno = 0;
+  while (dirent* item = ::readdir(handle)) {
+    string_view name(item->d_name);
+    if (name != "." && name != "..")
+      entries.emplace_back(directory / path(name));
+    errno = 0;
+  }
+  const int read_error = errno;
+  ::closedir(handle);
+  if (read_error) {
+    set_error(ec, read_error);
+    return false;
+  }
+  clear_error(ec);
+  return true;
+}
+
+directory_iterator::directory_iterator(const path& directory) {
+  error_code ec;
+  state_ = new _state;
+  if (!read_directory(directory, state_->entries, ec)) {
+    release();
+    _PSYCHICSTD_THROW(filesystem_error("directory_iterator", directory, ec));
+  }
+  if (state_->entries.empty())
+    release();
+}
+
+directory_iterator::directory_iterator(const path& directory, error_code& ec) {
+  state_ = new _state;
+  if (!read_directory(directory, state_->entries, ec) ||
+      state_->entries.empty())
+    release();
+}
+
+directory_iterator::directory_iterator(const directory_iterator& other) noexcept
+    : state_(other.state_) {
+  if (state_)
+    ++state_->references;
+}
+
+directory_iterator::directory_iterator(directory_iterator&& other) noexcept
+    : state_(other.state_) {
+  other.state_ = nullptr;
+}
+
+directory_iterator&
+directory_iterator::operator=(const directory_iterator& other) noexcept {
+  if (this == &other)
+    return *this;
+  release();
+  state_ = other.state_;
+  if (state_)
+    ++state_->references;
+  return *this;
+}
+
+directory_iterator&
+directory_iterator::operator=(directory_iterator&& other) noexcept {
+  if (this == &other)
+    return *this;
+  release();
+  state_ = other.state_;
+  other.state_ = nullptr;
+  return *this;
+}
+
+directory_iterator::~directory_iterator() { release(); }
+
+const directory_entry& directory_iterator::operator*() const noexcept {
+  return state_->entries[state_->position];
+}
+
+const directory_entry* directory_iterator::operator->() const noexcept {
+  return &state_->entries[state_->position];
+}
+
+directory_iterator& directory_iterator::operator++() {
+  if (++state_->position == state_->entries.size())
+    release();
+  return *this;
+}
+
+directory_iterator& directory_iterator::increment(error_code& ec) {
+  clear_error(ec);
+  return operator++();
+}
+
+void directory_iterator::release() noexcept {
+  if (state_ && --state_->references == 0)
+    delete state_;
+  state_ = nullptr;
+}
+
 bool exists(const path& value) noexcept {
   struct stat status;
   return ::stat(value.c_str(), &status) == 0;
+}
+
+bool exists(const path& value, error_code& ec) noexcept {
+  struct stat status;
+  if (::stat(value.c_str(), &status) == 0) {
+    clear_error(ec);
+    return true;
+  }
+  if (missing_path_error(errno))
+    clear_error(ec);
+  else
+    set_error(ec);
+  return false;
 }
 
 bool is_directory(const path& value) noexcept {
@@ -156,9 +358,48 @@ bool is_directory(const path& value) noexcept {
   return ::stat(value.c_str(), &status) == 0 && S_ISDIR(status.st_mode);
 }
 
+bool is_directory(const path& value, error_code& ec) noexcept {
+  struct stat status;
+  if (::stat(value.c_str(), &status) == 0) {
+    clear_error(ec);
+    return S_ISDIR(status.st_mode);
+  }
+  if (missing_path_error(errno))
+    clear_error(ec);
+  else
+    set_error(ec);
+  return false;
+}
+
 bool is_regular_file(const path& value) noexcept {
   struct stat status;
   return ::stat(value.c_str(), &status) == 0 && S_ISREG(status.st_mode);
+}
+
+bool is_regular_file(const path& value, error_code& ec) noexcept {
+  struct stat status;
+  if (::stat(value.c_str(), &status) == 0) {
+    clear_error(ec);
+    return S_ISREG(status.st_mode);
+  }
+  if (missing_path_error(errno))
+    clear_error(ec);
+  else
+    set_error(ec);
+  return false;
+}
+
+bool is_symlink(const path& value, error_code& ec) noexcept {
+  struct stat status;
+  if (::lstat(value.c_str(), &status) == 0) {
+    clear_error(ec);
+    return S_ISLNK(status.st_mode);
+  }
+  if (missing_path_error(errno))
+    clear_error(ec);
+  else
+    set_error(ec);
+  return false;
 }
 
 uintmax_t file_size(const path& value) {
@@ -167,6 +408,157 @@ uintmax_t file_size(const path& value) {
     _PSYCHICSTD_THROW(filesystem_error("file_size", value,
                                        error_code(errno, generic_category())));
   return static_cast<uintmax_t>(status.st_size);
+}
+
+uintmax_t file_size(const path& value, error_code& ec) noexcept {
+  struct stat status;
+  if (::stat(value.c_str(), &status) != 0) {
+    set_error(ec);
+    return static_cast<uintmax_t>(-1);
+  }
+  clear_error(ec);
+  return static_cast<uintmax_t>(status.st_size);
+}
+
+path temp_directory_path(error_code& ec) {
+  const char* value = ::getenv("TMPDIR");
+  path result(value && *value ? value : "/tmp");
+  if (!is_directory(result, ec))
+    return {};
+  return result;
+}
+
+path current_path(error_code& ec) {
+  char buffer[PATH_MAX];
+  if (!::getcwd(buffer, sizeof(buffer))) {
+    set_error(ec);
+    return {};
+  }
+  clear_error(ec);
+  return buffer;
+}
+
+void current_path(const path& value, error_code& ec) noexcept {
+  if (::chdir(value.c_str()) != 0)
+    set_error(ec);
+  else
+    clear_error(ec);
+}
+
+path absolute(const path& value, error_code& ec) {
+  if (!value.empty() && value.native()[0] == '/') {
+    clear_error(ec);
+    return value;
+  }
+  path cwd = current_path(ec);
+  return ec ? path() : cwd / value;
+}
+
+file_time_type last_write_time(const path& value, error_code& ec) noexcept {
+  struct stat status;
+  if (::stat(value.c_str(), &status) != 0) {
+    set_error(ec);
+    return file_time_type::min();
+  }
+  clear_error(ec);
+#if defined(__APPLE__)
+  const auto seconds = status.st_mtimespec.tv_sec;
+  const auto nanoseconds = status.st_mtimespec.tv_nsec;
+#else
+  const auto seconds = status.st_mtim.tv_sec;
+  const auto nanoseconds = status.st_mtim.tv_nsec;
+#endif
+  return file_time_type(
+      chrono::nanoseconds(seconds * 1000000000LL + nanoseconds));
+}
+
+bool remove(const path& value, error_code& ec) noexcept {
+  if (::remove(value.c_str()) == 0) {
+    clear_error(ec);
+    return true;
+  }
+  if (missing_path_error(errno)) {
+    clear_error(ec);
+    return false;
+  }
+  set_error(ec);
+  return false;
+}
+
+bool copy_file(const path& source, const path& destination, error_code& ec) {
+  FILE* input = ::fopen(source.c_str(), "rb");
+  if (!input) {
+    set_error(ec);
+    return false;
+  }
+  FILE* output = ::fopen(destination.c_str(), "wbx");
+  if (!output) {
+    const int open_error = errno;
+    ::fclose(input);
+    set_error(ec, open_error);
+    return false;
+  }
+
+  bool ok = true;
+  char buffer[8192];
+  while (size_t count = ::fread(buffer, 1, sizeof(buffer), input)) {
+    if (::fwrite(buffer, 1, count, output) != count) {
+      ok = false;
+      break;
+    }
+  }
+  if (::ferror(input))
+    ok = false;
+  const int io_error = errno;
+  if (::fclose(output) != 0)
+    ok = false;
+  ::fclose(input);
+  if (!ok) {
+    set_error(ec, io_error ? io_error : EIO);
+    return false;
+  }
+  clear_error(ec);
+  return true;
+}
+
+bool create_directory(const path& value, error_code& ec) noexcept {
+  if (::mkdir(value.c_str(), 0777) == 0) {
+    clear_error(ec);
+    return true;
+  }
+  if (errno == EEXIST && is_directory(value)) {
+    clear_error(ec);
+    return false;
+  }
+  set_error(ec);
+  return false;
+}
+
+bool create_directories(const path& value, error_code& ec) {
+  if (value.empty()) {
+    clear_error(ec);
+    return false;
+  }
+  if (is_directory(value, ec))
+    return false;
+  if (ec)
+    return false;
+
+  path parent = value.parent_path();
+  if (!parent.empty() && !is_directory(parent, ec)) {
+    if (ec || !create_directories(parent, ec))
+      if (ec)
+        return false;
+  }
+  return create_directory(value, ec);
+}
+
+void rename(const path& source, const path& destination,
+            error_code& ec) noexcept {
+  if (::rename(source.c_str(), destination.c_str()) != 0)
+    set_error(ec);
+  else
+    clear_error(ec);
 }
 
 } // namespace std::filesystem

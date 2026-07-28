@@ -152,6 +152,14 @@ int main() {
   filled.append(16, 'c');
   psyassert(filled ==
             std::string(32, 'a') + std::string(16, 'b') + std::string(16, 'c'));
+  filled.resize_and_overwrite(6, [](char* data, size_t capacity) {
+    psyassert(capacity == 6);
+    data[0] = 'o';
+    data[1] = 'k';
+    return 2;
+  });
+  psyassert(filled == "ok");
+  static_assert(__cpp_lib_string_resize_and_overwrite == 202110L);
   s.reserve(32);
   const char* storage = s.data();
   s.assign("replacement", 11);

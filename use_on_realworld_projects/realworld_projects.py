@@ -2918,24 +2918,6 @@ def _zancle() -> Project:
                 t.extractall(work)
             src = work / f"zancle-{revision}"
 
-            # These translation units need standard-library facilities that
-            # psychicstd deliberately does not yet provide.
-            system_cmake = src / "src" / "SFML" / "System" / "CMakeLists.txt"
-            cmake_text = system_cmake.read_text()
-            marker = "find_package(Threads REQUIRED)"
-            if marker not in cmake_text:
-                raise RuntimeError("Zancle System CMake layout changed")
-            cmake_text = cmake_text.replace(
-                marker,
-                """list(REMOVE_ITEM SRC
-    ${BASE_SRCROOT}/ThreadPool.cpp
-    ${SRCROOT}/Clock.cpp
-    ${SRCROOT}/ErrIOUnity.cpp)
-
-find_package(Threads REQUIRED)""",
-            )
-            system_cmake.write_text(cmake_text)
-
             env = _env(tc)
             configure = [
                 "cmake",
@@ -2985,8 +2967,7 @@ find_package(Threads REQUIRED)""",
         build=build,
         expected_seconds={"debug": 4, "release": 4},
         phases=("compile",),
-        comment="Builds Zancle's Base/System static library except Clock, "
-        "ThreadPool, and filesystem-backed I/O.",
+        comment="Builds Zancle's complete Base/System static library.",
     )
 
 

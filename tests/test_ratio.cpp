@@ -10,4 +10,10 @@ int main() {
   static_assert(std::ratio_less_equal<one, two>::value);
   static_assert(std::ratio_greater<two, one>::value);
   static_assert(std::ratio_greater_equal<two, one>::value);
+  static_assert(std::ratio_equal_v<one, one>);
+  static_assert(std::ratio_not_equal_v<one, two>);
+  static_assert(std::ratio_less_v<one, two>);
+  static_assert(std::ratio_less_equal_v<one, two>);
+  static_assert(std::ratio_greater_v<two, one>);
+  static_assert(std::ratio_greater_equal_v<two, one>);
 }

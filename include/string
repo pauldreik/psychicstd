@@ -275,6 +275,13 @@ public:
     }
   }
 
+  template <typename Operation>
+  void resize_and_overwrite(size_type count, Operation operation) {
+    reserve(count);
+    size_ = static_cast<size_type>(operation(data(), count));
+    data()[size_] = Char();
+  }
+
   void clear() noexcept {
     size_ = 0;
     if (data_)

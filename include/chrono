@@ -260,6 +260,19 @@ struct system_clock {
   }
 };
 
+struct file_clock {
+  using duration = nanoseconds;
+  using rep = duration::rep;
+  using period = duration::period;
+  using time_point = chrono::time_point<file_clock>;
+  static constexpr bool is_steady = false;
+
+  static chrono::time_point<system_clock>
+  to_sys(const time_point& value) noexcept {
+    return chrono::time_point<system_clock>(value.time_since_epoch());
+  }
+};
+
 struct steady_clock {
   using duration = nanoseconds;
   using rep = duration::rep;

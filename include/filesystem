@@ -1,4 +1,5 @@
 #pragma once
+#include <chrono>
 #include <cstdint>
 #include <string>
 #include <string_view>
@@ -15,11 +16,16 @@ public:
   path() = default;
   path(const char* s) : path_(s) {}
   path(const __str& s) : path_(s) {}
-  // move
   path(__str&& s) : path_(static_cast<__str&&>(s)) {}
   path(string_view s) : path_(s.data(), s.size()) {}
   path(u8string_view s)
       : path_(reinterpret_cast<const char*>(s.data()), s.size()) {}
+  path(const wchar_t* s)
+      : path_(from_wstring(s ? wstring_view(s) : wstring_view())) {}
+  path(const wstring& s) : path_(from_wstring(s)) {}
+  path(const u32string& s) : path_(from_u32string(s)) {}
+  path(const char32_t* s)
+      : path_(from_u32string(s ? u32string_view(s) : u32string_view())) {}
 
   path& operator=(const char* s) {
     path_ = s;
@@ -32,11 +38,14 @@ public:
 
   bool empty() const noexcept { return path_.empty(); }
   const __str& string() const noexcept { return path_; }
+  const __str& native() const noexcept { return path_; }
   operator __str() const { return path_; }
   __u8str u8string() const {
     return __u8str(reinterpret_cast<const char8_t*>(path_.data()),
                    path_.size());
   }
+  auto wstring() const -> std::wstring;
+  auto u32string() const -> std::u32string;
   const char* c_str() const noexcept { return path_.c_str(); }
 
   path filename() const {
@@ -64,6 +73,9 @@ public:
     auto pos = path_.find_last_of('/');
     return pos == __str::npos ? path() : path(path_.substr(0, pos));
   }
+  bool has_parent_path() const noexcept {
+    return path_.find_last_of('/') != __str::npos;
+  }
 
   path lexically_relative(const path& base) const;
   path& replace_extension(const path& replacement = path());
@@ -74,6 +86,11 @@ public:
         path_ += '/';
       path_ += p.path_;
     }
+    return *this;
+  }
+
+  path& operator+=(const path& p) {
+    path_ += p.path_;
     return *this;
   }
 
@@ -93,6 +110,8 @@ public:
   }
 
 private:
+  static __str from_wstring(wstring_view value);
+  static __str from_u32string(u32string_view value);
   __str path_;
 };
 
@@ -149,6 +168,34 @@ private:
   _state* state_ = nullptr;
 };
 
+class directory_iterator {
+  struct _state;
+
+public:
+  directory_iterator() noexcept = default;
+  explicit directory_iterator(const path&);
+  directory_iterator(const path&, error_code&);
+  directory_iterator(const directory_iterator&) noexcept;
+  directory_iterator(directory_iterator&& other) noexcept;
+  directory_iterator& operator=(const directory_iterator&) noexcept;
+  directory_iterator& operator=(directory_iterator&& other) noexcept;
+  ~directory_iterator();
+
+  const directory_entry& operator*() const noexcept;
+  const directory_entry* operator->() const noexcept;
+  directory_iterator& operator++();
+  directory_iterator& increment(error_code&);
+
+  friend bool operator==(const directory_iterator& lhs,
+                         const directory_iterator& rhs) noexcept {
+    return lhs.state_ == rhs.state_;
+  }
+
+private:
+  void release() noexcept;
+  _state* state_ = nullptr;
+};
+
 inline recursive_directory_iterator
 begin(recursive_directory_iterator iter) noexcept {
   return iter;
@@ -171,9 +218,27 @@ public:
 };
 
 bool exists(const path&) noexcept;
+bool exists(const path&, error_code&) noexcept;
 bool is_directory(const path&) noexcept;
+bool is_directory(const path&, error_code&) noexcept;
 bool is_regular_file(const path&) noexcept;
+bool is_regular_file(const path&, error_code&) noexcept;
+bool is_symlink(const path&, error_code&) noexcept;
 uintmax_t file_size(const path&);
+uintmax_t file_size(const path&, error_code&) noexcept;
+
+using file_time_type = chrono::time_point<chrono::file_clock>;
+
+path temp_directory_path(error_code&);
+path current_path(error_code&);
+void current_path(const path&, error_code&) noexcept;
+path absolute(const path&, error_code&);
+file_time_type last_write_time(const path&, error_code&) noexcept;
+bool remove(const path&, error_code&) noexcept;
+bool copy_file(const path&, const path&, error_code&);
+bool create_directory(const path&, error_code&) noexcept;
+bool create_directories(const path&, error_code&);
+void rename(const path&, const path&, error_code&) noexcept;
 
 } // namespace filesystem
 } // namespace std

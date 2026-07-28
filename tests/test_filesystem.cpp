@@ -39,6 +39,13 @@ int main() {
   std::u8string u8 = p1.u8string();
   fs::path from_u8{std::u8string_view(u8)};
   psyassert(from_u8 == p1);
+  psyassert(fs::path(L"wide/path").wstring() == L"wide/path");
+  psyassert(fs::path(U"unicode/path").u32string() == U"unicode/path");
+  psyassert(fs::path("parent/child").has_parent_path());
+  fs::path appended = "suffix";
+  appended += ".txt";
+  psyassert(appended == fs::path("suffix.txt"));
+  psyassert(fs::path("native").native() == "native");
 
   std::queue<fs::path> q;
   q.push(std::string("/tmp/a"));
@@ -81,4 +88,62 @@ int main() {
   std::remove(child);
   ::rmdir(subtree);
   ::rmdir(tree);
+
+  std::error_code ec;
+  fs::path cwd = fs::current_path(ec);
+  psyassert(!ec && !cwd.empty());
+  fs::current_path(cwd, ec);
+  psyassert(!ec);
+  psyassert(fs::is_directory(fs::temp_directory_path(ec), ec));
+  psyassert(!ec);
+
+  fs::path ops_root = "psychicstd_test_filesystem_ops";
+  fs::path nested = ops_root / "a" / "b";
+  psyassert(fs::create_directories(nested, ec));
+  psyassert(!ec);
+  psyassert(!fs::create_directories(nested, ec));
+  psyassert(!ec);
+
+  fs::path source_file = ops_root / "source.txt";
+  {
+    std::ofstream out(source_file);
+    out << "copy me";
+  }
+  fs::path copied_file = ops_root / "copied.txt";
+  psyassert(fs::copy_file(source_file, copied_file, ec));
+  psyassert(!ec && fs::file_size(copied_file, ec) == 7);
+  psyassert(!ec);
+  psyassert(!fs::copy_file(source_file, copied_file, ec));
+  psyassert(ec);
+  ec = {};
+  auto write_time = fs::last_write_time(copied_file, ec);
+  psyassert(!ec);
+  (void)write_time;
+  psyassert(!fs::is_symlink(copied_file, ec));
+  psyassert(!ec);
+
+  bool saw_nested_parent = false;
+  bool saw_source = false;
+  for (fs::directory_iterator it(ops_root, ec), last; it != last;
+       it.increment(ec)) {
+    psyassert(!ec);
+    auto filename = it->path().filename();
+    saw_nested_parent |= filename == fs::path("a");
+    saw_source |= filename == fs::path("source.txt");
+  }
+  psyassert(!ec && saw_nested_parent && saw_source);
+
+  fs::path renamed_file = ops_root / "renamed.txt";
+  fs::rename(copied_file, renamed_file, ec);
+  psyassert(!ec && fs::exists(renamed_file, ec));
+  psyassert(!ec);
+  psyassert(!fs::absolute(renamed_file, ec).empty());
+  psyassert(!ec);
+
+  psyassert(fs::remove(source_file, ec));
+  psyassert(fs::remove(renamed_file, ec));
+  psyassert(fs::remove(nested, ec));
+  psyassert(fs::remove(ops_root / "a", ec));
+  psyassert(fs::remove(ops_root, ec));
+  psyassert(!ec);
 }

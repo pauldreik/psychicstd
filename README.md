@@ -35,7 +35,7 @@ It is not complete. It is not fully compliant. But it is good enough to quickly 
 | [simdutf](https://github.com/simdutf/simdutf) | [1.72x](use_on_realworld_projects/simdutf_speed_report.md) | Mostly SIMD intrinsics. [Strict mode uncovered missing includes](https://github.com/simdutf/simdutf/pull/998). |
 | [Tesseract](https://github.com/tesseract-ocr/tesseract) | [2.16x](use_on_realworld_projects/tesseract_speed_report.md) | Builds the OCR library and command-line program using the system Leptonica package. |
 | [TensorFlow](https://www.tensorflow.org/) | [2.39x](use_on_realworld_projects/tensorflow_speed_report.md) | Builds a focused set of core platform/base libraries; excludes Python, CUDA, kernels, and the full framework. |
-| [Zancle](https://github.com/vittorioromeo/zancle) | [1.86x](use_on_realworld_projects/zancle_speed_report.md) | Builds the Base/System static library except Clock, ThreadPool, and filesystem-backed I/O. |
+| [Zancle](https://github.com/vittorioromeo/zancle) | [2.66x](use_on_realworld_projects/zancle_speed_report.md) | Builds the complete Base/System static library. |
 | [wordcounter](examples/wordcounter.cpp)| [3.71x](compile_time.md) | Example application using the STL. Counts word occurrences in text files. |
 
 <!-- README_BENCHMARK:realworld-speedups:end -->
