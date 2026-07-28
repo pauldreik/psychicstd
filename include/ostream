@@ -246,18 +246,23 @@ private:
   // point + thousands grouping of the integer part) when one is installed.
   // Default streams have no facet, so this is just pad_and_write (hot path).
   void num_write(const char* buf, int n) {
-    const numpunct<Char>* np = this->loc_.template _facet<numpunct<Char>>();
-    if (!np) {
+    if (!this->loc_._has_facets()) {
       pad_and_write(buf, n);
       return;
     }
-    char dp = (char)np->decimal_point();
-    char ts = (char)np->thousands_sep();
-    basic_string<char> grp = np->grouping();
+    constexpr int character_kind = is_same_v<Char, char>       ? 1
+                                   : is_same_v<Char, wchar_t>  ? 2
+                                   : is_same_v<Char, char8_t>  ? 3
+                                   : is_same_v<Char, char16_t> ? 4
+                                   : is_same_v<Char, char32_t> ? 5
+                                                               : 0;
     char out[80];
-    int size = this->_localize_number(out, sizeof(out), buf, n, dp, ts,
-                                      grp.data(), grp.size());
-    pad_and_write(out, size);
+    int size = this->_localize_number_with_locale(out, sizeof(out), buf, n,
+                                                  character_kind);
+    if (size == 0)
+      pad_and_write(buf, n);
+    else
+      pad_and_write(out, size);
   }
 
   template <typename V> basic_ostream& write_int(V v) {

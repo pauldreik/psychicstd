@@ -2,6 +2,7 @@
 #include <ctime>
 #include <ios>
 #include <istream>
+#include <locale>
 #include <ostream>
 #include <string>
 
