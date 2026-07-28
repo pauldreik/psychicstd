@@ -1,0 +1,73 @@
+#pragma once
+#include <__psychicstd_errc>
+#include <limits>
+#include <type_traits>
+
+namespace std {
+
+struct from_chars_result {
+  const char* ptr;
+  errc ec;
+
+  friend bool operator==(const from_chars_result&,
+                         const from_chars_result&) = default;
+};
+
+template <typename T>
+  requires(is_integral_v<T> && !is_same_v<remove_cv_t<T>, bool>)
+constexpr from_chars_result from_chars(const char* first, const char* last,
+                                       T& value, int base = 10) {
+  using U = make_unsigned_t<T>;
+  const char* current = first;
+  bool negative = false;
+  if constexpr (is_signed_v<T>) {
+    if (current != last && *current == '-') {
+      negative = true;
+      ++current;
+    }
+  }
+
+  U limit = static_cast<U>(numeric_limits<T>::max());
+  if (negative)
+    ++limit;
+
+  U parsed = 0;
+  bool any = false;
+  bool overflow = false;
+  for (; current != last; ++current) {
+    unsigned digit;
+    if (*current >= '0' && *current <= '9')
+      digit = static_cast<unsigned>(*current - '0');
+    else if (*current >= 'a' && *current <= 'z')
+      digit = static_cast<unsigned>(*current - 'a') + 10;
+    else if (*current >= 'A' && *current <= 'Z')
+      digit = static_cast<unsigned>(*current - 'A') + 10;
+    else
+      break;
+    if (digit >= static_cast<unsigned>(base))
+      break;
+    any = true;
+    if (parsed > (limit - digit) / static_cast<unsigned>(base))
+      overflow = true;
+    else if (!overflow)
+      parsed = parsed * static_cast<unsigned>(base) + digit;
+  }
+
+  if (!any)
+    return {first, errc::invalid_argument};
+  if (overflow)
+    return {current, errc::result_out_of_range};
+  if constexpr (is_signed_v<T>) {
+    if (negative) {
+      value = parsed == limit ? numeric_limits<T>::min()
+                              : static_cast<T>(-static_cast<T>(parsed));
+    } else {
+      value = static_cast<T>(parsed);
+    }
+  } else {
+    value = parsed;
+  }
+  return {current, errc{}};
+}
+
+} // namespace std
