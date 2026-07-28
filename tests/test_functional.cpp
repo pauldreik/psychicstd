@@ -29,6 +29,17 @@ int main() {
   first.swap(second);
   psyassert(first() == 2);
   psyassert(second() == 1);
+  struct callable {
+    int value;
+    int operator()() const { return value; }
+  };
+  std::function<int()> targeted = callable{3};
+  psyassert(targeted.target<callable>() != nullptr);
+  targeted.target<callable>()->value = 4;
+  psyassert(targeted() == 4);
+  psyassert(targeted.target<int (*)()>() == nullptr);
+  const auto& const_targeted = targeted;
+  psyassert(const_targeted.target<callable>()->value == 4);
   int referred = 3;
   std::function<int&(int*)> reference = [](int* value) -> int& {
     return *value;

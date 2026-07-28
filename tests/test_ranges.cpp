@@ -1,4 +1,5 @@
 #include "psyassert.h"
+#include <algorithm>
 #include <ranges>
 #include <vector>
 
@@ -22,6 +23,8 @@ void iter_swap(iterator a, iterator b) {
 int main() {
   std::vector<int> v = {1, 2, 3};
   psyassert(*std::ranges::begin(v) == 1);
+  psyassert(std::ranges::count(v, 2) == 1);
+  psyassert(std::ranges::count(v.begin(), v.end(), 4) == 0);
 
   int a = 4;
   int b = 5;

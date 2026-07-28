@@ -6,6 +6,8 @@
 #include <system_error>
 #include <thread>
 
+inline int once_calls;
+
 template <typename Mutex> bool try_from_another_thread(Mutex& mutex) {
   std::atomic<bool> acquired(false);
   std::thread thread([&] {
@@ -18,6 +20,26 @@ template <typename Mutex> bool try_from_another_thread(Mutex& mutex) {
 }
 
 int main() {
+  std::once_flag once;
+  std::thread once_first([&] { std::call_once(once, [] { ++once_calls; }); });
+  std::thread once_second([&] { std::call_once(once, [] { ++once_calls; }); });
+  once_first.join();
+  once_second.join();
+  psyassert(once_calls == 1);
+
+  std::once_flag retry;
+  bool first_attempt = true;
+  try {
+    std::call_once(retry, [&] {
+      first_attempt = false;
+      throw 1;
+    });
+  } catch (int) {
+  }
+  std::call_once(retry, [&] { ++once_calls; });
+  psyassert(!first_attempt);
+  psyassert(once_calls == 2);
+
   std::mutex m;
   m.lock();
   psyassert(!try_from_another_thread(m));

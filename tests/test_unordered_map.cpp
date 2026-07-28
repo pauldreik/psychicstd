@@ -45,7 +45,13 @@ int main() {
     ++matches;
   psyassert(matches == 2);
 
+  auto erased_next = mm.erase(mm.find(17));
+  psyassert(mm.count(17) == 0);
+  psyassert(mm.size() == 2);
+  psyassert(erased_next == mm.end() || erased_next->first == 1);
+
   std::unordered_multimap<int, int> equal_mm{{1, 20}, {17, 99}, {1, 10}};
+  equal_mm.erase(equal_mm.find(17));
   psyassert(mm == equal_mm);
   equal_mm.emplace(1, 10);
   psyassert(!(mm == equal_mm));
