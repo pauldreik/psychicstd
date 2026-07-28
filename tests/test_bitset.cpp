@@ -34,6 +34,21 @@ int main() {
     psyassert(false);
   } catch (const std::out_of_range&) {
   }
+  try {
+    large.set(large.size());
+    psyassert(false);
+  } catch (const std::out_of_range&) {
+  }
+  try {
+    large.reset(large.size());
+    psyassert(false);
+  } catch (const std::out_of_range&) {
+  }
+  try {
+    large.flip(large.size());
+    psyassert(false);
+  } catch (const std::out_of_range&) {
+  }
   large.set(632);
   try {
     (void)large.to_ullong();
