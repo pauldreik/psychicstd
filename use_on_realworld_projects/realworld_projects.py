@@ -2897,6 +2897,99 @@ def _pybind11() -> Project:
     )
 
 
+# --- zancle --------------------------------------------------------------
+
+
+def _zancle() -> Project:
+    version = "9c272d6"
+    revision = "9c272d60134d568f35fbad9891f3b436de87cc28"
+    url = f"https://github.com/vittorioromeo/zancle/archive/{revision}.tar.gz"
+    checksum = "f1e868c458d0c422df6d84d11b2e60718bbae10913e4c6182505eac8307461dd"
+
+    def build(tc: Toolchain) -> dict[str, float]:
+        tarball = RW_DIR / f"zancle-{version}.tar.gz"
+        _fetch(url, tarball, checksum)
+
+        with tempfile.TemporaryDirectory(
+            prefix="rw-zancle-", ignore_cleanup_errors=True
+        ) as work_dir:
+            work = Path(work_dir)
+            with tarfile.open(tarball) as t:
+                t.extractall(work)
+            src = work / f"zancle-{revision}"
+
+            # These translation units need standard-library facilities that
+            # psychicstd deliberately does not yet provide.
+            system_cmake = src / "src" / "SFML" / "System" / "CMakeLists.txt"
+            cmake_text = system_cmake.read_text()
+            marker = "find_package(Threads REQUIRED)"
+            if marker not in cmake_text:
+                raise RuntimeError("Zancle System CMake layout changed")
+            cmake_text = cmake_text.replace(
+                marker,
+                """list(REMOVE_ITEM SRC
+    ${BASE_SRCROOT}/ThreadPool.cpp
+    ${SRCROOT}/Clock.cpp
+    ${SRCROOT}/ErrIOUnity.cpp)
+
+find_package(Threads REQUIRED)""",
+            )
+            system_cmake.write_text(cmake_text)
+
+            env = _env(tc)
+            configure = [
+                "cmake",
+                "-S",
+                ".",
+                "-B",
+                "build",
+                "-GNinja",
+                "-DCMAKE_BUILD_TYPE=" + tc.build_type.capitalize(),
+                "-DCMAKE_CXX_COMPILER=" + tc.cxx,
+                "-DCMAKE_CXX_FLAGS=" + tc.cxxflags,
+                "-DCMAKE_EXE_LINKER_FLAGS=" + tc.ldflags,
+                "-DCMAKE_CXX_STANDARD_LIBRARIES=" + tc.libs,
+                "-DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY",
+                "-DBUILD_SHARED_LIBS=OFF",
+                "-DSFML_BUILD_GLUTILS=OFF",
+                "-DSFML_BUILD_WINDOW=OFF",
+                "-DSFML_BUILD_GRAPHICS=OFF",
+                "-DSFML_BUILD_IMGUI=OFF",
+                "-DSFML_BUILD_AUDIO=OFF",
+                "-DSFML_BUILD_NETWORK=OFF",
+                "-DSFML_BUILD_EXAMPLES=OFF",
+                "-DSFML_BUILD_TEST_SUITE=OFF",
+                "-DSFML_ENABLE_STACK_TRACES=OFF",
+                "-DSFML_ENABLE_LIFETIME_TRACKING=OFF",
+                "-DSFML_INSTALL_PKGCONFIG_FILES=OFF",
+            ]
+            jobs = f"-j{tc.jobs}"
+            return {
+                "configure": _timed(configure, src, env),
+                "compile": _timed(
+                    [
+                        "cmake",
+                        "--build",
+                        "build",
+                        "--target",
+                        "sfml-system",
+                        jobs,
+                    ],
+                    src,
+                    env,
+                ),
+            }
+
+    return Project(
+        version=version,
+        build=build,
+        expected_seconds={"debug": 4, "release": 4},
+        phases=("compile",),
+        comment="Builds Zancle's Base/System static library except Clock, "
+        "ThreadPool, and filesystem-backed I/O.",
+    )
+
+
 PROJECTS: dict[str, Project] = {
     "abseil": _abseil(full=False),
     "abseil-full": _abseil(full=True),
@@ -2928,4 +3021,5 @@ PROJECTS: dict[str, Project] = {
     "simdutf": _simdutf(strict=True, strict_label="strict"),
     "tesseract": _tesseract(),
     "tensorflow": _tensorflow(),
+    "zancle": _zancle(),
 }

@@ -349,3 +349,13 @@ jobs:
         run: >-
           scripts/benchmark_realworld.py --check-only
           --project pybind11 --build-type debug
+  zancle:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install Ninja
+        run: sudo apt-get install -y ninja-build
+      - name: Build Zancle Base/System with psychicstd
+        run: >-
+          scripts/benchmark_realworld.py --check-only
+          --project zancle --build-type debug --compiler g++-14
