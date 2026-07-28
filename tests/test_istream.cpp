@@ -60,6 +60,18 @@ int main() {
   psyassert(x == std::numeric_limits<int>::min());
   psyassert(overflow.fail());
 
+  std::istringstream unsigned_overflow("65536");
+  unsigned short us = 0;
+  unsigned_overflow >> us;
+  psyassert(us == std::numeric_limits<unsigned short>::max());
+  psyassert(unsigned_overflow.fail());
+
+  std::istringstream ull_overflow("18446744073709551616");
+  unsigned long long ull = 0;
+  ull_overflow >> ull;
+  psyassert(ull == std::numeric_limits<unsigned long long>::max());
+  psyassert(ull_overflow.fail());
+
   std::istringstream chars("ab");
   psyassert(chars.get() == 'a');
 

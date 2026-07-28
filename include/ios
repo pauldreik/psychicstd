@@ -113,8 +113,8 @@ protected:
                               int input_size, char decimal_point,
                               char thousands_sep, const char* grouping,
                               size_t grouping_size);
-  static long long _parse_signed(const char*, int, bool&);
-  static unsigned long long _parse_unsigned(const char*, int, bool&);
+  static bool _parse_signed(const char*, int, size_t, long long&);
+  static bool _parse_unsigned(const char*, int, size_t, unsigned long long&);
   static bool _parse_float(const char*, float&, int&);
   static bool _parse_float(const char*, double&, int&);
   static bool _parse_float(const char*, long double&, int&);
