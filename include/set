@@ -177,8 +177,27 @@ public:
     return result;
   }
   iterator erase(const_iterator first, const_iterator last) {
-    while (first != last)
-      first = erase(first);
+    if (first == last)
+      return last;
+    const auto first_index = lower_bound_index_(first.node_->key);
+    const auto last_index =
+        last == end() ? data_.size() : lower_bound_index_(last.node_->key);
+    node* before = first.node_->prev;
+    node* after = last.node_;
+    if (before)
+      before->next = after;
+    else
+      head_ = after;
+    if (after)
+      after->prev = before;
+    else
+      tail_ = before;
+    for (node* value = first.node_; value != after;) {
+      node* next = value->next;
+      delete value;
+      value = next;
+    }
+    data_.erase(first_index, last_index);
     return last;
   }
   size_type erase(const Key& k) {
@@ -455,17 +474,39 @@ public:
     return result;
   }
   iterator erase(const_iterator first, const_iterator last) {
-    while (first != last)
-      first = erase(first);
+    if (first == last)
+      return last;
+    auto first_index = lower_bound_index_(first.node_->key);
+    while (data_[first_index] != first.node_)
+      ++first_index;
+    node* before = first.node_->prev;
+    node* after = last.node_;
+    size_type count = 0;
+    for (node* value = first.node_; value != after;) {
+      node* next = value->next;
+      delete value;
+      value = next;
+      ++count;
+    }
+    if (before)
+      before->next = after;
+    else
+      head_ = after;
+    if (after)
+      after->prev = before;
+    else
+      tail_ = before;
+    data_.erase(first_index, first_index + count);
     return last;
   }
   size_type erase(const Key& k) {
-    size_type result = 0;
-    auto it = lower_bound(k);
-    while (it != end() && !comp_(k, *it)) {
-      it = erase(it);
-      ++result;
-    }
+    const auto first_index = lower_bound_index_(k);
+    const auto last_index = upper_bound_index_(k);
+    const auto result = last_index - first_index;
+    if (result)
+      erase(iterator{data_[first_index], this},
+            iterator{last_index == data_.size() ? nullptr : data_[last_index],
+                     this});
     return result;
   }
   size_type count(const Key& k) const {
