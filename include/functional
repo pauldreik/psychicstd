@@ -21,9 +21,13 @@ struct identity {
 template <typename> class function;
 
 template <typename R, typename... Args> class function<R(Args...)> {
+  // Type ID by address.
+  template <typename T> static inline constexpr char target_token_ = 0;
+
   struct base {
     virtual R call(Args...) = 0;
     virtual base* clone() = 0;
+    virtual void* target(const void* id) noexcept = 0;
     virtual ~base() = default;
   };
   template <typename F> struct impl : base {
@@ -33,6 +37,9 @@ template <typename R, typename... Args> class function<R(Args...)> {
       return detail::__invoke(f_, static_cast<Args&&>(args)...);
     }
     base* clone() override { return new impl(f_); }
+    void* target(const void* id) noexcept override {
+      return id == &target_token_<F> ? &f_ : nullptr;
+    }
   };
   base* ptr_ = nullptr;
 
@@ -83,6 +90,14 @@ public:
 
   R operator()(Args... args) const {
     return ptr_->call(static_cast<Args&&>(args)...);
+  }
+
+  template <typename T> T* target() noexcept {
+    return ptr_ ? static_cast<T*>(ptr_->target(&target_token_<T>)) : nullptr;
+  }
+  template <typename T> const T* target() const noexcept {
+    return ptr_ ? static_cast<const T*>(ptr_->target(&target_token_<T>))
+                : nullptr;
   }
 
   friend bool operator==(const function& f, nullptr_t) noexcept {

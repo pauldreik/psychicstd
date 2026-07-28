@@ -823,6 +823,24 @@ public:
     return {it, last};
   }
 
+  iterator erase(const_iterator pos) {
+    size_t b = pos.b;
+    Node* target = const_cast<Node*>(pos.n);
+    Node* next = target->next;
+    Node** link = &buckets_[b];
+    while (*link && *link != target)
+      link = &(*link)->next;
+    if (*link) {
+      *link = target->next;
+      delete target;
+      --size_;
+    }
+    iterator result{this, b, next};
+    while (!result.n && ++result.b < nbuckets_)
+      result.n = buckets_[result.b];
+    return result;
+  }
+
   void clear() { destroy(); }
 };
 

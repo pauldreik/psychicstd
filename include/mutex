@@ -1,4 +1,5 @@
 #pragma once
+#include <__psychicstd_invoke>
 #include <pthread.h>
 
 namespace std {
@@ -58,6 +59,15 @@ private:
   pthread_mutex_t mutex_;
 };
 
+struct once_flag {
+  constexpr once_flag() noexcept = default;
+  once_flag(const once_flag&) = delete;
+  once_flag& operator=(const once_flag&) = delete;
+
+  mutex mutex_;
+  bool done_ = false;
+};
+
 template <typename Mutex> struct lock_guard {
   using mutex_type = Mutex;
   explicit lock_guard(Mutex& m) : m_(m) { m_.lock(); }
@@ -69,6 +79,16 @@ template <typename Mutex> struct lock_guard {
 private:
   Mutex& m_;
 };
+
+template <typename Callable, typename... Args>
+void call_once(once_flag& flag, Callable&& callable, Args&&... args) {
+  lock_guard guard(flag.mutex_);
+  if (!flag.done_) {
+    detail::__invoke(static_cast<Callable&&>(callable),
+                     static_cast<Args&&>(args)...);
+    flag.done_ = true;
+  }
+}
 
 template <typename Mutex> struct scoped_lock {
   explicit scoped_lock(Mutex& mutex) : mutex_(mutex) { mutex_.lock(); }
