@@ -21,7 +21,7 @@ ios_base::fmtflags ios_base::setf(fmtflags f) {
 
 ios_base::fmtflags ios_base::setf(fmtflags f, fmtflags mask) {
   fmtflags old = flags_;
-  flags_ = (flags_ & ~mask) | f;
+  flags_ = (flags_ & ~mask) | (f & mask);
   return old;
 }
 

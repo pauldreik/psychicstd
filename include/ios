@@ -113,8 +113,8 @@ protected:
                               int input_size, char decimal_point,
                               char thousands_sep, const char* grouping,
                               size_t grouping_size);
-  static long long _parse_signed(const char*, int);
-  static unsigned long long _parse_unsigned(const char*, int);
+  static long long _parse_signed(const char*, int, bool&);
+  static unsigned long long _parse_unsigned(const char*, int, bool&);
   static bool _parse_float(const char*, float&, int&);
   static bool _parse_float(const char*, double&, int&);
   static bool _parse_float(const char*, long double&, int&);
@@ -179,8 +179,10 @@ public:
   bool bad() const noexcept { return ios_base::bad(); }
   explicit operator bool() const noexcept { return ios_base::operator bool(); }
   bool operator!() const noexcept { return ios_base::operator!(); }
-  void clear(iostate s = goodbit) { ios_base::clear(s); }
-  void setstate(iostate s) { ios_base::setstate(s); }
+  void clear(iostate s = goodbit) {
+    ios_base::clear(s | (buf_ ? goodbit : badbit));
+  }
+  void setstate(iostate s) { clear(rdstate() | s); }
   iostate exceptions() const noexcept { return ios_base::exceptions(); }
   void exceptions(iostate mask) { ios_base::exceptions(mask); }
   locale getloc() const { return ios_base::getloc(); }
