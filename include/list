@@ -325,47 +325,59 @@ public:
     return {pos.n ? const_cast<Node*>(pos.n) : tail_, tail_};
   }
   void sort() {
-    if (size_ <= 1)
-      return;
-    for (Node* cur = head_->next; cur;) {
-      Node* next = cur->next;
-      Node* pos = head_;
-      while (pos != cur && !(cur->value < pos->value))
-        pos = pos->next;
-      if (pos != cur) {
-        unlink(cur);
-        cur->prev = pos->prev;
-        cur->next = pos;
-        if (pos->prev)
-          pos->prev->next = cur;
-        else
-          head_ = cur;
-        pos->prev = cur;
-        ++size_;
-      }
-      cur = next;
-    }
+    sort([](const T& a, const T& b) { return a < b; });
   }
   template <typename Compare> void sort(Compare comp) {
     if (size_ <= 1)
       return;
-    for (Node* cur = head_->next; cur;) {
-      Node* next = cur->next;
-      Node* pos = head_;
-      while (pos != cur && !comp(cur->value, pos->value))
-        pos = pos->next;
-      if (pos != cur) {
-        unlink(cur);
-        cur->prev = pos->prev;
-        cur->next = pos;
-        if (pos->prev)
-          pos->prev->next = cur;
-        else
-          head_ = cur;
-        pos->prev = cur;
-        ++size_;
+    for (size_type width = 1; width < size_; width *= 2) {
+      Node* left = head_;
+      while (left) {
+        Node* right = left;
+        size_type left_count = 0;
+        while (left_count < width && right) {
+          right = right->next;
+          ++left_count;
+        }
+        if (!right)
+          break;
+
+        Node* after = right;
+        size_type right_count = 0;
+        while (right_count < width && after) {
+          after = after->next;
+          ++right_count;
+        }
+
+        Node* a = left;
+        Node* b = right;
+        while (left_count && right_count) {
+          if (!comp(b->value, a->value)) {
+            a = a->next;
+            --left_count;
+            continue;
+          }
+
+          Node* next = b->next;
+          b->prev->next = next;
+          if (next)
+            next->prev = b->prev;
+          else
+            tail_ = b->prev;
+          b->prev = a->prev;
+          b->next = a;
+          if (a->prev)
+            a->prev->next = b;
+          else
+            head_ = b;
+          a->prev = b;
+          b = next;
+          --right_count;
+        }
+        left = after;
       }
-      cur = next;
+      if (width > size_ / 2)
+        break;
     }
   }
   void remove(const T& val) {

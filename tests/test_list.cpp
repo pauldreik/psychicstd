@@ -3,6 +3,7 @@
 
 struct sortable_item {
   int key;
+  int order = 0;
 
   bool operator<(const sortable_item& other) const { return key < other.key; }
 };
@@ -59,4 +60,57 @@ int main() {
   psyassert(&sortable.front() == second);
   psyassert(&*++sortable.begin() == third);
   psyassert(&sortable.back() == first);
+
+  std::list<sortable_item> stable = {{2, 0}, {1, 1}, {2, 2}, {1, 3}};
+  stable.sort();
+  auto stable_it = stable.begin();
+  psyassert(stable_it++->order == 1);
+  psyassert(stable_it++->order == 3);
+  psyassert(stable_it++->order == 0);
+  psyassert(stable_it++->order == 2);
+
+  stable.sort([](const sortable_item& a, const sortable_item& b) {
+    return a.key > b.key;
+  });
+  psyassert(stable.front().key == 2);
+  psyassert(stable.back().key == 1);
+
+  std::list<int> many;
+  for (int i = 0; i < 1024; ++i)
+    many.push_back(i);
+  int comparisons = 0;
+  many.sort([&](int a, int b) {
+    ++comparisons;
+    return a < b;
+  });
+  psyassert(comparisons < 20 * 1024);
+
+  many.clear();
+  for (int i = 0; i < 1000; ++i)
+    many.push_back((i * 37) % 1000);
+  many.sort();
+  int expected = 0;
+  for (int item : many)
+    psyassert(item == expected++);
+
+  int throws_after = 10;
+  bool threw = false;
+  try {
+    many.sort([&](int a, int b) {
+      if (--throws_after == 0)
+        throw 1;
+      return a > b;
+    });
+  } catch (int) {
+    threw = true;
+  }
+  psyassert(threw);
+  std::size_t forward_count = 0;
+  for (auto it = many.begin(); it != many.end(); ++it)
+    ++forward_count;
+  std::size_t reverse_count = 0;
+  for (auto it = many.rbegin(); it != many.rend(); ++it)
+    ++reverse_count;
+  psyassert(forward_count == many.size());
+  psyassert(reverse_count == many.size());
 }
