@@ -32,6 +32,7 @@ public:
 
   bool empty() const noexcept { return path_.empty(); }
   const __str& string() const noexcept { return path_; }
+  operator __str() const { return path_; }
   __u8str u8string() const {
     return __u8str(reinterpret_cast<const char8_t*>(path_.data()),
                    path_.size());
@@ -61,7 +62,7 @@ public:
 
   path parent_path() const {
     auto pos = path_.find_last_of('/');
-    return pos == __str::npos ? path() : path_.substr(0, pos);
+    return pos == __str::npos ? path() : path(path_.substr(0, pos));
   }
 
   path lexically_relative(const path& base) const;
@@ -83,6 +84,12 @@ public:
 
   friend bool operator==(const path& a, const path& b) noexcept {
     return a.path_ == b.path_;
+  }
+
+  template <typename Char, typename Traits>
+  friend basic_ostream<Char, Traits>&
+  operator<<(basic_ostream<Char, Traits>& output, const path& value) {
+    return output << '"' << value.string() << '"';
   }
 
 private:
