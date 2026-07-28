@@ -74,6 +74,11 @@
 #define __cpp_lib_is_constant_evaluated 201811L
 #endif
 
+// std::source_location (<source_location>)
+#ifndef __cpp_lib_source_location
+#define __cpp_lib_source_location 201907L
+#endif
+
 // std::bit_cast (<bit>)
 #ifndef __cpp_lib_bit_cast
 #define __cpp_lib_bit_cast 201806L

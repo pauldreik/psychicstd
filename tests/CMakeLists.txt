@@ -52,6 +52,7 @@ set(TESTS
     test_scoped_allocator
     test_set
     test_span
+    test_source_location
     test_sstream
     test_stack
     test_stdexcept

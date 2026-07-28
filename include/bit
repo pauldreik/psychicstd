@@ -45,6 +45,24 @@ constexpr int bit_width(T value) noexcept {
 template <typename T>
   requires(is_integral_v<T> && is_unsigned_v<T> &&
            !is_same_v<remove_cv_t<T>, bool>)
+constexpr int countr_zero(T value) noexcept {
+  if (value == 0)
+    return sizeof(T) * __CHAR_BIT__;
+  if constexpr (sizeof(T) <= sizeof(unsigned long long)) {
+    return __builtin_ctzll(static_cast<unsigned long long>(value));
+  } else {
+    int count = 0;
+    while ((value & 1) == 0) {
+      ++count;
+      value >>= 1;
+    }
+    return count;
+  }
+}
+
+template <typename T>
+  requires(is_integral_v<T> && is_unsigned_v<T> &&
+           !is_same_v<remove_cv_t<T>, bool>)
 constexpr T rotl(T value, int shift) noexcept {
   constexpr unsigned digits = sizeof(T) * __CHAR_BIT__;
   constexpr unsigned mask = digits - 1;
