@@ -350,9 +350,32 @@ public:
   }
   iterator erase(iterator position) { return erase(const_iterator(position)); }
   iterator erase(const_iterator first, const_iterator last) {
-    while (first != last)
-      first = erase(first);
-    return {const_cast<node*>(last.node_), this};
+    if (first == last)
+      return {const_cast<node*>(last.node_), this};
+    node* value = const_cast<node*>(first.node_);
+    node* after = const_cast<node*>(last.node_);
+    node* before = value->previous;
+    auto first_index = lower_bound_index(value->value.first);
+    while (index_[first_index] != value)
+      ++first_index;
+    size_type count = 0;
+    while (value != after) {
+      node* next = value->next;
+      delete value;
+      value = next;
+      ++count;
+    }
+    if (before)
+      before->next = after;
+    else
+      first_ = after;
+    if (after)
+      after->previous = before;
+    else
+      last_ = before;
+    index_.erase(first_index, first_index + count);
+    size_ -= count;
+    return {after, this};
   }
   size_type erase(const Key& key) {
     auto found = find(key);
@@ -471,12 +494,14 @@ protected:
     return link(position, value, index);
   }
   size_type __erase_multi(const Key& key) {
-    auto [first, last] = equal_range(key);
-    size_type result = 0;
-    while (first != last) {
-      first = erase(first);
-      ++result;
-    }
+    const auto first_index = lower_bound_index(key);
+    const auto last_index = upper_bound_index(key);
+    const auto result = last_index - first_index;
+    if (result)
+      erase(const_iterator{index_[first_index], this},
+            const_iterator{last_index == index_.size() ? nullptr
+                                                       : index_[last_index],
+                           this});
     return result;
   }
 
