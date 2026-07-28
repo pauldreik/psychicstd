@@ -2,23 +2,23 @@
 
 Compiler: `c++ (Debian 14.2.0-19) 14.2.0`. Each project is built 9 time(s) per side (system libstdc++, psychicstd); `system (s)`/`psychicstd (s)` are the *median* build time of those repetitions, in seconds -- the median is used instead of the mean so one repetition disturbed by another process on the machine doesn't skew the result. `speedup` = system median / psychicstd median (>1x means psychicstd is faster); its bracketed range is a 95% confidence interval on that *same ratio* (obtained by resampling the raw per-repetition timings, not just the two medians, 2000 times) -- so it reflects how much the repetitions varied, not a different unit. 🟢 the whole CI is above 1x (reliably faster) · 🔴 the whole CI is below 1x (reliably slower) · 🟡 the CI straddles 1x (not distinguishable from run-to-run noise).
 
-Parallelism: **8 jobs** (20 logical CPUs available; the memory estimate permits 14 jobs at 1.5 GiB/job). ccache was disabled.
+Parallelism: **8 jobs** (20 logical CPUs available; the memory estimate permits 23 jobs at 1.5 GiB/job). ccache was disabled.
 
 ## bitcoin (31.0)
 
-Builds Bitcoin Core's bitcoin_crypto primitives except MuHash and SipHash, whose include chains require charconv; node, wallet, GUI, networking, and external dependencies are excluded.
+Builds Bitcoin Core's bitcoin_crypto primitives; node, wallet, GUI, networking, and external dependencies are excluded.
 
 ### Debug
 
 | step | system (s) | psychicstd (s) | speedup | comment |
 | --- | ---: | ---: | ---: | --- |
-| compile | 0.48 | 0.27 | 🟢 1.80x [1.77x, 1.86x] | |
+| compile | 0.72 | 0.31 | 🟢 2.31x [2.21x, 2.35x] | |
 
 ### Release
 
 | step | system (s) | psychicstd (s) | speedup | comment |
 | --- | ---: | ---: | ---: | --- |
-| compile | 0.96 | 0.75 | 🟢 1.29x [1.27x, 1.30x] | |
+| compile | 1.01 | 0.78 | 🟢 1.29x [1.27x, 1.33x] | |
 
 ______________________________________________________________________
 
