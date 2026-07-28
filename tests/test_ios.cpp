@@ -17,6 +17,13 @@ int main() {
   psyassert(std::ios_base::goodbit == 0);
   std::ios ios(nullptr);
   psyassert(!ios.rdbuf());
+  psyassert(ios.bad());
+  ios.exceptions(std::ios::eofbit);
+  try {
+    ios.exceptions(std::ios::badbit);
+    psyassert(false);
+  } catch (const std::ios::failure&) {
+  }
   int first_word = std::ios_base::xalloc();
   int second_word = std::ios_base::xalloc();
   psyassert(first_word != second_word);

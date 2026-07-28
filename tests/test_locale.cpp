@@ -36,6 +36,9 @@ protected:
 };
 
 int main() {
+  psyassert((std::use_facet<std::codecvt<char16_t, char8_t, std::mbstate_t>>(
+                 std::locale::classic())
+                 .max_length() == 4));
   static_assert(std::locale::none == 0);
   static_assert((std::locale::all & std::locale::collate) != 0);
   psyassert(std::isalpha('a', std::locale::classic()));

@@ -1,4 +1,5 @@
 #pragma once
+#include <__psychicstd_except>
 #include <__psychicstd_hash>
 #include <cstddef>
 
@@ -49,7 +50,11 @@ public:
   reference operator[](size_t pos) noexcept {
     return reference(&words_[pos / word_bits], pos % word_bits);
   }
-  constexpr bool test(size_t pos) const { return (*this)[pos]; }
+  constexpr bool test(size_t pos) const {
+    if (pos >= N)
+      _PSYCHICSTD_THROW_HELPER(__throw_out_of_range, "bitset::test");
+    return (*this)[pos];
+  }
   constexpr size_t size() const noexcept { return N; }
 
   bitset& set() noexcept {
@@ -106,7 +111,12 @@ public:
   constexpr unsigned long to_ulong() const {
     return static_cast<unsigned long>(words_[0]);
   }
-  constexpr unsigned long long to_ullong() const { return words_[0]; }
+  constexpr unsigned long long to_ullong() const {
+    for (size_t i = 1; i < word_count; ++i)
+      if (words_[i])
+        _PSYCHICSTD_THROW_HELPER(__throw_overflow_error, "bitset::to_ullong");
+    return words_[0];
+  }
 
   bitset& operator|=(const bitset& other) noexcept {
     for (size_t i = 0; i < word_count; ++i)

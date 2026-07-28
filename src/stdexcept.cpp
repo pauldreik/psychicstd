@@ -75,6 +75,9 @@ void __throw_invalid_argument(const char* message) {
 void __throw_runtime_error(const char* message) {
   _PSYCHICSTD_THROW(runtime_error(message));
 }
+void __throw_overflow_error(const char* message) {
+  _PSYCHICSTD_THROW(overflow_error(message));
+}
 
 void __throw_bad_optional_access() { _PSYCHICSTD_THROW(bad_optional_access()); }
 void __throw_bad_variant_access() { _PSYCHICSTD_THROW(bad_variant_access()); }

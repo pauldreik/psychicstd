@@ -208,7 +208,15 @@ protected:
     size_t available = static_cast<size_t>(end - from);
     return static_cast<int>(available < max ? available : max);
   }
-  virtual int do_max_length() const noexcept { return 1; }
+  virtual int do_max_length() const noexcept {
+    if constexpr ((__psychicstd_detail::is_same_v<Intern, char16_t> ||
+                   __psychicstd_detail::is_same_v<Intern, char32_t>) &&
+                  (__psychicstd_detail::is_same_v<E, char> ||
+                   __psychicstd_detail::is_same_v<E, char8_t>))
+      return 4;
+    else
+      return 1;
+  }
 
 private:
   template <typename From, typename To>
