@@ -2455,11 +2455,6 @@ def _bitcoin() -> Project:
             with tarfile.open(tarball) as t:
                 t.extractall(work)
             src = work / f"bitcoin-{version}"
-            crypto_cmake = src / "src" / "crypto" / "CMakeLists.txt"
-            crypto_text = crypto_cmake.read_text()
-            for source in ("muhash.cpp", "siphash.cpp"):
-                crypto_text = crypto_text.replace(f"  {source}\n", "")
-            crypto_cmake.write_text(crypto_text)
             driver = work / "driver"
             driver.mkdir()
             driver.joinpath("CMakeLists.txt").write_text(
@@ -2488,6 +2483,10 @@ add_subdirectory("${BITCOIN_SOURCE}/src/crypto" crypto)
                 "-DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY",
                 "-DBITCOIN_SOURCE=" + str(src),
             ]
+            if tc.build_type == "release":
+                # Bitcoin's real build deliberately keeps assertions enabled
+                # and replaces CMake's default -O3 -DNDEBUG with -O2.
+                configure.append("-DCMAKE_CXX_FLAGS_RELEASE=-O2")
             jobs = f"-j{tc.jobs}"
             return {
                 "configure": _timed(configure, src, env),
@@ -2510,9 +2509,8 @@ add_subdirectory("${BITCOIN_SOURCE}/src/crypto" crypto)
         build=build,
         expected_seconds={"debug": 10, "release": 10},
         phases=("compile",),
-        comment="Builds Bitcoin Core's bitcoin_crypto primitives except MuHash "
-        "and SipHash, whose include chains require charconv; node, wallet, GUI, "
-        "networking, and external dependencies are excluded.",
+        comment="Builds Bitcoin Core's bitcoin_crypto primitives; node, wallet, "
+        "GUI, networking, and external dependencies are excluded.",
     )
 
 

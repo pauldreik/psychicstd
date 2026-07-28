@@ -1,0 +1,45 @@
+#pragma once
+
+#define __cpp_lib_source_location 201907L
+
+namespace std {
+
+struct source_location {
+private:
+  using uint_least32_t = __UINT_LEAST32_TYPE__;
+  struct __impl {
+    const char* _M_file_name;
+    const char* _M_function_name;
+    unsigned _M_line;
+    unsigned _M_column;
+  };
+  using __builtin_result = decltype(__builtin_source_location());
+
+public:
+  static consteval source_location
+  current(__builtin_result location = __builtin_source_location()) noexcept {
+    source_location result;
+    result.impl_ = static_cast<const __impl*>(location);
+    return result;
+  }
+
+  constexpr source_location() noexcept = default;
+
+  constexpr uint_least32_t line() const noexcept {
+    return impl_ ? impl_->_M_line : 0;
+  }
+  constexpr uint_least32_t column() const noexcept {
+    return impl_ ? impl_->_M_column : 0;
+  }
+  constexpr const char* file_name() const noexcept {
+    return impl_ ? impl_->_M_file_name : "";
+  }
+  constexpr const char* function_name() const noexcept {
+    return impl_ ? impl_->_M_function_name : "";
+  }
+
+private:
+  const __impl* impl_ = nullptr;
+};
+
+} // namespace std
