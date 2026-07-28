@@ -28,6 +28,12 @@ struct aggregate {
 int main() {
   std::optional<int> o = 42;
   psyassert(o.value() == 42);
+  std::optional<double> source = 4.5;
+  std::optional<float> converted = source;
+  psyassert(converted && *converted == 4.5F);
+  std::optional<double> no_source;
+  std::optional<float> no_converted = no_source;
+  psyassert(!no_converted);
 
   std::optional<move_only> a(move_only(7));
   std::optional<move_only> b(static_cast<decltype(a)&&>(a));

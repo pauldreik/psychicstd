@@ -22,6 +22,10 @@ public:
 
 [[noreturn, gnu::cold, gnu::noinline]] void __throw_bad_optional_access();
 
+template <typename T> class optional;
+template <typename T> struct __is_optional : false_type {};
+template <typename T> struct __is_optional<optional<T>> : true_type {};
+
 template <typename T> class optional {
   union {
     T val_;
@@ -56,9 +60,29 @@ public:
   constexpr optional(T&& value) : val_(static_cast<T&&>(value)), has_(true) {}
   template <typename U = T>
     requires(!is_same_v<remove_cvref_t<U>, optional> &&
+             !__is_optional<remove_cvref_t<U>>::value &&
              !is_same_v<remove_cvref_t<U>, T>)
   // forward
   constexpr optional(U&& v) : val_(static_cast<U&&>(v)), has_(true) {}
+  template <typename U>
+    requires(is_constructible_v<T, const U&>)
+  constexpr explicit(!is_convertible_v<const U&, T>)
+      optional(const optional<U>& other)
+      : _dummy(0), has_(false) {
+    if (other) {
+      construct_at(ptr(), *other);
+      has_ = true;
+    }
+  }
+  template <typename U>
+    requires(is_constructible_v<T, U &&>)
+  constexpr explicit(!is_convertible_v<U&&, T>) optional(optional<U>&& other)
+      : _dummy(0), has_(false) {
+    if (other) {
+      construct_at(ptr(), static_cast<U&&>(*other));
+      has_ = true;
+    }
+  }
   template <typename... Args>
   constexpr explicit optional(in_place_t, Args&&... args)
       : val_(static_cast<Args&&>(args)...), has_(true) {}
@@ -196,8 +220,6 @@ constexpr bool operator>=(const optional<T>& a, const optional<T>& b) {
 }
 
 // Mixed comparisons: optional<T> vs a non-optional value.
-template <typename> struct __is_optional : false_type {};
-template <typename U> struct __is_optional<optional<U>> : true_type {};
 template <typename U>
 concept __non_optional = !__is_optional<remove_cvref_t<U>>::value;
 
