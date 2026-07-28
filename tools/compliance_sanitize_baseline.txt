@@ -10,6 +10,12 @@ std/containers/sequences/deque/deque.modifiers/push_front_exception_safety.pass.
 std/input.output/iostream.format/input.streams/istream/istream_sentry/ctor.pass.cpp
 std/input.output/iostream.format/output.streams/ostream.formatted/ostream.inserters.arithmetic/pointer.volatile.pass.cpp
 std/input.output/iostream.format/std.manip/setfill_wchar_max.pass.cpp
+
+# psychicstd keeps 16 extension words inline. Supporting the test's 10,000
+# independent slots would require dynamically growing every ios_base.
+std/input.output/iostreams.base/ios.base/ios.base.storage/iword.pass.cpp
+std/input.output/iostreams.base/ios.base/ios.base.storage/pword.pass.cpp
+
 std/input.output/string.streams/stringbuf/stringbuf.virtuals/overflow.pass.cpp
 std/iterators/predef.iterators/insert.iterators/insert.iter.ops/insert.iter.op=/lv_value.pass.cpp
 std/language.support/support.exception/propagation/exception_ptr_move_assignment.pass.cpp
