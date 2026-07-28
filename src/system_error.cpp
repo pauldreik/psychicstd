@@ -4,6 +4,12 @@
 
 namespace std {
 
+void __throw_shared_lock_error(bool deadlock) {
+  _PSYCHICSTD_THROW(system_error(
+      make_error_code(deadlock ? errc::resource_deadlock_would_occur
+                               : errc::operation_not_permitted)));
+}
+
 error_category::~error_category() = default;
 
 error_condition error_category::default_error_condition(int ev) const noexcept {
