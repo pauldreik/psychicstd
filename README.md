@@ -24,7 +24,10 @@ It is not complete. It is not fully compliant. But it is good enough to quickly 
 | [googletest](https://github.com/google/googletest) | [1.58x](use_on_realworld_projects/googletest_speed_report.md) | |
 | [llama.cpp](https://github.com/ggml-org/llama.cpp) | [1.53x](use_on_realworld_projects/llama.cpp_speed_report.md) | Builds `ggml-base` and `ggml-cpu` and compiles model-architecture and hyperparameter handling; excludes accelerator backends, tools, examples, server, and tests. |
 | [nlohmann json](https://json.nlohmann.me/) | [2.05x](use_on_realworld_projects/nlohmann_speed_report.md) | Uncovered a reliance on implementation-specific behaviour, fixed in [PR #5236](https://github.com/nlohmann/json/pull/5236). |
+| [cxxopts](https://github.com/jarro2783/cxxopts) | [2.77x](use_on_realworld_projects/cxxopts_speed_report.md) | Compiles the upstream example with cxxopts' documented no-regex fallback. |
+| [inipp](https://github.com/mcmtroffaes/inipp) | [4.72x](use_on_realworld_projects/inipp_speed_report.md) | Compiles the upstream header smoke test. |
 | [OpenCV](https://opencv.org/) | [1.83x](use_on_realworld_projects/opencv_speed_report.md) | Builds the core and imgproc modules and their tests. |
+| [pocketfft](https://github.com/mreineck/pocketfft) | [1.56x](use_on_realworld_projects/pocketfft_speed_report.md) | Compiles and runs the upstream demonstration. |
 | [rapidjson](https://github.com/Tencent/rapidjson/) | [1.26x](use_on_realworld_projects/rapidjson_speed_report.md) | Not using much of the standard library, little speedup expected. |
 | [rdfind](https://rdfind.pauldreik.se/) | [4.18x](use_on_realworld_projects/rdfind_speed_report.md) | Runs in psychic strict mode, see "Compatibility levels" further down this document. Strict mode uncovered code relying on transitive includes. |
 | [simdutf](https://github.com/simdutf/simdutf) | [1.72x](use_on_realworld_projects/simdutf_speed_report.md) | Mostly SIMD intrinsics. [Strict mode uncovered missing includes](https://github.com/simdutf/simdutf/pull/998). |

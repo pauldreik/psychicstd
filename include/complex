@@ -58,6 +58,12 @@ inline float sqrt(float value) { return __builtin_sqrtf(value); }
 inline double sqrt(double value) { return __builtin_sqrt(value); }
 inline long double sqrt(long double value) { return __builtin_sqrtl(value); }
 
+template <typename T>
+inline constexpr int floating_rank = __is_same(T, float)         ? 1
+                                     : __is_same(T, double)      ? 2
+                                     : __is_same(T, long double) ? 3
+                                                                 : 0;
+
 } // namespace __complex_detail
 
 template <typename T> class complex {
@@ -65,8 +71,15 @@ public:
   using value_type = T;
   constexpr complex(T r = T(), T i = T()) : re_(r), im_(i) {}
   template <typename U>
-  constexpr explicit complex(const complex<U>& other)
+  constexpr explicit(__complex_detail::floating_rank<T> <
+                     __complex_detail::floating_rank<U>)
+      complex(const complex<U>& other)
       : re_(static_cast<T>(other.real())), im_(static_cast<T>(other.imag())) {}
+  template <typename U> constexpr complex& operator=(const complex<U>& other) {
+    re_ = static_cast<T>(other.real());
+    im_ = static_cast<T>(other.imag());
+    return *this;
+  }
   constexpr T real() const noexcept { return re_; }
   constexpr T imag() const noexcept { return im_; }
   constexpr void real(T r) noexcept { re_ = r; }
