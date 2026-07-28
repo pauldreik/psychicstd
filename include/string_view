@@ -49,7 +49,14 @@ private:
     if (!s)
       return 0;
     if constexpr (__psychicstd_detail::is_same_v<Char, char>) {
-      return __builtin_strlen(s);
+      if (__builtin_is_constant_evaluated()) {
+        size_type n = 0;
+        while (s[n])
+          ++n;
+        return n;
+      } else {
+        return __builtin_strlen(s);
+      }
     } else {
       size_type n = 0;
       while (s[n])
