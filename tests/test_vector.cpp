@@ -53,6 +53,8 @@ int main() {
   psyassert(
       std::hash<std::vector<bool>>{}(bools) ==
       std::hash<std::vector<bool>>{}(std::vector<bool>{true, false, true}));
+  psyassert(std::erase(bools, true) == 2);
+  psyassert((bools == std::vector<bool>{false}));
 
   int n = 1;
   std::vector<value> values;
@@ -90,4 +92,26 @@ int main() {
   psyassert(resize_value::moves < 512);
   for (const auto& item : resized_with_value)
     psyassert(item.n == 42);
+
+  std::vector<int> erased{1, 2, 3, 2, 4};
+  psyassert(std::erase(erased, 2) == 2);
+  psyassert((erased == std::vector<int>{1, 3, 4}));
+
+  int predicate_calls = 0;
+  psyassert(std::erase_if(erased, [&](int item) {
+              ++predicate_calls;
+              return item != 3;
+            }) == 2);
+  psyassert(predicate_calls == 3);
+  psyassert((erased == std::vector<int>{3}));
+
+  std::vector<value> erased_values;
+  erased_values.emplace_back(n);
+  erased_values.emplace_back(n);
+  erased_values.emplace_back(n);
+  erased_values[1].n = 2;
+  psyassert(std::erase_if(erased_values,
+                          [](const value& item) { return item.n == 1; }) == 2);
+  psyassert(erased_values.size() == 1);
+  psyassert(erased_values[0].n == 2);
 }
