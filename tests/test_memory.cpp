@@ -211,6 +211,17 @@ static void test_shared_ptr_concurrent_destruction() {
   psyassert(*owner == 42);
 }
 
+static void test_shared_ptr_atomic_access() {
+  std::shared_ptr<int> value = std::make_shared<int>(1);
+  std::shared_ptr<int> loaded = std::atomic_load(&value);
+  psyassert(*loaded == 1);
+  psyassert(loaded.use_count() == 2);
+
+  std::atomic_store(&value, std::make_shared<int>(2));
+  psyassert(*value == 2);
+  psyassert(*loaded == 1);
+}
+
 static void test_weak_ptr_shares_control_block() {
   auto owner = std::make_shared<Derived>();
   std::weak_ptr<Derived> derived = owner;
@@ -302,6 +313,7 @@ int main() {
   test_shared_ptr_from_unique_ptr();
   test_shared_ptr_custom_deleter();
   test_shared_ptr_concurrent_destruction();
+  test_shared_ptr_atomic_access();
   test_weak_ptr_shares_control_block();
   test_expired_converting_weak_ptr();
   test_member_init_from_template_prvalue();

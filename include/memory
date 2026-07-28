@@ -500,6 +500,34 @@ shared_ptr<const T> enable_shared_from_this<T>::shared_from_this() const {
   return shared_ptr<const T>(ctrl_, ptr_, {});
 }
 
+namespace __detail {
+inline unsigned char __shared_ptr_atomic_lock;
+
+inline void __shared_ptr_atomic_acquire() noexcept {
+  while (__atomic_test_and_set(&__shared_ptr_atomic_lock, __ATOMIC_ACQUIRE))
+    ;
+}
+
+inline void __shared_ptr_atomic_release() noexcept {
+  __atomic_clear(&__shared_ptr_atomic_lock, __ATOMIC_RELEASE);
+}
+} // namespace __detail
+
+template <typename T>
+shared_ptr<T> atomic_load(const shared_ptr<T>* pointer) noexcept {
+  __detail::__shared_ptr_atomic_acquire();
+  shared_ptr<T> result = *pointer;
+  __detail::__shared_ptr_atomic_release();
+  return result;
+}
+
+template <typename T>
+void atomic_store(shared_ptr<T>* pointer, shared_ptr<T> desired) noexcept {
+  __detail::__shared_ptr_atomic_acquire();
+  pointer->swap(desired);
+  __detail::__shared_ptr_atomic_release();
+}
+
 template <typename D, typename T>
 D* get_deleter(const shared_ptr<T>& value) noexcept {
 #if _PSYCHICSTD_HAS_RTTI
