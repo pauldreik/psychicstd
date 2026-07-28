@@ -1,7 +1,4 @@
 #pragma once
-#ifndef _INITIALIZER_LIST
-#define _INITIALIZER_LIST 1
-
 #include <__psychicstd_begin_end>
 #include <cstddef>
 
@@ -39,5 +36,3 @@ template <typename T> constexpr const T* end(initializer_list<T> il) noexcept {
 }
 
 } // namespace std
-
-#endif

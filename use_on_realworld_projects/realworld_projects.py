@@ -2918,6 +2918,12 @@ def _zancle() -> Project:
                 t.extractall(work)
             src = work / f"zancle-{revision}"
 
+            # Upstream replaces std::initializer_list and relies on private
+            # include guards from specific standard-library implementations.
+            # Use the portable header in both benchmark variants.
+            initializer_list = src / "include" / "SFML" / "Base" / "InitializerList.hpp"
+            initializer_list.write_text("#pragma once\n#include <initializer_list>\n")
+
             env = _env(tc)
             configure = [
                 "cmake",
