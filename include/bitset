@@ -170,6 +170,27 @@ private:
   unsigned long long words_[word_count]{};
 };
 
+template <size_t N>
+bitset<N> operator&(const bitset<N>& lhs, const bitset<N>& rhs) noexcept {
+  bitset<N> result(lhs);
+  result &= rhs;
+  return result;
+}
+
+template <size_t N>
+bitset<N> operator|(const bitset<N>& lhs, const bitset<N>& rhs) noexcept {
+  bitset<N> result(lhs);
+  result |= rhs;
+  return result;
+}
+
+template <size_t N>
+bitset<N> operator^(const bitset<N>& lhs, const bitset<N>& rhs) noexcept {
+  bitset<N> result(lhs);
+  result ^= rhs;
+  return result;
+}
+
 template <size_t N> struct hash<bitset<N>> {
   size_t operator()(const bitset<N>& value) const noexcept {
     size_t result = N;
