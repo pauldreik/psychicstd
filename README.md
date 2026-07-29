@@ -8,34 +8,35 @@ It is not complete. It is not fully compliant. But it is good enough to quickly 
 
 | Project | Compile time speedup | comment |
 |-------------------------------------------------------------|-----------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------|
-| [Abseil](https://abseil.io/) | [2.19x](use_on_realworld_projects/abseil_speed_report.md) | Builds `absl/base` and eight small upstream base tests. |
-| [Bitcoin Core](https://github.com/bitcoin/bitcoin) | [2.31x](use_on_realworld_projects/bitcoin_speed_report.md) | Builds all 16 crypto primitives plus memory cleansing, including MuHash and SipHash. |
-| [Boost.Asio](https://www.boost.org/libs/asio/) | [2.14x](use_on_realworld_projects/boost-asio_speed_report.md) | |
-| [Boost.Test](https://www.boost.org/libs/test/) | [1.58x](use_on_realworld_projects/boost-test_speed_report.md) | Builds and runs three upstream header-only smoke tests. |
-| [catch2](https://github.com/catchorg/Catch2) | [3.55x](use_on_realworld_projects/catch2_speed_report.md) | |
-| [cmake](https://cmake.org/) | [3.11x](use_on_realworld_projects/cmake_speed_report.md) | Uses a compiler wrapper to build. |
-| [cppcheck](https://github.com/cppcheck-opensource/cppcheck) | [2.04x](use_on_realworld_projects/cppcheck_speed_report.md)| |
-| [CTRE](https://github.com/hanickadot/compile-time-regular-expressions) | [1.12x](use_on_realworld_projects/ctre_speed_report.md) | Builds every upstream compile-time test. |
+| [Abseil](https://abseil.io/) | [2.14x](use_on_realworld_projects/abseil_speed_report.md) | Builds `absl/base` and eight small upstream base tests. |
+| [Bitcoin Core](https://github.com/bitcoin/bitcoin) | [2.22x](use_on_realworld_projects/bitcoin_speed_report.md) | Builds all 16 crypto primitives plus memory cleansing, including MuHash and SipHash. |
+| [Boost.Asio](https://www.boost.org/libs/asio/) | [2.11x](use_on_realworld_projects/boost-asio_speed_report.md) | |
+| [Boost.Test](https://www.boost.org/libs/test/) | [1.57x](use_on_realworld_projects/boost-test_speed_report.md) | Builds and runs three upstream header-only smoke tests. |
+| [catch2](https://github.com/catchorg/Catch2) | [3.51x](use_on_realworld_projects/catch2_speed_report.md) | |
+| [cmake](https://cmake.org/) | [3.06x](use_on_realworld_projects/cmake_speed_report.md) | Uses a compiler wrapper to build. |
+| [cppcheck](https://github.com/cppcheck-opensource/cppcheck) | [2.02x](use_on_realworld_projects/cppcheck_speed_report.md)| |
+| [CTRE](https://github.com/hanickadot/compile-time-regular-expressions) | [1.11x](use_on_realworld_projects/ctre_speed_report.md) | Builds every upstream compile-time test. |
 | [eigen](https://gitlab.com/libeigen/eigen) | [1.89x](use_on_realworld_projects/eigen_speed_report.md) | |
-| [Electron](https://www.electronjs.org/) | [3.54x](use_on_realworld_projects/electron_speed_report.md) | Builds and tests a focused slice of Electron's startup and command-line handling without a Chromium checkout. |
-| [FlatBuffers](https://flatbuffers.dev/) | [2.35x](use_on_realworld_projects/flatbuffers_speed_report.md) | Builds the compiler, library, samples, and C++ test suite. |
-| [fmt](https://github.com/fmtlib/fmt) | [1.63x](use_on_realworld_projects/fmt_speed_report.md) | |
+| [Electron](https://www.electronjs.org/) | [3.52x](use_on_realworld_projects/electron_speed_report.md) | Builds and tests a focused slice of Electron's startup and command-line handling without a Chromium checkout. |
+| [FlatBuffers](https://flatbuffers.dev/) | [2.33x](use_on_realworld_projects/flatbuffers_speed_report.md) | Builds the compiler, library, samples, and C++ test suite. |
+| [fmt](https://github.com/fmtlib/fmt) | [1.61x](use_on_realworld_projects/fmt_speed_report.md) | |
 | [Godot Engine](https://godotengine.org/) | [1.09x](use_on_realworld_projects/godot_speed_report.md) | Builds the core static library with SCons; rendering, window-system, audio, and optional engine modules are disabled. |
-| [googletest](https://github.com/google/googletest) | [1.58x](use_on_realworld_projects/googletest_speed_report.md) | |
-| [libcamera](https://libcamera.org/) | [5.12x](use_on_realworld_projects/libcamera_speed_report.md) | Builds the core libraries and UVC pipeline handler; hardware-dependent applications, optional integrations, bindings, and tests are disabled. |
-| [llama.cpp](https://github.com/ggml-org/llama.cpp) | [1.53x](use_on_realworld_projects/llama.cpp_speed_report.md) | Builds `ggml-base` and `ggml-cpu` and compiles model-architecture and hyperparameter handling; excludes accelerator backends, tools, examples, server, and tests. |
-| [nlohmann json](https://json.nlohmann.me/) | [2.05x](use_on_realworld_projects/nlohmann_speed_report.md) | Uncovered a reliance on implementation-specific behaviour, fixed in [PR #5236](https://github.com/nlohmann/json/pull/5236). |
-| [cxxopts](https://github.com/jarro2783/cxxopts) | [2.77x](use_on_realworld_projects/cxxopts_speed_report.md) | Compiles the upstream example with cxxopts' documented no-regex fallback. |
-| [inipp](https://github.com/mcmtroffaes/inipp) | [4.72x](use_on_realworld_projects/inipp_speed_report.md) | Compiles the upstream header smoke test. |
+| [googletest](https://github.com/google/googletest) | [1.56x](use_on_realworld_projects/googletest_speed_report.md) | |
+| [libcamera](https://libcamera.org/) | [4.45x](use_on_realworld_projects/libcamera_speed_report.md) | Builds the core libraries and UVC pipeline handler; hardware-dependent applications, optional integrations, bindings, and tests are disabled. |
+| [llama.cpp](https://github.com/ggml-org/llama.cpp) | [1.54x](use_on_realworld_projects/llama.cpp_speed_report.md) | Builds `ggml-base` and `ggml-cpu` and compiles model-architecture and hyperparameter handling; excludes accelerator backends, tools, examples, server, and tests. |
+| [nlohmann json](https://json.nlohmann.me/) | [2.00x](use_on_realworld_projects/nlohmann_speed_report.md) | Uncovered a reliance on implementation-specific behaviour, fixed in [PR #5236](https://github.com/nlohmann/json/pull/5236). |
+| [cxxopts](https://github.com/jarro2783/cxxopts) | [2.67x](use_on_realworld_projects/cxxopts_speed_report.md) | Compiles the upstream example with cxxopts' documented no-regex fallback. |
+| [inipp](https://github.com/mcmtroffaes/inipp) | [4.66x](use_on_realworld_projects/inipp_speed_report.md) | Compiles the upstream header smoke test. |
 | [OpenCV](https://opencv.org/) | [1.83x](use_on_realworld_projects/opencv_speed_report.md) | Builds the core and imgproc modules and their tests. |
-| [pocketfft](https://github.com/mreineck/pocketfft) | [1.56x](use_on_realworld_projects/pocketfft_speed_report.md) | Compiles and runs the upstream demonstration. |
-| [pybind11](https://github.com/pybind/pybind11) | [2.37x](use_on_realworld_projects/pybind11_speed_report.md) | Builds pybind11's upstream CMake extension test, imports the module in Python, and calls its bound C++ function. |
-| [rapidjson](https://github.com/Tencent/rapidjson/) | [1.26x](use_on_realworld_projects/rapidjson_speed_report.md) | Not using much of the standard library, little speedup expected. |
-| [rdfind](https://rdfind.pauldreik.se/) | [4.18x](use_on_realworld_projects/rdfind_speed_report.md) | Runs in psychic strict mode, see "Compatibility levels" further down this document. Strict mode uncovered code relying on transitive includes. |
-| [simdutf](https://github.com/simdutf/simdutf) | [1.72x](use_on_realworld_projects/simdutf_speed_report.md) | Mostly SIMD intrinsics. [Strict mode uncovered missing includes](https://github.com/simdutf/simdutf/pull/998). |
-| [Tesseract](https://github.com/tesseract-ocr/tesseract) | [2.16x](use_on_realworld_projects/tesseract_speed_report.md) | Builds the OCR library and command-line program using the system Leptonica package. |
-| [TensorFlow](https://www.tensorflow.org/) | [2.39x](use_on_realworld_projects/tensorflow_speed_report.md) | Builds a focused set of core platform/base libraries; excludes Python, CUDA, kernels, and the full framework. |
-| [wordcounter](examples/wordcounter.cpp)| [3.71x](compile_time.md) | Example application using the STL. Counts word occurrences in text files. |
+| [pocketfft](https://github.com/mreineck/pocketfft) | [1.54x](use_on_realworld_projects/pocketfft_speed_report.md) | Compiles and runs the upstream demonstration. |
+| [pybind11](https://github.com/pybind/pybind11) | [2.38x](use_on_realworld_projects/pybind11_speed_report.md) | Builds pybind11's upstream CMake extension test, imports the module in Python, and calls its bound C++ function. |
+| [rapidjson](https://github.com/Tencent/rapidjson/) | [1.24x](use_on_realworld_projects/rapidjson_speed_report.md) | Not using much of the standard library, little speedup expected. |
+| [rdfind](https://rdfind.pauldreik.se/) | [4.30x](use_on_realworld_projects/rdfind_speed_report.md) | Runs in psychic strict mode, see "Compatibility levels" further down this document. Strict mode uncovered code relying on transitive includes. |
+| [simdutf](https://github.com/simdutf/simdutf) | [1.70x](use_on_realworld_projects/simdutf_speed_report.md) | Mostly SIMD intrinsics. [Strict mode uncovered missing includes](https://github.com/simdutf/simdutf/pull/998). |
+| [Tesseract](https://github.com/tesseract-ocr/tesseract) | [2.18x](use_on_realworld_projects/tesseract_speed_report.md) | Builds the OCR library and command-line program using the system Leptonica package. |
+| [TensorFlow](https://www.tensorflow.org/) | [2.36x](use_on_realworld_projects/tensorflow_speed_report.md) | Builds a focused set of core platform/base libraries; excludes Python, CUDA, kernels, and the full framework. |
+| [Zancle](https://github.com/vittorioromeo/zancle) | [2.30x](use_on_realworld_projects/zancle_speed_report.md) | Builds the complete Base/System static library. |
+| [wordcounter](examples/wordcounter.cpp)| [3.70x](compile_time.md) | Example application using the STL. Counts word occurrences in text files. |
 
 <!-- README_BENCHMARK:realworld-speedups:end -->
 
@@ -43,7 +44,7 @@ The real-world project recipes and reports live in [use_on_realworld_projects/](
 
 <!-- README_BENCHMARK:startup-speedup:start -->
 
-Static linking also avoids the `libstdc++.so.6` and `libm.so.6` dependencies. A representative Linux program measured [1.69x faster exec-to-exit](startup.md), including loading, initialization, and its small fixed workload.
+Static linking also avoids the `libstdc++.so.6` and `libm.so.6` dependencies. A representative Linux program measured [1.65x faster exec-to-exit](startup.md), including loading, initialization, and its small fixed workload.
 
 <!-- README_BENCHMARK:startup-speedup:end -->
 
@@ -415,7 +416,7 @@ Compiler memory matters because it controls how many compiler jobs can run in pa
 | workload | libstdc++ peak RSS | psychicstd peak RSS | reduction |
 |---|---:|---:|---:|
 | [wordcounter](examples/wordcounter.cpp) | 114.5 MiB | 51.9 MiB | 55% |
-| [`<iostream>` test](benchmarks/compile_time/bench_iostream.cpp) | 71.6 MiB | 36.9 MiB | 48% |
+| [`<iostream>` test](benchmarks/compile_time/bench_iostream.cpp) | 71.6 MiB | 37.1 MiB | 48% |
 
 <!-- README_BENCHMARK:benchmark-peak-rss:end -->
 

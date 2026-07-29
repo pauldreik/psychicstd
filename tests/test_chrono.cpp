@@ -59,8 +59,19 @@ static void test_time_point_arithmetic() {
 }
 
 static void test_duration_bounds() {
-  psyassert(seconds::min().count() == std::numeric_limits<long long>::min());
-  psyassert(seconds::max().count() == std::numeric_limits<long long>::max());
+  static_assert(seconds::min().count() ==
+                std::numeric_limits<long long>::min());
+  static_assert(seconds::max().count() ==
+                std::numeric_limits<long long>::max());
+  using unsigned_seconds = duration<unsigned>;
+  static_assert(unsigned_seconds::min().count() == 0);
+  static_assert(unsigned_seconds::max().count() ==
+                std::numeric_limits<unsigned>::max());
+  using float_seconds = duration<float>;
+  static_assert(float_seconds::min().count() ==
+                std::numeric_limits<float>::lowest());
+  static_assert(float_seconds::max().count() ==
+                std::numeric_limits<float>::max());
 }
 
 static void test_integral_is_finite() {

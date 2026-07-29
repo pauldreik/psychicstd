@@ -4,21 +4,21 @@ Compiler: `c++ (Debian 14.2.0-19) 14.2.0`. Each project is built 9 time(s) per s
 
 Parallelism: **8 jobs** (20 logical CPUs available; the memory estimate permits 22 jobs at 1.5 GiB/job). ccache was disabled.
 
-## catch2 (3.8.0)
+## zancle (9c272d6)
+
+Builds Zancle's complete Base/System static library.
 
 ### Debug
 
 | step | system (s) | psychicstd (s) | speedup | comment |
 | --- | ---: | ---: | ---: | --- |
-| compile | 15.91 | 4.53 | 🟢 3.51x [3.48x, 3.55x] | |
-| run tests | 2.00 | 1.65 | 🟢 1.21x [1.19x, 1.22x] | the approval tests are ignored |
+| compile | 1.23 | 0.53 | 🟢 2.30x [2.28x, 2.34x] | |
 
 ### Release
 
 | step | system (s) | psychicstd (s) | speedup | comment |
 | --- | ---: | ---: | ---: | --- |
-| compile | 20.04 | 13.79 | 🟢 1.45x [1.45x, 1.46x] | |
-| run tests | 1.52 | 1.53 | 🟡 1.00x [0.99x, 1.01x] | the approval tests are ignored |
+| compile | 1.57 | 0.82 | 🟢 1.92x [1.89x, 1.95x] | |
 
 ______________________________________________________________________
 

@@ -88,3 +88,8 @@
 #ifndef __cpp_lib_bit_cast
 #define __cpp_lib_bit_cast 201806L
 #endif
+
+// basic_string::resize_and_overwrite (<string>)
+#ifndef __cpp_lib_string_resize_and_overwrite
+#define __cpp_lib_string_resize_and_overwrite 202110L
+#endif

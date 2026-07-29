@@ -12,16 +12,16 @@ The interval is a bootstrapped 95% confidence interval for the system/psychicstd
 
 🟢 above 1.2x 🟡 0.8x–1.2x 🔴 below 0.8x
 
-Last updated: 2026-07-28 03:55
+Last updated: 2026-07-29 17:38
 
 | | name | mode | system | psychicstd | speedup | 95% CI | system peak RSS | psychicstd peak RSS |
 |--|------|------|-------:|----------:|--------:|-------:|---------------:|--------------------:|
-| 🟢 | all-headers | strict | 1014.8ms | 122.0ms | 8.32x | [8.28x, 8.36x] | 271.2 MiB | 61.7 MiB |
-| 🟢 | all-headers | drop-in | 1014.8ms | 121.4ms | 8.36x | [8.32x, 8.40x] | 271.2 MiB | 61.8 MiB |
-| 🟢 | wordcounter | strict | 372.3ms | 100.2ms | 3.71x | [3.70x, 3.73x] | 114.5 MiB | 47.5 MiB |
-| 🟢 | wordcounter | drop-in | 372.3ms | 111.6ms | 3.34x | [3.33x, 3.35x] | 114.5 MiB | 51.9 MiB |
-| 🟢 | iostream | strict | 173.5ms | 36.9ms | 4.71x | [4.64x, 4.78x] | 71.6 MiB | 34.1 MiB |
-| 🟢 | iostream | drop-in | 173.5ms | 48.1ms | 3.61x | [3.59x, 3.65x] | 71.6 MiB | 36.9 MiB |
+| 🟢 | all-headers | strict | 1007.6ms | 126.3ms | 7.98x | [7.93x, 8.01x] | 271.2 MiB | 63.9 MiB |
+| 🟢 | all-headers | drop-in | 1007.6ms | 126.3ms | 7.98x | [7.92x, 8.02x] | 271.2 MiB | 63.9 MiB |
+| 🟢 | wordcounter | strict | 368.3ms | 99.5ms | 3.70x | [3.68x, 3.73x] | 114.5 MiB | 47.5 MiB |
+| 🟢 | wordcounter | drop-in | 368.3ms | 111.5ms | 3.30x | [3.29x, 3.33x] | 114.5 MiB | 51.9 MiB |
+| 🟢 | iostream | strict | 172.9ms | 24.5ms | 7.04x | [6.98x, 7.15x] | 71.6 MiB | 28.9 MiB |
+| 🟢 | iostream | drop-in | 172.9ms | 48.1ms | 3.59x | [3.57x, 3.64x] | 71.6 MiB | 37.1 MiB |
 
 ## Strict-mode improvement
 
@@ -29,9 +29,9 @@ Reduction relative to psychicstd's drop-in mode; positive values mean strict mod
 
 | workload | compile-time reduction | 95% CI | peak-RSS reduction |
 |---|---:|---:|---:|
-| all-headers | -0.5% | [-0.8%, -0.1%] | 0.1% |
-| wordcounter | 10.2% | [9.9%, 10.5%] | 8.3% |
-| iostream | 23.4% | [22.2%, 24.2%] | 7.6% |
+| all-headers | 0.0% | [-0.4%, 0.4%] | 0.1% |
+| wordcounter | 10.7% | [10.3%, 11.1%] | 8.5% |
+| iostream | 49.0% | [48.5%, 49.5%] | 22.1% |
 
 ______________________________________________________________________
 

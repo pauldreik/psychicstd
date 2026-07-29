@@ -1,8 +1,27 @@
 #include "psyassert.h"
 #include <atomic>
+#include <memory>
 #include <optional>
 #include <stop_token>
 #include <utility>
+
+struct callback_holder;
+
+struct delete_callback {
+  callback_holder& holder;
+  void operator()() const;
+};
+
+struct callback_holder {
+  std::unique_ptr<std::stop_callback<delete_callback>> callback;
+};
+
+void delete_callback::operator()() const { holder.callback.reset(); }
+
+struct count_callback {
+  int& count;
+  void operator()() const { ++count; }
+};
 
 int main() {
   std::optional<std::stop_source> discarded_source(std::in_place);
@@ -40,4 +59,21 @@ int main() {
   std::stop_source empty(std::nostopstate);
   psyassert(!empty.stop_possible());
   psyassert(!empty.request_stop());
+
+  std::stop_source self_delete_source;
+  callback_holder holder;
+  holder.callback = std::make_unique<std::stop_callback<delete_callback>>(
+      self_delete_source.get_token(), delete_callback{holder});
+  psyassert(self_delete_source.request_stop());
+  psyassert(holder.callback == nullptr);
+
+  std::stop_source remove_pending_source;
+  int removed_runs = 0;
+  std::optional<std::stop_callback<count_callback>> removed(
+      std::in_place, remove_pending_source.get_token(),
+      count_callback{removed_runs});
+  std::stop_callback remove_pending(remove_pending_source.get_token(),
+                                    [&] { removed.reset(); });
+  psyassert(remove_pending_source.request_stop());
+  psyassert(removed_runs == 0);
 }

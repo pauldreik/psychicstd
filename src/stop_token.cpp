@@ -18,6 +18,13 @@ static pthread_cond_t* condition(stop_callback_base* callback) {
   return reinterpret_cast<pthread_cond_t*>(callback->done_);
 }
 
+struct callback_frame {
+  stop_callback_base* callback;
+  callback_frame* previous;
+  bool destroyed = false;
+};
+static thread_local callback_frame* current_callback;
+
 stop_state::stop_state() { pthread_mutex_init(mutex(this), nullptr); }
 stop_state::~stop_state() { pthread_mutex_destroy(mutex(this)); }
 
@@ -58,6 +65,16 @@ void remove_callback(stop_state* state, stop_callback_base* target) {
     *link = target->next_;
 }
 
+bool mark_destroyed_if_current(stop_callback_base* target) noexcept {
+  for (auto* frame = current_callback; frame; frame = frame->previous) {
+    if (frame->callback == target) {
+      frame->destroyed = true;
+      return true;
+    }
+  }
+  return false;
+}
+
 bool stop_state::request_stop() noexcept {
   lock(this);
   if (stop_requested_) {
@@ -66,21 +83,25 @@ bool stop_state::request_stop() noexcept {
   }
 
   __atomic_store_n(&stop_requested_, true, __ATOMIC_RELEASE);
-  stop_callback_base* callbacks = callbacks_;
-  callbacks_ = nullptr;
-  for (auto* cb = callbacks; cb; cb = cb->next_) {
+  while (callbacks_) {
+    stop_callback_base* cb = callbacks_;
+    callbacks_ = cb->next_;
     cb->registered_ = false;
     cb->running_ = true;
+    unlock(this);
+
+    callback_frame frame{cb, current_callback};
+    current_callback = &frame;
+    cb->invoke();
+    current_callback = frame.previous;
+
+    lock(this);
+    if (!frame.destroyed) {
+      cb->running_ = false;
+      pthread_cond_broadcast(condition(cb));
+    }
   }
   unlock(this);
-
-  for (auto* cb = callbacks; cb; cb = cb->next_) {
-    cb->invoke();
-    lock(this);
-    cb->running_ = false;
-    pthread_cond_broadcast(condition(cb));
-    unlock(this);
-  }
   return true;
 }
 

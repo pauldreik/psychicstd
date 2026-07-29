@@ -1,7 +1,13 @@
 #pragma once
+#include <__psychicstd_config>
 #include <cstddef>
 #include <cstdint>
 #include <type_traits>
+
+#if _PSYCHICSTD_COMPATIBILITY_LEVEL >= _PSYCHICSTD_COMPAT_DROPIN
+// libstdc++ exposes errno through <atomic>; moodycamel relies on it.
+#include <cerrno>
+#endif
 
 #define ATOMIC_BOOL_LOCK_FREE __GCC_ATOMIC_BOOL_LOCK_FREE
 #define ATOMIC_CHAR_LOCK_FREE __GCC_ATOMIC_CHAR_LOCK_FREE

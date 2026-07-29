@@ -2,7 +2,7 @@
 
 Compiler: `c++ (Debian 14.2.0-19) 14.2.0`. Each project is built 9 time(s) per side (system libstdc++, psychicstd); `system (s)`/`psychicstd (s)` are the *median* build time of those repetitions, in seconds -- the median is used instead of the mean so one repetition disturbed by another process on the machine doesn't skew the result. `speedup` = system median / psychicstd median (>1x means psychicstd is faster); its bracketed range is a 95% confidence interval on that *same ratio* (obtained by resampling the raw per-repetition timings, not just the two medians, 2000 times) -- so it reflects how much the repetitions varied, not a different unit. 🟢 the whole CI is above 1x (reliably faster) · 🔴 the whole CI is below 1x (reliably slower) · 🟡 the CI straddles 1x (not distinguishable from run-to-run noise).
 
-Parallelism: **8 jobs** (20 logical CPUs available; the memory estimate permits 14 jobs at 1.5 GiB/job). ccache was disabled.
+Parallelism: **8 jobs** (20 logical CPUs available; the memory estimate permits 22 jobs at 1.5 GiB/job). ccache was disabled.
 
 ## simdutf (master260724 (strict))
 
@@ -12,15 +12,15 @@ simdutf code is mostly simd intrinsics.
 
 | step | system (s) | psychicstd (s) | speedup | comment |
 | --- | ---: | ---: | ---: | --- |
-| compile | 9.77 | 5.68 | 🟢 1.72x [1.69x, 1.73x] | |
-| run tests | 20.85 | 19.80 | 🟡 1.05x [0.98x, 1.07x] | |
+| compile | 9.73 | 5.73 | 🟢 1.70x [1.68x, 1.73x] | |
+| run tests | 20.74 | 20.49 | 🟡 1.01x [0.93x, 1.03x] | |
 
 ### Release
 
 | step | system (s) | psychicstd (s) | speedup | comment |
 | --- | ---: | ---: | ---: | --- |
-| compile | 19.22 | 18.17 | 🟢 1.06x [1.05x, 1.06x] | |
-| run tests | 1.28 | 1.16 | 🟢 1.10x [1.08x, 1.12x] | |
+| compile | 19.54 | 18.58 | 🟢 1.05x [1.05x, 1.06x] | |
+| run tests | 1.29 | 1.16 | 🟢 1.11x [1.10x, 1.13x] | |
 
 ______________________________________________________________________
 

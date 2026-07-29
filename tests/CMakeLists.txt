@@ -25,6 +25,7 @@ set(TESTS
     test_exception
     test_future
     test_filesystem
+    test_filesystem_chrono_surface
     test_forward_list
     test_fstream
     test_functional

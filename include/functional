@@ -41,6 +41,17 @@ template <typename R, typename... Args> class function<R(Args...)> {
       return id == &target_token_<F> ? &f_ : nullptr;
     }
   };
+
+  template <typename F> static base* make_target(F&& f) {
+    using target_type = decay_t<F>;
+    if constexpr (is_pointer_v<target_type> ||
+                  is_member_pointer_v<target_type>) {
+      if (f == nullptr)
+        return nullptr;
+    }
+    return new impl<target_type>(static_cast<F&&>(f));
+  }
+
   base* ptr_ = nullptr;
 
 public:
@@ -51,7 +62,7 @@ public:
   template <typename F>
     requires(!is_same_v<decay_t<F>, function> &&
              is_invocable_r_v<R, decay_t<F>&, Args...>)
-  function(F&& f) : ptr_(new impl<decay_t<F>>(static_cast<F&&>(f))) {}
+  function(F&& f) : ptr_(make_target(static_cast<F&&>(f))) {}
   ~function() { delete ptr_; }
 
   function& operator=(const function& o) {
