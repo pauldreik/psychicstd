@@ -292,7 +292,7 @@ project or its whole dependency graph.
 ### Using with Conan
 
 If you already use Conan, the intended integration point is a single overlay
-profile: [`tests/conan_project/psychic.profile`](tests/conan_project/psychic.profile).
+profile: [`conan/psychic.profile`](conan/psychic.profile).
 It composes with your existing host profile and injects the psychicstd toolchain
 without selecting a compiler or adding dependency-specific flags.
 

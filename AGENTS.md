@@ -49,7 +49,7 @@ macOS 14.4 and newer is also supported.
 
 ## Conan integration
 
-- `tests/conan_project/psychic.profile` is the user-facing Conan overlay.
+- `conan/psychic.profile` is the user-facing Conan overlay.
   It is composed after normal host and build profiles and must not choose a
   compiler or add application-specific workarounds.
 - Apply the profile to both host and build contexts when dependencies compile
