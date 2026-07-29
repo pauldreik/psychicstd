@@ -3045,7 +3045,7 @@ def _trompeloeil() -> Project:
                 jobs,
             ]
             test_commands = (
-                [str(src / "build" / "test" / "self_test"), "[coro]"],
+                [str(src / "build" / "test" / "self_test")],
                 [str(src / "build" / "test" / "thread_terror")],
                 [str(src / "build" / "test" / "custom_recursive_mutex")],
             )
@@ -3061,10 +3061,8 @@ def _trompeloeil() -> Project:
         version=f"v{version}",
         build=build,
         expected_seconds={"debug": 25, "release": 25},
-        comment="Builds Trompeloeil's complete self-test suite and runs its "
-        "coroutine, threaded, and custom-mutex tests. The remaining self-tests "
-        "rely on ECMAScript regex behavior beyond psychicstd's POSIX-backed "
-        "implementation.",
+        comment="Builds and runs Trompeloeil's complete self-test suite, "
+        "including its coroutine, threaded, and custom-mutex tests.",
     )
 
 
