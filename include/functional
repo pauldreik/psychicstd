@@ -262,24 +262,10 @@ constexpr auto bind(F&& f, Args&&... args) {
       static_cast<F&&>(f), static_cast<Args&&>(args)...);
 }
 
-// std::mem_fn — creates a call wrapper for a member function pointer
+// std::mem_fn — creates a call wrapper for a member pointer
 template <typename R, typename T> constexpr auto mem_fn(R T::* pm) {
-  return [pm](auto&& obj, auto&&... args) -> decltype(auto) {
-    if constexpr (is_pointer_v<decay_t<decltype(obj)>>)
-      return ((*static_cast<decltype(obj)>(obj)).*
-              pm)(static_cast<decltype(args)>(args)...);
-    else
-      return (static_cast<decltype(obj)>(obj).*
-              pm)(static_cast<decltype(args)>(args)...);
-  };
-}
-// const version
-template <typename R, typename T> constexpr auto mem_fn(R (T::*pm)() const) {
-  return [pm](auto&& obj) -> decltype(auto) {
-    if constexpr (is_pointer_v<decay_t<decltype(obj)>>)
-      return ((*static_cast<decltype(obj)>(obj)).*pm)();
-    else
-      return (static_cast<decltype(obj)>(obj).*pm)();
+  return [pm](auto&&... args) -> decltype(auto) {
+    return detail::__invoke(pm, static_cast<decltype(args)>(args)...);
   };
 }
 

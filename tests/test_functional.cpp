@@ -67,6 +67,8 @@ int main() {
       std::is_same_v<
           std::invoke_result_t<decltype(&member_target::value), member_target&>,
           int&>);
+  psyassert(std::mem_fn(&member_target::value)(target) == 4);
+  psyassert(std::mem_fn(&member_target::add)(&target, 3) == 7);
 
   const auto positive = std::bind(std::less<int>{}, 0, 2);
   psyassert(positive());
