@@ -213,6 +213,28 @@ concept three_way_comparable_with =
       u <=> t;
     };
 
+namespace __psychicstd_detail {
+template <typename T, typename U, typename = void>
+struct __compare_three_way_result {};
+
+template <typename T, typename U>
+struct __compare_three_way_result<
+    T, U,
+    void_t<decltype(declval<const remove_reference_t<T>&>() <=>
+                    declval<const remove_reference_t<U>&>())>> {
+  using type = decltype(declval<const remove_reference_t<T>&>() <=>
+                        declval<const remove_reference_t<U>&>());
+};
+} // namespace __psychicstd_detail
+
+template <typename T, typename U = T>
+struct compare_three_way_result
+    : __psychicstd_detail::__compare_three_way_result<T, U> {};
+
+template <typename T, typename U = T>
+using compare_three_way_result_t =
+    typename compare_three_way_result<T, U>::type;
+
 // compare_three_way functor
 struct compare_three_way {
   template <typename T, typename U>

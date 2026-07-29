@@ -357,6 +357,16 @@ jobs:
         run: >-
           scripts/benchmark_realworld.py --check-only
           --project ssvstart --build-type debug --compiler g++-14
+  strong-type:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install Ninja
+        run: sudo apt-get install -y ninja-build
+      - name: Build and test strong_type with psychicstd
+        run: >-
+          scripts/benchmark_realworld.py --check-only
+          --project strong-type --build-type debug
   trompeloeil:
     runs-on: ubuntu-latest
     steps:
