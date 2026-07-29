@@ -28,5 +28,15 @@ template <typename T> constexpr T* launder(T* p) noexcept {
 struct nothrow_t {
   explicit nothrow_t() = default;
 };
+#ifdef __APPLE__
+// libc++abi does not provide this object without libc++.
 inline constexpr nothrow_t nothrow{};
+#else
+extern const nothrow_t nothrow;
+#endif
 } // namespace std
+
+void* operator new(std::size_t, const std::nothrow_t&) noexcept;
+void* operator new[](std::size_t, const std::nothrow_t&) noexcept;
+void operator delete(void*, const std::nothrow_t&) noexcept;
+void operator delete[](void*, const std::nothrow_t&) noexcept;

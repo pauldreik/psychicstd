@@ -1,5 +1,6 @@
 rdfind-1.8.0/*
 *.tar.gz
+catch2-*.hpp
 bazel-*-linux-x86_64
 .tensorflow-bazel-repository-cache/
 abseil-cpp-20260107.1/

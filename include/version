@@ -64,6 +64,11 @@
 #define __cpp_lib_three_way_comparison 201907L
 #endif
 
+// std::coroutine_handle and coroutine support types (<coroutine>)
+#if defined(__cpp_impl_coroutine) && !defined(__cpp_lib_coroutine)
+#define __cpp_lib_coroutine 201902L
+#endif
+
 // std::span (<span>)
 #ifndef __cpp_lib_span
 #define __cpp_lib_span 202002L

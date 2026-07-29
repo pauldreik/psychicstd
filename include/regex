@@ -7,12 +7,88 @@
 
 namespace std {
 
+namespace regex_constants {
+enum syntax_option_type : int {
+  ECMAScript = 0,
+  icase = REG_ICASE,
+  extended = REG_EXTENDED,
+};
+
+constexpr syntax_option_type operator|(syntax_option_type lhs,
+                                       syntax_option_type rhs) noexcept {
+  return static_cast<syntax_option_type>(static_cast<int>(lhs) |
+                                         static_cast<int>(rhs));
+}
+constexpr syntax_option_type operator&(syntax_option_type lhs,
+                                       syntax_option_type rhs) noexcept {
+  return static_cast<syntax_option_type>(static_cast<int>(lhs) &
+                                         static_cast<int>(rhs));
+}
+constexpr syntax_option_type operator^(syntax_option_type lhs,
+                                       syntax_option_type rhs) noexcept {
+  return static_cast<syntax_option_type>(static_cast<int>(lhs) ^
+                                         static_cast<int>(rhs));
+}
+constexpr syntax_option_type operator~(syntax_option_type value) noexcept {
+  return static_cast<syntax_option_type>(~static_cast<int>(value));
+}
+constexpr syntax_option_type& operator|=(syntax_option_type& lhs,
+                                         syntax_option_type rhs) noexcept {
+  return lhs = lhs | rhs;
+}
+constexpr syntax_option_type& operator&=(syntax_option_type& lhs,
+                                         syntax_option_type rhs) noexcept {
+  return lhs = lhs & rhs;
+}
+constexpr syntax_option_type& operator^=(syntax_option_type& lhs,
+                                         syntax_option_type rhs) noexcept {
+  return lhs = lhs ^ rhs;
+}
+
+enum match_flag_type : int {
+  match_default = 0,
+  match_not_bol = REG_NOTBOL,
+  match_not_eol = REG_NOTEOL,
+};
+
+constexpr match_flag_type operator|(match_flag_type lhs,
+                                    match_flag_type rhs) noexcept {
+  return static_cast<match_flag_type>(static_cast<int>(lhs) |
+                                      static_cast<int>(rhs));
+}
+constexpr match_flag_type operator&(match_flag_type lhs,
+                                    match_flag_type rhs) noexcept {
+  return static_cast<match_flag_type>(static_cast<int>(lhs) &
+                                      static_cast<int>(rhs));
+}
+constexpr match_flag_type operator^(match_flag_type lhs,
+                                    match_flag_type rhs) noexcept {
+  return static_cast<match_flag_type>(static_cast<int>(lhs) ^
+                                      static_cast<int>(rhs));
+}
+constexpr match_flag_type operator~(match_flag_type value) noexcept {
+  return static_cast<match_flag_type>(~static_cast<int>(value));
+}
+constexpr match_flag_type& operator|=(match_flag_type& lhs,
+                                      match_flag_type rhs) noexcept {
+  return lhs = lhs | rhs;
+}
+constexpr match_flag_type& operator&=(match_flag_type& lhs,
+                                      match_flag_type rhs) noexcept {
+  return lhs = lhs & rhs;
+}
+constexpr match_flag_type& operator^=(match_flag_type& lhs,
+                                      match_flag_type rhs) noexcept {
+  return lhs = lhs ^ rhs;
+}
+} // namespace regex_constants
+
 class regex {
 public:
-  using flag_type = int;
-  static constexpr flag_type ECMAScript = 0;
-  static constexpr flag_type icase = REG_ICASE;
-  static constexpr flag_type extended = REG_EXTENDED;
+  using flag_type = regex_constants::syntax_option_type;
+  static constexpr flag_type ECMAScript = regex_constants::ECMAScript;
+  static constexpr flag_type icase = regex_constants::icase;
+  static constexpr flag_type extended = regex_constants::extended;
 
   regex();
   explicit regex(const string& pattern, flag_type flags = ECMAScript);
@@ -54,6 +130,18 @@ bool regex_search(const string&, smatch&, const regex&);
 bool regex_search(const char*, smatch&, const regex&);
 bool regex_search(const string&, const regex&);
 bool regex_search(const char*, const regex&);
+
+template <typename It>
+bool regex_search(
+    It first, It last, const regex& expression,
+    regex_constants::match_flag_type flags = regex_constants::match_default) {
+  string subject(first, last);
+  if (!expression.valid())
+    return false;
+  return ::regexec(&expression.native(), subject.c_str(), 0, nullptr, flags) ==
+         0;
+}
+
 bool regex_match(const string&, smatch&, const regex&);
 bool regex_match(const string&, const regex&);
 bool regex_match(const char*, const regex&);

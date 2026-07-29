@@ -2,6 +2,110 @@
 
 namespace std {
 
+namespace {
+
+// Keep ECMAScript adaptation out of the public header's parse path.
+void append_escape(string& out, char escaped, bool in_class) {
+  switch (escaped) {
+  case 'n':
+    out.push_back('\n');
+    break;
+  case 'r':
+    out.push_back('\r');
+    break;
+  case 't':
+    out.push_back('\t');
+    break;
+  case 'f':
+    out.push_back('\f');
+    break;
+  case 'v':
+    out.push_back('\v');
+    break;
+  case 'd':
+    out.append(in_class ? "[:digit:]" : "[[:digit:]]");
+    break;
+  case 's':
+    out.append(in_class ? "[:space:]" : "[[:space:]]");
+    break;
+  case 'w':
+    out.append(in_class ? "[:alnum:]_" : "[[:alnum:]_]");
+    break;
+  case 'D':
+    if (!in_class) {
+      out.append("[^[:digit:]]");
+      return;
+    }
+    [[fallthrough]];
+  case 'S':
+    if (!in_class) {
+      out.append("[^[:space:]]");
+      return;
+    }
+    [[fallthrough]];
+  case 'W':
+    if (!in_class) {
+      out.append("[^[:alnum:]_]");
+      return;
+    }
+    [[fallthrough]];
+  default:
+    out.push_back('\\');
+    out.push_back(escaped);
+    break;
+  }
+}
+
+string translate_ecmascript(const char* pattern) {
+  string result;
+
+  for (const char* p = pattern; *p; ++p) {
+    if (*p == '.') {
+      result.append("[^\n\r]");
+      continue;
+    }
+
+    if (*p == '[') {
+      string contents;
+      bool includes_closing_bracket = false;
+      const char* q = p + 1;
+      if (*q == '^')
+        ++q;
+
+      for (; *q && *q != ']'; ++q) {
+        if (*q != '\\' || !q[1]) {
+          contents.push_back(*q);
+        } else if (*++q == ']') {
+          includes_closing_bracket = true;
+        } else {
+          append_escape(contents, *q, true);
+        }
+      }
+
+      result.push_back('[');
+      if (p[1] == '^')
+        result.push_back('^');
+      if (includes_closing_bracket)
+        result.push_back(']');
+      result.append(contents);
+      if (*q == ']') {
+        result.push_back(']');
+        p = q;
+      }
+      continue;
+    }
+
+    if (*p != '\\' || !p[1]) {
+      result.push_back(*p);
+      continue;
+    }
+    append_escape(result, *++p, false);
+  }
+  return result;
+}
+
+} // namespace
+
 regex::regex() : valid_(false) {}
 
 regex::regex(const string& pattern, flag_type flags)
@@ -11,7 +115,9 @@ regex::regex(const char* pattern, flag_type flags) {
   int native_flags = REG_EXTENDED;
   if (flags & icase)
     native_flags |= REG_ICASE;
-  if (::regcomp(&re_, pattern, native_flags) != 0)
+  const string translated =
+      (flags & extended) ? string(pattern) : translate_ecmascript(pattern);
+  if (::regcomp(&re_, translated.c_str(), native_flags) != 0)
     _PSYCHICSTD_THROW_HELPER(__throw_runtime_error, "regex: bad pattern");
   valid_ = true;
 }

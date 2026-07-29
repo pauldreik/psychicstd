@@ -5,6 +5,8 @@
 
 namespace std {
 
+template <typename T, typename D> class unique_ptr;
+
 template <typename Char, typename Traits>
 class basic_ostream : public virtual basic_ios<Char, Traits> {
 public:
@@ -309,6 +311,15 @@ private:
     return *this;
   }
 };
+
+template <typename Char, typename Traits, typename T, typename D>
+  requires requires(basic_ostream<Char, Traits>& stream,
+                    const unique_ptr<T, D>& ptr) { stream << ptr.get(); }
+basic_ostream<Char, Traits>& operator<<(basic_ostream<Char, Traits>& out,
+                                        const unique_ptr<T, D>& ptr) {
+  // Per the standard, character pointers are treated as C strings.
+  return out << ptr.get();
+}
 
 // Manipulators
 template <typename C, typename T>
