@@ -40,6 +40,10 @@ int main() {
   psyassert(targeted.target<int (*)()>() == nullptr);
   const auto& const_targeted = targeted;
   psyassert(const_targeted.target<callable>()->value == 4);
+  int (*null_function)() = nullptr;
+  std::function<int()> empty_function = null_function;
+  psyassert(!empty_function);
+  psyassert(empty_function.target<int (*)()>() == nullptr);
   int referred = 3;
   std::function<int&(int*)> reference = [](int* value) -> int& {
     return *value;
@@ -52,6 +56,13 @@ int main() {
   psyassert(std::invoke(&member_target::add, target, 3) == 7);
   std::function<int(member_target, int)> member_function = &member_target::add;
   psyassert(member_function(target, 3) == 7);
+  int (member_target::*null_member_function)(int) const = nullptr;
+  std::function<int(member_target, int)> empty_member_function =
+      null_member_function;
+  psyassert(!empty_member_function);
+  int member_target::* null_member_object = nullptr;
+  std::function<int&(member_target&)> empty_member_object = null_member_object;
+  psyassert(!empty_member_object);
   static_assert(
       std::is_same_v<
           std::invoke_result_t<decltype(&member_target::value), member_target&>,
