@@ -15,6 +15,8 @@ struct member_target {
 
 int main() {
   psyassert(std::divides<>{}(8.0, 2.0) == 4.0);
+  psyassert(std::negate<>{}(3) == -3);
+  static_assert(requires { typename std::negate<>::is_transparent; });
 
   int identity_value = 42;
   static_assert(
