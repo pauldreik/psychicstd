@@ -105,6 +105,39 @@ The standard library uses `std::` namespace just like the real standard. You sho
 
 Compile time for these headers is dominated by the compiler *frontend*, in two parts: **parsing declarations** and **instantiating templates**. psychicstd wins by having far less of both. Raw byte count, number of include files, and backend code generation are all second-order. Precompiled headers help by caching that same frontend work — but they attack the same bottleneck, so psychicstd without a PCH is roughly as fast as libstdc++ with one, and still wins when both use PCH. The [case studies](casestudies/) measure each of these effects.
 
+### Which projects benefit most?
+
+A useful mental model is:
+
+```text
+compile time = standard-library frontend work + project-specific compiler work
+```
+
+psychicstd greatly reduces the first term. The overall speedup is largest when
+that term was a large fraction of the build:
+
+- Many ordinary translation units repeatedly include expensive facilities such
+  as strings, streams, containers, iterators, filesystem, threading, or
+  regular expressions.
+- The code mostly composes standard-library facilities instead of asking the
+  compiler to evaluate a large project-specific template or constexpr engine.
+- Debug compilation leaves parsing, instantiation, and debug-information
+  generation as a larger share of the work. In Release builds, optimization
+  and backend code generation usually narrow the difference.
+
+This makes **standard-library-heavy** a better predictor than merely
+**template-heavy**. Applications such as CMake and rdfind gain substantially
+because they use standard vocabulary throughout. CTRE and Eigen are highly
+templated, but much of their compile time belongs to their own compile-time
+engines. SIMD and numerical projects similarly spend more time compiling their
+algorithms than their standard-library scaffolding.
+
+The headline real-world figures report the Debug **compile phase**, not total
+wall time. Configuration and test execution usually remain unchanged, so a
+large ratio on a tiny build can save less time than a smaller ratio on a large
+one. The individual reports show the absolute times for every phase. Per-header
+costs are available in the [include-cost report](include_weight.md).
+
 A concrete example is that `std::sort` has a very short and simple implementation to minimize compile time. It is still O(Nlog(N)) but not as fast as other standard libraries **in release mode**. In debug mode, it can however even be faster!
 
 The [compiled-library experiment](docs/compiled-library.md) measures the
