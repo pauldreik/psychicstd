@@ -1,5 +1,6 @@
 #include "psyassert.h"
 #include <memory>
+#include <sstream>
 #include <string>
 #include <thread>
 #include <utility>
@@ -302,6 +303,9 @@ int main() {
   std::shared_ptr<void> void_shared;
   psyassert(void_unique.get() == nullptr);
   psyassert(void_shared.get() == nullptr);
+  std::ostringstream pointer_text;
+  psyassert(&(pointer_text << void_unique) == &pointer_text);
+  psyassert(!pointer_text.str().empty());
 
   test_forwarding();
   test_unique_ptr_equality();
