@@ -349,6 +349,14 @@ jobs:
         run: >-
           scripts/benchmark_realworld.py --check-only
           --project pybind11 --build-type debug
+  ssvstart:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Compile SSVStart with psychicstd
+        run: >-
+          scripts/benchmark_realworld.py --check-only
+          --project ssvstart --build-type debug --compiler g++-14
   zancle:
     runs-on: ubuntu-latest
     steps:

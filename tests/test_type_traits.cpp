@@ -69,6 +69,11 @@ int main() {
   static_assert(!std::is_invocable_v<const MutableCallable&>);
   static_assert(std::alignment_of<int>::value == alignof(int));
   static_assert(std::alignment_of_v<int> == alignof(int));
+  static_assert(std::is_standard_layout_v<Pod>);
+  static_assert(sizeof(std::aligned_storage_t<sizeof(int), alignof(int)>) ==
+                sizeof(int));
+  static_assert(alignof(std::aligned_storage_t<sizeof(int), alignof(int)>) ==
+                alignof(int));
   static_assert(std::negation_v<std::false_type>);
   static_assert(!std::negation_v<std::true_type>);
 }
