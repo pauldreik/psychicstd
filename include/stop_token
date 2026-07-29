@@ -52,6 +52,7 @@ void lock(stop_state*) noexcept;
 void unlock(stop_state*) noexcept;
 void wait(stop_callback_base*, stop_state*) noexcept;
 void remove_callback(stop_state* state, stop_callback_base* target);
+bool mark_destroyed_if_current(stop_callback_base*) noexcept;
 } // namespace __stop_detail
 
 class stop_token {
@@ -142,8 +143,10 @@ public:
       remove_callback(state, this);
       registered_ = false;
     }
-    while (running_)
-      __stop_detail::wait(this, state);
+    if (!__stop_detail::mark_destroyed_if_current(this)) {
+      while (running_)
+        __stop_detail::wait(this, state);
+    }
     __stop_detail::unlock(state);
     state->release();
   }
