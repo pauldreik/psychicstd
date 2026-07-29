@@ -2897,6 +2897,86 @@ def _pybind11() -> Project:
     )
 
 
+# --- ssvstart ------------------------------------------------------------
+
+
+def _ssvstart() -> Project:
+    revision = "89c77a124742870b0ec366605b3cfb159b5897ac"
+    ssvutils_revision = "c8848b81ecb912f9d6b345a169058b4f425677f7"
+    vrm_pp_revision = "d14dbb0486e2d0755443c333bb56aabe11079e3f"
+    vrsfml_revision = "9c272d60134d568f35fbad9891f3b436de87cc28"
+    archives = (
+        (
+            f"https://github.com/vittorioromeo/SSVStart/archive/{revision}.tar.gz",
+            RW_DIR / f"SSVStart-{revision}.tar.gz",
+            "be46f688096d872e4d00b70815e2e33883011ceb78b4689af5861ce8f703708f",
+        ),
+        (
+            f"https://github.com/SuperV1234/SSVUtils/archive/{ssvutils_revision}.tar.gz",
+            RW_DIR / f"SSVUtils-{ssvutils_revision}.tar.gz",
+            "b45216df3ebed6f534273c0ef0fbe743a9d52fb7313410c04afece9b5ec291a4",
+        ),
+        (
+            f"https://github.com/vittorioromeo/vrm_pp/archive/{vrm_pp_revision}.tar.gz",
+            RW_DIR / f"vrm_pp-{vrm_pp_revision}.tar.gz",
+            "aae3eebb63d8cf796c6e4920faa2769b452e43a5dc09adffd7b50457b0ffd087",
+        ),
+        (
+            f"https://github.com/vittorioromeo/VRSFML/archive/{vrsfml_revision}.tar.gz",
+            RW_DIR / f"zancle-{vrsfml_revision[:7]}.tar.gz",
+            "f1e868c458d0c422df6d84d11b2e60718bbae10913e4c6182505eac8307461dd",
+        ),
+    )
+
+    def build(tc: Toolchain) -> dict[str, float]:
+        for url, tarball, checksum in archives:
+            _fetch(url, tarball, checksum)
+
+        with tempfile.TemporaryDirectory(
+            prefix="rw-ssvstart-", ignore_cleanup_errors=True
+        ) as work_dir:
+            work = Path(work_dir)
+            for _, tarball, _ in archives:
+                with tarfile.open(tarball) as archive:
+                    archive.extractall(work)
+
+            src = work / f"SSVStart-{revision}"
+            source = src / "test" / "UtilsInput.cpp"
+            contents = source.read_text()
+            umbrella = "<SSVStart/SSVStart.hpp>"
+            if contents.count(umbrella) != 1:
+                raise RuntimeError("unexpected SSVStart test source")
+            # The umbrella currently includes unrelated, mismatched VRSFML APIs.
+            source.write_text(contents.replace(umbrella, "<SSVStart/Utils/Input.hpp>"))
+            includes = (
+                src / "test",
+                src / "include",
+                work / f"SSVUtils-{ssvutils_revision}" / "include",
+                work / f"vrm_pp-{vrm_pp_revision}" / "include",
+                work / f"zancle-{vrsfml_revision}" / "include",
+            )
+            command = [
+                *shlex.split(tc.cxx),
+                *shlex.split(tc.cxxflags),
+                "-std=c++23",
+                *(f"-I{path}" for path in includes),
+                "-c",
+                str(source),
+                "-o",
+                str(work / "UtilsInput.o"),
+            ]
+            return {"compile": _timed(command, src, _env(tc))}
+
+    return Project(
+        version=revision[:7],
+        build=build,
+        expected_seconds={"debug": 2, "release": 2},
+        phases=("compile",),
+        comment="Compiles SSVStart's upstream input-utility test against "
+        "its current header dependencies.",
+    )
+
+
 # --- zancle --------------------------------------------------------------
 
 
@@ -3006,6 +3086,7 @@ PROJECTS: dict[str, Project] = {
     "rdfind": _rdfind(),
     "simdutf-dropin": _simdutf(strict=False, strict_label="drop-in"),
     "simdutf": _simdutf(strict=True, strict_label="strict"),
+    "ssvstart": _ssvstart(),
     "tesseract": _tesseract(),
     "tensorflow": _tensorflow(),
     "zancle": _zancle(),
