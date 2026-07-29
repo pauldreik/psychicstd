@@ -150,6 +150,8 @@ private:
 
 template <> class tuple<> {};
 
+template <typename... Ts> tuple(Ts...) -> tuple<Ts...>;
+
 // tuple_size
 template <typename... Ts>
 struct tuple_size<tuple<Ts...>> : integral_constant<size_t, sizeof...(Ts)> {};

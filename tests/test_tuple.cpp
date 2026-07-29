@@ -22,6 +22,12 @@ struct Wrapper {
   Wrapper(Tracker&& x) : t(static_cast<Tracker&&>(x)) {}
 };
 
+struct MoveOnly {
+  MoveOnly() = default;
+  MoveOnly(const MoveOnly&) = delete;
+  MoveOnly(MoveOnly&&) = default;
+};
+
 struct AssignmentCategory {
   int category = 0;
   AssignmentCategory& operator=(const int&) {
@@ -42,6 +48,10 @@ std::tuple<const char*, int, bool> make_result(const char* p, int n) {
 int main() {
   constexpr std::tuple compile_time_tuple(1, 2, 3);
   static_assert(std::get<1>(compile_time_tuple) == 2);
+
+  auto move_only_tuple = std::tuple(MoveOnly{});
+  static_assert(
+      std::is_same_v<decltype(move_only_tuple), std::tuple<MoveOnly>>);
 
   int referenced = 7;
   auto references = std::forward_as_tuple(referenced);
