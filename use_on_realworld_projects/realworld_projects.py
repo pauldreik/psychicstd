@@ -2897,6 +2897,85 @@ def _pybind11() -> Project:
     )
 
 
+# --- strong_type ---------------------------------------------------------
+
+
+def _strong_type() -> Project:
+    version = "16"
+    url = f"https://github.com/rollbear/strong_type/archive/refs/tags/v{version}.tar.gz"
+    checksum = "b0582ff8ebff7a909464216e4686cdba90a5924dc261672aa6ed0407cd53f5f1"
+    catch_version = "2.13.9"
+    catch_url = (
+        "https://github.com/catchorg/Catch2/"
+        f"releases/download/v{catch_version}/catch.hpp"
+    )
+    catch_checksum = "27da57c7a06d09be8dd81fab7246b79e7892b6ae7e4e49ba8631f1d5a955e3fc"
+
+    def build(tc: Toolchain) -> dict[str, float]:
+        tarball = RW_DIR / f"strong-type-v{version}.tar.gz"
+        catch_header = RW_DIR / f"catch2-v{catch_version}.hpp"
+        _fetch(url, tarball, checksum)
+        _fetch(catch_url, catch_header, catch_checksum)
+
+        with tempfile.TemporaryDirectory(
+            prefix="rw-strong-type-", ignore_cleanup_errors=True
+        ) as work_dir:
+            work = Path(work_dir)
+            with tarfile.open(tarball) as archive:
+                archive.extractall(work)
+            src = work / f"strong_type-{version}"
+
+            # Avoid configure-time network access by pre-seeding the exact
+            # Catch2 single header requested by strong_type's test build.
+            bundled_catch = src / "build" / "test" / "catch" / "catch2" / "catch.hpp"
+            bundled_catch.parent.mkdir(parents=True)
+            shutil.copyfile(catch_header, bundled_catch)
+
+            env = _env(tc)
+            configure = [
+                "cmake",
+                "-S",
+                ".",
+                "-B",
+                "build",
+                "-GNinja",
+                "-DCMAKE_BUILD_TYPE=" + tc.build_type.capitalize(),
+                "-DCMAKE_CXX_COMPILER=" + tc.cxx,
+                "-DCMAKE_CXX_FLAGS=" + tc.cxxflags,
+                "-DCMAKE_EXE_LINKER_FLAGS=" + tc.ldflags,
+                "-DCMAKE_CXX_STANDARD_LIBRARIES=" + tc.libs,
+                "-DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY",
+                "-DCMAKE_CXX_STANDARD=20",
+                "-DCMAKE_DISABLE_FIND_PACKAGE_fmt=ON",
+                "-DSTRONG_TYPE_UNIT_TEST=ON",
+            ]
+            return {
+                "configure": _timed(configure, src, env),
+                "compile": _timed(
+                    [
+                        "cmake",
+                        "--build",
+                        "build",
+                        "--target",
+                        "self_test",
+                        f"-j{tc.jobs}",
+                    ],
+                    src,
+                    env,
+                ),
+                "run tests": _timed(
+                    [str(src / "build" / "test" / "self_test")], src, env
+                ),
+            }
+
+    return Project(
+        version=f"v{version}",
+        build=build,
+        expected_seconds={"debug": 12, "release": 12},
+        comment="Builds and runs strong_type's complete upstream self-test suite.",
+    )
+
+
 # --- ssvstart ------------------------------------------------------------
 
 
@@ -3176,6 +3255,7 @@ PROJECTS: dict[str, Project] = {
     "simdutf-dropin": _simdutf(strict=False, strict_label="drop-in"),
     "simdutf": _simdutf(strict=True, strict_label="strict"),
     "ssvstart": _ssvstart(),
+    "strong-type": _strong_type(),
     "tesseract": _tesseract(),
     "tensorflow": _tensorflow(),
     "trompeloeil": _trompeloeil(),
