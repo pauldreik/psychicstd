@@ -111,6 +111,8 @@ macOS 14.4 and newer is also supported.
 
 ## Repository hygiene
 
+- Never open or close a pull request without the user's explicit consent for
+  that action.
 - Keep changes distinct. Prefer small, focused commits over mixed refactors.
   Use a terse, specific commit subject and put rationale or implementation
   detail in the commit body. Wrap commit body lines at 80 columns.
