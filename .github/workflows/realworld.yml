@@ -357,6 +357,16 @@ jobs:
         run: >-
           scripts/benchmark_realworld.py --check-only
           --project ssvstart --build-type debug --compiler g++-14
+  trompeloeil:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install Ninja
+        run: sudo apt-get install -y ninja-build
+      - name: Build and test Trompeloeil with psychicstd
+        run: >-
+          scripts/benchmark_realworld.py --check-only
+          --project trompeloeil --build-type debug
   zancle:
     runs-on: ubuntu-latest
     steps:

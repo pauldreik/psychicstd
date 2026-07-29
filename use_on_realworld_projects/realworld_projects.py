@@ -2977,6 +2977,97 @@ def _ssvstart() -> Project:
     )
 
 
+# --- trompeloeil ---------------------------------------------------------
+
+
+def _trompeloeil() -> Project:
+    version = "49"
+    url = f"https://github.com/rollbear/trompeloeil/archive/refs/tags/v{version}.tar.gz"
+    checksum = "2523571fb7920b2813cbc23b46e60294aba8ead7eba434bfec69c24408615593"
+    catch_version = "2.13.7"
+    catch_url = (
+        "https://github.com/catchorg/Catch2/"
+        f"releases/download/v{catch_version}/catch.hpp"
+    )
+    catch_checksum = "ea379c4a3cb5799027b1eb451163dff065a3d641aaba23bf4e24ee6b536bd9bc"
+
+    def build(tc: Toolchain) -> dict[str, float]:
+        tarball = RW_DIR / f"trompeloeil-v{version}.tar.gz"
+        catch_header = RW_DIR / f"catch2-v{catch_version}.hpp"
+        _fetch(url, tarball, checksum)
+        _fetch(catch_url, catch_header, catch_checksum)
+
+        with tempfile.TemporaryDirectory(
+            prefix="rw-trompeloeil-", ignore_cleanup_errors=True
+        ) as work_dir:
+            work = Path(work_dir)
+            with tarfile.open(tarball) as t:
+                t.extractall(work)
+            src = work / f"trompeloeil-{version}"
+
+            # Avoid configure-time network access by pre-seeding the exact
+            # Catch2 single header requested by Trompeloeil's test build.
+            bundled_catch = src / "build" / "test" / "catch" / "catch2" / "catch.hpp"
+            bundled_catch.parent.mkdir(parents=True)
+            shutil.copyfile(catch_header, bundled_catch)
+
+            env = _env(tc)
+            # mock.hpp uses numeric_limits without including <limits>.
+            # Preinclude it rather than putting <limits> on psychicstd's hot
+            # <memory> transitive-include path for one upstream omission.
+            cxxflags = tc.cxxflags + " -include limits"
+            configure = [
+                "cmake",
+                "-S",
+                ".",
+                "-B",
+                "build",
+                "-GNinja",
+                "-DCMAKE_BUILD_TYPE=" + tc.build_type.capitalize(),
+                "-DCMAKE_CXX_COMPILER=" + tc.cxx,
+                "-DCMAKE_CXX_FLAGS=" + cxxflags,
+                "-DCMAKE_EXE_LINKER_FLAGS=" + tc.ldflags,
+                "-DCMAKE_CXX_STANDARD_LIBRARIES=" + tc.libs,
+                "-DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY",
+                "-DCXX_STANDARD=20",
+                "-DTROMPELOEIL_BUILD_TESTS=ON",
+                "-DTROMPELOEIL_INSTALL_TARGETS=OFF",
+            ]
+            jobs = f"-j{tc.jobs}"
+            compile_command = [
+                "cmake",
+                "--build",
+                "build",
+                "--target",
+                "self_test",
+                "thread_terror",
+                "custom_recursive_mutex",
+                jobs,
+            ]
+            test_commands = (
+                [str(src / "build" / "test" / "self_test"), "[coro]"],
+                [str(src / "build" / "test" / "thread_terror")],
+                [str(src / "build" / "test" / "custom_recursive_mutex")],
+            )
+            return {
+                "configure": _timed(configure, src, env),
+                "compile": _timed(compile_command, src, env),
+                "run tests": sum(
+                    _timed(command, src, env) for command in test_commands
+                ),
+            }
+
+    return Project(
+        version=f"v{version}",
+        build=build,
+        expected_seconds={"debug": 25, "release": 25},
+        comment="Builds Trompeloeil's complete self-test suite and runs its "
+        "coroutine, threaded, and custom-mutex tests. The remaining self-tests "
+        "rely on ECMAScript regex behavior beyond psychicstd's POSIX-backed "
+        "implementation.",
+    )
+
+
 # --- zancle --------------------------------------------------------------
 
 
@@ -3089,5 +3180,6 @@ PROJECTS: dict[str, Project] = {
     "ssvstart": _ssvstart(),
     "tesseract": _tesseract(),
     "tensorflow": _tensorflow(),
+    "trompeloeil": _trompeloeil(),
     "zancle": _zancle(),
 }

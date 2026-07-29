@@ -36,6 +36,7 @@ It is not complete. It is not fully compliant. But it is good enough to quickly 
 | [SSVStart](https://github.com/vittorioromeo/SSVStart) | [4.21x](use_on_realworld_projects/ssvstart_speed_report.md) | Compiles the upstream input-utility test against SSVStart's current header dependencies. |
 | [Tesseract](https://github.com/tesseract-ocr/tesseract) | [2.18x](use_on_realworld_projects/tesseract_speed_report.md) | Builds the OCR library and command-line program using the system Leptonica package. |
 | [TensorFlow](https://www.tensorflow.org/) | [2.36x](use_on_realworld_projects/tensorflow_speed_report.md) | Builds a focused set of core platform/base libraries; excludes Python, CUDA, kernels, and the full framework. |
+| [Trompeloeil](https://github.com/rollbear/trompeloeil) | [1.59x](use_on_realworld_projects/trompeloeil_speed_report.md) | Builds the complete self-test suite and runs the coroutine, threaded, and custom-mutex tests. |
 | [Zancle](https://github.com/vittorioromeo/zancle) | [2.30x](use_on_realworld_projects/zancle_speed_report.md) | Builds the complete Base/System static library. |
 | [wordcounter](examples/wordcounter.cpp)| [3.70x](compile_time.md) | Example application using the STL. Counts word occurrences in text files. |
 
