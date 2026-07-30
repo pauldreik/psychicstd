@@ -5,6 +5,7 @@
 #include <filesystem>
 #include <limits.h>
 #include <sys/stat.h>
+#include <sys/statvfs.h>
 #include <unistd.h>
 #include <vector>
 
@@ -106,6 +107,42 @@ auto path::wstring() const -> std::wstring {
 
 auto path::u32string() const -> std::u32string {
   return decode_utf8<std::u32string>(path_);
+}
+
+path path::lexically_normal() const {
+  if (path_.empty())
+    return {};
+
+  const bool absolute = path_[0] == '/';
+  const bool trailing_separator = path_.back() == '/';
+  vector<std::string> parts;
+  for (size_t begin = 0; begin < path_.size();) {
+    while (begin < path_.size() && path_[begin] == '/')
+      ++begin;
+    auto end = path_.find('/', begin);
+    if (end == std::string::npos)
+      end = path_.size();
+    std::string part = path_.substr(begin, end - begin);
+    if (!part.empty() && part != ".") {
+      if (part == ".." && !parts.empty() && parts.back() != "..")
+        parts.pop_back();
+      else if (part != ".." || !absolute)
+        parts.push_back(static_cast<std::string&&>(part));
+    }
+    begin = end + 1;
+  }
+
+  std::string result = absolute ? "/" : "";
+  for (const auto& part : parts) {
+    if (!result.empty() && result.back() != '/')
+      result += '/';
+    result += part;
+  }
+  if (result.empty())
+    result = ".";
+  if (trailing_separator && result != "/" && result != ".")
+    result += '/';
+  return result;
 }
 
 path path::lexically_relative(const path& base) const {
@@ -428,6 +465,10 @@ bool is_regular_file(const path& value, error_code& ec) noexcept {
   return false;
 }
 
+bool directory_entry::is_regular_file() const noexcept {
+  return filesystem::is_regular_file(path_);
+}
+
 bool is_symlink(const path& value, error_code& ec) noexcept {
   struct stat status;
   if (::lstat(value.c_str(), &status) == 0) {
@@ -447,6 +488,55 @@ uintmax_t file_size(const path& value) {
     _PSYCHICSTD_THROW(filesystem_error("file_size", value,
                                        error_code(errno, generic_category())));
   return static_cast<uintmax_t>(status.st_size);
+}
+
+bool equivalent(const path& first, const path& second,
+                error_code& ec) noexcept {
+  struct stat first_status;
+  if (::stat(first.c_str(), &first_status) != 0) {
+    set_error(ec);
+    return false;
+  }
+  struct stat second_status;
+  if (::stat(second.c_str(), &second_status) != 0) {
+    set_error(ec);
+    return false;
+  }
+  clear_error(ec);
+  return first_status.st_dev == second_status.st_dev &&
+         first_status.st_ino == second_status.st_ino;
+}
+
+bool equivalent(const path& first, const path& second) {
+  error_code ec;
+  bool result = equivalent(first, second, ec);
+  if (ec)
+    _PSYCHICSTD_THROW(filesystem_error("equivalent", first, ec));
+  return result;
+}
+
+file_status status(const path& value) {
+  struct stat result;
+  if (::stat(value.c_str(), &result) != 0) {
+    error_code ec;
+    set_error(ec);
+    _PSYCHICSTD_THROW(filesystem_error("status", value, ec));
+  }
+  return file_status(static_cast<perms>(result.st_mode & 07777));
+}
+
+space_info space(const path& value) {
+  struct statvfs result;
+  if (::statvfs(value.c_str(), &result) != 0) {
+    error_code ec;
+    set_error(ec);
+    _PSYCHICSTD_THROW(filesystem_error("space", value, ec));
+  }
+  return {
+      static_cast<uintmax_t>(result.f_blocks) * result.f_frsize,
+      static_cast<uintmax_t>(result.f_bfree) * result.f_frsize,
+      static_cast<uintmax_t>(result.f_bavail) * result.f_frsize,
+  };
 }
 
 uintmax_t file_size(const path& value, error_code& ec) noexcept {
@@ -501,6 +591,30 @@ path absolute(const path& value, error_code& ec) {
   return ec ? path() : cwd / value;
 }
 
+path absolute(const path& value) {
+  error_code ec;
+  path result = absolute(value, ec);
+  if (ec)
+    _PSYCHICSTD_THROW(filesystem_error("absolute", value, ec));
+  return result;
+}
+
+path weakly_canonical(const path& value, error_code& ec) {
+  char* resolved = ::realpath(value.c_str(), nullptr);
+  if (resolved) {
+    path result(resolved);
+    ::free(resolved);
+    clear_error(ec);
+    return result;
+  }
+  if (missing_path_error(errno)) {
+    path result = absolute(value, ec);
+    return ec ? path() : result.lexically_normal();
+  }
+  set_error(ec);
+  return {};
+}
+
 file_time_type last_write_time(const path& value, error_code& ec) noexcept {
   struct stat status;
   if (::stat(value.c_str(), &status) != 0) {
@@ -530,6 +644,14 @@ bool remove(const path& value, error_code& ec) noexcept {
   }
   set_error(ec);
   return false;
+}
+
+bool remove(const path& value) {
+  error_code ec;
+  bool result = remove(value, ec);
+  if (ec)
+    _PSYCHICSTD_THROW(filesystem_error("remove", value, ec));
+  return result;
 }
 
 bool copy_file(const path& source, const path& destination, error_code& ec) {
@@ -568,6 +690,26 @@ bool copy_file(const path& source, const path& destination, error_code& ec) {
   return true;
 }
 
+bool copy_file(const path& source, const path& destination,
+               copy_options options) {
+  error_code ec;
+  if (options == copy_options::skip_existing && exists(destination, ec)) {
+    if (ec)
+      _PSYCHICSTD_THROW(filesystem_error("copy_file", destination, ec));
+    return false;
+  }
+
+  if (options == copy_options::overwrite_existing)
+    remove(destination, ec);
+  if (ec)
+    _PSYCHICSTD_THROW(filesystem_error("copy_file", destination, ec));
+
+  bool result = copy_file(source, destination, ec);
+  if (ec)
+    _PSYCHICSTD_THROW(filesystem_error("copy_file", source, ec));
+  return result;
+}
+
 bool create_directory(const path& value, error_code& ec) noexcept {
   if (::mkdir(value.c_str(), 0777) == 0) {
     clear_error(ec);
@@ -598,6 +740,34 @@ bool create_directories(const path& value, error_code& ec) {
         return false;
   }
   return create_directory(value, ec);
+}
+
+bool create_directories(const path& value) {
+  error_code ec;
+  bool result = create_directories(value, ec);
+  if (ec)
+    _PSYCHICSTD_THROW(filesystem_error("create_directories", value, ec));
+  return result;
+}
+
+void permissions(const path& value, perms permissions_value,
+                 perm_options options, error_code& ec) noexcept {
+  mode_t mode = static_cast<mode_t>(permissions_value) & 07777;
+  if (options == perm_options::add || options == perm_options::remove) {
+    struct stat status;
+    if (::stat(value.c_str(), &status) != 0) {
+      set_error(ec);
+      return;
+    }
+    if (options == perm_options::add)
+      mode |= status.st_mode & 07777;
+    else
+      mode = (status.st_mode & 07777) & ~mode;
+  }
+  if (::chmod(value.c_str(), mode) != 0)
+    set_error(ec);
+  else
+    clear_error(ec);
 }
 
 void rename(const path& source, const path& destination,

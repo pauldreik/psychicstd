@@ -826,6 +826,17 @@ def _cmake() -> Project:
             with tarfile.open(tarball) as t:
                 t.extractall(work)
             src = work / f"cmake-{version}"
+            # CMake's std::filesystem wrapper requires path iteration, but its
+            # feature check does not test it. Extend the check so psychicstd's
+            # intentionally partial implementation selects CMake's fallback.
+            filesystem_check = src / "Source" / "Checks" / "cm_cxx_filesystem.cxx"
+            text = filesystem_check.read_text()
+            old = "  return 0;\n}\n"
+            assert old in text
+            filesystem_check.write_text(
+                text.replace(old, "  (void)p1.begin();\n\n" + old)
+            )
+
             # CMake relies on ADL finding these through its string iterator,
             # which is not guaranteed when an implementation uses pointers.
             compat_header = work / "cmake-compat.h"
