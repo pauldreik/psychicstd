@@ -249,6 +249,27 @@ private:
         static_cast<decltype(resolved)&&>(resolved));
   }
 };
+
+template <typename R, typename F, typename... Bound> struct __bind_r_wrapper {
+  __bind_wrapper<F, Bound...> bound_;
+
+  template <typename F2, typename... B2>
+  constexpr __bind_r_wrapper(F2&& f, B2&&... bound)
+      : bound_(static_cast<F2&&>(f), static_cast<B2&&>(bound)...) {}
+
+  template <typename... Args> constexpr R operator()(Args&&... args) {
+    if constexpr (is_void_v<R>)
+      bound_(static_cast<Args&&>(args)...);
+    else
+      return static_cast<R>(bound_(static_cast<Args&&>(args)...));
+  }
+  template <typename... Args> constexpr R operator()(Args&&... args) const {
+    if constexpr (is_void_v<R>)
+      bound_(static_cast<Args&&>(args)...);
+    else
+      return static_cast<R>(bound_(static_cast<Args&&>(args)...));
+  }
+};
 } // namespace detail
 
 template <typename F, typename... Args>
@@ -259,6 +280,12 @@ constexpr decltype(auto) invoke(F&& f, Args&&... args) {
 template <typename F, typename... Args>
 constexpr auto bind(F&& f, Args&&... args) {
   return detail::__bind_wrapper<decay_t<F>, decay_t<Args>...>(
+      static_cast<F&&>(f), static_cast<Args&&>(args)...);
+}
+
+template <typename R, typename F, typename... Args>
+constexpr auto bind(F&& f, Args&&... args) {
+  return detail::__bind_r_wrapper<R, decay_t<F>, decay_t<Args>...>(
       static_cast<F&&>(f), static_cast<Args&&>(args)...);
 }
 
