@@ -97,6 +97,7 @@ HEADER_TO_DIRS: dict[str, list[str]] = {
     "complex": ["numerics/complex.number"],
     "concepts": ["concepts"],
     "condition_variable": ["thread/thread.condition"],
+    "csetjmp": ["language.support/support.runtime"],
     "csignal": ["depr/depr.c.headers"],
     "cstddef": ["language.support/support.types"],
     "cstdint": ["utilities/intseq"],
