@@ -18,28 +18,36 @@ public:
   using int_type = typename Traits::int_type;
   using string_type = basic_string<Char, Traits, Alloc>;
 
-  basic_stringbuf() = default;
+  basic_stringbuf() { _reset_put_area(); }
   explicit basic_stringbuf(const string_type& s,
                            ios_base::openmode which = ios_base::in |
                                                       ios_base::out)
-      : buf_(s), rpos_(0), ppos_((which & ios_base::ate) ? s.size() : 0) {}
+      : buf_(s), rpos_(0), ppos_((which & ios_base::ate) ? s.size() : 0) {
+    _reset_put_area();
+  }
   explicit basic_stringbuf(string_type&& s,
                            ios_base::openmode which = ios_base::in |
                                                       ios_base::out)
       : buf_(static_cast<string_type&&>(s)), rpos_(0),
-        ppos_((which & ios_base::ate) ? buf_.size() : 0) {}
+        ppos_((which & ios_base::ate) ? buf_.size() : 0) {
+    _reset_put_area();
+  }
 
   string_type str() const { return buf_; }
-  size_t _put_position() const noexcept { return ppos_; }
+  size_t _put_position() const noexcept {
+    return this->pbase() ? (size_t)(this->pptr() - this->pbase()) : ppos_;
+  }
   void str(const string_type& s) {
     buf_ = s;
     rpos_ = 0;
     ppos_ = 0;
+    _reset_put_area();
   }
   void str(string_type&& s) {
     buf_ = static_cast<string_type&&>(s);
     rpos_ = 0;
     ppos_ = 0;
+    _reset_put_area();
   }
 
 protected:
@@ -47,6 +55,7 @@ protected:
   streamsize xsputn(const Char* s, streamsize n) override {
     if (n <= 0)
       return 0;
+    _sync_put_position();
     size_t count = (size_t)n;
     size_t available = ppos_ < buf_.size() ? buf_.size() - ppos_ : 0;
     size_t overwritten = count < available ? count : available;
@@ -54,16 +63,19 @@ protected:
     if (overwritten < count)
       buf_.append(s + overwritten, count - overwritten);
     ppos_ += count;
+    _reset_put_area();
     return n;
   }
   int_type overflow(int_type c) override {
     if (Traits::eq_int_type(c, Traits::eof()))
       return Traits::eof();
+    _sync_put_position();
     if (ppos_ < buf_.size())
       buf_[ppos_] = Traits::to_char_type(c);
     else
       buf_.push_back(Traits::to_char_type(c));
     ++ppos_;
+    _reset_put_area();
     return c;
   }
 
@@ -104,12 +116,16 @@ protected:
       return streampos(-1);
     if (which & ios_base::in)
       rpos_ = p;
-    if (which & ios_base::out)
+    if (which & ios_base::out) {
       ppos_ = p;
+      _reset_put_area();
+    }
     return streampos((which & ios_base::out) ? ppos_ : rpos_);
   }
   streampos seekoff(streamoff off, ios_base::seekdir dir,
                     ios_base::openmode which) override {
+    if (which & ios_base::out)
+      _sync_put_position();
     size_t base;
     if (dir == ios_base::beg)
       base = 0;
@@ -122,12 +138,25 @@ protected:
       return streampos(-1);
     if (which & ios_base::in)
       rpos_ = pos;
-    if (which & ios_base::out)
+    if (which & ios_base::out) {
       ppos_ = pos;
+      _reset_put_area();
+    }
     return streampos((which & ios_base::out) ? ppos_ : rpos_);
   }
 
 private:
+  void _sync_put_position() noexcept {
+    if (this->pbase())
+      ppos_ = (size_t)(this->pptr() - this->pbase());
+  }
+
+  void _reset_put_area() noexcept {
+    Char* begin = buf_.data();
+    this->setp(begin, begin + buf_.size());
+    this->pbump((int)ppos_);
+  }
+
   string_type buf_;
   size_t rpos_ = 0;
   size_t ppos_ = 0;
