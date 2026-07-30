@@ -63,13 +63,15 @@ string build_what(const error_code& code, const char* message) {
 } // namespace
 
 const error_category& system_category() noexcept {
-  static system_category_type category;
-  return category;
+  // Category references must remain valid during static destruction.
+  static const auto* category = new system_category_type;
+  return *category;
 }
 
 const error_category& generic_category() noexcept {
-  static generic_category_type category;
-  return category;
+  // Category references must remain valid during static destruction.
+  static const auto* category = new generic_category_type;
+  return *category;
 }
 
 string error_condition::message() const { return cat_->message(val_); }

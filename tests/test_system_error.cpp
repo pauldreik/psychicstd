@@ -13,6 +13,18 @@ std::error_code make_error_code(error value) {
 
 template <> struct std::is_error_code_enum<custom::error> : std::true_type {};
 
+struct category_lifetime_check {
+  const std::error_category* generic = nullptr;
+  const std::error_category* system = nullptr;
+
+  ~category_lifetime_check() {
+    psyassert(std::string(generic->name()) == "generic");
+    psyassert(std::string(system->name()) == "system");
+  }
+};
+
+category_lifetime_check categories_after_main;
+
 int main() {
   static_assert(std::is_error_condition_enum_v<std::errc>);
   psyassert(std::make_error_code(std::errc::value_too_large).value() ==
@@ -28,6 +40,8 @@ int main() {
   psyassert(&std::generic_category() != &std::system_category());
   psyassert(std::string(std::generic_category().name()) == "generic");
   psyassert(std::string(std::system_category().name()) == "system");
+  categories_after_main.generic = &std::generic_category();
+  categories_after_main.system = &std::system_category();
 
   auto ec = std::error_code(EDOM, std::generic_category());
   psyassert(ec.value() == EDOM);
