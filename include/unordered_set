@@ -311,6 +311,7 @@ public:
   }
 
   size_type count(const Key& k) const { return find(k) != end() ? 1 : 0; }
+  bool contains(const Key& k) const { return find(k) != end(); }
 
   iterator erase(const_iterator pos) {
     size_t b = bucket(*pos);

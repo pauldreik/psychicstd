@@ -39,6 +39,12 @@ int main() {
   psyassert(hinted->second == 24);
   m = {{3, 7}};
   psyassert(m.size() == 1 && m[3] == 7);
+  std::map<int, int> merge_source{{3, 70}, {4, 8}};
+  m.merge(merge_source);
+  psyassert(m[3] == 7 && m[4] == 8);
+  psyassert(merge_source.size() == 1 && merge_source.contains(3));
+  m.merge(std::map<int, int>{{5, 9}});
+  psyassert(m[5] == 9);
 
   std::map<int, nonassignable> immutable;
   immutable.emplace(2, 2);

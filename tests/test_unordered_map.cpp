@@ -12,6 +12,13 @@ struct stateful_equal {
   bool operator()(int a, int b) const { return a + state == b + state; }
 };
 
+struct immovable {
+  explicit immovable(int value) : value(value) {}
+  immovable(const immovable&) = delete;
+  immovable(immovable&&) = delete;
+  int value;
+};
+
 int main() {
   using map_type = std::unordered_map<int, int>;
   map_type::iterator empty_iterator;
@@ -25,6 +32,8 @@ int main() {
   m[1] = 42;
   psyassert(m[1] == 42);
   psyassert(m.find(1) != m.cend());
+  std::unordered_map<int, immovable> immovable_map;
+  psyassert(immovable_map.try_emplace(1, 42).first->second.value == 42);
 
   std::unordered_multimap<int, int> mm;
   mm.reserve(100);
