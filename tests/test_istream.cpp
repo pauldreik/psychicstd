@@ -114,6 +114,11 @@ int main() {
   psyassert(peek_throwing.eof());
   psyassert(!peek_throwing.fail());
 
+  std::stringbuf advancing("ab");
+  psyassert(advancing.sgetc() == 'a');
+  psyassert(advancing.snextc() == 'b');
+  psyassert(advancing.snextc() == std::char_traits<char>::eof());
+
   seekbuf seeking_buffer;
   std::istream seeking(&seeking_buffer);
   seeking.seekg(5, std::ios_base::cur);

@@ -53,6 +53,11 @@ public:
       return traits_type::to_int_type(*gptr_++);
     return uflow();
   }
+  int_type snextc() {
+    if (traits_type::eq_int_type(sbumpc(), traits_type::eof()))
+      return traits_type::eof();
+    return sgetc();
+  }
 
   // put back one character (decrement get pointer)
   int_type sungetc() {
