@@ -2450,7 +2450,7 @@ def _boost_test() -> Project:
 # --- bitcoin core --------------------------------------------------------
 
 
-def _bitcoin() -> Project:
+def _bitcoin(full: bool) -> Project:
     version = "31.0"
     url = f"https://github.com/bitcoin/bitcoin/archive/refs/tags/v{version}.tar.gz"
     checksum = "884fd15f195df3d36ab9c7d8854be16c53d9e7596ec001c283626e0fc1837e67"
@@ -2460,12 +2460,76 @@ def _bitcoin() -> Project:
         _fetch(url, tarball, checksum)
 
         with tempfile.TemporaryDirectory(
-            prefix="rw-bitcoin-", ignore_cleanup_errors=True
+            prefix="rw-bitcoin-full-" if full else "rw-bitcoin-",
+            ignore_cleanup_errors=True,
         ) as work_dir:
             work = Path(work_dir)
-            with tarfile.open(tarball) as t:
-                t.extractall(work)
+            with tarfile.open(tarball) as archive:
+                archive.extractall(work)
             src = work / f"bitcoin-{version}"
+
+            env = _env(tc)
+            jobs = f"-j{tc.jobs}"
+            if full:
+                # Bitcoin relies on libstdc++ transitive includes in these
+                # files. Keep the workaround local instead of expanding
+                # psychicstd's drop-in header surface.
+                explicit_includes = {
+                    "src/common/system.cpp": "#include <limits>\n",
+                    "src/init/common.cpp": "#include <ranges>\n",
+                    "src/util/sock.h": "#include <limits>\n",
+                    "src/util/string.cpp": "#include <iterator>\n",
+                }
+                for source_name, include in explicit_includes.items():
+                    source = src / source_name
+                    source.write_text(include + source.read_text())
+
+                configure = [
+                    "cmake",
+                    "-S",
+                    str(src),
+                    "-B",
+                    "build",
+                    "-GNinja",
+                    "-DCMAKE_BUILD_TYPE=" + tc.build_type.capitalize(),
+                    "-DCMAKE_CXX_COMPILER=" + tc.cxx,
+                    "-DAPPEND_CXXFLAGS=" + tc.cxxflags + " -DBOOST_NO_AUTO_PTR",
+                    "-DAPPEND_LDFLAGS=" + f"{tc.ldflags} {tc.libs}",
+                    "-DWITH_CCACHE=OFF",
+                    "-DBUILD_BITCOIN_BIN=ON",
+                    "-DBUILD_DAEMON=OFF",
+                    "-DBUILD_GUI=OFF",
+                    "-DBUILD_CLI=OFF",
+                    "-DBUILD_TESTS=OFF",
+                    "-DBUILD_TX=ON",
+                    "-DBUILD_UTIL=ON",
+                    "-DBUILD_UTIL_CHAINSTATE=OFF",
+                    "-DBUILD_KERNEL_LIB=OFF",
+                    "-DBUILD_KERNEL_TEST=OFF",
+                    "-DENABLE_WALLET=OFF",
+                    "-DENABLE_IPC=OFF",
+                    "-DWITH_ZMQ=OFF",
+                    "-DWITH_USDT=OFF",
+                    "-DINSTALL_MAN=OFF",
+                ]
+                return {
+                    "configure": _timed(configure, src, env),
+                    "compile": _timed(
+                        [
+                            "cmake",
+                            "--build",
+                            "build",
+                            "--target",
+                            "bitcoin",
+                            "bitcoin-tx",
+                            "bitcoin-util",
+                            jobs,
+                        ],
+                        src,
+                        env,
+                    ),
+                }
+
             driver = work / "driver"
             driver.mkdir()
             driver.joinpath("CMakeLists.txt").write_text(
@@ -2480,7 +2544,6 @@ add_subdirectory("${BITCOIN_SOURCE}/src/crypto" crypto)
 """
             )
 
-            env = _env(tc)
             wrapper = _compiler_wrapper(work / "cxx", tc)
             configure = [
                 "cmake",
@@ -2498,7 +2561,6 @@ add_subdirectory("${BITCOIN_SOURCE}/src/crypto" crypto)
                 # Bitcoin's real build deliberately keeps assertions enabled
                 # and replaces CMake's default -O3 -DNDEBUG with -O2.
                 configure.append("-DCMAKE_CXX_FLAGS_RELEASE=-O2")
-            jobs = f"-j{tc.jobs}"
             return {
                 "configure": _timed(configure, src, env),
                 "compile": _timed(
@@ -2518,10 +2580,20 @@ add_subdirectory("${BITCOIN_SOURCE}/src/crypto" crypto)
     return Project(
         version=version,
         build=build,
-        expected_seconds={"debug": 10, "release": 10},
+        expected_seconds=(
+            {"debug": 120, "release": 120} if full else {"debug": 10, "release": 10}
+        ),
         phases=("compile",),
-        comment="Builds Bitcoin Core's bitcoin_crypto primitives; node, wallet, "
-        "GUI, networking, and external dependencies are excluded.",
+        comment=(
+            "Uses Bitcoin Core's native CMake build for the command wrapper, "
+            "`bitcoin-tx`, and `bitcoin-util`, including the common, consensus, "
+            "LevelDB, UniValue, secp256k1, descriptor, miniscript, RPC-helper, "
+            "and utility layers. The node, RPC client, wallet, GUI, "
+            "kernel/chainstate, and their additional dependencies are excluded."
+            if full
+            else "Builds Bitcoin Core's bitcoin_crypto primitives; node, wallet, "
+            "GUI, networking, and external dependencies are excluded."
+        ),
     )
 
 
@@ -3363,7 +3435,8 @@ def _zancle() -> Project:
 PROJECTS: dict[str, Project] = {
     "abseil": _abseil(full=False),
     "abseil-full": _abseil(full=True),
-    "bitcoin": _bitcoin(),
+    "bitcoin": _bitcoin(full=False),
+    "bitcoin-full": _bitcoin(full=True),
     "boost-asio": _boost_asio(),
     "boost-test": _boost_test(),
     "catch2": _catch2(),
