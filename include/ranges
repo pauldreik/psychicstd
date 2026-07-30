@@ -144,6 +144,31 @@ template <typename T> inline constexpr bool enable_view = false;
 // view_base
 struct view_base {};
 
+template <typename Iterator, typename Sentinel = Iterator> class subrange {
+public:
+  constexpr subrange() = default;
+  constexpr subrange(Iterator first, Sentinel last)
+      : first_(static_cast<Iterator&&>(first)),
+        last_(static_cast<Sentinel&&>(last)) {}
+
+  template <typename Range>
+    requires(!std::is_same_v<std::remove_cvref_t<Range>, subrange>)
+  constexpr subrange(Range&& range)
+      : first_(std::ranges::begin(range)), last_(std::ranges::end(range)) {}
+
+  constexpr Iterator begin() const { return first_; }
+  constexpr Sentinel end() const { return last_; }
+
+private:
+  Iterator first_{};
+  Sentinel last_{};
+};
+
+template <typename Iterator, typename Sentinel>
+subrange(Iterator, Sentinel) -> subrange<Iterator, Sentinel>;
+template <typename Range>
+subrange(Range&&) -> subrange<iterator_t<Range>, sentinel_t<Range>>;
+
 } // namespace std::ranges
 
 namespace std::views {

@@ -153,6 +153,40 @@ struct __count_fn {
 };
 inline constexpr __count_fn count{};
 
+struct __equal_fn {
+  template <typename It1, typename Sent1, typename It2, typename Sent2>
+  constexpr bool operator()(It1 first1, Sent1 last1, It2 first2,
+                            Sent2 last2) const {
+    for (; first1 != last1 && first2 != last2; ++first1, ++first2)
+      if (!(*first1 == *first2))
+        return false;
+    return first1 == last1 && first2 == last2;
+  }
+
+  template <typename Range1, typename Range2>
+  constexpr bool operator()(Range1&& first, Range2&& second) const {
+    return (*this)(std::begin(first), std::end(first), std::begin(second),
+                   std::end(second));
+  }
+};
+inline constexpr __equal_fn equal{};
+
+struct __all_of_fn {
+  template <typename It, typename Sent, typename Pred>
+  constexpr bool operator()(It first, Sent last, Pred pred) const {
+    for (; first != last; ++first)
+      if (!pred(*first))
+        return false;
+    return true;
+  }
+
+  template <typename Range, typename Pred>
+  constexpr bool operator()(Range&& range, Pred pred) const {
+    return (*this)(std::begin(range), std::end(range), pred);
+  }
+};
+inline constexpr __all_of_fn all_of{};
+
 struct __none_of_fn {
   template <typename It, typename Sent, typename Pred>
   constexpr bool operator()(It first, Sent last, Pred pred) const {

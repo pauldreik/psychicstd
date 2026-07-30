@@ -77,13 +77,33 @@ public:
   constexpr span<T, dynamic_extent> first(size_t count) const noexcept {
     return span<T, dynamic_extent>(data_, count);
   }
+  template <size_t Count> constexpr span<T, Count> first() const noexcept {
+    static_assert(Count <= Extent || Extent == dynamic_extent);
+    return span<T, Count>(data_, Count);
+  }
   constexpr span<T, dynamic_extent> last(size_t count) const noexcept {
     return span<T, dynamic_extent>(data_ + (size_ - count), count);
+  }
+  template <size_t Count> constexpr span<T, Count> last() const noexcept {
+    static_assert(Count <= Extent || Extent == dynamic_extent);
+    return span<T, Count>(data_ + size_ - Count, Count);
   }
   constexpr span<T, dynamic_extent>
   subspan(size_t offset, size_t count = dynamic_extent) const noexcept {
     return span<T, dynamic_extent>(
         data_ + offset, count == dynamic_extent ? size_ - offset : count);
+  }
+  template <size_t Offset, size_t Count = dynamic_extent>
+  constexpr auto subspan() const noexcept {
+    static_assert(Offset <= Extent || Extent == dynamic_extent);
+    static_assert(Count == dynamic_extent || Extent == dynamic_extent ||
+                  Offset + Count <= Extent);
+    constexpr size_t result_extent =
+        Count != dynamic_extent
+            ? Count
+            : (Extent != dynamic_extent ? Extent - Offset : dynamic_extent);
+    return span<T, result_extent>(
+        data_ + Offset, Count == dynamic_extent ? size_ - Offset : Count);
   }
 
 private:

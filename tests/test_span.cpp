@@ -1,4 +1,5 @@
 #include "psyassert.h"
+#include <algorithm>
 #include <array>
 #include <cstddef>
 #include <span>
@@ -24,6 +25,12 @@ int main() {
   auto sub = s2.subspan(1);
   psyassert(sub.size() == 2);
   psyassert(sub[0] == 'b');
+  static_assert(decltype(s2.first<2>())::extent == 2);
+  psyassert(s2.first<2>()[1] == 'b');
+  psyassert(s2.last<2>()[0] == 'b');
+  psyassert((s2.subspan<1, 1>()[0] == 'b'));
+  std::array<char, 3> same = {'a', 'b', 'c'};
+  psyassert(std::ranges::equal(s2, same));
 
   int data[4] = {1, 2, 3, 4};
   auto bytes = std::as_bytes(std::span(data));
