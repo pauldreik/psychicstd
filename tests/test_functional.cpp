@@ -77,6 +77,8 @@ int main() {
   const auto subtract = std::bind(std::minus<int>{}, std::placeholders::_2,
                                   std::placeholders::_1);
   psyassert(subtract(3, 8) == 5);
+  psyassert(!std::logical_not<>{}(true));
+  psyassert(std::modulus<>{}(7, 4) == 3);
   psyassert(std::bit_and<unsigned>{}(6, 3) == 2);
   psyassert(std::bit_or<unsigned>{}(4, 1) == 5);
   psyassert(std::bit_xor<unsigned>{}(6, 3) == 5);

@@ -85,6 +85,13 @@ template <> struct divides<void> {
 template <typename T = void> struct modulus {
   constexpr T operator()(const T& a, const T& b) const { return a % b; }
 };
+template <> struct modulus<void> {
+  template <typename T, typename U>
+  constexpr auto operator()(T&& a, U&& b) const {
+    return static_cast<T&&>(a) % static_cast<U&&>(b);
+  }
+  using is_transparent = void;
+};
 template <typename T = void> struct negate {
   constexpr T operator()(const T& a) const { return -a; }
 };
@@ -102,25 +109,72 @@ template <> struct negate<void> {
 template <typename T = void> struct bit_and {
   constexpr T operator()(const T& a, const T& b) const { return a & b; }
 };
+template <> struct bit_and<void> {
+  template <typename T, typename U>
+  constexpr auto operator()(T&& a, U&& b) const {
+    return static_cast<T&&>(a) & static_cast<U&&>(b);
+  }
+  using is_transparent = void;
+};
 template <typename T = void> struct bit_or {
   constexpr T operator()(const T& a, const T& b) const { return a | b; }
+};
+template <> struct bit_or<void> {
+  template <typename T, typename U>
+  constexpr auto operator()(T&& a, U&& b) const {
+    return static_cast<T&&>(a) | static_cast<U&&>(b);
+  }
+  using is_transparent = void;
 };
 template <typename T = void> struct bit_xor {
   constexpr T operator()(const T& a, const T& b) const { return a ^ b; }
 };
+template <> struct bit_xor<void> {
+  template <typename T, typename U>
+  constexpr auto operator()(T&& a, U&& b) const {
+    return static_cast<T&&>(a) ^ static_cast<U&&>(b);
+  }
+  using is_transparent = void;
+};
 template <typename T = void> struct bit_not {
   constexpr T operator()(const T& a) const { return ~a; }
+};
+template <> struct bit_not<void> {
+  template <typename T> constexpr auto operator()(T&& a) const {
+    return ~static_cast<T&&>(a);
+  }
+  using is_transparent = void;
 };
 
 // Logical functors
 template <typename T = void> struct logical_and {
   constexpr bool operator()(const T& a, const T& b) const { return a && b; }
 };
+template <> struct logical_and<void> {
+  template <typename T, typename U>
+  constexpr auto operator()(T&& a, U&& b) const {
+    return static_cast<T&&>(a) && static_cast<U&&>(b);
+  }
+  using is_transparent = void;
+};
 template <typename T = void> struct logical_or {
   constexpr bool operator()(const T& a, const T& b) const { return a || b; }
 };
+template <> struct logical_or<void> {
+  template <typename T, typename U>
+  constexpr auto operator()(T&& a, U&& b) const {
+    return static_cast<T&&>(a) || static_cast<U&&>(b);
+  }
+  using is_transparent = void;
+};
 template <typename T = void> struct logical_not {
   constexpr bool operator()(const T& a) const { return !a; }
+};
+template <> struct logical_not<void> {
+  template <typename T> constexpr auto operator()(T&& a) const {
+    return !static_cast<T&&>(a);
+  }
+  using is_transparent = void;
 };
 
 } // namespace std
