@@ -331,6 +331,25 @@ constexpr const T* get_if(const variant<Ts...>* v) noexcept {
 }
 
 namespace __variant {
+template <typename... Ts>
+constexpr variant<Ts...>& __as_variant(variant<Ts...>& value) noexcept {
+  return value;
+}
+template <typename... Ts>
+constexpr const variant<Ts...>&
+__as_variant(const variant<Ts...>& value) noexcept {
+  return value;
+}
+template <typename... Ts>
+constexpr variant<Ts...>&& __as_variant(variant<Ts...>&& value) noexcept {
+  return static_cast<variant<Ts...>&&>(value);
+}
+template <typename... Ts>
+constexpr const variant<Ts...>&&
+__as_variant(const variant<Ts...>&& value) noexcept {
+  return static_cast<const variant<Ts...>&&>(value);
+}
+
 template <size_t Index, typename R, typename Visitor, typename V>
 constexpr R __visit_impl(Visitor&& vis, V&& v) {
   if (v.index() == Index)
@@ -345,9 +364,12 @@ constexpr R __visit_impl(Visitor&& vis, V&& v) {
 
 template <typename Visitor, typename V>
 constexpr decltype(auto) visit(Visitor&& vis, V&& v) {
-  using R = decltype(static_cast<Visitor&&>(vis)(get<0>(static_cast<V&&>(v))));
-  return __variant::__visit_impl<0, R>(static_cast<Visitor&&>(vis),
-                                       static_cast<V&&>(v));
+  auto&& variant_value = __variant::__as_variant(static_cast<V&&>(v));
+  using R = decltype(static_cast<Visitor&&>(vis)(
+      get<0>(static_cast<decltype(variant_value)>(variant_value))));
+  return __variant::__visit_impl<0, R>(
+      static_cast<Visitor&&>(vis),
+      static_cast<decltype(variant_value)>(variant_value));
 }
 
 template <typename Visitor, typename V1, typename V2>

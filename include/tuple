@@ -1,4 +1,5 @@
 #pragma once
+#include <compare>
 #include <type_traits>
 #include <utility>
 
@@ -269,6 +270,22 @@ template <typename... Ts, typename... Us>
   requires(sizeof...(Ts) == sizeof...(Us))
 constexpr bool operator!=(const tuple<Ts...>& a, const tuple<Us...>& b) {
   return !(a == b);
+}
+template <typename... Ts, typename... Us>
+  requires(sizeof...(Ts) == sizeof...(Us))
+constexpr auto operator<=>(const tuple<Ts...>& a, const tuple<Us...>& b) {
+  return [&]<size_t... Is>(index_sequence<Is...>) {
+    using result_type =
+        common_comparison_category_t<decltype(__detail::__synth_three_way(
+            get<Is>(a), get<Is>(b)))...>;
+    result_type result = strong_ordering::equal;
+    auto compare_element = [&]<size_t Index>() {
+      if (result == 0)
+        result = __detail::__synth_three_way(get<Index>(a), get<Index>(b));
+    };
+    (compare_element.template operator()<Is>(), ...);
+    return result;
+  }(make_index_sequence<sizeof...(Ts)>{});
 }
 template <typename... Ts>
 constexpr bool operator<(const tuple<Ts...>& a, const tuple<Ts...>& b) {
