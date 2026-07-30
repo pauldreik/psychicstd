@@ -124,6 +124,17 @@ int main() {
   std::nth_element(movable.begin(), movable.begin() + 2, movable.end());
   psyassert(movable[2].value == 3);
 
+  std::vector<move_only> removable;
+  removable.emplace_back(1);
+  removable.emplace_back(2);
+  removable.emplace_back(3);
+  auto removable_end =
+      std::remove_if(removable.begin(), removable.end(),
+                     [](const move_only& value) { return value.value == 1; });
+  psyassert(removable_end == removable.begin() + 2);
+  psyassert(removable[0].value == 2);
+  psyassert(removable[1].value == 3);
+
   std::vector<stable_value> stable = {{1, 0}, {0, 1}, {1, 2}, {0, 3}};
   std::stable_sort(stable.begin(), stable.end(),
                    [](const stable_value& a, const stable_value& b) {
