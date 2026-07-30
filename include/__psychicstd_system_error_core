@@ -58,6 +58,9 @@ public:
   error_condition(int v, const error_category& c) : val_(v), cat_(&c) {}
   error_condition(errc e)
       : val_(static_cast<int>(e)), cat_(&generic_category()) {}
+  template <typename E>
+    requires is_error_condition_enum_v<E>
+  error_condition(E e) noexcept : error_condition(make_error_condition(e)) {}
   int value() const noexcept { return val_; }
   const error_category& category() const noexcept { return *cat_; }
   string message() const;
@@ -80,6 +83,9 @@ class error_code {
 public:
   error_code() = default;
   error_code(int v, const error_category& c) : val_(v), cat_(&c) {}
+  template <typename E>
+    requires is_error_code_enum_v<E>
+  error_code(E e) noexcept : error_code(make_error_code(e)) {}
   int value() const noexcept { return val_; }
   const error_category& category() const noexcept { return *cat_; }
   string message() const;

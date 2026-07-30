@@ -137,6 +137,7 @@ HEADER_TO_DIRS: dict[str, list[str]] = {
     "streambuf": ["input.output/stream.buffers"],
     "string": ["strings/basic.string"],
     "string_view": ["strings/string.view"],
+    "system_error": ["diagnostics/syserr"],
     "thread": ["thread"],
     "tuple": ["utilities/tuple"],
     "typeinfo": ["language.support/support.rtti"],
