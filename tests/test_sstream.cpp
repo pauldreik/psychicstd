@@ -22,6 +22,13 @@ struct JsonLike {
   }
 };
 
+struct TestStringbuf : std::stringbuf {
+  using std::stringbuf::stringbuf;
+
+  void bump_put(int n) { pbump(n); }
+  int_type peek() { return underflow(); }
+};
+
 int main() {
   std::ostringstream os;
   os << 42;
@@ -41,6 +48,14 @@ int main() {
   reposition.seekp(2);
   reposition << 'X';
   psyassert(reposition.str() == "abXd");
+
+  TestStringbuf bumped("123");
+  bumped.bump_put(3);
+  psyassert(bumped.snextc() == '2');
+  psyassert(bumped.snextc() == '3');
+  psyassert(bumped.snextc() == std::char_traits<char>::eof());
+  bumped.sputc('4');
+  psyassert(bumped.peek() == '4');
 
   std::stringstream input_only("value", std::ios::in);
   psyassert(input_only.get() == 'v');
