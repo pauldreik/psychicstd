@@ -221,9 +221,17 @@ template <typename T> void rethrow_if_nested(const T& value) {
 #endif
 }
 
-template <typename E>
-exception_ptr make_exception_ptr([[maybe_unused]] E e) noexcept {
-  return exception_ptr{}; // stub
+template <typename E> exception_ptr make_exception_ptr(E e) noexcept {
+#if defined(__cpp_exceptions)
+  try {
+    throw e;
+  } catch (...) {
+    return current_exception();
+  }
+#else
+  (void)e;
+  return exception_ptr{};
+#endif
 }
 
 } // namespace std
