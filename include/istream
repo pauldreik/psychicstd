@@ -456,3 +456,6 @@ using istream = basic_istream<char>;
 using wistream = basic_istream<wchar_t>;
 
 } // namespace std
+
+#define _PSYCHICSTD_BASIC_ISTREAM_DEFINED
+#include <__psychicstd_iostream>

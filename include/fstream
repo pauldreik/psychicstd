@@ -295,10 +295,6 @@ private:
   basic_filebuf<Char, Traits> buf_;
 };
 
-// unitbuf / nounitbuf (no-op — we flush immediately)
-inline ios_base& unitbuf(ios_base& s) { return s; }
-inline ios_base& nounitbuf(ios_base& s) { return s; }
-
 using filebuf = basic_filebuf<char>;
 using ifstream = basic_ifstream<char>;
 using ofstream = basic_ofstream<char>;
