@@ -1,6 +1,6 @@
 # psychicstd - a C++ standard library implementation
 
-This is a **highly experimental** C++ standard library optimized for compilation speed. It is intended to be used during general C++ development to speed up the edit-compile-debug cycle. It is not at all intended to be used for shipping binaries.
+This is an **experimental** C++ standard library optimized for compilation speed. It is intended to be used during general C++ development to speed up the edit-compile-debug cycle. It is not at all intended to be used for shipping binaries.
 
 It is not complete. It is not fully compliant. But it is good enough to quickly iterate on code. Here are some real world projects that compile and pass their unit tests with psychicstd. The number in the second column indicates the speedup relative to the platform standard library for the compilation phase (1x means same speed, higher is better):
 
