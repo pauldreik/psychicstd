@@ -3,24 +3,30 @@
 
 namespace std::detail {
 
+template <typename T> struct __is_reference_wrapper : false_type {};
+template <typename T>
+struct __is_reference_wrapper<reference_wrapper<T>> : true_type {};
+
 template <typename F, typename... Args>
 constexpr decltype(auto) __invoke(F&& f, Args&&... args) {
   return static_cast<F&&>(f)(static_cast<Args&&>(args)...);
 }
 template <typename R, typename T, typename Obj, typename... Args>
 constexpr decltype(auto) __invoke(R T::* pm, Obj&& obj, Args&&... args) {
-  if constexpr (is_pointer_v<decay_t<Obj>>) {
-    if constexpr (sizeof...(Args) == 0 &&
-                  requires { (*static_cast<Obj&&>(obj)).*pm; })
-      return (*static_cast<Obj&&>(obj)).*pm;
+  if constexpr (is_function_v<R>) {
+    if constexpr (is_base_of_v<T, decay_t<Obj>>)
+      return (static_cast<Obj&&>(obj).*pm)(static_cast<Args&&>(args)...);
+    else if constexpr (__is_reference_wrapper<remove_cvref_t<Obj>>::value)
+      return (static_cast<Obj&&>(obj).get().*pm)(static_cast<Args&&>(args)...);
     else
       return ((*static_cast<Obj&&>(obj)).*pm)(static_cast<Args&&>(args)...);
   } else {
-    if constexpr (sizeof...(Args) == 0 &&
-                  requires { static_cast<Obj&&>(obj).*pm; })
+    if constexpr (is_base_of_v<T, decay_t<Obj>>)
       return static_cast<Obj&&>(obj).*pm;
+    else if constexpr (__is_reference_wrapper<remove_cvref_t<Obj>>::value)
+      return static_cast<Obj&&>(obj).get().*pm;
     else
-      return (static_cast<Obj&&>(obj).*pm)(static_cast<Args&&>(args)...);
+      return (*static_cast<Obj&&>(obj)).*pm;
   }
 }
 

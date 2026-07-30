@@ -2514,6 +2514,130 @@ add_subdirectory("${BITCOIN_SOURCE}/src/crypto" crypto)
     )
 
 
+# --- libtorrent ----------------------------------------------------------
+
+
+def _libtorrent() -> Project:
+    version = "2.1.0"
+    url = f"https://github.com/arvidn/libtorrent/archive/refs/tags/v{version}.tar.gz"
+    checksum = "5d5b264eb960fafe4a5c935f6c71bc00e02d3dab8872e76dee9dadb27282f912"
+    try_signal_revision = "105cce59972f925a33aa6b1c3109e4cd3caf583d"
+    try_signal_url = (
+        f"https://github.com/arvidn/try_signal/archive/{try_signal_revision}.tar.gz"
+    )
+    try_signal_checksum = (
+        "6f111b0d77429a8051be4faed06cf23fb03cf6ee233967c84fdd9d8d3b42ba8e"
+    )
+
+    def build(tc: Toolchain) -> dict[str, float]:
+        tarball = RW_DIR / f"libtorrent-v{version}.tar.gz"
+        try_signal_tarball = RW_DIR / f"try-signal-{try_signal_revision[:7]}.tar.gz"
+        _fetch(url, tarball, checksum)
+        _fetch(try_signal_url, try_signal_tarball, try_signal_checksum)
+
+        with tempfile.TemporaryDirectory(
+            prefix="rw-libtorrent-", ignore_cleanup_errors=True
+        ) as work_dir:
+            work = Path(work_dir)
+            with tarfile.open(tarball) as archive:
+                archive.extractall(work)
+            src = work / f"libtorrent-{version}"
+
+            with tarfile.open(try_signal_tarball) as archive:
+                archive.extractall(work)
+            shutil.copytree(
+                work / f"try_signal-{try_signal_revision}",
+                src / "deps" / "try_signal",
+                dirs_exist_ok=True,
+            )
+
+            # psychicstd's compact contiguous deque cannot grow an immovable
+            # element. Use libtorrent's existing compatibility path instead.
+            chained_buffer = (
+                src / "include" / "libtorrent" / "aux_" / "chained_buffer.hpp"
+            )
+            text = chained_buffer.read_text()
+            old = "#define TORRENT_CPP98_DEQUE 0"
+            assert old in text
+            chained_buffer.write_text(
+                text.replace(old, "#define TORRENT_CPP98_DEQUE 1")
+            )
+
+            # ip_filter.cpp uses std::fill without including <algorithm>.
+            ip_filter = src / "src" / "ip_filter.cpp"
+            text = ip_filter.read_text()
+            old = "#include <iterator> // for next"
+            assert old in text
+            ip_filter.write_text(
+                text.replace(
+                    old, "#include <algorithm>\n#include <iterator> // for next"
+                )
+            )
+
+            # io.hpp likewise uses std::copy without including <algorithm>.
+            io_header = src / "include" / "libtorrent" / "aux_" / "io.hpp"
+            text = io_header.read_text()
+            old = "#include <cstdint>"
+            assert old in text
+            io_header.write_text(
+                text.replace(old, "#include <algorithm>\n#include <cstdint>")
+            )
+
+            env = _env(tc)
+            cxxflags = (
+                tc.cxxflags + " -DBOOST_NO_AUTO_PTR=1" + " -DBOOST_ASIO_NO_IOSTREAM=1"
+            )
+            configure = [
+                "cmake",
+                "-S",
+                ".",
+                "-B",
+                "build",
+                "-GNinja",
+                "-DCMAKE_BUILD_TYPE=" + tc.build_type.capitalize(),
+                "-DCMAKE_CXX_COMPILER=" + tc.cxx,
+                "-DCMAKE_CXX_STANDARD=20",
+                "-DCMAKE_CXX_FLAGS=" + cxxflags,
+                "-DCMAKE_EXE_LINKER_FLAGS=" + tc.ldflags,
+                "-DCMAKE_CXX_STANDARD_LIBRARIES=" + tc.libs,
+                "-DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY",
+                "-DBUILD_SHARED_LIBS=OFF",
+                "-Dbuild_examples=OFF",
+                "-Dbuild_tests=OFF",
+                "-Dbuild_tools=OFF",
+                "-Dpython-bindings=OFF",
+                "-Dwebtorrent=OFF",
+            ]
+            return {
+                "configure": _timed(configure, src, env),
+                "compile": _timed(
+                    [
+                        "cmake",
+                        "--build",
+                        "build",
+                        "--target",
+                        "torrent-rasterbar",
+                        f"-j{tc.jobs}",
+                    ],
+                    src,
+                    env,
+                ),
+            }
+
+    return Project(
+        version=version,
+        build=build,
+        expected_seconds={"debug": 90, "release": 90},
+        phases=("compile",),
+        comment="Builds the complete static libtorrent library with DHT, "
+        "encryption, extensions, I2P, logging, and streaming enabled. "
+        "WebTorrent is disabled because its bundled submodule dependencies "
+        "are not part of the release archive. Enables libtorrent's movable "
+        "deque-element fallback because psychicstd's compact deque relocates "
+        "elements when it grows.",
+    )
+
+
 # --- llama.cpp -----------------------------------------------------------
 
 
@@ -3244,6 +3368,7 @@ PROJECTS: dict[str, Project] = {
     "inipp": _inipp(),
     "cxxopts": _cxxopts(),
     "libcamera": _libcamera(),
+    "libtorrent": _libtorrent(),
     "llama.cpp": _llama_cpp(),
     "nlohmann": _nlohmann(),
     "opencv": _opencv(),

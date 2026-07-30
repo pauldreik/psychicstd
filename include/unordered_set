@@ -539,6 +539,29 @@ public:
     return {this, b, n};
   }
 
+  iterator find(const Key& k) const {
+    size_t b = bucket(k);
+    for (Node* n = buckets_[b]; n; n = n->next)
+      if (equal_(n->key, k))
+        return {this, b, n};
+    return end();
+  }
+  iterator erase(const_iterator pos) {
+    size_t b = pos.bucket_;
+    Node** link = &buckets_[b];
+    while (*link != pos.node_)
+      link = &(*link)->next;
+    Node* erased = *link;
+    Node* next = erased->next;
+    *link = next;
+    delete erased;
+    --size_;
+    iterator result{this, b, next};
+    while (!result.node_ && ++result.bucket_ < nbuckets_)
+      result.node_ = buckets_[result.bucket_];
+    return result;
+  }
+
   size_type count(const Key& k) const {
     size_t b = bucket(k);
     size_type n = 0;

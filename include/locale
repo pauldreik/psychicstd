@@ -39,6 +39,45 @@ protected:
   virtual string_type do_grouping() const { return string_type(); }
 };
 
+template <typename Char> class ctype : public locale::facet {
+public:
+  using char_type = Char;
+
+  Char widen(char c) const { return do_widen(c); }
+  const char* widen(const char* first, const char* last, Char* out) const {
+    return do_widen(first, last, out);
+  }
+  char narrow(Char c, char fallback) const { return do_narrow(c, fallback); }
+  const Char* narrow(const Char* first, const Char* last, char fallback,
+                     char* out) const {
+    return do_narrow(first, last, fallback, out);
+  }
+
+  ~ctype() override = default;
+
+protected:
+  virtual Char do_widen(char c) const { return static_cast<Char>(c); }
+  virtual const char* do_widen(const char* first, const char* last,
+                               Char* out) const {
+    while (first != last)
+      *out++ = static_cast<Char>(*first++);
+    return last;
+  }
+  virtual char do_narrow(Char c, char fallback) const {
+    if constexpr (sizeof(Char) == 1)
+      return static_cast<char>(c);
+    else
+      return static_cast<unsigned long long>(c) <= 0x7f ? static_cast<char>(c)
+                                                        : fallback;
+  }
+  virtual const Char* do_narrow(const Char* first, const Char* last,
+                                char fallback, char* out) const {
+    while (first != last)
+      *out++ = do_narrow(*first++, fallback);
+    return last;
+  }
+};
+
 class codecvt_base {
 public:
   enum result { ok, partial, error, noconv };
@@ -173,6 +212,8 @@ struct __default_locale_facet : __psychicstd_detail::false_type {};
 template <typename Char>
 struct __default_locale_facet<numpunct<Char>> : __psychicstd_detail::true_type {
 };
+template <typename Char>
+struct __default_locale_facet<ctype<Char>> : __psychicstd_detail::true_type {};
 template <typename Intern, typename E, typename S>
 struct __default_locale_facet<codecvt<Intern, E, S>>
     : __psychicstd_detail::true_type {};

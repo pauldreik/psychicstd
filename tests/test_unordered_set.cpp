@@ -22,6 +22,11 @@ int main() {
   std::unordered_multiset<int> a{1, 1, 2};
   std::unordered_multiset<int> b{2, 1, 1};
   psyassert(a == b);
+  auto one = a.find(1);
+  psyassert(one != a.end());
+  a.erase(one);
+  psyassert(a.count(1) == 1);
+  a.insert(1);
   b.insert(2);
   psyassert(!(a == b));
 

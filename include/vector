@@ -103,7 +103,8 @@ private:
   // Transfer: move if movable, copy otherwise.
   static constexpr decltype(auto)
   _xfer(T& x) noexcept(is_nothrow_move_constructible_v<T>) {
-    if constexpr (is_move_constructible_v<T>) {
+    if constexpr (is_nothrow_move_constructible_v<T> ||
+                  !is_copy_constructible_v<T>) {
       // move
       return static_cast<T&&>(x);
     } else

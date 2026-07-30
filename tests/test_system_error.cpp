@@ -4,6 +4,15 @@
 #include <string>
 #include <system_error>
 
+namespace custom {
+enum class error { failed = 42 };
+std::error_code make_error_code(error value) {
+  return {static_cast<int>(value), std::generic_category()};
+}
+} // namespace custom
+
+template <> struct std::is_error_code_enum<custom::error> : std::true_type {};
+
 int main() {
   static_assert(std::is_error_condition_enum_v<std::errc>);
   psyassert(std::make_error_code(std::errc::value_too_large).value() ==
@@ -25,6 +34,9 @@ int main() {
   psyassert(ec.category() == std::generic_category());
   psyassert(static_cast<bool>(ec));
   psyassert(!std::error_code());
+  std::error_code custom_error = custom::error::failed;
+  psyassert(custom_error.value() == 42);
+  psyassert(std::system_error(custom::error::failed).code() == custom_error);
 
   // Category messages come from strerror (fmt relies on this via
   // fmt::format_system_error, which compares against system_error::what()).

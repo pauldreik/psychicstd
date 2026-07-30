@@ -1,4 +1,5 @@
 #include "psyassert.h"
+#include <memory>
 #include <set>
 
 struct counting_less {
@@ -14,6 +15,20 @@ struct throwing_move_less {
   throwing_move_less(const throwing_move_less&) noexcept(false) {}
   throwing_move_less(throwing_move_less&&) noexcept(false) {}
   bool operator()(int a, int b) const { return a < b; }
+};
+
+struct unique_pointer_less {
+  using is_transparent = void;
+  bool operator()(const std::unique_ptr<int>& a,
+                  const std::unique_ptr<int>& b) const {
+    return a < b;
+  }
+  bool operator()(const std::unique_ptr<int>& a, const int* b) const {
+    return a.get() < b;
+  }
+  bool operator()(const int* a, const std::unique_ptr<int>& b) const {
+    return a < b.get();
+  }
 };
 
 int main() {
@@ -81,4 +96,9 @@ int main() {
   pointers.insert(&second);
   psyassert(pointers.erase(&first) == 1);
   psyassert(pointers.count(&first) == 0);
+
+  std::set<std::unique_ptr<int>, unique_pointer_less> owned;
+  owned.insert(std::make_unique<int>(1));
+  int* owned_pointer = owned.begin()->get();
+  psyassert(owned.find(owned_pointer) == owned.begin());
 }

@@ -44,6 +44,13 @@ struct Allocated {
   explicit Allocated(int v) : value(v) {}
 };
 
+struct AllocatorAware {
+  using allocator_type = std::allocator<int>;
+};
+
+static_assert(
+    std::uses_allocator_v<AllocatorAware, std::allocator<AllocatorAware>>);
+
 struct CountingDeleter {
   int* count;
   void operator()(Derived* ptr) const {
@@ -113,6 +120,46 @@ static void test_converting_copy_ctor() {
   d.reset();
   psyassert(b.use_count() == 1);
   psyassert(b->x == 42);
+}
+
+static void test_owner_before() {
+  auto owner = std::make_shared<Derived>();
+  auto other_owner = std::make_shared<Derived>();
+  std::shared_ptr<Base> converted = owner;
+  std::weak_ptr<Derived> weak = owner;
+  std::weak_ptr<Derived> other_weak = other_owner;
+  std::weak_ptr<Base> converted_weak = converted;
+  psyassert(!owner.owner_before(converted));
+  psyassert(!converted.owner_before(weak));
+  psyassert(!weak.owner_before(converted));
+  psyassert(!weak.owner_before(converted_weak));
+  bool owner_first = owner.owner_before(other_owner);
+  psyassert(owner_first != other_owner.owner_before(owner));
+  psyassert(owner_first == weak.owner_before(other_owner));
+  psyassert(owner_first == owner.owner_before(other_weak));
+  psyassert(owner_first == weak.owner_before(other_weak));
+}
+
+static void test_smart_pointer_relations_and_output() {
+  auto first = std::make_unique<int>(1);
+  auto second = std::make_unique<int>(2);
+  psyassert((first < second) != (second < first));
+
+  std::ostringstream shared_output;
+  auto shared = std::make_shared<int>(1);
+  auto other_shared = std::make_shared<int>(2);
+  psyassert((shared < other_shared) != (other_shared < shared));
+  shared_output << shared;
+  std::ostringstream raw_output;
+  raw_output << shared.get();
+  psyassert(shared_output.str() == raw_output.str());
+
+  auto text = std::make_unique<char[]>(2);
+  text[0] = 'x';
+  text[1] = '\0';
+  std::ostringstream text_output;
+  text_output << text;
+  psyassert(text_output.str() == "x");
 }
 
 static void test_converting_ctor_from_prvalue() {
@@ -311,6 +358,8 @@ int main() {
   test_unique_ptr_equality();
   test_allocate_shared();
   test_converting_copy_ctor();
+  test_owner_before();
+  test_smart_pointer_relations_and_output();
   test_converting_ctor_from_prvalue();
   test_const_pointer_cast();
   test_enable_shared_from_this();

@@ -17,6 +17,7 @@ set(TESTS
     test_complex
     test_concepts
     test_coroutine
+    test_csetjmp
     test_csignal
     test_cstddef
     test_cstdint

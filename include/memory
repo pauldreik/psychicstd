@@ -1,9 +1,19 @@
 #pragma once
 #include <__psychicstd_allocator_traits>
 #include <__psychicstd_config>
+#include <__psychicstd_ordering>
+#include <iosfwd>
 #include <typeinfo>
 
 namespace std {
+
+template <typename T, typename Alloc, typename = void>
+struct uses_allocator : false_type {};
+template <typename T, typename Alloc>
+struct uses_allocator<T, Alloc, void_t<typename T::allocator_type>>
+    : bool_constant<is_convertible_v<Alloc, typename T::allocator_type>> {};
+template <typename T, typename Alloc>
+inline constexpr bool uses_allocator_v = uses_allocator<T, Alloc>::value;
 
 // unique_ptr (owning, non-copyable)
 template <typename T> struct default_delete {
@@ -187,6 +197,35 @@ template <typename T1, typename D1, typename T2, typename D2>
 bool operator==(const unique_ptr<T1, D1>& a,
                 const unique_ptr<T2, D2>& b) noexcept {
   return a.get() == b.get();
+}
+template <typename T1, typename D1, typename T2, typename D2>
+bool operator<(const unique_ptr<T1, D1>& a,
+               const unique_ptr<T2, D2>& b) noexcept {
+  using pointer = common_type_t<typename unique_ptr<T1, D1>::pointer,
+                                typename unique_ptr<T2, D2>::pointer>;
+  return less<pointer>{}(a.get(), b.get());
+}
+template <typename T1, typename D1, typename T2, typename D2>
+bool operator>(const unique_ptr<T1, D1>& a,
+               const unique_ptr<T2, D2>& b) noexcept {
+  return b < a;
+}
+template <typename T1, typename D1, typename T2, typename D2>
+bool operator<=(const unique_ptr<T1, D1>& a,
+                const unique_ptr<T2, D2>& b) noexcept {
+  return !(b < a);
+}
+template <typename T1, typename D1, typename T2, typename D2>
+bool operator>=(const unique_ptr<T1, D1>& a,
+                const unique_ptr<T2, D2>& b) noexcept {
+  return !(a < b);
+}
+
+template <typename Char, typename Traits, typename T, typename D>
+basic_ostream<Char, Traits>& operator<<(basic_ostream<Char, Traits>& out,
+                                        const unique_ptr<T, D>& pointer) {
+  // For unique_ptr<char>, the standard forwards a char* and prints a C string.
+  return out << pointer.get();
 }
 
 template <typename T, typename... Args>
@@ -485,8 +524,12 @@ public:
     o.ctrl_ = tc;
   }
 
-  bool owner_before(const shared_ptr& o) const noexcept {
-    return ctrl_ < o.ctrl_;
+  template <typename U>
+  bool owner_before(const shared_ptr<U>& o) const noexcept {
+    return less<__detail::__sp_ctrl*>{}(ctrl_, o.ctrl_);
+  }
+  template <typename U> bool owner_before(const weak_ptr<U>& o) const noexcept {
+    return less<__detail::__sp_ctrl*>{}(ctrl_, o.ctrl_);
   }
 };
 
@@ -556,6 +599,28 @@ template <typename T, typename U>
 bool operator!=(const shared_ptr<T>& a, const shared_ptr<U>& b) noexcept {
   return !(a == b);
 }
+template <typename T, typename U>
+bool operator<(const shared_ptr<T>& a, const shared_ptr<U>& b) noexcept {
+  using pointer = common_type_t<T*, U*>;
+  return less<pointer>{}(a.get(), b.get());
+}
+template <typename T, typename U>
+bool operator>(const shared_ptr<T>& a, const shared_ptr<U>& b) noexcept {
+  return b < a;
+}
+template <typename T, typename U>
+bool operator<=(const shared_ptr<T>& a, const shared_ptr<U>& b) noexcept {
+  return !(b < a);
+}
+template <typename T, typename U>
+bool operator>=(const shared_ptr<T>& a, const shared_ptr<U>& b) noexcept {
+  return !(a < b);
+}
+template <typename Char, typename Traits, typename T>
+basic_ostream<Char, Traits>& operator<<(basic_ostream<Char, Traits>& out,
+                                        const shared_ptr<T>& pointer) {
+  return out << pointer.get();
+}
 
 template <typename T, typename... Args>
 shared_ptr<T> make_shared(Args&&... args) {
@@ -601,6 +666,7 @@ shared_ptr<T> dynamic_pointer_cast(const shared_ptr<U>& p) noexcept {
 
 template <typename T> class weak_ptr {
   template <typename U> friend class weak_ptr;
+  template <typename U> friend class shared_ptr;
 
   T* ptr_ = nullptr;
   __detail::__sp_ctrl* ctrl_ = nullptr;
@@ -672,6 +738,14 @@ public:
       result.ctrl_ = ctrl_;
     }
     return result;
+  }
+  template <typename U>
+  bool owner_before(const shared_ptr<U>& other) const noexcept {
+    return less<__detail::__sp_ctrl*>{}(ctrl_, other.ctrl_);
+  }
+  template <typename U>
+  bool owner_before(const weak_ptr<U>& other) const noexcept {
+    return less<__detail::__sp_ctrl*>{}(ctrl_, other.ctrl_);
   }
 };
 

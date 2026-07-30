@@ -152,7 +152,14 @@ public:
     return assign(s, Traits::length(s));
   }
   basic_string& operator=(Char c) { return assign(1, c); }
-  basic_string& operator=(basic_string_view<Char> sv) {
+  basic_string& operator=(initializer_list<Char> il) {
+    return assign(il.begin(), il.size());
+  }
+  template <typename StringViewLike>
+    requires(is_convertible_v<const StringViewLike&, basic_string_view<Char>> &&
+             !is_convertible_v<const StringViewLike&, const Char*>)
+  basic_string& operator=(const StringViewLike& value) {
+    basic_string_view<Char> sv(value);
     return assign(sv.data(), sv.size());
   }
   basic_string& assign(const basic_string& o) { return *this = o; }

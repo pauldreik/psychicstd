@@ -298,7 +298,7 @@ constexpr It remove(It first, It last, const T& value) {
   ++first;
   for (; first != last; ++first)
     if (!(*first == value)) {
-      *out = static_cast<decltype(*first)&&>(*first);
+      *out = move(*first);
       ++out;
     }
   return out;
@@ -312,7 +312,7 @@ constexpr It remove_if(It first, It last, Pred pred) {
   ++first;
   for (; first != last; ++first)
     if (!pred(*first)) {
-      *out = static_cast<decltype(*first)&&>(*first);
+      *out = move(*first);
       ++out;
     }
   return out;
@@ -358,7 +358,7 @@ template <typename It> constexpr It unique(It first, It last) {
   while (++first != last)
     if (!(*result == *first)) {
       ++result;
-      *result = static_cast<decltype(*first)&&>(*first);
+      *result = move(*first);
     }
   return ++result;
 }
@@ -370,7 +370,7 @@ constexpr It unique(It first, It last, BinPred pred) {
   while (++first != last)
     if (!pred(*result, *first)) {
       ++result;
-      *result = static_cast<decltype(*first)&&>(*first);
+      *result = move(*first);
     }
   return ++result;
 }

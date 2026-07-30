@@ -27,6 +27,8 @@ int main() {
   psyassert(m.find(1) != m.cend());
 
   std::unordered_multimap<int, int> mm;
+  mm.reserve(100);
+  psyassert(mm.bucket_count() >= 100);
   mm.emplace(1, 10);
   mm.emplace(17, 99); // Same initial bucket, but not an equivalent key.
   mm.emplace(1, 20);

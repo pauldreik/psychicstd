@@ -17,6 +17,22 @@ struct value {
   }
 };
 
+struct throwing_move_only {
+  int value;
+  explicit throwing_move_only(int v) : value(v) {}
+  throwing_move_only(const throwing_move_only&) = delete;
+  throwing_move_only& operator=(const throwing_move_only&) = delete;
+  throwing_move_only(throwing_move_only&& other) noexcept(false)
+      : value(other.value) {
+    other.value = 0;
+  }
+  throwing_move_only& operator=(throwing_move_only&& other) noexcept(false) {
+    value = other.value;
+    other.value = 0;
+    return *this;
+  }
+};
+
 int main() {
   std::deque<int> empty;
   empty.insert(empty.end(), 1);
@@ -70,4 +86,10 @@ int main() {
                           [](const value& item) { return item.n == 1; }) == 2);
   psyassert(erased_values.size() == 1);
   psyassert(erased_values[0].n == 2);
+
+  std::deque<throwing_move_only> throwing_moves;
+  for (int i = 1; i <= 8; ++i)
+    throwing_moves.emplace_back(i);
+  for (int i = 0; i < 8; ++i)
+    psyassert(throwing_moves[static_cast<std::size_t>(i)].value == i + 1);
 }

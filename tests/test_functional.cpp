@@ -1,6 +1,7 @@
 #include "psyassert.h"
 #include <cstring>
 #include <functional>
+#include <memory>
 
 struct incomplete;
 template <typename T> struct holder {
@@ -11,6 +12,13 @@ holder<incomplete>* no_args() { return nullptr; }
 struct member_target {
   int value = 4;
   int add(int amount) const { return value + amount; }
+};
+
+struct conflicting_wrapper {
+  member_target* dereferenced;
+  member_target* returned;
+  member_target& operator*() const { return *dereferenced; }
+  member_target& get() const { return *returned; }
 };
 
 int main() {
@@ -56,6 +64,14 @@ int main() {
   psyassert(std::invoke(&member_target::value, target) == 4);
   psyassert(std::invoke(&member_target::value, &target) == 4);
   psyassert(std::invoke(&member_target::add, target, 3) == 7);
+  auto shared_target = std::make_shared<member_target>();
+  psyassert(std::invoke(&member_target::value, shared_target) == 4);
+  psyassert(std::invoke(&member_target::add, shared_target, 3) == 7);
+  psyassert(std::invoke(&member_target::add, std::ref(target), 3) == 7);
+  member_target other_target{9};
+  conflicting_wrapper wrapper{&target, &other_target};
+  psyassert(std::invoke(&member_target::value, wrapper) == 4);
+  psyassert(std::invoke(&member_target::add, wrapper, 3) == 7);
   std::function<int(member_target, int)> member_function = &member_target::add;
   psyassert(member_function(target, 3) == 7);
   int (member_target::*null_member_function)(int) const = nullptr;
@@ -77,6 +93,11 @@ int main() {
   const auto subtract = std::bind(std::minus<int>{}, std::placeholders::_2,
                                   std::placeholders::_1);
   psyassert(subtract(3, 8) == 5);
+  int bind_void_calls = 0;
+  std::bind<void>([&bind_void_calls](int) { ++bind_void_calls; }, 1)();
+  psyassert(bind_void_calls == 1);
+  psyassert(!std::logical_not<>{}(true));
+  psyassert(std::modulus<>{}(7, 4) == 3);
   psyassert(std::bit_and<unsigned>{}(6, 3) == 2);
   psyassert(std::bit_or<unsigned>{}(4, 1) == 5);
   psyassert(std::bit_xor<unsigned>{}(6, 3) == 5);

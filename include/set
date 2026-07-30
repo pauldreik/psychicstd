@@ -236,10 +236,24 @@ public:
       return it;
     return end();
   }
+  template <typename K>
+    requires requires { typename Compare::is_transparent; }
+  iterator find(const K& k) const {
+    auto it = lower_bound(k);
+    if (it != end() && !comp_(k, *it))
+      return it;
+    return end();
+  }
   size_type count(const Key& k) const { return find(k) != end() ? 1 : 0; }
   bool contains(const Key& k) const { return find(k) != end(); }
 
   iterator lower_bound(const Key& k) const {
+    auto index = lower_bound_index_(k);
+    return {index == data_.size() ? nullptr : data_[index], this};
+  }
+  template <typename K>
+    requires requires { typename Compare::is_transparent; }
+  iterator lower_bound(const K& k) const {
     auto index = lower_bound_index_(k);
     return {index == data_.size() ? nullptr : data_[index], this};
   }
@@ -275,7 +289,7 @@ private:
   Compare comp_ = {};
   [[no_unique_address]] Alloc alloc_ = {};
 
-  size_type lower_bound_index_(const Key& key) const {
+  template <typename K> size_type lower_bound_index_(const K& key) const {
     size_type first = 0;
     size_type count = data_.size();
     while (count) {

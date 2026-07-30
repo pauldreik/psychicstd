@@ -56,6 +56,13 @@ static void test_time_point_arithmetic() {
   time_point<system_clock, milliseconds> epoch(milliseconds(0));
   psyassert((epoch + milliseconds(5)).time_since_epoch().count() == 5);
   psyassert((epoch - milliseconds(2)).time_since_epoch().count() == -2);
+  time_point<system_clock, seconds> later(seconds(2));
+  psyassert(epoch < later);
+  psyassert(later > epoch);
+  psyassert(epoch <= later);
+  psyassert(later >= epoch);
+  psyassert(epoch != later);
+  psyassert((epoch == time_point<system_clock, microseconds>(microseconds(0))));
 }
 
 static void test_duration_bounds() {
