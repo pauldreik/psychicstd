@@ -1,6 +1,7 @@
 #include "psyassert.h"
 #include <stdexcept>
 #include <string>
+#include <string_view>
 
 struct rvalue_resize_operation {
   std::size_t operator()(char* data, std::size_t size) && {
@@ -35,6 +36,11 @@ int main() {
   allocated = "allocator";
   psyassert(allocated == "allocator");
   psyassert(allocated.get_allocator() == allocator);
+  allocated = std::string_view("view");
+  psyassert(allocated == "view");
+  const char range[] = "range";
+  allocated = {range, range + 5};
+  psyassert(allocated == "range");
 
   std::string s = "hello";
   psyassert(std::string().compare(0, 4, "test") < 0);
