@@ -23,6 +23,7 @@ int main() {
   psyassert(std::regex_replace("one two one", std::regex("one"), "1") ==
             "1 two 1");
   psyassert(std::regex_replace("ab", std::regex("(a)(b)"), "$2$1") == "ba");
+  psyassert(std::regex_replace("b", std::regex("(a)?b"), "$1").empty());
 
   bool threw = false;
   try {

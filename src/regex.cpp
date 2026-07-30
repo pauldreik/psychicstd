@@ -216,11 +216,11 @@ string regex_replace(const string& subject, const regex& expression,
         result.push_back('$');
       } else if (marker == '&') {
         result.append(subject.data() + match_begin, match_end - match_begin);
-      } else if (marker >= '0' && marker <= '9' &&
-                 matches[marker - '0'].rm_so >= 0) {
+      } else if (marker >= '0' && marker <= '9') {
         const auto& match = matches[marker - '0'];
-        result.append(subject.data() + offset + match.rm_so,
-                      match.rm_eo - match.rm_so);
+        if (match.rm_so >= 0)
+          result.append(subject.data() + offset + match.rm_so,
+                        match.rm_eo - match.rm_so);
       } else {
         result.push_back('$');
         result.push_back(marker);
