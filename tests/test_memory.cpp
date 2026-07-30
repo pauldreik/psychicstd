@@ -140,6 +140,16 @@ static void test_owner_before() {
   psyassert(owner_first == weak.owner_before(other_weak));
 }
 
+static void test_smart_pointer_relations_and_output() {
+  auto first = std::make_unique<int>(1);
+  auto second = std::make_unique<int>(2);
+  psyassert((first < second) != (second < first));
+
+  auto shared = std::make_shared<int>(1);
+  auto other_shared = std::make_shared<int>(2);
+  psyassert((shared < other_shared) != (other_shared < shared));
+}
+
 static void test_converting_ctor_from_prvalue() {
   std::shared_ptr<Base> b(std::make_shared<Derived>());
   psyassert(b.use_count() == 1);
@@ -337,6 +347,7 @@ int main() {
   test_allocate_shared();
   test_converting_copy_ctor();
   test_owner_before();
+  test_smart_pointer_relations_and_output();
   test_converting_ctor_from_prvalue();
   test_const_pointer_cast();
   test_enable_shared_from_this();

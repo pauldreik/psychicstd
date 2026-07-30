@@ -1,6 +1,7 @@
 #pragma once
 #include <__psychicstd_allocator_traits>
 #include <__psychicstd_config>
+#include <__psychicstd_ordering>
 #include <typeinfo>
 
 namespace std {
@@ -195,6 +196,28 @@ template <typename T1, typename D1, typename T2, typename D2>
 bool operator==(const unique_ptr<T1, D1>& a,
                 const unique_ptr<T2, D2>& b) noexcept {
   return a.get() == b.get();
+}
+template <typename T1, typename D1, typename T2, typename D2>
+bool operator<(const unique_ptr<T1, D1>& a,
+               const unique_ptr<T2, D2>& b) noexcept {
+  using pointer = common_type_t<typename unique_ptr<T1, D1>::pointer,
+                                typename unique_ptr<T2, D2>::pointer>;
+  return less<pointer>{}(a.get(), b.get());
+}
+template <typename T1, typename D1, typename T2, typename D2>
+bool operator>(const unique_ptr<T1, D1>& a,
+               const unique_ptr<T2, D2>& b) noexcept {
+  return b < a;
+}
+template <typename T1, typename D1, typename T2, typename D2>
+bool operator<=(const unique_ptr<T1, D1>& a,
+                const unique_ptr<T2, D2>& b) noexcept {
+  return !(b < a);
+}
+template <typename T1, typename D1, typename T2, typename D2>
+bool operator>=(const unique_ptr<T1, D1>& a,
+                const unique_ptr<T2, D2>& b) noexcept {
+  return !(a < b);
 }
 
 template <typename T, typename... Args>
@@ -568,7 +591,23 @@ template <typename T, typename U>
 bool operator!=(const shared_ptr<T>& a, const shared_ptr<U>& b) noexcept {
   return !(a == b);
 }
-
+template <typename T, typename U>
+bool operator<(const shared_ptr<T>& a, const shared_ptr<U>& b) noexcept {
+  using pointer = common_type_t<T*, U*>;
+  return less<pointer>{}(a.get(), b.get());
+}
+template <typename T, typename U>
+bool operator>(const shared_ptr<T>& a, const shared_ptr<U>& b) noexcept {
+  return b < a;
+}
+template <typename T, typename U>
+bool operator<=(const shared_ptr<T>& a, const shared_ptr<U>& b) noexcept {
+  return !(b < a);
+}
+template <typename T, typename U>
+bool operator>=(const shared_ptr<T>& a, const shared_ptr<U>& b) noexcept {
+  return !(a < b);
+}
 template <typename T, typename... Args>
 shared_ptr<T> make_shared(Args&&... args) {
   // forward
