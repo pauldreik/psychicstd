@@ -148,6 +148,18 @@ public:
       : basic_ostream<Char, Traits>(&buf_) {
     open(path.c_str(), mode);
   }
+  basic_ofstream(basic_ofstream&& other) noexcept
+      : basic_ostream<Char, Traits>(&buf_),
+        buf_(static_cast<basic_filebuf<Char, Traits>&&>(other.buf_)) {
+    this->clear(other.rdstate());
+  }
+  basic_ofstream& operator=(basic_ofstream&& other) noexcept {
+    if (this != &other) {
+      buf_ = static_cast<basic_filebuf<Char, Traits>&&>(other.buf_);
+      this->clear(other.rdstate());
+    }
+    return *this;
+  }
 
   void open(const char* path, ios_base::openmode mode = ios_base::out) {
     if (!buf_.open(path, mode | ios_base::out))
@@ -247,6 +259,18 @@ public:
                          ios_base::openmode mode = ios_base::in | ios_base::out)
       : basic_istream<Char, Traits>(&buf_), basic_ostream<Char, Traits>(&buf_) {
     open(path.c_str(), mode);
+  }
+  basic_fstream(basic_fstream&& other) noexcept
+      : basic_istream<Char, Traits>(&buf_), basic_ostream<Char, Traits>(&buf_),
+        buf_(static_cast<basic_filebuf<Char, Traits>&&>(other.buf_)) {
+    this->clear(other.rdstate());
+  }
+  basic_fstream& operator=(basic_fstream&& other) noexcept {
+    if (this != &other) {
+      buf_ = static_cast<basic_filebuf<Char, Traits>&&>(other.buf_);
+      this->clear(other.rdstate());
+    }
+    return *this;
   }
 
   void open(const char* path,
