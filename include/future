@@ -57,6 +57,8 @@ template <typename T> class future {
   template <typename F, typename Arg>
   friend auto async(launch, F&&, Arg&&)
       -> future<invoke_result_t<decay_t<F>, decay_t<Arg>>>;
+  template <typename F>
+  friend auto async(launch, F&&) -> future<invoke_result_t<decay_t<F>>>;
 
 public:
   future() noexcept = default;
@@ -103,6 +105,22 @@ auto async(launch, F&& function, Arg&& arg)
                    arg = decay_t<Arg>(static_cast<Arg&&>(arg))]() mutable {
     shared->set_value(
         static_cast<decay_t<F>&&>(fn)(static_cast<decay_t<Arg>&&>(arg)));
+    shared->release();
+  };
+  thread(static_cast<decltype(callable)&&>(callable)).detach();
+  return result_future;
+}
+
+template <typename F>
+auto async(launch, F&& function) -> future<invoke_result_t<decay_t<F>>> {
+  using result = invoke_result_t<decay_t<F>>;
+  using state = __future_detail::__state<result>;
+  auto* shared = new state;
+  future<result> result_future(shared);
+  shared->retain();
+  auto callable = [shared,
+                   fn = decay_t<F>(static_cast<F&&>(function))]() mutable {
+    shared->set_value(static_cast<decay_t<F>&&>(fn)());
     shared->release();
   };
   thread(static_cast<decltype(callable)&&>(callable)).detach();
