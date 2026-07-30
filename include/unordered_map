@@ -8,6 +8,7 @@
 #include <__psychicstd_iterator_next>
 #include <cstddef>
 #include <initializer_list>
+#include <tuple>
 #include <utility>
 
 namespace std {
@@ -461,18 +462,34 @@ public:
   }
   template <typename... Args>
   pair<iterator, bool> try_emplace(const Key& key, Args&&... args) {
-    auto it = find(key);
-    if (it != end())
-      return {it, false};
-    return insert(value_type(key, T(static_cast<Args&&>(args)...)));
+    size_t b = bucket(key);
+    for (Node* node = buckets_[b]; node; node = node->next)
+      if (eq_(node->kv.first, key))
+        return {{this, b, node}, false};
+    _maybe_rehash();
+    b = bucket(key);
+    Node* node = new Node(piecewise_construct, forward_as_tuple(key),
+                          forward_as_tuple(static_cast<Args&&>(args)...));
+    node->next = buckets_[b];
+    buckets_[b] = node;
+    ++size_;
+    return {{this, b, node}, true};
   }
   template <typename... Args>
   pair<iterator, bool> try_emplace(Key&& key, Args&&... args) {
-    auto it = find(key);
-    if (it != end())
-      return {it, false};
-    return insert(
-        value_type(static_cast<Key&&>(key), T(static_cast<Args&&>(args)...)));
+    size_t b = bucket(key);
+    for (Node* node = buckets_[b]; node; node = node->next)
+      if (eq_(node->kv.first, key))
+        return {{this, b, node}, false};
+    _maybe_rehash();
+    b = bucket(key);
+    Node* node =
+        new Node(piecewise_construct, forward_as_tuple(static_cast<Key&&>(key)),
+                 forward_as_tuple(static_cast<Args&&>(args)...));
+    node->next = buckets_[b];
+    buckets_[b] = node;
+    ++size_;
+    return {{this, b, node}, true};
   }
   template <typename... Args>
   iterator try_emplace(const_iterator, const Key& key, Args&&... args) {

@@ -46,7 +46,17 @@ int main() {
   psyassert(fs::path(L"wide/path").wstring() == L"wide/path");
   psyassert(fs::path(U"unicode/path").u32string() == U"unicode/path");
   psyassert(fs::path("parent/child").has_parent_path());
+  psyassert(fs::path("parent/child").has_filename());
+  psyassert(!fs::path("parent/").has_filename());
+  psyassert(fs::path("/tmp").is_absolute());
+  psyassert(fs::path("tmp").is_relative());
+  psyassert(fs::path("a//b/../c/./").lexically_normal() == fs::path("a/c/"));
   fs::path appended = "suffix";
+  appended += ".txt";
+  appended += fs::path::value_type('!');
+  appended.append("child");
+  psyassert(appended == fs::path("suffix.txt!/child"));
+  appended = "suffix";
   appended += ".txt";
   psyassert(appended == fs::path("suffix.txt"));
   psyassert(fs::path("native").native() == "native");
@@ -63,6 +73,7 @@ int main() {
   }
   fs::path existing(tmp_name);
   psyassert(fs::exists(existing));
+  psyassert(fs::equivalent(existing, existing));
   psyassert(fs::is_regular_file(existing));
   psyassert(!fs::is_directory(existing));
   psyassert(fs::file_size(existing) == 2);
@@ -96,6 +107,7 @@ int main() {
   std::error_code ec;
   fs::path cwd = fs::current_path(ec);
   psyassert(!ec && !cwd.empty());
+  psyassert(fs::space(cwd).capacity >= fs::space(cwd).available);
   fs::current_path(cwd, ec);
   psyassert(!ec);
 
@@ -133,6 +145,22 @@ int main() {
   psyassert(!fs::copy_file(source_file, copied_file, ec));
   psyassert(ec);
   ec = {};
+  {
+    std::ofstream out(copied_file);
+    out << "old";
+  }
+  psyassert(fs::copy_file(source_file, copied_file,
+                          fs::copy_options::overwrite_existing));
+  psyassert(fs::file_size(copied_file) == 7);
+  fs::permissions(copied_file, fs::perms::owner_read | fs::perms::owner_write,
+                  fs::perm_options::replace, ec);
+  psyassert(!ec);
+  psyassert((fs::status(copied_file).permissions() & fs::perms::owner_write) !=
+            fs::perms::none);
+  psyassert(!fs::copy_file(source_file, copied_file,
+                           fs::copy_options::skip_existing));
+  psyassert(((fs::perms::owner_read | fs::perms::owner_write) &
+             fs::perms::owner_write) != fs::perms::none);
   auto write_time = fs::last_write_time(copied_file, ec);
   psyassert(!ec);
   (void)write_time;
@@ -172,6 +200,9 @@ int main() {
   psyassert(!ec && fs::exists(renamed_file, ec));
   psyassert(!ec);
   psyassert(!fs::absolute(renamed_file, ec).empty());
+  psyassert(!ec);
+  psyassert(!fs::absolute(renamed_file).empty());
+  psyassert(!fs::weakly_canonical(renamed_file, ec).empty());
   psyassert(!ec);
 
   psyassert(fs::remove(source_file, ec));

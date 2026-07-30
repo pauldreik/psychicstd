@@ -73,6 +73,9 @@ int main() {
   psyassert(std::get<0>(t) == 1);
   std::get<0>(t) = 2;
   psyassert(std::get<0>(t) == 2);
+  psyassert((std::tuple(1, 2) <=> std::tuple(1, 3)) < 0);
+  psyassert((std::tuple(1, 3) <=> std::tuple(1, 2)) > 0);
+  psyassert((std::tuple(1, 2) <=> std::tuple(1L, 2L)) == 0);
 
   std::pair<int, float> pair{3, 4.5f};
   std::tuple<double, double> from_pair = pair;

@@ -19,6 +19,17 @@ public:
   ~basic_filebuf() { close(); }
   basic_filebuf(const basic_filebuf&) = delete;
   basic_filebuf& operator=(const basic_filebuf&) = delete;
+  basic_filebuf(basic_filebuf&& other) noexcept : fp_(other.fp_) {
+    other.fp_ = nullptr;
+  }
+  basic_filebuf& operator=(basic_filebuf&& other) noexcept {
+    if (this != &other) {
+      close();
+      fp_ = other.fp_;
+      other.fp_ = nullptr;
+    }
+    return *this;
+  }
 
   bool is_open() const noexcept { return fp_ != nullptr; }
 
@@ -174,6 +185,18 @@ public:
                           ios_base::openmode mode = ios_base::in)
       : basic_istream<Char, Traits>(&buf_) {
     open(path.c_str(), mode);
+  }
+  basic_ifstream(basic_ifstream&& other) noexcept
+      : basic_istream<Char, Traits>(&buf_),
+        buf_(static_cast<basic_filebuf<Char, Traits>&&>(other.buf_)) {
+    this->clear(other.rdstate());
+  }
+  basic_ifstream& operator=(basic_ifstream&& other) noexcept {
+    if (this != &other) {
+      buf_ = static_cast<basic_filebuf<Char, Traits>&&>(other.buf_);
+      this->clear(other.rdstate());
+    }
+    return *this;
   }
 
   void open(const char* path, ios_base::openmode mode = ios_base::in) {

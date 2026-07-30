@@ -43,6 +43,10 @@ int main() {
   psyassert(allocated == "range");
 
   std::string s = "hello";
+  psyassert(s.starts_with('h'));
+  psyassert(s.starts_with("he"));
+  psyassert(s.ends_with('o'));
+  psyassert(s.ends_with("lo"));
   psyassert(std::string().compare(0, 4, "test") < 0);
   psyassert(std::string("test").compare(0, 4, "test") == 0);
   psyassert(s.at(1) == 'e');

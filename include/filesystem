@@ -13,6 +13,9 @@ class path {
   using __u8str = std::u8string;
 
 public:
+  using value_type = char;
+  using string_type = std::string;
+
   path() = default;
   path(const char* s) : path_(s) {}
   path(const __str& s) : path_(s) {}
@@ -76,7 +79,13 @@ public:
   bool has_parent_path() const noexcept {
     return path_.find_last_of('/') != __str::npos;
   }
+  bool has_filename() const noexcept { return !filename().empty(); }
+  bool is_absolute() const noexcept {
+    return !path_.empty() && path_.front() == '/';
+  }
+  bool is_relative() const noexcept { return !is_absolute(); }
 
+  path lexically_normal() const;
   path lexically_relative(const path& base) const;
   path& replace_extension(const path& replacement = path());
 
@@ -93,6 +102,11 @@ public:
     path_ += p.path_;
     return *this;
   }
+  path& operator+=(value_type value) {
+    path_ += value;
+    return *this;
+  }
+  path& append(const path& p) { return *this /= p; }
 
   friend path operator/(path lhs, const path& rhs) {
     lhs /= rhs;
@@ -121,6 +135,57 @@ enum class directory_options : unsigned char {
   skip_permission_denied = 2,
 };
 
+enum class copy_options : unsigned char {
+  none = 0,
+  skip_existing = 1,
+  overwrite_existing = 2,
+  update_existing = 4,
+  recursive = 8,
+  copy_symlinks = 16,
+  skip_symlinks = 32,
+  directories_only = 64,
+  create_symlinks = 128,
+};
+
+enum class perms : unsigned {
+  none = 0,
+  owner_read = 0400,
+  owner_write = 0200,
+  owner_exec = 0100,
+  owner_all = 0700,
+  group_read = 0040,
+  group_write = 0020,
+  group_exec = 0010,
+  group_all = 0070,
+  others_read = 0004,
+  others_write = 0002,
+  others_exec = 0001,
+  others_all = 0007,
+  all = 0777,
+  set_uid = 04000,
+  set_gid = 02000,
+  sticky_bit = 01000,
+  mask = 07777,
+  unknown = 0xffff,
+};
+
+enum class perm_options : unsigned char {
+  replace = 1,
+  add = 2,
+  remove = 4,
+  nofollow = 8,
+};
+
+constexpr perms operator|(perms lhs, perms rhs) noexcept {
+  return static_cast<perms>(static_cast<unsigned>(lhs) |
+                            static_cast<unsigned>(rhs));
+}
+
+constexpr perms operator&(perms lhs, perms rhs) noexcept {
+  return static_cast<perms>(static_cast<unsigned>(lhs) &
+                            static_cast<unsigned>(rhs));
+}
+
 constexpr directory_options operator|(directory_options lhs,
                                       directory_options rhs) noexcept {
   return static_cast<directory_options>(static_cast<unsigned char>(lhs) |
@@ -134,6 +199,7 @@ public:
       : path_(static_cast<filesystem::path&&>(p)) {}
 
   const filesystem::path& path() const noexcept { return path_; }
+  bool is_regular_file() const noexcept;
 
 private:
   filesystem::path path_;
@@ -235,13 +301,37 @@ public:
   const path& path1() const noexcept { return path1_; }
 };
 
+class file_status {
+public:
+  file_status() noexcept = default;
+  explicit file_status(filesystem::perms permissions) noexcept
+      : permissions_(permissions) {}
+  filesystem::perms permissions() const noexcept { return permissions_; }
+
+private:
+  filesystem::perms permissions_ = filesystem::perms::unknown;
+};
+
+struct space_info {
+  uintmax_t capacity;
+  uintmax_t free;
+  uintmax_t available;
+};
+
 bool exists(const path&) noexcept;
 bool exists(const path&, error_code&) noexcept;
 bool is_directory(const path&) noexcept;
 bool is_directory(const path&, error_code&) noexcept;
 bool is_regular_file(const path&) noexcept;
 bool is_regular_file(const path&, error_code&) noexcept;
+inline bool is_regular_file(const directory_entry& entry) noexcept {
+  return entry.is_regular_file();
+}
 bool is_symlink(const path&, error_code&) noexcept;
+bool equivalent(const path&, const path&);
+bool equivalent(const path&, const path&, error_code&) noexcept;
+file_status status(const path&);
+space_info space(const path&);
 uintmax_t file_size(const path&);
 uintmax_t file_size(const path&, error_code&) noexcept;
 
@@ -251,11 +341,17 @@ path temp_directory_path(error_code&);
 path current_path(error_code&);
 void current_path(const path&, error_code&) noexcept;
 path absolute(const path&, error_code&);
+path absolute(const path&);
+path weakly_canonical(const path&, error_code&);
 file_time_type last_write_time(const path&, error_code&) noexcept;
 bool remove(const path&, error_code&) noexcept;
+bool remove(const path&);
 bool copy_file(const path&, const path&, error_code&);
+bool copy_file(const path&, const path&, copy_options);
 bool create_directory(const path&, error_code&) noexcept;
 bool create_directories(const path&, error_code&);
+bool create_directories(const path&);
+void permissions(const path&, perms, perm_options, error_code&) noexcept;
 void rename(const path&, const path&, error_code&) noexcept;
 
 } // namespace filesystem

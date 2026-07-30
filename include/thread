@@ -1,4 +1,5 @@
 #pragma once
+#include <__psychicstd_hash>
 #include <__psychicstd_invoke>
 #include <chrono>
 #include <compare>
@@ -199,6 +200,11 @@ inline auto operator<=>(thread::id a, thread::id b) noexcept {
          : b.operator<(a) ? strong_ordering::greater
                           : strong_ordering::equal;
 }
+template <> struct hash<thread::id> {
+  size_t operator()(thread::id value) const noexcept {
+    return hash<unsigned long>{}(value._value());
+  }
+};
 template <typename Char, typename Traits>
 basic_ostream<Char, Traits>& operator<<(basic_ostream<Char, Traits>& os,
                                         thread::id value) {

@@ -33,6 +33,7 @@ int main() {
   for (auto& future : futures)
     total += future.get();
   psyassert(total == 10);
+  psyassert(std::async(std::launch::async, [] { return 42; }).get() == 42);
 
   bool destroyed = false;
   {

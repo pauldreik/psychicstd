@@ -191,4 +191,50 @@ bool regex_match(const char* subject, const regex& expression) {
   return regex_match(string(subject), expression);
 }
 
+string regex_replace(const string& subject, const regex& expression,
+                     const string& replacement) {
+  if (!expression.valid())
+    return subject;
+
+  string result;
+  size_t offset = 0;
+  static constexpr size_t match_count = 10;
+  ::regmatch_t matches[match_count];
+  while (offset <= subject.size() &&
+         ::regexec(&expression.native(), subject.c_str() + offset, match_count,
+                   matches, offset ? REG_NOTBOL : 0) == 0) {
+    const size_t match_begin = offset + matches[0].rm_so;
+    const size_t match_end = offset + matches[0].rm_eo;
+    result.append(subject.data() + offset, match_begin - offset);
+    for (size_t i = 0; i < replacement.size(); ++i) {
+      if (replacement[i] != '$' || i + 1 == replacement.size()) {
+        result.push_back(replacement[i]);
+        continue;
+      }
+      const char marker = replacement[++i];
+      if (marker == '$') {
+        result.push_back('$');
+      } else if (marker == '&') {
+        result.append(subject.data() + match_begin, match_end - match_begin);
+      } else if (marker >= '0' && marker <= '9' &&
+                 matches[marker - '0'].rm_so >= 0) {
+        const auto& match = matches[marker - '0'];
+        result.append(subject.data() + offset + match.rm_so,
+                      match.rm_eo - match.rm_so);
+      } else {
+        result.push_back('$');
+        result.push_back(marker);
+      }
+    }
+    offset = match_end;
+    if (matches[0].rm_so == matches[0].rm_eo) {
+      if (offset == subject.size())
+        break;
+      result.push_back(subject[offset++]);
+    }
+  }
+  result.append(subject.data() + offset, subject.size() - offset);
+  return result;
+}
+
 } // namespace std

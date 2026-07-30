@@ -18,6 +18,12 @@ int main() {
   io.read(text, 11);
   psyassert(text == std::string("hello world"));
 
+  std::ifstream moved;
+  moved = std::ifstream("/tmp/psy_fstream_test.txt");
+  char first{};
+  moved.get(first);
+  psyassert(first == 'h');
+
   const char* seek_path = "/tmp/psy_fstream_seek_test.txt";
   std::remove(seek_path);
   std::filebuf seek;

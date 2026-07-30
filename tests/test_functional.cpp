@@ -21,6 +21,8 @@ struct conflicting_wrapper {
   member_target& get() const { return *returned; }
 };
 
+enum class hashable_enum : unsigned { value = 42 };
+
 int main() {
   psyassert(std::divides<>{}(8.0, 2.0) == 4.0);
   psyassert(std::negate<>{}(3) == -3);
@@ -33,6 +35,8 @@ int main() {
 
   auto h = std::hash<const char*>{};
   psyassert(h("hello") != 0);
+  psyassert(std::hash<hashable_enum>{}(hashable_enum::value) ==
+            std::hash<unsigned>{}(42));
 
   std::function<int()> first = [] { return 1; };
   std::function<int()> second = [] { return 2; };

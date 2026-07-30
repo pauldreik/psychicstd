@@ -18,6 +18,8 @@ int main() {
   psyassert(s.bucket_count() >= 100);
   s.insert(42);
   psyassert(s.count(42) == 1);
+  psyassert(s.contains(42));
+  psyassert(!s.contains(41));
 
   std::unordered_multiset<int> a{1, 1, 2};
   std::unordered_multiset<int> b{2, 1, 1};

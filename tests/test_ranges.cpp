@@ -25,6 +25,11 @@ int main() {
   psyassert(*std::ranges::begin(v) == 1);
   psyassert(std::ranges::count(v, 2) == 1);
   psyassert(std::ranges::count(v.begin(), v.end(), 4) == 0);
+  psyassert(std::ranges::all_of(v, [](int value) { return value > 0; }));
+  std::ranges::subrange tail(v.begin() + 1, v.end());
+  psyassert(*tail.begin() == 2);
+  std::ranges::subrange whole(v);
+  psyassert(*whole.begin() == 1);
 
   int a = 4;
   int b = 5;

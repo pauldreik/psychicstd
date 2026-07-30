@@ -42,6 +42,17 @@ int main() {
   std::set<int> s;
   s.insert(42);
   psyassert(s.count(42) == 1);
+  int constructor_values[] = {3, 1, 2};
+  std::set<int, std::greater<int>> constructed(
+      constructor_values, constructor_values + 3, std::greater<int>{});
+  psyassert(*constructed.begin() == 3);
+  std::set<int> merge_destination{1, 2};
+  std::set<int> merge_source{2, 3};
+  merge_destination.merge(merge_source);
+  psyassert(merge_destination.contains(3));
+  psyassert(merge_source.size() == 1 && merge_source.contains(2));
+  merge_destination.merge(std::set<int>{4});
+  psyassert(merge_destination.contains(4));
 
   std::multiset<int, std::greater<int>> multiple(std::greater<int>{});
   int values[] = {1, 3, 2, 3};

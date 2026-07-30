@@ -16,6 +16,10 @@ using std::monostate;
 using std::variant;
 using std::visit;
 
+struct derived_variant : variant<int, std::string> {
+  using variant::variant;
+};
+
 int main() {
   constexpr variant<monostate, char> compile_time_variant;
   static_assert(compile_time_variant.index() == 0);
@@ -60,6 +64,16 @@ int main() {
   variant<int, double> num = 2;
   int r = visit([](auto x) { return (int)(x * 2); }, num);
   psyassert(r == 4);
+
+  derived_variant derived = std::string("derived");
+  psyassert(visit(
+                [](const auto& value) {
+                  if constexpr (requires { value.size(); })
+                    return value.size();
+                  else
+                    return std::size_t{0};
+                },
+                derived) == 7);
 
   variant<int, std::string> c1 = 1;
   variant<int, std::string> c2 = 1;

@@ -43,6 +43,7 @@ int main() {
   std::ostringstream out;
   out << std::this_thread::get_id();
   psyassert(!out.str().empty());
+  (void)std::hash<std::thread::id>{}(std::this_thread::get_id());
 
   std::stop_source source;
   std::stop_token token = source.get_token();

@@ -32,6 +32,18 @@ public:
   swap(map& other) noexcept(noexcept(declval<base&>().swap(declval<base&>()))) {
     base::swap(other);
   }
+  void merge(map& source) {
+    for (auto current = source.begin(); current != source.end();) {
+      auto next = current;
+      ++next;
+      if (!this->contains(current->first)) {
+        this->try_emplace(current->first, static_cast<T&&>(current->second));
+        source.erase(current);
+      }
+      current = next;
+    }
+  }
+  void merge(map&& source) { merge(source); }
   friend void swap(map& a, map& b) noexcept(noexcept(a.swap(b))) { a.swap(b); }
 };
 

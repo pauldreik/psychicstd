@@ -145,5 +145,6 @@ bool regex_search(
 bool regex_match(const string&, smatch&, const regex&);
 bool regex_match(const string&, const regex&);
 bool regex_match(const char*, const regex&);
+string regex_replace(const string&, const regex&, const string&);
 
 } // namespace std

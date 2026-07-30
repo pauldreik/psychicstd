@@ -82,6 +82,13 @@ static void test_forwarding() {
   // not the variadic single-object one (cmake regression).
   auto arr = std::make_unique<char[]>(16);
   psyassert(arr[0] == 0 && arr[15] == 0);
+  psyassert(std::assume_aligned<alignof(Forwarded)>(raw) == raw);
+
+  alignas(Forwarded) unsigned char range_storage[2 * sizeof(Forwarded)];
+  auto* range = reinterpret_cast<Forwarded*>(range_storage);
+  std::construct_at(range, value);
+  std::construct_at(range + 1, value);
+  std::destroy(range, range + 2);
 }
 
 static void test_unique_ptr_equality() {

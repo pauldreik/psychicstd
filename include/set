@@ -86,6 +86,13 @@ public:
     for (; first != last; ++first)
       insert(*first);
   }
+  template <typename It>
+  set(It first, It last, const Compare& compare,
+      const Alloc& allocator = Alloc())
+      : comp_(compare), alloc_(allocator) {
+    for (; first != last; ++first)
+      insert(*first);
+  }
   set(initializer_list<Key> il) {
     for (auto& v : il)
       insert(v);
@@ -229,6 +236,18 @@ public:
     std::swap(tail_, other.tail_);
     std::swap(comp_, other.comp_);
   }
+  void merge(set& source) {
+    for (auto current = source.begin(); current != source.end();) {
+      auto next = current;
+      ++next;
+      if (!contains(*current)) {
+        insert(static_cast<Key&&>(current.node_->key));
+        source.erase(current);
+      }
+      current = next;
+    }
+  }
+  void merge(set&& source) { merge(source); }
 
   iterator find(const Key& k) const {
     auto it = lower_bound(k);

@@ -15,6 +15,13 @@ struct uses_allocator<T, Alloc, void_t<typename T::allocator_type>>
 template <typename T, typename Alloc>
 inline constexpr bool uses_allocator_v = uses_allocator<T, Alloc>::value;
 
+template <size_t Alignment, typename T>
+constexpr T* assume_aligned(T* pointer) noexcept {
+  static_assert((Alignment & (Alignment - 1)) == 0,
+                "alignment must be a power of two");
+  return static_cast<T*>(__builtin_assume_aligned(pointer, Alignment));
+}
+
 // unique_ptr (owning, non-copyable)
 template <typename T> struct default_delete {
   constexpr default_delete() noexcept = default;
