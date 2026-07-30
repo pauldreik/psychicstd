@@ -20,6 +20,19 @@ struct Forwarded {
   explicit Forwarded(int&&) : kind(2) {}
 };
 
+struct ThrowingConstruction {
+  static inline int alive;
+  static inline int copies;
+
+  ThrowingConstruction() { ++alive; }
+  ThrowingConstruction(const ThrowingConstruction&) {
+    if (++copies == 2)
+      throw 1;
+    ++alive;
+  }
+  ~ThrowingConstruction() { --alive; }
+};
+
 template <typename T> struct counting_allocator {
   using value_type = T;
   int* allocations;
@@ -188,6 +201,61 @@ static void test_const_pointer_cast() {
   *cast = 7;
   psyassert(*mutable_ptr == 7);
   psyassert(cast.use_count() == 3);
+
+}
+
+static void test_uninitialized_exception_cleanup() {
+#if defined(__cpp_exceptions)
+  {
+    ThrowingConstruction::alive = 0;
+    ThrowingConstruction::copies = 0;
+    ThrowingConstruction input[3];
+    alignas(ThrowingConstruction) unsigned char
+        storage[sizeof(ThrowingConstruction) * 3];
+    auto* output = reinterpret_cast<ThrowingConstruction*>(storage);
+    try {
+      std::uninitialized_copy_n(input, 3, output);
+      psyassert(false);
+    } catch (int) {
+    }
+    psyassert(ThrowingConstruction::alive == 3);
+    ThrowingConstruction::copies = 0;
+    alignas(ThrowingConstruction) unsigned char
+        range_storage[sizeof(ThrowingConstruction) * 3];
+    auto* range_output = reinterpret_cast<ThrowingConstruction*>(range_storage);
+    try {
+      std::uninitialized_copy(input, input + 3, range_output);
+      psyassert(false);
+    } catch (int) {
+    }
+    psyassert(ThrowingConstruction::alive == 3);
+  }
+  psyassert(ThrowingConstruction::alive == 0);
+  {
+    ThrowingConstruction::copies = 0;
+    ThrowingConstruction value;
+    alignas(ThrowingConstruction) unsigned char
+        storage[sizeof(ThrowingConstruction) * 3];
+    auto* output = reinterpret_cast<ThrowingConstruction*>(storage);
+    try {
+      std::uninitialized_fill_n(output, 3, value);
+      psyassert(false);
+    } catch (int) {
+    }
+    psyassert(ThrowingConstruction::alive == 1);
+    ThrowingConstruction::copies = 0;
+    alignas(ThrowingConstruction) unsigned char
+        range_storage[sizeof(ThrowingConstruction) * 3];
+    auto* range_output = reinterpret_cast<ThrowingConstruction*>(range_storage);
+    try {
+      std::uninitialized_fill(range_output, range_output + 3, value);
+      psyassert(false);
+    } catch (int) {
+    }
+    psyassert(ThrowingConstruction::alive == 1);
+  }
+  psyassert(ThrowingConstruction::alive == 0);
+#endif
 }
 
 struct SelfShared : std::enable_shared_from_this<SelfShared> {
@@ -369,6 +437,7 @@ int main() {
   test_smart_pointer_relations_and_output();
   test_converting_ctor_from_prvalue();
   test_const_pointer_cast();
+  test_uninitialized_exception_cleanup();
   test_enable_shared_from_this();
   test_shared_ptr_from_unique_ptr();
   test_shared_ptr_custom_deleter();

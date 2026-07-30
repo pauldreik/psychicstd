@@ -50,32 +50,67 @@ template <typename T> struct pointer_traits<T*> {
 template <typename InputIt, typename Size, typename ForwardIt>
 constexpr ForwardIt uninitialized_copy_n(InputIt first, Size count,
                                          ForwardIt result) {
-  for (; count > 0; --count, ++first, ++result)
-    construct_at(std::addressof(*result), *first);
-  return result;
+  ForwardIt current = result;
+  _PSYCHICSTD_TRY {
+    for (; count > 0; --count, ++first, ++current)
+      construct_at(std::addressof(*current), *first);
+    return current;
+  }
+  _PSYCHICSTD_CATCH(...) {
+    for (; result != current; ++result)
+      destroy_at(std::addressof(*result));
+    _PSYCHICSTD_RETHROW;
+  }
+  return current;
 }
 
 template <typename InputIt, typename ForwardIt>
 constexpr ForwardIt uninitialized_copy(InputIt first, InputIt last,
                                        ForwardIt result) {
-  for (; first != last; ++first, ++result)
-    construct_at(std::addressof(*result), *first);
-  return result;
+  ForwardIt current = result;
+  _PSYCHICSTD_TRY {
+    for (; first != last; ++first, ++current)
+      construct_at(std::addressof(*current), *first);
+    return current;
+  }
+  _PSYCHICSTD_CATCH(...) {
+    for (; result != current; ++result)
+      destroy_at(std::addressof(*result));
+    _PSYCHICSTD_RETHROW;
+  }
+  return current;
 }
 
 template <typename ForwardIt, typename Size, typename T>
 constexpr ForwardIt uninitialized_fill_n(ForwardIt first, Size count,
                                          const T& value) {
-  for (; count > 0; --count, ++first)
-    construct_at(std::addressof(*first), value);
-  return first;
+  ForwardIt current = first;
+  _PSYCHICSTD_TRY {
+    for (; count > 0; --count, ++current)
+      construct_at(std::addressof(*current), value);
+    return current;
+  }
+  _PSYCHICSTD_CATCH(...) {
+    for (; first != current; ++first)
+      destroy_at(std::addressof(*first));
+    _PSYCHICSTD_RETHROW;
+  }
+  return current;
 }
 
 template <typename ForwardIt, typename T>
 constexpr void uninitialized_fill(ForwardIt first, ForwardIt last,
                                   const T& value) {
-  for (; first != last; ++first)
-    construct_at(std::addressof(*first), value);
+  ForwardIt current = first;
+  _PSYCHICSTD_TRY {
+    for (; current != last; ++current)
+      construct_at(std::addressof(*current), value);
+  }
+  _PSYCHICSTD_CATCH(...) {
+    for (; first != current; ++first)
+      destroy_at(std::addressof(*first));
+    _PSYCHICSTD_RETHROW;
+  }
 }
 
 namespace __detail {
