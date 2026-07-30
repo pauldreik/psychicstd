@@ -493,8 +493,12 @@ public:
     o.ctrl_ = tc;
   }
 
-  bool owner_before(const shared_ptr& o) const noexcept {
-    return ctrl_ < o.ctrl_;
+  template <typename U>
+  bool owner_before(const shared_ptr<U>& o) const noexcept {
+    return less<__detail::__sp_ctrl*>{}(ctrl_, o.ctrl_);
+  }
+  template <typename U> bool owner_before(const weak_ptr<U>& o) const noexcept {
+    return less<__detail::__sp_ctrl*>{}(ctrl_, o.ctrl_);
   }
 };
 
@@ -609,6 +613,7 @@ shared_ptr<T> dynamic_pointer_cast(const shared_ptr<U>& p) noexcept {
 
 template <typename T> class weak_ptr {
   template <typename U> friend class weak_ptr;
+  template <typename U> friend class shared_ptr;
 
   T* ptr_ = nullptr;
   __detail::__sp_ctrl* ctrl_ = nullptr;
@@ -680,6 +685,14 @@ public:
       result.ctrl_ = ctrl_;
     }
     return result;
+  }
+  template <typename U>
+  bool owner_before(const shared_ptr<U>& other) const noexcept {
+    return less<__detail::__sp_ctrl*>{}(ctrl_, other.ctrl_);
+  }
+  template <typename U>
+  bool owner_before(const weak_ptr<U>& other) const noexcept {
+    return less<__detail::__sp_ctrl*>{}(ctrl_, other.ctrl_);
   }
 };
 

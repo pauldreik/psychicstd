@@ -122,6 +122,24 @@ static void test_converting_copy_ctor() {
   psyassert(b->x == 42);
 }
 
+static void test_owner_before() {
+  auto owner = std::make_shared<Derived>();
+  auto other_owner = std::make_shared<Derived>();
+  std::shared_ptr<Base> converted = owner;
+  std::weak_ptr<Derived> weak = owner;
+  std::weak_ptr<Derived> other_weak = other_owner;
+  std::weak_ptr<Base> converted_weak = converted;
+  psyassert(!owner.owner_before(converted));
+  psyassert(!converted.owner_before(weak));
+  psyassert(!weak.owner_before(converted));
+  psyassert(!weak.owner_before(converted_weak));
+  bool owner_first = owner.owner_before(other_owner);
+  psyassert(owner_first != other_owner.owner_before(owner));
+  psyassert(owner_first == weak.owner_before(other_owner));
+  psyassert(owner_first == owner.owner_before(other_weak));
+  psyassert(owner_first == weak.owner_before(other_weak));
+}
+
 static void test_converting_ctor_from_prvalue() {
   std::shared_ptr<Base> b(std::make_shared<Derived>());
   psyassert(b.use_count() == 1);
@@ -318,6 +336,7 @@ int main() {
   test_unique_ptr_equality();
   test_allocate_shared();
   test_converting_copy_ctor();
+  test_owner_before();
   test_converting_ctor_from_prvalue();
   test_const_pointer_cast();
   test_enable_shared_from_this();
