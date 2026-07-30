@@ -202,6 +202,13 @@ static void test_const_pointer_cast() {
   psyassert(*mutable_ptr == 7);
   psyassert(cast.use_count() == 3);
 
+  auto* raw = new int(9);
+  std::shared_ptr<const int> source(raw);
+  auto moved = std::const_pointer_cast<int>(
+      static_cast<std::shared_ptr<const int>&&>(source));
+  psyassert(!source);
+  psyassert(moved.get() == raw);
+  psyassert(moved.use_count() == 1);
 }
 
 static void test_uninitialized_exception_cleanup() {
