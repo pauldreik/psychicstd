@@ -63,6 +63,11 @@ int main() {
   psyassert(!std::isalnum('-', std::locale::classic()));
   psyassert(std::isspace(' ', std::locale::classic()));
   psyassert(!std::isspace('x', std::locale::classic()));
+  const auto& ctype =
+      std::use_facet<std::ctype<wchar_t>>(std::locale::classic());
+  psyassert(ctype.widen('x') == L'x');
+  psyassert(ctype.narrow(L'x', '?') == 'x');
+  psyassert(ctype.narrow(wchar_t(0x100), '?') == '?');
 
   std::locale classic;
   psyassert(std::has_facet<std::numpunct<char>>(classic));
