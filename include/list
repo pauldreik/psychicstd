@@ -8,38 +8,50 @@
 namespace std {
 
 template <typename T, typename Allocator = allocator<T>> class list {
-  struct Node {
+  struct NodeBase {
+    NodeBase* prev;
+    NodeBase* next;
+    NodeBase() : prev(this), next(this) {}
+  };
+  struct Node : NodeBase {
     T value;
-    Node* prev = nullptr;
-    Node* next = nullptr;
     template <typename... Args>
     Node(Args&&... args) : value(static_cast<Args&&>(args)...) {}
   };
 
-  Node* head_ = nullptr;
-  Node* tail_ = nullptr;
+  NodeBase sentinel_;
   size_t size_ = 0;
   Allocator alloc_{};
 
-  void link_back(Node* n) {
-    n->prev = tail_;
-    n->next = nullptr;
-    if (tail_)
-      tail_->next = n;
-    else
-      head_ = n;
-    tail_ = n;
+  static Node* node(NodeBase* n) { return static_cast<Node*>(n); }
+  static const Node* node(const NodeBase* n) {
+    return static_cast<const Node*>(n);
+  }
+  void reset() {
+    sentinel_.prev = sentinel_.next = &sentinel_;
+    size_ = 0;
+  }
+  void take_nodes(list& other) {
+    if (other.empty())
+      return;
+    sentinel_.next = other.sentinel_.next;
+    sentinel_.prev = other.sentinel_.prev;
+    sentinel_.next->prev = &sentinel_;
+    sentinel_.prev->next = &sentinel_;
+    size_ = other.size_;
+    other.reset();
+  }
+  void link_before(NodeBase* pos, NodeBase* n) {
+    n->prev = pos->prev;
+    n->next = pos;
+    pos->prev->next = n;
+    pos->prev = n;
     ++size_;
   }
-  void unlink(Node* n) {
-    if (n->prev)
-      n->prev->next = n->next;
-    else
-      head_ = n->next;
-    if (n->next)
-      n->next->prev = n->prev;
-    else
-      tail_ = n->prev;
+  void link_back(Node* n) { link_before(&sentinel_, n); }
+  void unlink(NodeBase* n) {
+    n->prev->next = n->next;
+    n->next->prev = n->prev;
     --size_;
   }
 
@@ -59,11 +71,10 @@ public:
     using difference_type = ptrdiff_t;
     using pointer = T*;
     using reference = T&;
-    Node* n;
-    Node* tail;
-    iterator(Node* n = nullptr, Node* tail = nullptr) : n(n), tail(tail) {}
-    T& operator*() const { return n->value; }
-    T* operator->() const { return &n->value; }
+    NodeBase* n;
+    explicit iterator(NodeBase* n = nullptr) : n(n) {}
+    T& operator*() const { return node(n)->value; }
+    T* operator->() const { return &node(n)->value; }
     iterator& operator++() {
       n = n->next;
       return *this;
@@ -74,7 +85,7 @@ public:
       return t;
     }
     iterator& operator--() {
-      n = n ? n->prev : tail;
+      n = n->prev;
       return *this;
     }
     bool operator==(const iterator& o) const { return n == o.n; }
@@ -86,13 +97,11 @@ public:
     using difference_type = ptrdiff_t;
     using pointer = const T*;
     using reference = const T&;
-    const Node* n;
-    const Node* tail;
-    const_iterator(const Node* n = nullptr, const Node* tail = nullptr)
-        : n(n), tail(tail) {}
-    const_iterator(iterator it) : n(it.n), tail(it.tail) {}
-    const T& operator*() const { return n->value; }
-    const T* operator->() const { return &n->value; }
+    const NodeBase* n;
+    explicit const_iterator(const NodeBase* n = nullptr) : n(n) {}
+    const_iterator(iterator it) : n(it.n) {}
+    const T& operator*() const { return node(n)->value; }
+    const T* operator->() const { return &node(n)->value; }
     const_iterator& operator++() {
       n = n->next;
       return *this;
@@ -103,7 +112,7 @@ public:
       return t;
     }
     const_iterator& operator--() {
-      n = n ? n->prev : tail;
+      n = n->prev;
       return *this;
     }
     const_iterator operator--(int) {
@@ -140,11 +149,7 @@ public:
     for (const auto& v : o)
       push_back(v);
   }
-  list(list&& o) noexcept
-      : head_(o.head_), tail_(o.tail_), size_(o.size_), alloc_(o.alloc_) {
-    o.head_ = o.tail_ = nullptr;
-    o.size_ = 0;
-  }
+  list(list&& o) noexcept : alloc_(o.alloc_) { take_nodes(o); }
   ~list() { clear(); }
   list& operator=(const list& o) {
     if (this != &o) {
@@ -156,20 +161,18 @@ public:
     return *this;
   }
   list& operator=(list&& o) noexcept {
-    clear();
-    head_ = o.head_;
-    tail_ = o.tail_;
-    size_ = o.size_;
-    alloc_ = o.alloc_;
-    o.head_ = o.tail_ = nullptr;
-    o.size_ = 0;
+    if (this != &o) {
+      clear();
+      alloc_ = o.alloc_;
+      take_nodes(o);
+    }
     return *this;
   }
 
-  iterator begin() { return {head_, tail_}; }
-  iterator end() { return {nullptr, tail_}; }
-  const_iterator begin() const { return {head_, tail_}; }
-  const_iterator end() const { return {nullptr, tail_}; }
+  iterator begin() { return iterator(sentinel_.next); }
+  iterator end() { return iterator(&sentinel_); }
+  const_iterator begin() const { return const_iterator(sentinel_.next); }
+  const_iterator end() const { return const_iterator(&sentinel_); }
   const_iterator cbegin() const { return begin(); }
   const_iterator cend() const { return end(); }
 
@@ -188,141 +191,87 @@ public:
   bool empty() const noexcept { return size_ == 0; }
   allocator_type get_allocator() const noexcept { return alloc_; }
 
-  T& front() { return head_->value; }
-  const T& front() const { return head_->value; }
-  T& back() { return tail_->value; }
-  const T& back() const { return tail_->value; }
+  T& front() { return node(sentinel_.next)->value; }
+  const T& front() const { return node(sentinel_.next)->value; }
+  T& back() { return node(sentinel_.prev)->value; }
+  const T& back() const { return node(sentinel_.prev)->value; }
 
   void push_back(const T& v) { link_back(new Node(v)); }
   void push_back(T&& v) { link_back(new Node(static_cast<T&&>(v))); }
   void push_front(const T& v) {
     Node* n = new Node(v);
-    n->next = head_;
-    n->prev = nullptr;
-    if (head_)
-      head_->prev = n;
-    else
-      tail_ = n;
-    head_ = n;
-    ++size_;
+    link_before(sentinel_.next, n);
   }
   void pop_back() {
-    Node* n = tail_;
+    Node* n = node(sentinel_.prev);
     unlink(n);
     delete n;
   }
   void pop_front() {
-    Node* n = head_;
+    Node* n = node(sentinel_.next);
     unlink(n);
     delete n;
   }
   template <typename... Args> iterator emplace_back(Args&&... args) {
     Node* n = new Node(static_cast<Args&&>(args)...);
     link_back(n);
-    return {n, tail_};
+    return iterator(n);
   }
   template <typename... Args> iterator emplace_front(Args&&... args) {
     Node* n = new Node(static_cast<Args&&>(args)...);
-    n->next = head_;
-    n->prev = nullptr;
-    if (head_)
-      head_->prev = n;
-    else
-      tail_ = n;
-    head_ = n;
-    ++size_;
-    return {n, tail_};
+    link_before(sentinel_.next, n);
+    return iterator(n);
   }
   template <typename... Args>
   iterator emplace(const_iterator pos, Args&&... args) {
     Node* n = new Node(static_cast<Args&&>(args)...);
-    Node* cur = const_cast<Node*>(pos.n);
-    if (!cur) {
-      link_back(n);
-      return {n, tail_};
-    }
-    n->next = cur;
-    n->prev = cur->prev;
-    if (cur->prev)
-      cur->prev->next = n;
-    else
-      head_ = n;
-    cur->prev = n;
-    ++size_;
-    return {n, tail_};
+    link_before(const_cast<NodeBase*>(pos.n), n);
+    return iterator(n);
   }
   void clear() {
-    Node* n = head_;
-    while (n) {
-      Node* next = n->next;
-      delete n;
+    NodeBase* n = sentinel_.next;
+    while (n != &sentinel_) {
+      NodeBase* next = n->next;
+      delete node(n);
       n = next;
     }
-    head_ = tail_ = nullptr;
-    size_ = 0;
+    reset();
   }
   iterator erase(iterator it) {
-    Node* n = it.n;
-    Node* next = n->next;
+    NodeBase* n = it.n;
+    NodeBase* next = n->next;
     unlink(n);
-    delete n;
-    return {next, tail_};
+    delete node(n);
+    return iterator(next);
   }
   iterator erase(const_iterator it) {
-    Node* n = const_cast<Node*>(it.n);
-    Node* next = n->next;
+    NodeBase* n = const_cast<NodeBase*>(it.n);
+    NodeBase* next = n->next;
     unlink(n);
-    delete n;
-    return {next, tail_};
+    delete node(n);
+    return iterator(next);
   }
   iterator erase(const_iterator first, const_iterator last) {
     while (first != last)
       first = erase(first);
-    return iterator{const_cast<Node*>(last.n), tail_};
+    return iterator(const_cast<NodeBase*>(last.n));
   }
   iterator insert(const_iterator pos, const T& v) {
-    return insert(iterator{const_cast<Node*>(pos.n)}, v);
+    return insert(iterator(const_cast<NodeBase*>(pos.n)), v);
   }
   iterator insert(iterator pos, const T& v) {
-    if (!pos.n) {
-      push_back(v);
-      return {tail_, tail_};
-    }
     Node* n = new Node(v);
-    Node* cur = pos.n;
-    n->next = cur;
-    n->prev = cur->prev;
-    if (cur->prev)
-      cur->prev->next = n;
-    else
-      head_ = n;
-    cur->prev = n;
-    ++size_;
-    return {n, tail_};
+    link_before(pos.n, n);
+    return iterator(n);
   }
   template <typename It>
   iterator insert(const_iterator pos, It first, It last) {
-    Node* cur = const_cast<Node*>(pos.n);
+    NodeBase* cur = const_cast<NodeBase*>(pos.n);
     for (; first != last; ++first) {
       Node* n = new Node(*first);
-      n->next = cur;
-      n->prev = cur ? cur->prev : tail_;
-      if (cur) {
-        if (cur->prev)
-          cur->prev->next = n;
-        else
-          head_ = n;
-        cur->prev = n;
-      } else {
-        if (tail_)
-          tail_->next = n;
-        else
-          head_ = n;
-        tail_ = n;
-      }
-      ++size_;
+      link_before(cur, n);
     }
-    return {pos.n ? const_cast<Node*>(pos.n) : tail_, tail_};
+    return iterator(pos.n == &sentinel_ ? sentinel_.prev : cur);
   }
   void sort() {
     sort([](const T& a, const T& b) { return a < b; });
@@ -331,45 +280,39 @@ public:
     if (size_ <= 1)
       return;
     for (size_type width = 1; width < size_; width *= 2) {
-      Node* left = head_;
-      while (left) {
-        Node* right = left;
+      NodeBase* left = sentinel_.next;
+      while (left != &sentinel_) {
+        NodeBase* right = left;
         size_type left_count = 0;
-        while (left_count < width && right) {
+        while (left_count < width && right != &sentinel_) {
           right = right->next;
           ++left_count;
         }
-        if (!right)
+        if (right == &sentinel_)
           break;
 
-        Node* after = right;
+        NodeBase* after = right;
         size_type right_count = 0;
-        while (right_count < width && after) {
+        while (right_count < width && after != &sentinel_) {
           after = after->next;
           ++right_count;
         }
 
-        Node* a = left;
-        Node* b = right;
+        NodeBase* a = left;
+        NodeBase* b = right;
         while (left_count && right_count) {
-          if (!comp(b->value, a->value)) {
+          if (!comp(node(b)->value, node(a)->value)) {
             a = a->next;
             --left_count;
             continue;
           }
 
-          Node* next = b->next;
+          NodeBase* next = b->next;
           b->prev->next = next;
-          if (next)
-            next->prev = b->prev;
-          else
-            tail_ = b->prev;
+          next->prev = b->prev;
           b->prev = a->prev;
           b->next = a;
-          if (a->prev)
-            a->prev->next = b;
-          else
-            head_ = b;
+          a->prev->next = b;
           a->prev = b;
           b = next;
           --right_count;
@@ -381,24 +324,24 @@ public:
     }
   }
   void remove(const T& val) {
-    Node* n = head_;
-    while (n) {
-      Node* next = n->next;
-      if (n->value == val) {
+    NodeBase* n = sentinel_.next;
+    while (n != &sentinel_) {
+      NodeBase* next = n->next;
+      if (node(n)->value == val) {
         unlink(n);
-        delete n;
+        delete node(n);
       }
       n = next;
     }
   }
   template <typename Pred> size_type remove_if(Pred pred) {
     size_type removed = 0;
-    Node* n = head_;
-    while (n) {
-      Node* next = n->next;
-      if (pred(n->value)) {
+    NodeBase* n = sentinel_.next;
+    while (n != &sentinel_) {
+      NodeBase* next = n->next;
+      if (pred(node(n)->value)) {
         unlink(n);
-        delete n;
+        delete node(n);
         ++removed;
       }
       n = next;
@@ -406,94 +349,63 @@ public:
     return removed;
   }
   void unique() {
-    Node* n = head_;
-    while (n && n->next) {
-      if (n->value == n->next->value) {
-        Node* dup = n->next;
+    NodeBase* n = sentinel_.next;
+    while (n->next != &sentinel_) {
+      if (node(n)->value == node(n->next)->value) {
+        NodeBase* dup = n->next;
         unlink(dup);
-        delete dup;
+        delete node(dup);
       } else {
         n = n->next;
       }
     }
   }
   void splice(const_iterator pos, list& other) {
-    if (other.size_ == 0)
+    if (this == &other || other.empty())
       return;
-    Node* at = const_cast<Node*>(pos.n);
-    Node* first = other.head_;
-    Node* last = other.tail_;
-    if (at) {
-      first->prev = at->prev;
-      last->next = at;
-      if (at->prev)
-        at->prev->next = first;
-      else
-        head_ = first;
-      at->prev = last;
-    } else {
-      first->prev = tail_;
-      if (tail_)
-        tail_->next = first;
-      else
-        head_ = first;
-      tail_ = last;
-    }
-    size_ += other.size_;
-    other.head_ = other.tail_ = nullptr;
-    other.size_ = 0;
+    NodeBase* at = const_cast<NodeBase*>(pos.n);
+    NodeBase* first = other.sentinel_.next;
+    NodeBase* last = other.sentinel_.prev;
+    size_type count = other.size_;
+    other.reset();
+    first->prev = at->prev;
+    at->prev->next = first;
+    last->next = at;
+    at->prev = last;
+    size_ += count;
   }
   void splice(const_iterator pos, list& other, const_iterator it) {
     if (it == other.end())
       return;
-    const_iterator next_it(it.n->next, other.tail_);
+    const_iterator next_it(it.n->next);
+    if (this == &other && (pos == it || pos == next_it))
+      return;
     splice(pos, other, it, next_it);
   }
   void splice(const_iterator pos, list& other, const_iterator first,
               const_iterator last) {
     if (first == last)
       return;
-    Node* f = const_cast<Node*>(first.n);
-    Node* l = const_cast<Node*>(last.n);
+    NodeBase* f = const_cast<NodeBase*>(first.n);
+    NodeBase* l = const_cast<NodeBase*>(last.n);
     // Detach range [f, l) from other
-    Node* prev = f->prev;
-    Node* before_last = l ? l->prev : other.tail_;
-    if (prev)
-      prev->next = l;
-    else
-      other.head_ = l;
-    if (l)
-      l->prev = prev;
-    else
-      other.tail_ = prev;
+    NodeBase* prev = f->prev;
+    NodeBase* before_last = l->prev;
+    prev->next = l;
+    l->prev = prev;
     // Count and adjust other size
     size_t n = 0;
-    for (Node* cur = f; cur != l; cur = cur->next)
+    for (NodeBase* cur = f; cur != l; cur = cur->next)
       ++n;
     if (n > other.size_)
       n = other.size_;
     other.size_ -= n;
     // Insert into this list before pos
-    Node* at = const_cast<Node*>(pos.n);
-    if (at) {
-      if (at->prev)
-        at->prev->next = f;
-      else
-        head_ = f;
-      f->prev = at->prev;
-      if (before_last)
-        before_last->next = at;
-      at->prev = before_last;
-    } else {
-      if (tail_) {
-        tail_->next = f;
-        f->prev = tail_;
-      } else
-        head_ = f;
-      tail_ = before_last ? before_last : f;
-      if (tail_)
-        tail_->next = nullptr;
-    }
+    NodeBase* at = const_cast<NodeBase*>(pos.n);
+    at->prev->next = f;
+    f->prev = at->prev;
+    before_last->next = at;
+    at->prev = before_last;
     size_ += n;
   }
 };

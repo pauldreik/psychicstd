@@ -1,5 +1,10 @@
 #include "psyassert.h"
 #include <list>
+#include <utility>
+
+#ifdef PSYCHICSTD_TEST_PSYCHICSTD
+static_assert(sizeof(std::list<int>::iterator) == sizeof(void*));
+#endif
 
 struct sortable_item {
   int key;
@@ -42,6 +47,17 @@ int main() {
   const std::list<int, stateful_allocator<int>> tl(ta);
   psyassert(tl.get_allocator() == ta);
 
+  std::list<int> stable_end;
+  auto old_end = stable_end.end();
+  stable_end.push_back(7);
+  psyassert(*--old_end == 7);
+
+  std::list<int> recycled = {8};
+  std::list<int> reactor_queue;
+  auto queue_end = reactor_queue.end();
+  reactor_queue.splice(queue_end, recycled, recycled.begin());
+  psyassert(*--queue_end == 8);
+
   std::list<int> source = {4, 5};
   l.splice(l.end(), source);
   psyassert(source.empty());
@@ -57,6 +73,61 @@ int main() {
   psyassert((middle == std::list<int>{1, 2, 3, 4}));
   psyassert(&*++middle.begin() == inserted_first);
   psyassert(&*std::next(middle.begin(), 2) == inserted_last);
+
+  std::list<int> splice_source = {2, 3};
+  std::list<int> splice_destination = {1, 4};
+  auto transferred = splice_source.begin();
+  auto insertion_point = ++splice_destination.begin();
+  splice_destination.splice(insertion_point, splice_source, transferred);
+  psyassert(*transferred == 2);
+  auto before_transferred = transferred;
+  psyassert(*--before_transferred == 1);
+  auto after_transferred = transferred;
+  psyassert(++after_transferred == insertion_point);
+  psyassert(*after_transferred == 4);
+
+  std::list<int> range_source = {2, 3, 6};
+  std::list<int> range_destination = {1, 4, 5};
+  auto range_first = range_source.begin();
+  auto range_last = ++range_source.begin();
+  auto range_end = std::next(range_source.begin(), 2);
+  auto range_insertion_point = ++range_destination.begin();
+  range_destination.splice(range_insertion_point, range_source, range_first,
+                           range_end);
+  auto before_range = range_first;
+  psyassert(*--before_range == 1);
+  psyassert(*range_first == 2);
+  psyassert(*range_last == 3);
+  psyassert(++range_last == range_insertion_point);
+  psyassert(*range_last == 4);
+  psyassert((range_destination == std::list<int>{1, 2, 3, 4, 5}));
+  psyassert((range_source == std::list<int>{6}));
+
+  std::list<int> whole_source = {5, 6};
+  std::list<int> whole_destination = {4, 7};
+  auto whole_first = whole_source.begin();
+  auto whole_last = ++whole_source.begin();
+  whole_destination.splice(++whole_destination.begin(), whole_source);
+  auto before_whole = whole_first;
+  psyassert(*--before_whole == 4);
+  psyassert(*whole_first == 5);
+  psyassert(*whole_last == 6);
+  psyassert(*++whole_last == 7);
+
+  std::list<int> move_source = {8, 9};
+  auto moved_iterator = ++move_source.begin();
+  std::list<int> move_destination(std::move(move_source));
+  psyassert(*moved_iterator == 9);
+  psyassert(++moved_iterator == move_destination.end());
+
+  std::list<int> assigned_source = {10, 11};
+  auto assigned_iterator = assigned_source.begin();
+  std::list<int> assigned_destination = {12};
+  assigned_destination = std::move(assigned_source);
+  psyassert(*assigned_iterator == 10);
+  psyassert(++assigned_iterator != assigned_destination.end());
+  psyassert(*assigned_iterator == 11);
+  psyassert(++assigned_iterator == assigned_destination.end());
 
   auto reverse = l.rbegin();
   psyassert(*reverse++ == 5);
