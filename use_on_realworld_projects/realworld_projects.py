@@ -2297,7 +2297,7 @@ int main() {
 # --- boost asio ----------------------------------------------------------
 
 
-def _boost_asio() -> Project:
+def _boost_asio(full: bool) -> Project:
     version = "1.91.0"
     url = f"https://archives.boost.io/release/{version}/source/boost_1_91_0.tar.gz"
     checksum = "5734305f40a76c30f951c9abd409a45a2a19fb546efe4162119250bbe4d3a463"
@@ -2310,7 +2310,8 @@ def _boost_asio() -> Project:
         _fetch(url, tarball, checksum)
 
         with tempfile.TemporaryDirectory(
-            prefix="rw-boost-asio-", ignore_cleanup_errors=True
+            prefix="rw-boost-asio-full-" if full else "rw-boost-asio-",
+            ignore_cleanup_errors=True,
         ) as work_dir:
             work = Path(work_dir)
             with tarfile.open(tarball) as t:
@@ -2323,6 +2324,57 @@ def _boost_asio() -> Project:
                 CXXFLAGS=tc.cxxflags,
             )
             configure_ms = _timed(["./bootstrap.sh"], src, env)
+            if full:
+                # Regex is a project-wide requirement in these Jamfiles, but
+                # no Asio test source uses it. Keep this exclusion recipe-local:
+                # Boost.Regex needs locale facets far beyond Asio's needs.
+                regex_requirement = "    <library>/boost/regex//boost_regex\n"
+                jamfiles = [
+                    "libs/asio/test/Jamfile.v2",
+                    "libs/asio/test/execution/Jamfile.v2",
+                    "libs/asio/test/properties/cpp03/Jamfile.v2",
+                    "libs/asio/test/properties/cpp11/Jamfile.v2",
+                    "libs/asio/test/properties/cpp14/Jamfile.v2",
+                ]
+                for name in jamfiles:
+                    jamfile = src / name
+                    text = jamfile.read_text()
+                    if text.count(regex_requirement) != 1:
+                        raise RuntimeError(
+                            f"unexpected Boost.Regex requirement in {name}"
+                        )
+                    jamfile.write_text(text.replace(regex_requirement, ""))
+
+                wrapper = _compiler_wrapper(
+                    work / "cxx", tc, ("-DBOOST_NO_AUTO_PTR=1",)
+                )
+                compiler_version = subprocess.run(
+                    [*shlex.split(tc.cxx), "--version"],
+                    capture_output=True,
+                    text=True,
+                    check=True,
+                ).stdout.lower()
+                toolset = "clang" if "clang" in compiler_version else "gcc"
+                toolset_name = f"{toolset}-psychic"
+                user_config = work / "user-config.jam"
+                user_config.write_text(f"using {toolset} : psychic : {wrapper} ;\n")
+                build_and_test = [
+                    str(src / "b2"),
+                    "libs/asio/test",
+                    f"--user-config={user_config}",
+                    f"toolset={toolset_name}",
+                    "cxxstd=20",
+                    f"variant={tc.build_type}",
+                    "link=static",
+                    "threading=multi",
+                    f"-j{tc.jobs}",
+                    "--abbreviate-paths",
+                ]
+                return {
+                    "configure": configure_ms,
+                    "build and test": _timed(build_and_test, src, env),
+                }
+
             test_dir = src / "libs" / "asio" / "test"
             # The upstream test Jamfile declares Boost.Regex, Context, and
             # Chrono as project-wide requirements, so even one Asio test builds
@@ -2373,11 +2425,27 @@ def _boost_asio() -> Project:
     return Project(
         version=version,
         build=build,
-        expected_seconds={"debug": 39, "release": 39},
-        comments={
-            "compile": "Representative upstream Asio tests are compiled and "
-            "linked directly; unrelated Boost libraries are excluded.",
-        },
+        expected_seconds=(
+            {"debug": 180, "release": 180} if full else {"debug": 39, "release": 39}
+        ),
+        phases=("build and test",) if full else PHASES,
+        comment=(
+            "Builds and runs Asio's complete upstream test target with "
+            "Boost.Build, including its execution, properties, coroutine, "
+            "timer, file, pipe, serial-port, signal, socket, and SSL coverage. "
+            "The unused project-wide Boost.Regex dependency is excluded; "
+            "Boost.Context and Boost.Chrono remain enabled."
+            if full
+            else ""
+        ),
+        comments=(
+            {}
+            if full
+            else {
+                "compile": "Representative upstream Asio tests are compiled and "
+                "linked directly; unrelated Boost libraries are excluded.",
+            }
+        ),
     )
 
 
@@ -3437,7 +3505,8 @@ PROJECTS: dict[str, Project] = {
     "abseil-full": _abseil(full=True),
     "bitcoin": _bitcoin(full=False),
     "bitcoin-full": _bitcoin(full=True),
-    "boost-asio": _boost_asio(),
+    "boost-asio": _boost_asio(full=False),
+    "boost-asio-full": _boost_asio(full=True),
     "boost-test": _boost_test(),
     "catch2": _catch2(),
     "cmake": _cmake(),
