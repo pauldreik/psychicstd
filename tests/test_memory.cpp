@@ -44,6 +44,13 @@ struct Allocated {
   explicit Allocated(int v) : value(v) {}
 };
 
+struct AllocatorAware {
+  using allocator_type = std::allocator<int>;
+};
+
+static_assert(
+    std::uses_allocator_v<AllocatorAware, std::allocator<AllocatorAware>>);
+
 struct CountingDeleter {
   int* count;
   void operator()(Derived* ptr) const {

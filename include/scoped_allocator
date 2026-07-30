@@ -18,14 +18,6 @@ struct __scoped_inner<OuterAlloc, InnerAlloc, Rest...> {
 };
 } // namespace __detail
 
-template <typename T, typename Alloc, typename = void>
-struct uses_allocator : false_type {};
-template <typename T, typename Alloc>
-struct uses_allocator<T, Alloc, void_t<typename T::allocator_type>>
-    : bool_constant<is_convertible_v<Alloc, typename T::allocator_type>> {};
-template <typename T, typename Alloc>
-inline constexpr bool uses_allocator_v = uses_allocator<T, Alloc>::value;
-
 // A compact scoped allocator adaptor. It provides the allocator propagation
 // and construction hooks needed by standard containers without duplicating
 // allocator storage or allocation logic.
