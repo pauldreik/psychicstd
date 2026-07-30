@@ -151,8 +151,10 @@ public:
       : first_(static_cast<Iterator&&>(first)),
         last_(static_cast<Sentinel&&>(last)) {}
 
+  // Without borrowed_range support, only accept ranges that outlive this view.
   template <typename Range>
-    requires(!std::is_same_v<std::remove_cvref_t<Range>, subrange>)
+    requires(!std::is_same_v<std::remove_cvref_t<Range>, subrange> &&
+             std::is_lvalue_reference_v<Range>)
   constexpr subrange(Range&& range)
       : first_(std::ranges::begin(range)), last_(std::ranges::end(range)) {}
 
@@ -167,6 +169,7 @@ private:
 template <typename Iterator, typename Sentinel>
 subrange(Iterator, Sentinel) -> subrange<Iterator, Sentinel>;
 template <typename Range>
+  requires std::is_lvalue_reference_v<Range>
 subrange(Range&&) -> subrange<iterator_t<Range>, sentinel_t<Range>>;
 
 } // namespace std::ranges
