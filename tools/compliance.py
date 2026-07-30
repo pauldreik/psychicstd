@@ -96,6 +96,7 @@ HEADER_TO_DIRS: dict[str, list[str]] = {
     "compare": ["language.support/cmp"],
     "complex": ["numerics/complex.number"],
     "concepts": ["concepts"],
+    "condition_variable": ["thread/thread.condition"],
     "csignal": ["depr/depr.c.headers"],
     "cstddef": ["language.support/support.types"],
     "cstdint": ["utilities/intseq"],

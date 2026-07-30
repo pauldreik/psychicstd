@@ -148,4 +148,18 @@ int main() {
   condition.notify_one();
   timed_waiter.join();
   psyassert(observed);
+
+  std::condition_variable_any any_condition;
+  std::recursive_mutex any_mutex;
+  bool any_ready = false;
+  std::thread any_waiter([&] {
+    std::unique_lock lock(any_mutex);
+    any_condition.wait(lock, [&] { return any_ready; });
+  });
+  {
+    std::lock_guard lock(any_mutex);
+    any_ready = true;
+  }
+  any_condition.notify_one();
+  any_waiter.join();
 }

@@ -69,4 +69,70 @@ private:
   pthread_cond_t condition_ = PTHREAD_COND_INITIALIZER;
 };
 
+class condition_variable_any {
+public:
+  condition_variable_any() = default;
+  condition_variable_any(const condition_variable_any&) = delete;
+  condition_variable_any& operator=(const condition_variable_any&) = delete;
+
+  void notify_one() noexcept {
+    lock_guard<mutex> guard(mutex_);
+    condition_.notify_one();
+  }
+  void notify_all() noexcept {
+    lock_guard<mutex> guard(mutex_);
+    condition_.notify_all();
+  }
+
+  template <typename Lock> void wait(Lock& lock) {
+    unique_lock<mutex> guard(mutex_);
+    lock.unlock();
+    condition_.wait(guard);
+    guard.unlock();
+    lock.lock();
+  }
+  template <typename Lock, typename Predicate>
+  void wait(Lock& lock, Predicate pred) {
+    while (!pred())
+      wait(lock);
+  }
+
+  template <typename Lock, typename Clock, typename Duration>
+  cv_status wait_until(Lock& lock,
+                       const chrono::time_point<Clock, Duration>& timeout) {
+    unique_lock<mutex> guard(mutex_);
+    lock.unlock();
+    cv_status result = condition_.wait_until(guard, timeout);
+    guard.unlock();
+    lock.lock();
+    return result;
+  }
+  template <typename Lock, typename Clock, typename Duration,
+            typename Predicate>
+  bool wait_until(Lock& lock,
+                  const chrono::time_point<Clock, Duration>& timeout,
+                  Predicate pred) {
+    while (!pred()) {
+      if (wait_until(lock, timeout) == cv_status::timeout)
+        return pred();
+    }
+    return true;
+  }
+
+  template <typename Lock, typename Rep, typename Period>
+  cv_status wait_for(Lock& lock,
+                     const chrono::duration<Rep, Period>& duration) {
+    return wait_until(lock, chrono::steady_clock::now() + duration);
+  }
+  template <typename Lock, typename Rep, typename Period, typename Predicate>
+  bool wait_for(Lock& lock, const chrono::duration<Rep, Period>& duration,
+                Predicate pred) {
+    return wait_until(lock, chrono::steady_clock::now() + duration, pred);
+  }
+
+private:
+  mutex mutex_;
+  condition_variable condition_;
+};
+
 } // namespace std
