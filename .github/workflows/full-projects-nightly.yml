@@ -1,18 +1,22 @@
 ---
-name: Abseil nightly (full)
+name: Full project builds nightly
 on:
   schedule:
     - cron: 30 3 * * *
   workflow_dispatch:
 jobs:
   full:
+    strategy:
+      fail-fast: false
+      matrix:
+        project: [abseil-full, bitcoin-full]
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v7
       - name: Install Ninja
         run: sudo apt-get install -y ninja-build
-      - name: Build and test all Abseil targets with psychicstd
+      - name: Build and test ${{ matrix.project }} with psychicstd
         run: >-
           scripts/benchmark_realworld.py --check-only
-          --project abseil-full --build-type debug
+          --project ${{ matrix.project }} --build-type debug
