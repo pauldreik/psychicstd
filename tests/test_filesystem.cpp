@@ -152,6 +152,14 @@ int main() {
   psyassert(fs::copy_file(source_file, copied_file,
                           fs::copy_options::overwrite_existing));
   psyassert(fs::file_size(copied_file) == 7);
+  bool same_file_threw = false;
+  try {
+    (void)fs::copy_file(source_file, source_file,
+                        fs::copy_options::overwrite_existing);
+  } catch (const fs::filesystem_error&) {
+    same_file_threw = true;
+  }
+  psyassert(same_file_threw && fs::file_size(source_file) == 7);
   fs::permissions(copied_file, fs::perms::owner_read | fs::perms::owner_write,
                   fs::perm_options::replace, ec);
   psyassert(!ec);

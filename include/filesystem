@@ -136,6 +136,7 @@ enum class directory_options : unsigned char {
 };
 
 enum class copy_options : unsigned char {
+  // Only none, skip_existing, and overwrite_existing are operational.
   none = 0,
   skip_existing = 1,
   overwrite_existing = 2,

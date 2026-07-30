@@ -20,6 +20,14 @@ void iter_swap(iterator a, iterator b) {
 }
 } // namespace custom
 
+template <typename Range>
+concept can_make_subrange = requires(Range&& range) {
+  std::ranges::subrange(static_cast<Range&&>(range));
+};
+
+static_assert(can_make_subrange<std::vector<int>&>);
+static_assert(!can_make_subrange<std::vector<int>>);
+
 int main() {
   std::vector<int> v = {1, 2, 3};
   psyassert(*std::ranges::begin(v) == 1);

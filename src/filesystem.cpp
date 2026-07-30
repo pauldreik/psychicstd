@@ -23,6 +23,27 @@ bool missing_path_error(int value) noexcept {
   return value == ENOENT || value == ENOTDIR;
 }
 
+bool same_file(FILE* source, const path& destination, error_code& ec) {
+  struct stat source_status;
+  if (::fstat(::fileno(source), &source_status) != 0) {
+    set_error(ec);
+    return false;
+  }
+
+  struct stat destination_status;
+  if (::stat(destination.c_str(), &destination_status) != 0) {
+    if (missing_path_error(errno))
+      clear_error(ec);
+    else
+      set_error(ec);
+    return false;
+  }
+
+  clear_error(ec);
+  return source_status.st_dev == destination_status.st_dev &&
+         source_status.st_ino == destination_status.st_ino;
+}
+
 class directory_handle {
 public:
   explicit directory_handle(DIR* handle) noexcept : handle_(handle) {}
@@ -608,6 +629,7 @@ path weakly_canonical(const path& value, error_code& ec) {
     return result;
   }
   if (missing_path_error(errno)) {
+    // This fallback does not resolve symlinks in an existing path prefix.
     path result = absolute(value, ec);
     return ec ? path() : result.lexically_normal();
   }
@@ -654,13 +676,28 @@ bool remove(const path& value) {
   return result;
 }
 
-bool copy_file(const path& source, const path& destination, error_code& ec) {
+static bool copy_file_impl(const path& source, const path& destination,
+                           bool overwrite, error_code& ec) {
   FILE* input = ::fopen(source.c_str(), "rb");
   if (!input) {
     set_error(ec);
     return false;
   }
-  FILE* output = ::fopen(destination.c_str(), "wbx");
+
+  if (overwrite) {
+    const bool source_is_destination = same_file(input, destination, ec);
+    if (ec) {
+      ::fclose(input);
+      return false;
+    }
+    if (source_is_destination) {
+      ::fclose(input);
+      set_error(ec, EEXIST);
+      return false;
+    }
+  }
+
+  FILE* output = ::fopen(destination.c_str(), overwrite ? "wb" : "wbx");
   if (!output) {
     const int open_error = errno;
     ::fclose(input);
@@ -690,6 +727,10 @@ bool copy_file(const path& source, const path& destination, error_code& ec) {
   return true;
 }
 
+bool copy_file(const path& source, const path& destination, error_code& ec) {
+  return copy_file_impl(source, destination, false, ec);
+}
+
 bool copy_file(const path& source, const path& destination,
                copy_options options) {
   error_code ec;
@@ -699,12 +740,8 @@ bool copy_file(const path& source, const path& destination,
     return false;
   }
 
-  if (options == copy_options::overwrite_existing)
-    remove(destination, ec);
-  if (ec)
-    _PSYCHICSTD_THROW(filesystem_error("copy_file", destination, ec));
-
-  bool result = copy_file(source, destination, ec);
+  bool result = copy_file_impl(source, destination,
+                               options == copy_options::overwrite_existing, ec);
   if (ec)
     _PSYCHICSTD_THROW(filesystem_error("copy_file", source, ec));
   return result;

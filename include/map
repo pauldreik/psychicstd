@@ -32,6 +32,7 @@ public:
   swap(map& other) noexcept(noexcept(declval<base&>().swap(declval<base&>()))) {
     base::swap(other);
   }
+  // Rebuilds nodes and therefore requires movable mapped values.
   void merge(map& source) {
     for (auto current = source.begin(); current != source.end();) {
       auto next = current;
