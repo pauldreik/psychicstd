@@ -2,6 +2,7 @@
 #include <cstdio>
 #include <fstream>
 #include <string>
+#include <utility>
 
 int main() {
   std::ofstream out("/tmp/psy_fstream_test.txt");
@@ -23,6 +24,41 @@ int main() {
   char first{};
   moved.get(first);
   psyassert(first == 'h');
+
+  const char* move_path = "/tmp/psy_fstream_move_test.txt";
+  std::remove(move_path);
+  {
+    std::ofstream source(move_path);
+    std::ofstream destination;
+    destination = std::move(source);
+    destination << "assigned";
+  }
+  {
+    std::ifstream verify(move_path);
+    std::string value;
+    verify >> value;
+    psyassert(value == "assigned");
+  }
+  {
+    std::fstream source(move_path, std::ios_base::in | std::ios_base::out |
+                                       std::ios_base::trunc);
+    std::fstream destination(std::move(source));
+    destination << "moved";
+  }
+  {
+    std::fstream source(move_path, std::ios_base::in | std::ios_base::out |
+                                       std::ios_base::trunc);
+    std::fstream destination;
+    destination = std::move(source);
+    destination << "again";
+  }
+  {
+    std::ifstream verify(move_path);
+    std::string value;
+    verify >> value;
+    psyassert(value == "again");
+  }
+  std::remove(move_path);
 
   const char* seek_path = "/tmp/psy_fstream_seek_test.txt";
   std::remove(seek_path);

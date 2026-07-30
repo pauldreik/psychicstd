@@ -467,6 +467,11 @@ public:
   shared_ptr(const shared_ptr<U>& r, T* p) noexcept : ptr_(p), ctrl_(r.ctrl_) {
     inc();
   }
+  template <typename U>
+  shared_ptr(shared_ptr<U>&& r, T* p) noexcept : ptr_(p), ctrl_(r.ctrl_) {
+    r.ptr_ = nullptr;
+    r.ctrl_ = nullptr;
+  }
 
   ~shared_ptr() { dec(); }
 
@@ -662,13 +667,38 @@ shared_ptr<T> static_pointer_cast(const shared_ptr<U>& p) noexcept {
   return shared_ptr<T>(p, static_cast<T*>(p.get()));
 }
 template <typename T, typename U>
+shared_ptr<T> static_pointer_cast(shared_ptr<U>&& p) noexcept {
+  T* result = static_cast<T*>(p.get());
+  return shared_ptr<T>(static_cast<shared_ptr<U>&&>(p), result);
+}
+template <typename T, typename U>
 shared_ptr<T> const_pointer_cast(const shared_ptr<U>& p) noexcept {
   return shared_ptr<T>(p, const_cast<T*>(p.get()));
+}
+template <typename T, typename U>
+shared_ptr<T> const_pointer_cast(shared_ptr<U>&& p) noexcept {
+  T* result = const_cast<T*>(p.get());
+  return shared_ptr<T>(static_cast<shared_ptr<U>&&>(p), result);
 }
 template <typename T, typename U>
 shared_ptr<T> dynamic_pointer_cast(const shared_ptr<U>& p) noexcept {
   T* q = dynamic_cast<T*>(p.get());
   return q ? shared_ptr<T>(p, q) : shared_ptr<T>();
+}
+template <typename T, typename U>
+shared_ptr<T> dynamic_pointer_cast(shared_ptr<U>&& p) noexcept {
+  T* result = dynamic_cast<T*>(p.get());
+  return result ? shared_ptr<T>(static_cast<shared_ptr<U>&&>(p), result)
+                : shared_ptr<T>();
+}
+template <typename T, typename U>
+shared_ptr<T> reinterpret_pointer_cast(const shared_ptr<U>& p) noexcept {
+  return shared_ptr<T>(p, reinterpret_cast<T*>(p.get()));
+}
+template <typename T, typename U>
+shared_ptr<T> reinterpret_pointer_cast(shared_ptr<U>&& p) noexcept {
+  T* result = reinterpret_cast<T*>(p.get());
+  return shared_ptr<T>(static_cast<shared_ptr<U>&&>(p), result);
 }
 
 template <typename T> class weak_ptr {
