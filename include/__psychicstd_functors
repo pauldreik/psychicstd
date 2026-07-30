@@ -88,6 +88,15 @@ template <typename T = void> struct modulus {
 template <typename T = void> struct negate {
   constexpr T operator()(const T& a) const { return -a; }
 };
+template <> struct negate<void> {
+  template <typename T>
+  constexpr auto operator()(T&& a) const
+      noexcept(noexcept(-static_cast<T&&>(a)))
+          -> decltype(-static_cast<T&&>(a)) {
+    return -static_cast<T&&>(a);
+  }
+  using is_transparent = void;
+};
 
 // Bitwise functors
 template <typename T = void> struct bit_and {

@@ -2,11 +2,12 @@
 # Usage: run.sh [compiler]
 #
 # Builds a tiny Conan project that depends on fmt. The project is configured
-# with a normal Conan profile plus the project-supplied psychic.profile
-# overlay, so both the app and fmt itself are built with psychicstd.
+# with a normal Conan profile plus the project-supplied Conan overlay, so both
+# the app and fmt itself are built with psychicstd.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PSYCHIC_PROFILE="$SCRIPT_DIR/../../conan/psychic.profile"
 REAL_CXX="${1:-${CXX:-clang++}}"
 BUILD_DIR="$SCRIPT_DIR/build"
 BUILD_PROFILE="$BUILD_DIR/build.profile"
@@ -72,7 +73,7 @@ EOF
 
 cat >"$HOST_PROFILE" <<EOF
 include($BUILD_PROFILE)
-include($SCRIPT_DIR/psychic.profile)
+include($PSYCHIC_PROFILE)
 EOF
 
 export CXX="$REAL_CXX"

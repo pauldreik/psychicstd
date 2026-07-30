@@ -1,6 +1,6 @@
 # Real-world project speed comparison
 
-Compiler: `g++-14 (Debian 14.2.0-19) 14.2.0`. Each project is built 3 time(s) per side (system libstdc++, psychicstd); `system (s)`/`psychicstd (s)` are the *median* build time of those repetitions, in seconds -- the median is used instead of the mean so one repetition disturbed by another process on the machine doesn't skew the result. `speedup` = system median / psychicstd median (>1x means psychicstd is faster); its bracketed range is a 95% confidence interval on that *same ratio* (obtained by resampling the raw per-repetition timings, not just the two medians, 2000 times) -- so it reflects how much the repetitions varied, not a different unit. 🟢 the whole CI is above 1x (reliably faster) · 🔴 the whole CI is below 1x (reliably slower) · 🟡 the CI straddles 1x (not distinguishable from run-to-run noise).
+Compiler: `c++ (Debian 14.2.0-19) 14.2.0`. Each project is built 9 time(s) per side (system libstdc++, psychicstd); `system (s)`/`psychicstd (s)` are the *median* build time of those repetitions, in seconds -- the median is used instead of the mean so one repetition disturbed by another process on the machine doesn't skew the result. `speedup` = system median / psychicstd median (>1x means psychicstd is faster); its bracketed range is a 95% confidence interval on that *same ratio* (obtained by resampling the raw per-repetition timings, not just the two medians, 2000 times) -- so it reflects how much the repetitions varied, not a different unit. 🟢 the whole CI is above 1x (reliably faster) · 🔴 the whole CI is below 1x (reliably slower) · 🟡 the CI straddles 1x (not distinguishable from run-to-run noise).
 
 Parallelism: **8 jobs** (20 logical CPUs available; the memory estimate permits 21 jobs at 1.5 GiB/job). ccache was disabled.
 
@@ -12,10 +12,18 @@ Builds and runs strong_type's complete upstream self-test suite.
 
 | step | system (s) | psychicstd (s) | speedup | comment |
 | --- | ---: | ---: | ---: | --- |
-| configure | 0.32 | 0.32 | 🟡 1.00x [0.98x, 1.03x] | |
-| compile | 9.69 | 2.74 | 🟢 3.54x [3.52x, 3.61x] | |
-| run tests | 0.00 | 0.00 | 🟢 1.51x [1.47x, 1.59x] | |
+| configure | 0.30 | 0.30 | 🟡 1.00x [0.99x, 1.01x] | |
+| compile | 9.31 | 2.61 | 🟢 3.56x [3.55x, 3.58x] | |
+| run tests | 0.00 | 0.00 | 🟢 1.49x [1.45x, 1.53x] | |
+
+### Release
+
+| step | system (s) | psychicstd (s) | speedup | comment |
+| --- | ---: | ---: | ---: | --- |
+| configure | 0.30 | 0.30 | 🟡 1.00x [1.00x, 1.01x] | |
+| compile | 13.22 | 7.11 | 🟢 1.86x [1.86x, 1.86x] | |
+| run tests | 0.00 | 0.00 | 🟢 1.17x [1.11x, 1.28x] | |
 
 ______________________________________________________________________
 
-Reproduce this on your machine: `scripts/benchmark_realworld.py --compiler g++-14 --build-type debug --reps 3 --jobs 8`
+Reproduce this on your machine: `scripts/benchmark_realworld.py --compiler c++ --build-type both --reps 9 --jobs 8`
