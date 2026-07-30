@@ -145,9 +145,21 @@ static void test_smart_pointer_relations_and_output() {
   auto second = std::make_unique<int>(2);
   psyassert((first < second) != (second < first));
 
+  std::ostringstream shared_output;
   auto shared = std::make_shared<int>(1);
   auto other_shared = std::make_shared<int>(2);
   psyassert((shared < other_shared) != (other_shared < shared));
+  shared_output << shared;
+  std::ostringstream raw_output;
+  raw_output << shared.get();
+  psyassert(shared_output.str() == raw_output.str());
+
+  auto text = std::make_unique<char[]>(2);
+  text[0] = 'x';
+  text[1] = '\0';
+  std::ostringstream text_output;
+  text_output << text;
+  psyassert(text_output.str() == "x");
 }
 
 static void test_converting_ctor_from_prvalue() {
