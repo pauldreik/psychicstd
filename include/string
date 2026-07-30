@@ -627,9 +627,21 @@ public:
     return size_ >= sv.size() &&
            Traits::compare(data_, sv.data(), sv.size()) == 0;
   }
+  bool starts_with(Char character) const noexcept {
+    return !empty() && Traits::eq(front(), character);
+  }
+  bool starts_with(const Char* value) const noexcept {
+    return starts_with(basic_string_view<Char>(value));
+  }
   bool ends_with(basic_string_view<Char> sv) const noexcept {
     return size_ >= sv.size() && Traits::compare(data_ + size_ - sv.size(),
                                                  sv.data(), sv.size()) == 0;
+  }
+  bool ends_with(Char character) const noexcept {
+    return !empty() && Traits::eq(back(), character);
+  }
+  bool ends_with(const Char* value) const noexcept {
+    return ends_with(basic_string_view<Char>(value));
   }
   bool contains(basic_string_view<Char> sv) const noexcept {
     return find(sv.data(), 0, sv.size()) != npos;
