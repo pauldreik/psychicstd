@@ -251,32 +251,34 @@ time_point_cast(const time_point<Clock, Dur>& tp) {
   return time_point<Clock, ToDur>(duration_cast<ToDur>(tp.time_since_epoch()));
 }
 
-template <typename C, typename D>
-constexpr bool operator==(const time_point<C, D>& a,
-                          const time_point<C, D>& b) {
+template <typename C, typename D1, typename D2>
+constexpr bool operator==(const time_point<C, D1>& a,
+                          const time_point<C, D2>& b) {
   return a.time_since_epoch() == b.time_since_epoch();
 }
-template <typename C, typename D>
-constexpr bool operator<(const time_point<C, D>& a, const time_point<C, D>& b) {
+template <typename C, typename D1, typename D2>
+constexpr bool operator<(const time_point<C, D1>& a,
+                         const time_point<C, D2>& b) {
   return a.time_since_epoch() < b.time_since_epoch();
 }
-template <typename C, typename D>
-constexpr bool operator!=(const time_point<C, D>& a,
-                          const time_point<C, D>& b) {
+template <typename C, typename D1, typename D2>
+constexpr bool operator!=(const time_point<C, D1>& a,
+                          const time_point<C, D2>& b) {
   return !(a == b);
 }
-template <typename C, typename D>
-constexpr bool operator>(const time_point<C, D>& a, const time_point<C, D>& b) {
+template <typename C, typename D1, typename D2>
+constexpr bool operator>(const time_point<C, D1>& a,
+                         const time_point<C, D2>& b) {
   return b < a;
 }
-template <typename C, typename D>
-constexpr bool operator<=(const time_point<C, D>& a,
-                          const time_point<C, D>& b) {
+template <typename C, typename D1, typename D2>
+constexpr bool operator<=(const time_point<C, D1>& a,
+                          const time_point<C, D2>& b) {
   return !(b < a);
 }
-template <typename C, typename D>
-constexpr bool operator>=(const time_point<C, D>& a,
-                          const time_point<C, D>& b) {
+template <typename C, typename D1, typename D2>
+constexpr bool operator>=(const time_point<C, D1>& a,
+                          const time_point<C, D2>& b) {
   return !(a < b);
 }
 
