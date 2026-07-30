@@ -15,10 +15,11 @@
 namespace std {
 
 namespace __iter_rr_detail {
-template <typename It>
-constexpr auto __iter_move_impl(It&& i)
-    -> decltype(static_cast<decltype(*i)&&>(*i)) {
-  return static_cast<decltype(*i)&&>(*i);
+template <typename It> constexpr decltype(auto) __iter_move_impl(It&& i) {
+  if constexpr (is_lvalue_reference_v<decltype(*i)>)
+    return static_cast<remove_reference_t<decltype(*i)>&&>(*i);
+  else
+    return *i;
 }
 } // namespace __iter_rr_detail
 template <typename It>
