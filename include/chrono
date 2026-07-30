@@ -40,6 +40,141 @@ struct steady_clock {
 
 using high_resolution_clock = steady_clock;
 
+using sys_seconds = sys_time<seconds>;
+using sys_days = sys_time<days>;
+
+template <typename ToDuration, typename Rep, typename Period>
+constexpr ToDuration floor(const duration<Rep, Period>& value) {
+  auto result = duration_cast<ToDuration>(value);
+  if (result > value)
+    return result - ToDuration(1);
+  return result;
+}
+
+template <typename ToDuration, typename Clock, typename Duration>
+constexpr time_point<Clock, ToDuration>
+floor(const time_point<Clock, Duration>& value) {
+  return time_point<Clock, ToDuration>(
+      chrono::floor<ToDuration>(value.time_since_epoch()));
+}
+
+class year {
+public:
+  constexpr explicit year(int value) noexcept : value_(value) {}
+  constexpr explicit operator int() const noexcept { return value_; }
+  constexpr bool is_leap() const noexcept {
+    return value_ % 4 == 0 && (value_ % 100 != 0 || value_ % 400 == 0);
+  }
+
+private:
+  int value_;
+};
+
+class month {
+public:
+  constexpr explicit month(unsigned value) noexcept : value_(value) {}
+  constexpr explicit operator unsigned() const noexcept { return value_; }
+
+private:
+  unsigned value_;
+};
+
+class day {
+public:
+  constexpr explicit day(unsigned value) noexcept : value_(value) {}
+  constexpr explicit operator unsigned() const noexcept { return value_; }
+
+private:
+  unsigned value_;
+};
+
+class year_month_day {
+public:
+  constexpr year_month_day(chrono::year year_value, chrono::month month_value,
+                           chrono::day day_value) noexcept
+      : year_(year_value), month_(month_value), day_(day_value) {}
+
+  constexpr year_month_day(const sys_days& value) noexcept {
+    long long z = value.time_since_epoch().count() + 719468;
+    const long long era = (z >= 0 ? z : z - 146096) / 146097;
+    const unsigned day_of_era = static_cast<unsigned>(z - era * 146097);
+    const unsigned year_of_era = (day_of_era - day_of_era / 1460 +
+                                  day_of_era / 36524 - day_of_era / 146096) /
+                                 365;
+    int year_value = static_cast<int>(year_of_era) + era * 400;
+    const unsigned day_of_year =
+        day_of_era - (365 * year_of_era + year_of_era / 4 - year_of_era / 100);
+    const unsigned month_prime = (5 * day_of_year + 2) / 153;
+    const unsigned day_value = day_of_year - (153 * month_prime + 2) / 5 + 1;
+    const unsigned month_value =
+        month_prime < 10 ? month_prime + 3 : month_prime - 9;
+    year_value += month_value <= 2;
+    year_ = chrono::year(year_value);
+    month_ = chrono::month(month_value);
+    day_ = chrono::day(day_value);
+  }
+
+  constexpr chrono::year year() const noexcept { return year_; }
+  constexpr chrono::month month() const noexcept { return month_; }
+  constexpr chrono::day day() const noexcept { return day_; }
+
+  constexpr bool ok() const noexcept {
+    const unsigned month_value = static_cast<unsigned>(month_);
+    const unsigned day_value = static_cast<unsigned>(day_);
+    if (month_value < 1 || month_value > 12 || day_value < 1)
+      return false;
+    constexpr unsigned month_days[] = {31, 28, 31, 30, 31, 30,
+                                       31, 31, 30, 31, 30, 31};
+    unsigned maximum = month_days[month_value - 1];
+    if (month_value == 2 && year_.is_leap())
+      ++maximum;
+    return day_value <= maximum;
+  }
+
+  constexpr operator sys_days() const noexcept {
+    int year_value = static_cast<int>(year_);
+    const unsigned month_value = static_cast<unsigned>(month_);
+    const unsigned day_value = static_cast<unsigned>(day_);
+    year_value -= month_value <= 2;
+    const long long era =
+        (year_value >= 0 ? year_value : year_value - 399) / 400;
+    const unsigned year_of_era = static_cast<unsigned>(year_value - era * 400);
+    const unsigned day_of_year =
+        (153 * (month_value > 2 ? month_value - 3 : month_value + 9) + 2) / 5 +
+        day_value - 1;
+    const unsigned day_of_era =
+        year_of_era * 365 + year_of_era / 4 - year_of_era / 100 + day_of_year;
+    return sys_days(
+        days(era * 146097 + static_cast<long long>(day_of_era) - 719468));
+  }
+
+private:
+  chrono::year year_{0};
+  chrono::month month_{0};
+  chrono::day day_{0};
+};
+
+template <typename Duration> class hh_mm_ss {
+public:
+  constexpr explicit hh_mm_ss(Duration value) {
+    const auto total = duration_cast<chrono::seconds>(value).count();
+    hours_ = chrono::hours(static_cast<int>(total / 3600));
+    minutes_ = chrono::minutes(static_cast<int>((total % 3600) / 60));
+    seconds_ = chrono::seconds(total % 60);
+  }
+
+  constexpr chrono::hours hours() const noexcept { return hours_; }
+  constexpr chrono::minutes minutes() const noexcept { return minutes_; }
+  constexpr chrono::seconds seconds() const noexcept { return seconds_; }
+
+private:
+  chrono::hours hours_{};
+  chrono::minutes minutes_{};
+  chrono::seconds seconds_{};
+};
+
+template <typename Duration> hh_mm_ss(Duration) -> hh_mm_ss<Duration>;
+
 template <typename Rep> struct treat_as_floating_point : false_type {};
 template <> struct treat_as_floating_point<float> : true_type {};
 template <> struct treat_as_floating_point<double> : true_type {};

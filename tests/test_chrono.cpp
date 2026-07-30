@@ -88,6 +88,20 @@ static void test_integral_is_finite() {
 }
 
 int main() {
+  const std::chrono::sys_seconds epoch{std::chrono::seconds{0}};
+  const auto epoch_days = std::chrono::floor<std::chrono::days>(epoch);
+  const std::chrono::year_month_day epoch_date{epoch_days};
+  psyassert(static_cast<int>(epoch_date.year()) == 1970);
+  psyassert(static_cast<unsigned>(epoch_date.month()) == 1);
+  psyassert(static_cast<unsigned>(epoch_date.day()) == 1);
+  const std::chrono::year_month_day leap{
+      std::chrono::year{2000}, std::chrono::month{2}, std::chrono::day{29}};
+  psyassert(leap.ok());
+  psyassert(std::chrono::sys_days{leap}.time_since_epoch().count() == 11016);
+  const std::chrono::hh_mm_ss time{std::chrono::seconds{3723}};
+  psyassert(time.hours().count() == 1);
+  psyassert(time.minutes().count() == 2);
+  psyassert(time.seconds().count() == 3);
   using namespace std::chrono_literals;
   static_assert(2h == std::chrono::hours(2));
   static_assert(3min == std::chrono::minutes(3));
