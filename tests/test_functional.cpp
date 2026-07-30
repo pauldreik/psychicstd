@@ -97,6 +97,15 @@ int main() {
   const auto subtract = std::bind(std::minus<int>{}, std::placeholders::_2,
                                   std::placeholders::_1);
   psyassert(subtract(3, 8) == 5);
+  const auto constrained =
+      std::bind([](int value) { return value; }, std::placeholders::_1);
+  static_assert(std::is_invocable_v<decltype(constrained), int>);
+  static_assert(!std::is_invocable_v<decltype(constrained), const char*>);
+  const auto nested = std::bind(
+      [](int value) { return value; },
+      std::bind([](int value) { return value; }, std::placeholders::_1));
+  static_assert(std::is_invocable_v<decltype(nested), int>);
+  static_assert(!std::is_invocable_v<decltype(nested), const char*>);
   int bind_void_calls = 0;
   std::bind<void>([&bind_void_calls](int) { ++bind_void_calls; }, 1)();
   psyassert(bind_void_calls == 1);
