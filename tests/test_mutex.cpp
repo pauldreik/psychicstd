@@ -55,6 +55,17 @@ int main() {
   psyassert(second_lock.owns_lock());
   first_lock.unlock();
   second_lock.unlock();
+  first_lock.swap(second_lock);
+  psyassert(first_lock.mutex() == &second);
+  psyassert(second_lock.mutex() == &first);
+
+  std::unique_lock released_lock(m);
+  psyassert(released_lock.release() == &m);
+  psyassert(!released_lock.owns_lock());
+  psyassert(released_lock.mutex() == nullptr);
+  psyassert(!try_from_another_thread(m));
+  m.unlock();
+  psyassert(try_from_another_thread(m));
 
   std::shared_mutex shared;
   std::shared_lock first_reader(shared);
