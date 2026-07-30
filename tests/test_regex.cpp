@@ -20,6 +20,9 @@ int main() {
   psyassert(std::regex_search("]", std::regex("[a\\]]")));
   psyassert(std::regex_search("/tmp/a-b.cpp:12",
                               std::regex("[A-Za-z0-9_ ./:\\]*:[0-9]*.*")));
+  psyassert(std::regex_replace("one two one", std::regex("one"), "1") ==
+            "1 two 1");
+  psyassert(std::regex_replace("ab", std::regex("(a)(b)"), "$2$1") == "ba");
 
   bool threw = false;
   try {
