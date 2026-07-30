@@ -154,6 +154,7 @@ private:
   chrono::day day_{0};
 };
 
+// Whole-second subset; sign and fractional-second APIs are omitted.
 template <typename Duration> class hh_mm_ss {
 public:
   constexpr explicit hh_mm_ss(Duration value) {
