@@ -19,18 +19,28 @@ public:
   using string_type = basic_string<Char, Traits, Alloc>;
 
   basic_stringbuf() { _reset_put_area(); }
+  explicit basic_stringbuf(ios_base::openmode which) : which_(which) {
+    _reset_put_area();
+  }
   explicit basic_stringbuf(const string_type& s,
                            ios_base::openmode which = ios_base::in |
                                                       ios_base::out)
-      : buf_(s), rpos_(0), ppos_((which & ios_base::ate) ? s.size() : 0) {
+      : buf_(s), rpos_(0), ppos_((which & ios_base::ate) ? s.size() : 0),
+        which_(which) {
     _reset_put_area();
   }
   explicit basic_stringbuf(string_type&& s,
                            ios_base::openmode which = ios_base::in |
                                                       ios_base::out)
       : buf_(static_cast<string_type&&>(s)), rpos_(0),
-        ppos_((which & ios_base::ate) ? buf_.size() : 0) {
+        ppos_((which & ios_base::ate) ? buf_.size() : 0), which_(which) {
     _reset_put_area();
+  }
+  basic_stringbuf(basic_stringbuf&& other) noexcept { _move_from(other); }
+  basic_stringbuf& operator=(basic_stringbuf&& other) noexcept {
+    if (this != &other)
+      _move_from(other);
+    return *this;
   }
 
   string_type str() const { return buf_; }
@@ -53,7 +63,7 @@ public:
 protected:
   // Write support
   streamsize xsputn(const Char* s, streamsize n) override {
-    if (n <= 0)
+    if (n <= 0 || !(which_ & ios_base::out))
       return 0;
     _sync_put_position();
     size_t count = (size_t)n;
@@ -67,7 +77,7 @@ protected:
     return n;
   }
   int_type overflow(int_type c) override {
-    if (Traits::eq_int_type(c, Traits::eof()))
+    if (!(which_ & ios_base::out) || Traits::eq_int_type(c, Traits::eof()))
       return Traits::eof();
     _sync_put_position();
     if (ppos_ < buf_.size())
@@ -93,9 +103,14 @@ protected:
   int_type pbackfail(int_type c = Traits::eof()) override {
     if (rpos_ == 0)
       return Traits::eof();
-    if (!Traits::eq_int_type(c, Traits::eof()) &&
-        !Traits::eq(Traits::to_char_type(c), buf_[rpos_ - 1]))
-      return Traits::eof();
+    if (!Traits::eq_int_type(c, Traits::eof())) {
+      Char replacement = Traits::to_char_type(c);
+      if (!Traits::eq(replacement, buf_[rpos_ - 1])) {
+        if (!(which_ & ios_base::out))
+          return Traits::eof();
+        buf_[rpos_ - 1] = replacement;
+      }
+    }
     --rpos_;
     return Traits::eq_int_type(c, Traits::eof())
                ? Traits::to_int_type(buf_[rpos_])
@@ -111,6 +126,8 @@ protected:
 
   // Seek support
   streampos seekpos(streampos pos, ios_base::openmode which) override {
+    if (!_can_seek(which))
+      return streampos(-1);
     size_t p = (size_t)(long long)pos;
     if (p > buf_.size())
       return streampos(-1);
@@ -124,6 +141,8 @@ protected:
   }
   streampos seekoff(streamoff off, ios_base::seekdir dir,
                     ios_base::openmode which) override {
+    if (!_can_seek(which))
+      return streampos(-1);
     if (which & ios_base::out)
       _sync_put_position();
     size_t base;
@@ -131,8 +150,11 @@ protected:
       base = 0;
     else if (dir == ios_base::end)
       base = buf_.size();
-    else
+    else {
+      if ((which & ios_base::in) && (which & ios_base::out) && rpos_ != ppos_)
+        return streampos(-1);
       base = (which & ios_base::out) ? ppos_ : rpos_;
+    }
     size_t pos = (size_t)((long long)base + off);
     if (pos > buf_.size())
       return streampos(-1);
@@ -146,20 +168,49 @@ protected:
   }
 
 private:
+  bool _can_seek(ios_base::openmode which) const noexcept {
+    ios_base::openmode requested = which & (ios_base::in | ios_base::out);
+    return requested && (requested & which_) == requested;
+  }
+
   void _sync_put_position() noexcept {
     if (this->pbase())
       ppos_ = (size_t)(this->pptr() - this->pbase());
   }
 
   void _reset_put_area() noexcept {
+    if (buf_.empty() || !(which_ & ios_base::out)) {
+      this->setp(nullptr, nullptr);
+      return;
+    }
     Char* begin = buf_.data();
     this->setp(begin, begin + buf_.size());
-    this->pbump((int)ppos_);
+    size_t remaining = ppos_;
+    while (remaining > (size_t)__INT_MAX__) {
+      this->pbump(__INT_MAX__);
+      remaining -= __INT_MAX__;
+    }
+    this->pbump((int)remaining);
+  }
+
+  void _move_from(basic_stringbuf& other) noexcept {
+    other._sync_put_position();
+    buf_ = static_cast<string_type&&>(other.buf_);
+    rpos_ = other.rpos_;
+    ppos_ = other.ppos_;
+    which_ = other.which_;
+    _reset_put_area();
+
+    other.buf_.clear();
+    other.rpos_ = 0;
+    other.ppos_ = 0;
+    other._reset_put_area();
   }
 
   string_type buf_;
   size_t rpos_ = 0;
   size_t ppos_ = 0;
+  ios_base::openmode which_ = ios_base::in | ios_base::out;
 };
 
 // basic_ostringstream (default args are in <iosfwd>)
@@ -170,10 +221,11 @@ public:
   using traits_type = Traits;
   using string_type = basic_string<Char, Traits, Alloc>;
 
-  basic_ostringstream() : basic_ostream<Char, Traits>(&buf_) {}
+  basic_ostringstream()
+      : basic_ostream<Char, Traits>(&buf_), buf_(ios_base::out) {}
   explicit basic_ostringstream(const string_type& s,
                                ios_base::openmode which = ios_base::out)
-      : basic_ostream<Char, Traits>(&buf_), buf_(s, which) {}
+      : basic_ostream<Char, Traits>(&buf_), buf_(s, which | ios_base::out) {}
   basic_ostringstream(basic_ostringstream&& other)
       : basic_ostream<Char, Traits>(&buf_), buf_(other.buf_.str()) {}
   basic_ostringstream& operator=(basic_ostringstream&& other) {
@@ -204,10 +256,11 @@ public:
   using traits_type = Traits;
   using string_type = basic_string<Char, Traits, Alloc>;
 
-  basic_istringstream() : basic_istream<Char, Traits>(&buf_) {}
+  basic_istringstream()
+      : basic_istream<Char, Traits>(&buf_), buf_(ios_base::in) {}
   explicit basic_istringstream(const string_type& s,
                                ios_base::openmode which = ios_base::in)
-      : basic_istream<Char, Traits>(&buf_), buf_(s, which) {}
+      : basic_istream<Char, Traits>(&buf_), buf_(s, which | ios_base::in) {}
 
   string_type str() const { return buf_.str(); }
   void str(const string_type& s) { buf_.str(s); }
