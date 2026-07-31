@@ -1,4 +1,5 @@
 #pragma once
+#include <__psychicstd_refcount>
 #include <chrono>
 #include <mutex>
 
@@ -70,22 +71,46 @@ private:
 };
 
 class condition_variable_any {
+  // A notified waiter can retain the internal mutex after *this is destroyed.
+  class __mutex_owner {
+    struct __state {
+      mutex mutex_;
+      unsigned references_ = 1;
+    };
+
+    __state* state_;
+
+  public:
+    __mutex_owner() : state_(new __state) {}
+    __mutex_owner(const __mutex_owner& other) noexcept : state_(other.state_) {
+      __refcount_detail::add(&state_->references_);
+    }
+    ~__mutex_owner() {
+      if (__refcount_detail::release(&state_->references_))
+        delete state_;
+    }
+    __mutex_owner& operator=(const __mutex_owner&) = delete;
+
+    mutex& get() const noexcept { return state_->mutex_; }
+  };
+
 public:
   condition_variable_any() = default;
   condition_variable_any(const condition_variable_any&) = delete;
   condition_variable_any& operator=(const condition_variable_any&) = delete;
 
   void notify_one() noexcept {
-    lock_guard<mutex> guard(mutex_);
+    lock_guard<mutex> guard(mutex_.get());
     condition_.notify_one();
   }
   void notify_all() noexcept {
-    lock_guard<mutex> guard(mutex_);
+    lock_guard<mutex> guard(mutex_.get());
     condition_.notify_all();
   }
 
   template <typename Lock> void wait(Lock& lock) {
-    unique_lock<mutex> guard(mutex_);
+    __mutex_owner internal_mutex = mutex_;
+    unique_lock<mutex> guard(internal_mutex.get());
     lock.unlock();
     condition_.wait(guard);
     guard.unlock();
@@ -100,7 +125,8 @@ public:
   template <typename Lock, typename Clock, typename Duration>
   cv_status wait_until(Lock& lock,
                        const chrono::time_point<Clock, Duration>& timeout) {
-    unique_lock<mutex> guard(mutex_);
+    __mutex_owner internal_mutex = mutex_;
+    unique_lock<mutex> guard(internal_mutex.get());
     lock.unlock();
     cv_status result = condition_.wait_until(guard, timeout);
     guard.unlock();
@@ -131,7 +157,7 @@ public:
   }
 
 private:
-  mutex mutex_;
+  __mutex_owner mutex_;
   condition_variable condition_;
 };
 
