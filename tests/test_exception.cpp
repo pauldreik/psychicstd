@@ -4,11 +4,11 @@
 
 static_assert(__cpp_lib_uncaught_exceptions >= 201411L);
 
-#if defined(__SANITIZE_ADDRESS__)
-#define PSYCHICSTD_TEST_WITH_ASAN 1
+#if defined(__SANITIZE_ADDRESS__) || defined(__SANITIZE_THREAD__)
+#define PSYCHICSTD_TEST_WITH_LIMITED_ALLOCATOR 1
 #elif defined(__has_feature)
-#if __has_feature(address_sanitizer)
-#define PSYCHICSTD_TEST_WITH_ASAN 1
+#if __has_feature(address_sanitizer) || __has_feature(thread_sanitizer)
+#define PSYCHICSTD_TEST_WITH_LIMITED_ALLOCATOR 1
 #endif
 #endif
 
@@ -16,11 +16,12 @@ int main() {
   std::exception e;
   psyassert(e.what() != nullptr);
 
-#ifndef PSYCHICSTD_TEST_WITH_ASAN
+#ifndef PSYCHICSTD_TEST_WITH_LIMITED_ALLOCATOR
   // Regression (fmt util_test.format_system_error): a failed huge allocation
   // makes the C++ runtime's operator new throw ITS std::bad_alloc. The catch
   // must match even though the handler's typeinfo comes from these headers --
   // i.e. our exception classes must share vtable/typeinfo with the runtime.
+  // ASan and TSan abort before reporting an allocation failure at this size.
   auto huge = static_cast<unsigned long>(-1) / 2;
   bool caught_bad_alloc = false;
   try {

@@ -85,6 +85,13 @@ case "$MODE" in
       "-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=memory"
     )
     ;;
+  toolchain-tsan)
+    cmake_args+=(
+      -DCMAKE_TOOLCHAIN_FILE="$PSYCHICSTD_ROOT/cmake/psychicstd-toolchain.cmake"
+      "-DCMAKE_CXX_FLAGS=-fsanitize=thread -fno-omit-frame-pointer"
+      "-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=thread"
+    )
+    ;;
   *)
     echo "unknown mode: $MODE" >&2
     exit 2
@@ -122,6 +129,9 @@ case "$MODE" in
     ;;
   toolchain-msan)
     run_env+=("MSAN_OPTIONS=halt_on_error=1:abort_on_error=1:exit_code=1${MSAN_OPTIONS:+:$MSAN_OPTIONS}")
+    ;;
+  toolchain-tsan)
+    run_env+=("TSAN_OPTIONS=halt_on_error=1:abort_on_error=1:exit_code=1${TSAN_OPTIONS:+:$TSAN_OPTIONS}")
     ;;
 esac
 
