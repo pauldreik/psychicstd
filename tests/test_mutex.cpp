@@ -19,6 +19,38 @@ template <typename Mutex> bool try_from_another_thread(Mutex& mutex) {
   return acquired;
 }
 
+static void test_condition_variable_any_destruction() {
+  auto* condition = new std::condition_variable_any;
+  std::mutex mutex;
+  bool waiter_ready = false;
+  bool destroyer_ready = false;
+
+  std::thread waiter([&] {
+    mutex.lock();
+    waiter_ready = true;
+    condition->notify_one();
+    while (!destroyer_ready)
+      condition->wait(mutex);
+    mutex.unlock();
+  });
+
+  mutex.lock();
+  while (!waiter_ready)
+    condition->wait(mutex);
+  mutex.unlock();
+
+  std::thread destroyer([&] {
+    mutex.lock();
+    destroyer_ready = true;
+    condition->notify_one();
+    delete condition;
+    mutex.unlock();
+  });
+
+  destroyer.join();
+  waiter.join();
+}
+
 int main() {
   std::once_flag once;
   std::thread once_first([&] { std::call_once(once, [] { ++once_calls; }); });
@@ -173,4 +205,6 @@ int main() {
   }
   any_condition.notify_one();
   any_waiter.join();
+
+  test_condition_variable_any_destruction();
 }
