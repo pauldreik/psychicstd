@@ -186,6 +186,14 @@ if(_psychicstd_toolchain_supported)
             bash ${CMAKE_CURRENT_SOURCE_DIR}/external_project/run.sh ${CMAKE_SOURCE_DIR}
             toolchain-asan-ubsan ${CMAKE_CXX_COMPILER}
     )
+    if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+        add_test(
+            NAME ext_project_toolchain_msan
+            COMMAND
+                bash ${CMAKE_CURRENT_SOURCE_DIR}/external_project/run.sh ${CMAKE_SOURCE_DIR}
+                toolchain-msan ${CMAKE_CXX_COMPILER}
+        )
+    endif()
     add_test(
         NAME ext_project_toolchain_project_include
         COMMAND

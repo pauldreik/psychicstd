@@ -5,6 +5,7 @@
 # Usage:
 #   ./run_ci_locally.sh               # run all jobs
 #   ./run_ci_locally.sh clang asan    # run a specific job by name (words joined, substring match)
+#   ./run_ci_locally.sh clang msan    # run memory-sanitizer job
 #   ./run_ci_locally.sh clang         # run all jobs whose name contains "clang"
 
 set -uo pipefail
@@ -20,6 +21,7 @@ RESET='\033[0m'
 
 export ASAN_OPTIONS=halt_on_error=1:abort_on_error=1
 export UBSAN_OPTIONS=halt_on_error=1:abort_on_error=1:print_stacktrace=1
+export MSAN_OPTIONS=halt_on_error=1:abort_on_error=1:exit_code=1
 
 declare -a RESULTS
 FAILED=0
@@ -142,6 +144,11 @@ if CLANGXX=$(find_clangxx); then
     -DCMAKE_BUILD_TYPE=Debug \
     "-DCMAKE_CXX_FLAGS=-fsanitize=address -fno-omit-frame-pointer" \
     "-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address"
+  run "clang msan" build_clang_msan \
+    -DCMAKE_CXX_COMPILER="$CLANGXX" \
+    -DCMAKE_BUILD_TYPE=Debug \
+    "-DCMAKE_CXX_FLAGS=-fsanitize=memory -fno-omit-frame-pointer" \
+    "-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=memory"
   run "clang ubsan" build_clang_ubsan \
     -DCMAKE_CXX_COMPILER="$CLANGXX" \
     -DCMAKE_BUILD_TYPE=Debug \
