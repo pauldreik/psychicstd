@@ -78,10 +78,14 @@ set(TESTS
 )
 
 foreach(t ${TESTS})
+    # MSan cannot track writes made by the uninstrumented host libstdc++.
+    # system-runtime marks psychicstd tests that cross a similar libsupc++ ABI
+    # boundary; external-tests build child projects without the MSan flags.
     add_executable(${t}_system ${t}.cpp)
     target_compile_features(${t}_system PRIVATE cxx_std_23)
     psychicstd_enable_warnings(${t}_system)
     add_test(NAME ${t}_system COMMAND ${t}_system)
+    set_tests_properties(${t}_system PROPERTIES LABELS system-stdlib)
 
     add_executable(${t}_psychicstd ${t}.cpp)
     target_link_libraries(${t}_psychicstd PRIVATE psychicstd::psychicstd)
@@ -93,6 +97,7 @@ endforeach()
 
 target_sources(test_iostream_system PRIVATE iostream_globals.cpp)
 target_sources(test_iostream_psychicstd PRIVATE iostream_globals.cpp)
+set_tests_properties(test_exception_psychicstd PROPERTIES LABELS system-runtime)
 
 # Generic system atomics can also require GCC's out-of-line atomic runtime.
 # macOS has no libatomic; the compiler runtime covers it.
@@ -159,6 +164,7 @@ if(
             bash ${CMAKE_CURRENT_SOURCE_DIR}/external_project/run.sh ${CMAKE_SOURCE_DIR}
             fetchcontent ${CMAKE_CXX_COMPILER}
     )
+    set_tests_properties(ext_project_fetchcontent PROPERTIES LABELS external-tests)
 endif()
 
 if(_psychicstd_toolchain_supported)
@@ -168,36 +174,50 @@ if(_psychicstd_toolchain_supported)
             bash ${CMAKE_CURRENT_SOURCE_DIR}/external_project/run.sh ${CMAKE_SOURCE_DIR} toolchain
             ${CMAKE_CXX_COMPILER}
     )
+    set_tests_properties(ext_project_toolchain PROPERTIES LABELS external-tests)
     add_test(
         NAME ext_project_toolchain_asan
         COMMAND
             bash ${CMAKE_CURRENT_SOURCE_DIR}/external_project/run.sh ${CMAKE_SOURCE_DIR}
             toolchain-asan ${CMAKE_CXX_COMPILER}
     )
+    set_tests_properties(ext_project_toolchain_asan PROPERTIES LABELS external-tests)
     add_test(
         NAME ext_project_toolchain_ubsan
         COMMAND
             bash ${CMAKE_CURRENT_SOURCE_DIR}/external_project/run.sh ${CMAKE_SOURCE_DIR}
             toolchain-ubsan ${CMAKE_CXX_COMPILER}
     )
+    set_tests_properties(ext_project_toolchain_ubsan PROPERTIES LABELS external-tests)
     add_test(
         NAME ext_project_toolchain_asan_ubsan
         COMMAND
             bash ${CMAKE_CURRENT_SOURCE_DIR}/external_project/run.sh ${CMAKE_SOURCE_DIR}
             toolchain-asan-ubsan ${CMAKE_CXX_COMPILER}
     )
+    set_tests_properties(ext_project_toolchain_asan_ubsan PROPERTIES LABELS external-tests)
+    if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+        add_test(
+            NAME ext_project_toolchain_msan
+            COMMAND
+                bash ${CMAKE_CURRENT_SOURCE_DIR}/external_project/run.sh ${CMAKE_SOURCE_DIR}
+                toolchain-msan ${CMAKE_CXX_COMPILER}
+        )
+    endif()
     add_test(
         NAME ext_project_toolchain_project_include
         COMMAND
             bash ${CMAKE_CURRENT_SOURCE_DIR}/external_project/run.sh ${CMAKE_SOURCE_DIR}
             toolchain-project-include ${CMAKE_CXX_COMPILER}
     )
+    set_tests_properties(ext_project_toolchain_project_include PROPERTIES LABELS external-tests)
     add_test(
         NAME ext_project_toolchain_space
         COMMAND
             bash ${CMAKE_CURRENT_SOURCE_DIR}/external_project/run.sh ${CMAKE_SOURCE_DIR}
             toolchain-space ${CMAKE_CXX_COMPILER}
     )
+    set_tests_properties(ext_project_toolchain_space PROPERTIES LABELS external-tests)
     find_program(_psychicstd_ninja_executable ninja)
     if(_psychicstd_ninja_executable)
         add_test(
@@ -206,6 +226,7 @@ if(_psychicstd_toolchain_supported)
                 bash ${CMAKE_CURRENT_SOURCE_DIR}/external_project/run.sh ${CMAKE_SOURCE_DIR}
                 toolchain-multi-config ${CMAKE_CXX_COMPILER}
         )
+        set_tests_properties(ext_project_toolchain_multi_config PROPERTIES LABELS external-tests)
     endif()
 endif()
 
@@ -219,4 +240,5 @@ if(
         NAME conan_project_profile
         COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/conan_project/run.sh ${CMAKE_CXX_COMPILER}
     )
+    set_tests_properties(conan_project_profile PROPERTIES LABELS external-tests)
 endif()
