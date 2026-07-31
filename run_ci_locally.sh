@@ -93,13 +93,17 @@ run() {
   local name="$1" buildrel="$2" build="$REPO/$2"
   shift 2
   match "$name" || return 0
+  local -a ctest_args=(--test-dir "$build" --output-on-failure)
+  if [[ -n ${PSYCHICSTD_CTEST_EXCLUDE_LABELS:-} ]]; then
+    ctest_args+=(-LE "$PSYCHICSTD_CTEST_EXCLUDE_LABELS")
+  fi
   echo -e "\n${BOLD}─── $name ${DIM}[$buildrel]${RESET}"
   local status=pass
   if ! cmake -S "$REPO" -B "$build" "$@"; then
     status="FAIL (configure)"
   elif ! cmake --build "$build" -j"$NPROC"; then
     status="FAIL (build)"
-  elif ! ctest --test-dir "$build" --output-on-failure; then
+  elif ! ctest "${ctest_args[@]}"; then
     status="FAIL (test)"
   fi
   if [[ $status == pass ]]; then
@@ -144,7 +148,7 @@ if CLANGXX=$(find_clangxx); then
     -DCMAKE_BUILD_TYPE=Debug \
     "-DCMAKE_CXX_FLAGS=-fsanitize=address -fno-omit-frame-pointer" \
     "-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address"
-  run "clang msan" build_clang_msan \
+  PSYCHICSTD_CTEST_EXCLUDE_LABELS='system-stdlib|system-runtime|external-tests' run "clang msan" build_clang_msan \
     -DCMAKE_CXX_COMPILER="$CLANGXX" \
     -DCMAKE_BUILD_TYPE=Debug \
     "-DCMAKE_CXX_FLAGS=-fsanitize=memory -fno-omit-frame-pointer" \
