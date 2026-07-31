@@ -154,14 +154,17 @@ private:
   chrono::day day_{0};
 };
 
-// Whole-second subset; sign and fractional-second APIs are omitted.
+// Whole-second subset; fractional-second APIs are omitted.
 template <typename Duration> class hh_mm_ss {
 public:
   constexpr explicit hh_mm_ss(Duration value) {
     const auto total = duration_cast<chrono::seconds>(value).count();
-    hours_ = chrono::hours(static_cast<int>(total / 3600));
-    minutes_ = chrono::minutes(static_cast<int>((total % 3600) / 60));
-    seconds_ = chrono::seconds(total % 60);
+    const auto magnitude =
+        total < 0 ? static_cast<unsigned long long>(-(total + 1)) + 1
+                  : static_cast<unsigned long long>(total);
+    hours_ = chrono::hours(static_cast<int>(magnitude / 3600));
+    minutes_ = chrono::minutes(static_cast<int>((magnitude % 3600) / 60));
+    seconds_ = chrono::seconds(static_cast<long long>(magnitude % 60));
   }
 
   constexpr chrono::hours hours() const noexcept { return hours_; }

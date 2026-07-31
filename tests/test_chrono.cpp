@@ -102,6 +102,10 @@ int main() {
   psyassert(time.hours().count() == 1);
   psyassert(time.minutes().count() == 2);
   psyassert(time.seconds().count() == 3);
+  const std::chrono::hh_mm_ss negative_time{std::chrono::seconds{-3723}};
+  psyassert(negative_time.hours().count() == 1);
+  psyassert(negative_time.minutes().count() == 2);
+  psyassert(negative_time.seconds().count() == 3);
   using namespace std::chrono_literals;
   static_assert(2h == std::chrono::hours(2));
   static_assert(3min == std::chrono::minutes(3));
