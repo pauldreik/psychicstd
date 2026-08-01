@@ -78,9 +78,11 @@ set(TESTS
 )
 
 foreach(t ${TESTS})
-    # MSan cannot track writes made by the uninstrumented host libstdc++.
+    # Sanitizers cannot reliably exercise the uninstrumented host libstdc++:
+    # MSan cannot track its writes, and TSan's pthread_once interposition
+    # cannot recover from a throwing system std::call_once callback.
     # system-runtime marks psychicstd tests that cross a similar libsupc++ ABI
-    # boundary; external-tests build child projects without the MSan flags.
+    # boundary; external-tests build child projects without sanitizer flags.
     add_executable(${t}_system ${t}.cpp)
     target_compile_features(${t}_system PRIVATE cxx_std_23)
     psychicstd_enable_warnings(${t}_system)
@@ -202,6 +204,12 @@ if(_psychicstd_toolchain_supported)
             COMMAND
                 bash ${CMAKE_CURRENT_SOURCE_DIR}/external_project/run.sh ${CMAKE_SOURCE_DIR}
                 toolchain-msan ${CMAKE_CXX_COMPILER}
+        )
+        add_test(
+            NAME ext_project_toolchain_tsan
+            COMMAND
+                bash ${CMAKE_CURRENT_SOURCE_DIR}/external_project/run.sh ${CMAKE_SOURCE_DIR}
+                toolchain-tsan ${CMAKE_CXX_COMPILER}
         )
     endif()
     add_test(
