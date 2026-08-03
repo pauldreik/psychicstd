@@ -79,6 +79,20 @@ int main() {
   unit_buffered << std::nounitbuf << "second";
   psyassert(synced.sync_calls == 1);
 
+  syncing_buffer sentry_synced;
+  std::ostream sentry_stream(&sentry_synced);
+  {
+    std::ostream::sentry sentry(sentry_stream);
+    std::unitbuf(sentry_stream);
+  }
+  psyassert(sentry_synced.sync_calls == 1);
+  try {
+    std::ostream::sentry sentry(sentry_stream);
+    throw 1;
+  } catch (...) {
+  }
+  psyassert(sentry_synced.sync_calls == 1);
+
   std::wostringstream wide;
   wide << 42 << L'-' << L"wide";
   psyassert(wide.str() == L"42-wide");

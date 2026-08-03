@@ -1,6 +1,11 @@
+#include <exception>
 #include <ostream>
 
 namespace std {
+
+bool __ostream_sentry_should_flush() noexcept {
+  return uncaught_exceptions() == 0;
+}
 
 ios_base& boolalpha(ios_base& stream) {
   stream.setf(ios_base::boolalpha);

@@ -5,6 +5,8 @@
 
 namespace std {
 
+bool __ostream_sentry_should_flush() noexcept;
+
 template <typename T, typename D> class unique_ptr;
 
 template <typename Char, typename Traits>
@@ -36,7 +38,14 @@ public:
   class sentry {
   public:
     explicit sentry(basic_ostream& os) : os_(os), ok_(os.good()) {}
-    ~sentry() {}
+    ~sentry() {
+      if ((os_.flags() & ios_base::unitbuf) &&
+          __ostream_sentry_should_flush()) {
+        auto* sb = os_.rdbuf();
+        if (sb && sb->pubsync() == -1)
+          os_.setstate(ios_base::badbit);
+      }
+    }
     explicit operator bool() const noexcept { return ok_; }
 
   private:
