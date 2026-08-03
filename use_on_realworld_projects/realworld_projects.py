@@ -1066,11 +1066,11 @@ _EIGEN_TEST_LIST = (
 
 
 def _eigen() -> Project:
-    version = "3.4.0"
+    version = "5.0.1"
     url = (
         f"https://gitlab.com/libeigen/eigen/-/archive/{version}/eigen-{version}.tar.gz"
     )
-    checksum = "8586084f71f9bde545ee7fa6d00288b264a2b7ac3607b974e54d13e7162c1c72"
+    checksum = "e9c326dc8c05cd1e044c71f30f1b2e34a6161a3b6ecf445d56b53ff1669e3dec"
 
     def build(tc: Toolchain) -> dict[str, float]:
         tarball = RW_DIR / f"eigen-{version}.tar.gz"
