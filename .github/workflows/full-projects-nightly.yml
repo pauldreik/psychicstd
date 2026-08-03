@@ -5,11 +5,13 @@ on:
     - cron: 30 3 * * *
   workflow_dispatch:
 jobs:
+  # this is for all projects that do not need anything else but
+  # common tools (ninja, cmake etc)
   full:
     strategy:
       fail-fast: false
       matrix:
-        project: [abseil-full, bitcoin-full]
+        project: [abseil-full]
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
@@ -20,3 +22,22 @@ jobs:
         run: >-
           scripts/benchmark_realworld.py --check-only
           --project ${{ matrix.project }} --build-type debug
+  bitcoin:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install Ninja
+        run: >-
+          sudo apt-get install -y
+          cmake
+          libboost-all-dev
+          libevent-dev
+          ninja-build
+          pkg-config
+          python3
+      - name: Build Bitcoin Core crypto library with psychicstd
+        run: >-
+          scripts/benchmark_realworld.py
+          --check-only --project bitcoin-full
+          --build-type debug
