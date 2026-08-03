@@ -22,6 +22,7 @@ It is not complete. It is not fully compliant. But it is good enough to quickly 
 | [fmt](https://github.com/fmtlib/fmt) | [1.62x](use_on_realworld_projects/fmt_speed_report.md) | |
 | [Godot Engine](https://godotengine.org/) | [1.08x](use_on_realworld_projects/godot_speed_report.md) | Builds the core static library with SCons; rendering, window-system, audio, and optional engine modules are disabled. |
 | [googletest](https://github.com/google/googletest) | [1.56x](use_on_realworld_projects/googletest_speed_report.md) | |
+| [HarfBuzz](https://harfbuzz.github.io/) | [1.29x](use_on_realworld_projects/harfbuzz_speed_report.md) | Builds HarfBuzz's static libraries with Meson and runs its dependency-free upstream tests; optional integrations and command-line tools are disabled. |
 | [libcamera](https://libcamera.org/) | [4.49x](use_on_realworld_projects/libcamera_speed_report.md) | Builds the core libraries and UVC pipeline handler; hardware-dependent applications, optional integrations, bindings, and tests are disabled. |
 | [libtorrent](https://github.com/arvidn/libtorrent) | [1.93x](use_on_realworld_projects/libtorrent_speed_report.md) | Builds the complete static library with DHT, encryption, extensions, I2P, logging, and streaming enabled; WebTorrent is disabled because its bundled dependencies are absent from the release archive. |
 | [llama.cpp](https://github.com/ggml-org/llama.cpp) | [1.52x](use_on_realworld_projects/llama.cpp_speed_report.md) | Builds `ggml-base` and `ggml-cpu` and compiles model-architecture and hyperparameter handling; excludes accelerator backends, tools, examples, server, and tests. |
@@ -289,6 +290,36 @@ Every target containing C++ sources, including fetched dependencies, must use
 the same standard library. Link `psychicstd::psychicstd` to each such target or
 use the toolchain overlay when replacing the standard library for an untouched
 project or its whole dependency graph.
+
+### Meson native file
+
+Meson native files provide equivalent whole-project integration for GCC 13+
+and Clang. After building the psychicstd runtime as described above, create
+`psychicstd.ini`:
+
+```ini
+[binaries]
+cpp = 'g++-14'
+
+[built-in options]
+cpp_std = 'c++20'
+cpp_args = ['-nostdinc++', '-fvisibility=hidden', '-isystem', '/path/to/psychicstd/include']
+cpp_link_args = ['-nostdlib++', '/path/to/psychicstd/build-runtime/libpsychicstd.a', '-lsupc++', '-latomic']
+```
+
+Configure and build the project with that native file:
+
+```bash
+meson setup build-with-psychic --native-file psychicstd.ini
+meson compile -C build-with-psychic
+```
+
+The native file applies to every C++ target in the host build, including
+subprojects. As with the manual CMake integration, all linked C++ code must use
+the same standard library. Meson caches compiler settings at setup time, so
+reconfigure or recreate the build directory after changing the native file.
+The [HarfBuzz benchmark](use_on_realworld_projects/harfbuzz_speed_report.md)
+exercises this whole-project replacement through a Meson build.
 
 ### Using with Conan
 
