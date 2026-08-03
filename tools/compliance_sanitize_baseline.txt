@@ -18,10 +18,6 @@ std/input.output/iostreams.base/ios.base/ios.base.storage/pword.pass.cpp
 
 std/input.output/string.streams/stringbuf/stringbuf.virtuals/overflow.pass.cpp
 std/iterators/predef.iterators/insert.iterators/insert.iter.ops/insert.iter.op=/lv_value.pass.cpp
-std/language.support/support.exception/propagation/exception_ptr_move_assignment.pass.cpp
-std/language.support/support.exception/propagation/exception_ptr_move_ctr.pass.cpp
-std/language.support/support.exception/propagation/exception_ptr_swap.pass.cpp
-std/language.support/support.exception/propagation/make_exception_ptr.pass.cpp
 std/numerics/complex.number/complex.ops/stream_output.pass.cpp
 std/numerics/complex.number/complex.value.ops/abs.pass.cpp
 std/numerics/rand/rand.dist/rand.dist.samp/rand.dist.samp.discrete/ctor_func.pass.cpp
