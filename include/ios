@@ -54,6 +54,7 @@ public:
   static constexpr fmtflags showpos = 1 << 11;
   static constexpr fmtflags skipws = 1 << 12;
   static constexpr fmtflags uppercase = 1 << 13;
+  static constexpr fmtflags unitbuf = 1 << 14;
   static constexpr fmtflags adjustfield = left | right | internal;
   static constexpr fmtflags basefield = dec | oct | hex;
   static constexpr fmtflags floatfield = fixed | scientific;
@@ -221,6 +222,7 @@ public:
 
 protected:
   basic_ios() : buf_(nullptr) {}
+  void set_rdbuf(basic_streambuf<Char, Traits>* sb) noexcept { buf_ = sb; }
   void init(basic_streambuf<Char, Traits>* sb) {
     buf_ = sb;
     state_ = sb ? goodbit : badbit;

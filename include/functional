@@ -144,13 +144,13 @@ constexpr decltype(auto) __bind_arg(T&& v, Rest&&...) {
 }
 // Nested bind: invoke the nested bind expression with the call args
 template <typename F, typename... Bound, typename... Args>
-constexpr decltype(auto) __bind_arg(__bind_wrapper<F, Bound...>& bw,
-                                    Args&&... args) {
+constexpr auto __bind_arg(__bind_wrapper<F, Bound...>& bw, Args&&... args)
+    -> decltype(bw(static_cast<Args&&>(args)...)) {
   return bw(static_cast<Args&&>(args)...);
 }
 template <typename F, typename... Bound, typename... Args>
-constexpr decltype(auto) __bind_arg(const __bind_wrapper<F, Bound...>& bw,
-                                    Args&&... args) {
+constexpr auto __bind_arg(const __bind_wrapper<F, Bound...>& bw, Args&&... args)
+    -> decltype(bw(static_cast<Args&&>(args)...)) {
   return bw(static_cast<Args&&>(args)...);
 }
 template <typename T, typename... Rest>
@@ -215,10 +215,15 @@ template <typename F, typename... Bound> struct __bind_wrapper {
   constexpr __bind_wrapper(F2&& f, B2&&... b)
       : f_(static_cast<F2&&>(f)), bound_(static_cast<B2&&>(b)...) {}
   template <typename... Args>
+    requires(is_invocable_v<F&, decltype(detail::__bind_arg(
+                                    declval<Bound&>(), declval<Args>()...))...>)
   constexpr decltype(auto) operator()(Args&&... args) {
     return __call(index_sequence_for<Bound...>{}, static_cast<Args&&>(args)...);
   }
   template <typename... Args>
+    requires(is_invocable_v<
+             const F&, decltype(detail::__bind_arg(declval<const Bound&>(),
+                                                   declval<Args>()...))...>)
   constexpr decltype(auto) operator()(Args&&... args) const {
     return __call(index_sequence_for<Bound...>{}, static_cast<Args&&>(args)...);
   }

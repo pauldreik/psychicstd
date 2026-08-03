@@ -1,0 +1,47 @@
+#if defined(_PSYCHICSTD_BASIC_ISTREAM_DEFINED) &&                              \
+    defined(_PSYCHICSTD_BASIC_OSTREAM_DEFINED) &&                              \
+    !defined(_PSYCHICSTD_BASIC_IOSTREAM_DEFINED)
+#define _PSYCHICSTD_BASIC_IOSTREAM_DEFINED
+
+namespace std {
+
+template <typename Char, typename Traits>
+class basic_iostream : public basic_istream<Char, Traits>,
+                       public basic_ostream<Char, Traits> {
+public:
+  using char_type = Char;
+  using traits_type = Traits;
+  using int_type = typename Traits::int_type;
+  using pos_type = typename Traits::pos_type;
+  using off_type = typename Traits::off_type;
+
+  explicit basic_iostream(basic_streambuf<Char, Traits>* sb)
+      : basic_istream<Char, Traits>(sb), basic_ostream<Char, Traits>(sb) {}
+
+  virtual ~basic_iostream() = default;
+
+protected:
+  basic_iostream()
+      : basic_istream<Char, Traits>(nullptr),
+        basic_ostream<Char, Traits>(nullptr) {}
+
+  basic_iostream(basic_iostream&& other)
+      : basic_istream<Char, Traits>(other.basic_istream<Char, Traits>::rdbuf()),
+        basic_ostream<Char, Traits>(
+            other.basic_istream<Char, Traits>::rdbuf()) {
+    this->copyfmt(other);
+    this->clear(other.rdstate());
+  }
+
+  basic_iostream& operator=(basic_iostream&& other) {
+    if (this != &other) {
+      this->copyfmt(other);
+      this->clear(other.rdstate());
+    }
+    return *this;
+  }
+};
+
+} // namespace std
+
+#endif

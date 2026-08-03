@@ -48,6 +48,7 @@ public:
     auto* sb = this->rdbuf();
     if (!sb || sb->sputn(s, n) != n)
       this->setstate(ios_base::badbit);
+    flush_if_unitbuf();
     return *this;
   }
   basic_ostream& put(Char c) {
@@ -136,6 +137,7 @@ public:
     }
     if (count == 0)
       this->setstate(ios_base::failbit);
+    flush_if_unitbuf();
     return *this;
   }
 
@@ -191,6 +193,11 @@ protected:
   basic_ostream() { this->init(nullptr); }
 
 private:
+  void flush_if_unitbuf() {
+    if (this->flags_ & ios_base::unitbuf)
+      flush();
+  }
+
   void emit(const Char* s, streamsize n) {
     auto* sb = this->rdbuf();
     if (!sb || sb->sputn(s, n) != n)
@@ -202,6 +209,7 @@ private:
     this->width_ = 0; // width is consumed after use
     if (w <= n) {
       emit(s, n);
+      flush_if_unitbuf();
       return;
     }
     streamsize pad = w - n;
@@ -226,6 +234,7 @@ private:
         emit(&fc, 1);
       emit(s, n);
     }
+    flush_if_unitbuf();
   }
 
   template <typename C = Char>
@@ -361,6 +370,14 @@ ios_base& fixed(ios_base&);
 ios_base& scientific(ios_base&);
 ios_base& defaultfloat(ios_base&);
 ios_base& hexfloat(ios_base&);
+inline ios_base& unitbuf(ios_base& stream) {
+  stream.setf(ios_base::unitbuf);
+  return stream;
+}
+inline ios_base& nounitbuf(ios_base& stream) {
+  stream.unsetf(ios_base::unitbuf);
+  return stream;
+}
 
 template <typename Ostream, typename T>
   requires(!is_lvalue_reference_v<Ostream> &&
@@ -381,3 +398,6 @@ using ostream = basic_ostream<char>;
 using wostream = basic_ostream<wchar_t>;
 
 } // namespace std
+
+#define _PSYCHICSTD_BASIC_OSTREAM_DEFINED
+#include <__psychicstd_iostream>

@@ -71,6 +71,17 @@ int main() {
   }
   psyassert(caught_saved);
 
+  auto made = std::make_exception_ptr(23);
+  psyassert(made);
+  bool caught_made = false;
+  try {
+    std::rethrow_exception(made);
+  } catch (int value) {
+    caught_made = value == 23;
+  } catch (...) {
+  }
+  psyassert(caught_made);
+
   bool caught_nested = false;
   try {
     try {

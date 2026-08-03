@@ -24,6 +24,17 @@ public:
   ~derived_output() override = default;
 };
 
+class syncing_buffer : public std::stringbuf {
+public:
+  int sync_calls = 0;
+
+private:
+  int sync() override {
+    ++sync_calls;
+    return std::stringbuf::sync();
+  }
+};
+
 bool iostream_was_ready_during_static_initialization();
 std::ostream* iostream_cout_from_other_translation_unit();
 
@@ -52,6 +63,21 @@ int main() {
   std::cout << "test";
   std::cout.rdbuf(old);
   psyassert(buf.str() == "test");
+
+  std::stringbuf bidirectional_buffer;
+  std::iostream bidirectional(&bidirectional_buffer);
+  static_assert(
+      std::is_same_v<std::iostream::traits_type, std::char_traits<char>>);
+  psyassert(bidirectional.rdbuf() == &bidirectional_buffer);
+  bidirectional.setf(std::ios_base::unitbuf);
+  psyassert(bidirectional.flags() & std::ios_base::unitbuf);
+
+  syncing_buffer synced;
+  std::ostream unit_buffered(&synced);
+  unit_buffered << std::unitbuf << "first";
+  psyassert(synced.sync_calls == 1);
+  unit_buffered << std::nounitbuf << "second";
+  psyassert(synced.sync_calls == 1);
 
   std::wostringstream wide;
   wide << 42 << L'-' << L"wide";
