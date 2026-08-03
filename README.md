@@ -11,7 +11,7 @@ It is not complete. It is not fully compliant. But it is good enough to quickly 
 | [Abseil](https://abseil.io/) | [2.14x](use_on_realworld_projects/abseil_speed_report.md) | Builds `absl/base` and eight small upstream base tests. |
 | [Bitcoin Core](https://github.com/bitcoin/bitcoin) | [2.20x](use_on_realworld_projects/bitcoin_speed_report.md) | Builds all 16 crypto primitives plus memory cleansing, including MuHash and SipHash. |
 | [Boost.Asio](https://www.boost.org/libs/asio/) | [2.12x](use_on_realworld_projects/boost-asio_speed_report.md) | |
-| [Boost.Test](https://www.boost.org/libs/test/) | [1.58x](use_on_realworld_projects/boost-test_speed_report.md) | Builds and runs three upstream header-only smoke tests. |
+| [Boost.Test](https://www.boost.org/libs/test/) | [1.58x](use_on_realworld_projects/boost-test_speed_report.md) | Builds and runs three upstream header-only smoke tests; the nightly `boost-test-full` variant runs the complete upstream Boost.Build target. |
 | [catch2](https://github.com/catchorg/Catch2) | [3.48x](use_on_realworld_projects/catch2_speed_report.md) | |
 | [cmake](https://cmake.org/) | [3.04x](use_on_realworld_projects/cmake_speed_report.md) | Uses a compiler wrapper to build. |
 | [cppcheck](https://github.com/cppcheck-opensource/cppcheck) | [2.04x](use_on_realworld_projects/cppcheck_speed_report.md)| |

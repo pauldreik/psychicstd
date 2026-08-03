@@ -1111,6 +1111,8 @@ basic_istream<Char, Traits>& operator>>(basic_istream<Char, Traits>& is,
     s += ch;
     sb->sbumpc();
   }
+  if (Traits::eq_int_type(c, Traits::eof()))
+    is.setstate(basic_ios<Char, Traits>::eofbit);
   if (s.empty())
     is.setstate(basic_ios<Char, Traits>::failbit);
   return is;

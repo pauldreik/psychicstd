@@ -76,4 +76,8 @@ int main() {
                 alignof(int));
   static_assert(std::negation_v<std::false_type>);
   static_assert(!std::negation_v<std::true_type>);
+  static_assert(std::rank_v<int> == 0);
+  static_assert(std::rank_v<int[][2][3]> == 3);
+  static_assert(std::extent_v<int[2][3]> == 2);
+  static_assert(std::extent_v<int[2][3], 1> == 3);
 }

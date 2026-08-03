@@ -25,6 +25,14 @@ struct aggregate {
   int second;
 };
 
+struct unrelated {};
+
+template <typename T, typename U>
+concept equality_comparable = requires(T value, U other) { value == other; };
+
+static_assert(!equality_comparable<std::optional<int>, unrelated>);
+static_assert(!equality_comparable<unrelated, std::optional<int>>);
+
 int main() {
   std::optional<int> o = 42;
   psyassert(o.value() == 42);
