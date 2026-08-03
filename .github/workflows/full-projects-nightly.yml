@@ -56,3 +56,18 @@ jobs:
           scripts/benchmark_realworld.py
           --check-only --project boost-asio-full
           --build-type debug
+  harfbuzz:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install dependencies
+        run: >-
+          sudo apt-get install -y
+          meson
+          ninja-build
+      - name: Build and test HarfBuzz with psychicstd
+        run: >-
+          scripts/benchmark_realworld.py
+          --check-only --project harfbuzz
+          --build-type debug

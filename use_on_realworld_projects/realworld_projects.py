@@ -2885,6 +2885,70 @@ def _llama_cpp() -> Project:
     )
 
 
+# --- harfbuzz ------------------------------------------------------------
+
+
+def _harfbuzz() -> Project:
+    version = "14.2.1"
+    url = f"https://github.com/harfbuzz/harfbuzz/archive/refs/tags/{version}.tar.gz"
+    checksum = "3c2a9006a7e1bf58737e557014d7882c554c628fb379a9f00008f5ea53dbbdfb"
+
+    def build(tc: Toolchain) -> dict[str, float]:
+        tarball = RW_DIR / f"harfbuzz-{version}.tar.gz"
+        _fetch(url, tarball, checksum)
+
+        with tempfile.TemporaryDirectory(
+            prefix="rw-harfbuzz-", ignore_cleanup_errors=True
+        ) as work_dir:
+            work = Path(work_dir)
+            with tarfile.open(tarball) as t:
+                t.extractall(work)
+            src = work / f"harfbuzz-{version}"
+
+            env = _env(tc)
+            wrapper = _compiler_wrapper(work / "cxx", tc)
+            env["CXX"] = str(wrapper)
+            configure = [
+                "meson",
+                "setup",
+                "build",
+                "--buildtype=" + tc.build_type,
+                "--default-library=static",
+                "-Dcpp_std=c++20",
+                "-Dauto_features=disabled",
+                "-Dsubset=enabled",
+                "-Dtests=enabled",
+                "-Dutilities=disabled",
+            ]
+            jobs = f"-j{tc.jobs}"
+            return {
+                "configure": _timed(configure, src, env),
+                "compile": _timed(["ninja", "-C", "build", jobs], src, env),
+                "run tests": _timed(
+                    [
+                        "meson",
+                        "test",
+                        "-C",
+                        "build",
+                        "--print-errorlogs",
+                        "--no-rebuild",
+                    ],
+                    src,
+                    env,
+                ),
+            }
+
+    return Project(
+        version=version,
+        build=build,
+        expected_seconds={"debug": 20, "release": 22},
+        phases=("compile", "run tests"),
+        comment="Builds HarfBuzz's static libraries and runs its dependency-free "
+        "upstream tests; optional integrations and command-line tools are "
+        "disabled.",
+    )
+
+
 # --- libcamera -----------------------------------------------------------
 
 
@@ -3518,6 +3582,7 @@ PROJECTS: dict[str, Project] = {
     "fmt": _fmt(),
     "godot": _godot(),
     "googletest": _googletest(),
+    "harfbuzz": _harfbuzz(),
     "inipp": _inipp(),
     "cxxopts": _cxxopts(),
     "libcamera": _libcamera(),
