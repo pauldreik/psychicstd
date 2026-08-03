@@ -30,8 +30,10 @@ int main() {
   psyassert(x == 42);
 
   std::string temporary_value;
-  std::istringstream("temporary") >> temporary_value;
+  std::istringstream temporary("temporary");
+  temporary >> temporary_value;
   psyassert(temporary_value == "temporary");
+  psyassert(temporary.eof());
 
   std::istringstream hex_input("a");
   hex_input >> std::hex >> x;
