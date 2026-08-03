@@ -2452,7 +2452,7 @@ def _boost_asio(full: bool) -> Project:
 # --- boost test ----------------------------------------------------------
 
 
-def _boost_test() -> Project:
+def _boost_test(full: bool) -> Project:
     version = "1.91.0"
     url = f"https://archives.boost.io/release/{version}/source/boost_1_91_0.tar.gz"
     checksum = "5734305f40a76c30f951c9abd409a45a2a19fb546efe4162119250bbe4d3a463"
@@ -2462,7 +2462,8 @@ def _boost_test() -> Project:
         _fetch(url, tarball, checksum)
 
         with tempfile.TemporaryDirectory(
-            prefix="rw-boost-test-", ignore_cleanup_errors=True
+            prefix="rw-boost-test-full-" if full else "rw-boost-test-",
+            ignore_cleanup_errors=True,
         ) as work_dir:
             work = Path(work_dir)
             with tarfile.open(tarball) as t:
@@ -2470,6 +2471,58 @@ def _boost_test() -> Project:
             src = work / f"boost_{version.replace('.', '_')}"
 
             env = _env(tc)
+            if full:
+                # Boost.Test consumes only Boost.Algorithm's and Boost.Range's
+                # headers, but their project-wide dependency metadata pulls
+                # in the compiled Boost.Regex library. None of the selected
+                # Boost.Test sources use it.
+                regex_dependency = "    /boost/regex//boost_regex\n"
+                for name in ("libs/algorithm/build.jam", "libs/range/build.jam"):
+                    build_jam = src / name
+                    text = build_jam.read_text()
+                    if text.count(regex_dependency) != 1:
+                        raise RuntimeError(
+                            f"unexpected Boost.Regex dependency in {name}"
+                        )
+                    build_jam.write_text(text.replace(regex_dependency, ""))
+
+                # Boost.Test uses std::distance without including <iterator>.
+                iterable = src / "boost/test/utils/is_forward_iterable.hpp"
+                iterable.write_text("#include <iterator>\n" + iterable.read_text())
+
+                configure_ms = _timed(["./bootstrap.sh"], src, env)
+                wrapper = _compiler_wrapper(
+                    work / "cxx",
+                    tc,
+                    ("-DBOOST_NO_AUTO_PTR=1", "-DBOOST_NO_CXX98_BINDERS=1"),
+                )
+                compiler_version = subprocess.run(
+                    [*shlex.split(tc.cxx), "--version"],
+                    capture_output=True,
+                    text=True,
+                    check=True,
+                ).stdout.lower()
+                toolset = "clang" if "clang" in compiler_version else "gcc"
+                toolset_name = f"{toolset}-psychic"
+                user_config = work / "user-config.jam"
+                user_config.write_text(f"using {toolset} : psychic : {wrapper} ;\n")
+                build_and_test = [
+                    str(src / "b2"),
+                    "libs/test/test",
+                    f"--user-config={user_config}",
+                    f"toolset={toolset_name}",
+                    "cxxstd=20",
+                    f"variant={tc.build_type}",
+                    "link=static",
+                    "threading=multi",
+                    f"-j{tc.jobs}",
+                    "--abbreviate-paths",
+                ]
+                return {
+                    "configure": configure_ms,
+                    "build and test": _timed(build_and_test, src, env),
+                }
+
             test_dir = src / "libs" / "test" / "test"
             test_sources = [
                 Path("smoke-ts/basic-smoke-test.cpp"),
@@ -2509,9 +2562,18 @@ def _boost_test() -> Project:
     return Project(
         version=version,
         build=build,
-        expected_seconds={"debug": 30, "release": 30},
-        phases=("compile", "run tests"),
-        comment="Builds and runs Boost.Test's three upstream header-only smoke tests.",
+        expected_seconds=(
+            {"debug": 180, "release": 180} if full else {"debug": 30, "release": 30}
+        ),
+        phases=("build and test",) if full else ("compile", "run tests"),
+        comment=(
+            "Builds and runs Boost.Test's complete upstream test target with "
+            "Boost.Build, including its framework, datasets, logging, "
+            "execution-monitor, multithreading, usage-variant, utility, and "
+            "documentation-example coverage."
+            if full
+            else "Builds and runs Boost.Test's three upstream header-only smoke tests."
+        ),
     )
 
 
@@ -3571,7 +3633,8 @@ PROJECTS: dict[str, Project] = {
     "bitcoin-full": _bitcoin(full=True),
     "boost-asio": _boost_asio(full=False),
     "boost-asio-full": _boost_asio(full=True),
-    "boost-test": _boost_test(),
+    "boost-test": _boost_test(full=False),
+    "boost-test-full": _boost_test(full=True),
     "catch2": _catch2(),
     "cmake": _cmake(),
     "cppcheck": _cppcheck(),
