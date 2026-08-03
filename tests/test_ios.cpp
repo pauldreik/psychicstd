@@ -1,5 +1,6 @@
 #include "psyassert.h"
 #include <ios>
+#include <sstream>
 #include <type_traits>
 
 int main() {
@@ -27,6 +28,11 @@ int main() {
   std::ios null_ios(nullptr);
   null_ios.clear();
   psyassert(null_ios.bad());
+  std::ostringstream tied_output;
+  psyassert(ios.tie() == nullptr);
+  psyassert(ios.tie(&tied_output) == nullptr);
+  psyassert(ios.tie() == &tied_output);
+  psyassert(ios.tie(nullptr) == &tied_output);
   auto initial_flags = null_ios.flags();
   auto old_flags =
       null_ios.setf(std::ios::right | std::ios::hex, std::ios::adjustfield);

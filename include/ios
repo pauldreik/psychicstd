@@ -196,6 +196,13 @@ public:
   void exceptions(iostate mask) { ios_base::exceptions(mask); }
   locale getloc() const { return ios_base::getloc(); }
   locale imbue(const locale& loc) { return ios_base::imbue(loc); }
+  basic_ostream<Char, Traits>* tie() const noexcept { return tie_; }
+  basic_ostream<Char, Traits>*
+  tie(basic_ostream<Char, Traits>* stream) noexcept {
+    auto* old = tie_;
+    tie_ = stream;
+    return old;
+  }
 
   basic_streambuf<Char, Traits>* rdbuf() const noexcept { return buf_; }
   basic_streambuf<Char, Traits>* rdbuf(basic_streambuf<Char, Traits>* sb) {
@@ -212,6 +219,7 @@ public:
       width_ = rhs.width_;
       prec_ = rhs.prec_;
       fill_ = rhs.fill_;
+      tie_ = rhs.tie_;
       for (int i = 0; i < _word_count; ++i) {
         iwords_[i] = rhs.iwords_[i];
         pwords_[i] = rhs.pwords_[i];
@@ -229,6 +237,7 @@ protected:
   }
 
   basic_streambuf<Char, Traits>* buf_;
+  basic_ostream<Char, Traits>* tie_ = nullptr;
 };
 
 } // namespace std
