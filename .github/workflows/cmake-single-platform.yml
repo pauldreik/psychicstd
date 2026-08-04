@@ -22,6 +22,26 @@ jobs:
       - name: Test
         working-directory: ${{github.workspace}}/build
         run: ctest -C ${{env.BUILD_TYPE}} --output-on-failure
+  arm64-linux:
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v7
+      - name: Verify architecture
+        run: test "$(uname -m)" = aarch64
+      - name: Configure CMake
+        run: >
+          cmake -S . -B ${{github.workspace}}/build_arm64 -GNinja
+          -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
+          -DCMAKE_CXX_COMPILER=g++-14
+          -DPSYCHICSTD_BUILD_BENCHMARKS=OFF
+      - name: Build
+        run: cmake --build ${{github.workspace}}/build_arm64 --parallel 4
+      - name: Test
+        run: >
+          ctest --test-dir ${{github.workspace}}/build_arm64
+          -C ${{env.BUILD_TYPE}}
+          --parallel 4
+          --output-on-failure
   conan:
     runs-on: ubuntu-latest
     steps:
