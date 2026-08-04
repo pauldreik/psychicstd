@@ -58,11 +58,81 @@ inline float sqrt(float value) { return __builtin_sqrtf(value); }
 inline double sqrt(double value) { return __builtin_sqrt(value); }
 inline long double sqrt(long double value) { return __builtin_sqrtl(value); }
 
+template <typename T> T hypot(T x, T y) {
+  return static_cast<T>(__builtin_hypotl(static_cast<long double>(x),
+                                         static_cast<long double>(y)));
+}
+inline float hypot(float x, float y) { return __builtin_hypotf(x, y); }
+inline double hypot(double x, double y) { return __builtin_hypot(x, y); }
+inline long double hypot(long double x, long double y) {
+  return __builtin_hypotl(x, y);
+}
+
+template <typename T> T exp(T value) {
+  return static_cast<T>(__builtin_expl(static_cast<long double>(value)));
+}
+inline float exp(float value) { return __builtin_expf(value); }
+inline double exp(double value) { return __builtin_exp(value); }
+inline long double exp(long double value) { return __builtin_expl(value); }
+
+template <typename T> T log(T value) {
+  return static_cast<T>(__builtin_logl(static_cast<long double>(value)));
+}
+inline float log(float value) { return __builtin_logf(value); }
+inline double log(double value) { return __builtin_log(value); }
+inline long double log(long double value) { return __builtin_logl(value); }
+
+template <typename T> T sin(T value) {
+  return static_cast<T>(__builtin_sinl(static_cast<long double>(value)));
+}
+inline float sin(float value) { return __builtin_sinf(value); }
+inline double sin(double value) { return __builtin_sin(value); }
+inline long double sin(long double value) { return __builtin_sinl(value); }
+
+template <typename T> T cos(T value) {
+  return static_cast<T>(__builtin_cosl(static_cast<long double>(value)));
+}
+inline float cos(float value) { return __builtin_cosf(value); }
+inline double cos(double value) { return __builtin_cos(value); }
+inline long double cos(long double value) { return __builtin_cosl(value); }
+
+template <typename T> T sinh(T value) {
+  return static_cast<T>(__builtin_sinhl(static_cast<long double>(value)));
+}
+inline float sinh(float value) { return __builtin_sinhf(value); }
+inline double sinh(double value) { return __builtin_sinh(value); }
+inline long double sinh(long double value) { return __builtin_sinhl(value); }
+
+template <typename T> T cosh(T value) {
+  return static_cast<T>(__builtin_coshl(static_cast<long double>(value)));
+}
+inline float cosh(float value) { return __builtin_coshf(value); }
+inline double cosh(double value) { return __builtin_cosh(value); }
+inline long double cosh(long double value) { return __builtin_coshl(value); }
+
 template <typename T>
 inline constexpr int floating_rank = __is_same(T, float)         ? 1
                                      : __is_same(T, double)      ? 2
                                      : __is_same(T, long double) ? 3
                                                                  : 0;
+
+template <typename T> inline constexpr bool is_integral = false;
+template <> inline constexpr bool is_integral<bool> = true;
+template <> inline constexpr bool is_integral<char> = true;
+template <> inline constexpr bool is_integral<signed char> = true;
+template <> inline constexpr bool is_integral<unsigned char> = true;
+template <> inline constexpr bool is_integral<wchar_t> = true;
+template <> inline constexpr bool is_integral<char8_t> = true;
+template <> inline constexpr bool is_integral<char16_t> = true;
+template <> inline constexpr bool is_integral<char32_t> = true;
+template <> inline constexpr bool is_integral<short> = true;
+template <> inline constexpr bool is_integral<unsigned short> = true;
+template <> inline constexpr bool is_integral<int> = true;
+template <> inline constexpr bool is_integral<unsigned int> = true;
+template <> inline constexpr bool is_integral<long> = true;
+template <> inline constexpr bool is_integral<unsigned long> = true;
+template <> inline constexpr bool is_integral<long long> = true;
+template <> inline constexpr bool is_integral<unsigned long long> = true;
 
 } // namespace __complex_detail
 
@@ -251,18 +321,178 @@ template <typename T> constexpr bool operator!=(T a, const complex<T>& b) {
 template <typename T> T arg(const complex<T>& c) {
   return __complex_detail::atan2(c.imag(), c.real());
 }
+inline float arg(float value) { return __complex_detail::atan2(0.0F, value); }
+inline double arg(double value) { return __complex_detail::atan2(0.0, value); }
+inline long double arg(long double value) {
+  return __complex_detail::atan2(0.0L, value);
+}
+template <typename T>
+  requires(__complex_detail::is_integral<T>)
+double arg(T value) {
+  return arg(static_cast<double>(value));
+}
 template <typename T> T norm(const complex<T>& c) {
   return c.real() * c.real() + c.imag() * c.imag();
 }
 template <typename T> T abs(const complex<T>& c) {
-  return __complex_detail::sqrt(norm(c));
+  return __complex_detail::hypot(c.real(), c.imag());
+}
+template <typename T> complex<T> polar(const T& rho, const T& theta = T()) {
+  return complex<T>(rho * __complex_detail::cos(theta),
+                    rho * __complex_detail::sin(theta));
+}
+template <typename T> complex<T> sqrt(const complex<T>& c) {
+  if constexpr (__complex_detail::floating_rank<T> == 1) {
+    __complex__ float value;
+    __real__ value = c.real();
+    __imag__ value = c.imag();
+    value = __builtin_csqrtf(value);
+    return complex<T>(__real__ value, __imag__ value);
+  } else if constexpr (__complex_detail::floating_rank<T> == 2) {
+    __complex__ double value;
+    __real__ value = c.real();
+    __imag__ value = c.imag();
+    value = __builtin_csqrt(value);
+    return complex<T>(__real__ value, __imag__ value);
+  } else if constexpr (__complex_detail::floating_rank<T> == 3) {
+    __complex__ long double value;
+    __real__ value = c.real();
+    __imag__ value = c.imag();
+    value = __builtin_csqrtl(value);
+    return complex<T>(__real__ value, __imag__ value);
+  } else {
+    return polar(__complex_detail::sqrt(abs(c)), arg(c) / T(2));
+  }
+}
+template <typename T> complex<T> exp(const complex<T>& c) {
+  if constexpr (__complex_detail::floating_rank<T> == 1) {
+    __complex__ float value;
+    __real__ value = c.real();
+    __imag__ value = c.imag();
+    value = __builtin_cexpf(value);
+    return complex<T>(__real__ value, __imag__ value);
+  } else if constexpr (__complex_detail::floating_rank<T> == 2) {
+    __complex__ double value;
+    __real__ value = c.real();
+    __imag__ value = c.imag();
+    value = __builtin_cexp(value);
+    return complex<T>(__real__ value, __imag__ value);
+  } else if constexpr (__complex_detail::floating_rank<T> == 3) {
+    __complex__ long double value;
+    __real__ value = c.real();
+    __imag__ value = c.imag();
+    value = __builtin_cexpl(value);
+    return complex<T>(__real__ value, __imag__ value);
+  } else {
+    return polar(__complex_detail::exp(c.real()), c.imag());
+  }
+}
+template <typename T> complex<T> log(const complex<T>& c) {
+  return complex<T>(__complex_detail::log(abs(c)), arg(c));
+}
+template <typename T> complex<T> log10(const complex<T>& c) {
+  return log(c) / __complex_detail::log(T(10));
+}
+template <typename T>
+complex<T> pow(const complex<T>& base, const complex<T>& exponent) {
+  return exp(exponent * log(base));
+}
+// [cmplx.over] treats integral exponents as double. Do not preserve float as
+// libstdc++'s legacy complex<T> overload does.
+template <typename T, typename Integer>
+  requires(__complex_detail::is_integral<Integer>)
+complex<decltype(T() + double())> pow(const complex<T>& base,
+                                      Integer exponent) {
+  using R = decltype(T() + double());
+  complex<R> factor(base);
+  complex<R> result(R(1));
+  const bool reciprocal = exponent < Integer();
+  while (exponent != Integer()) {
+    if (exponent % Integer(2) != Integer())
+      result *= factor;
+    factor *= factor;
+    exponent /= Integer(2);
+  }
+  return reciprocal ? complex<R>(R(1)) / result : result;
+}
+template <typename T>
+complex<T> pow(const complex<T>& base, const T& exponent) {
+  return exp(complex<T>(exponent) * log(base));
+}
+template <typename T>
+complex<T> pow(const T& base, const complex<T>& exponent) {
+  return exp(exponent * log(complex<T>(base)));
 }
 
+// Compiler complex builtins preserve special values and avoid intermediate
+// overflow in the elementary formulas.
+#define _PSYCHICSTD_COMPLEX_BUILTIN(name, input)                               \
+  if constexpr (__complex_detail::floating_rank<T> == 1) {                     \
+    __complex__ float value;                                                   \
+    __real__ value = input.real();                                             \
+    __imag__ value = input.imag();                                             \
+    value = __builtin_##name##f(value);                                        \
+    return complex<T>(__real__ value, __imag__ value);                         \
+  } else if constexpr (__complex_detail::floating_rank<T> == 2) {              \
+    __complex__ double value;                                                  \
+    __real__ value = input.real();                                             \
+    __imag__ value = input.imag();                                             \
+    value = __builtin_##name(value);                                           \
+    return complex<T>(__real__ value, __imag__ value);                         \
+  } else if constexpr (__complex_detail::floating_rank<T> == 3) {              \
+    __complex__ long double value;                                             \
+    __real__ value = input.real();                                             \
+    __imag__ value = input.imag();                                             \
+    value = __builtin_##name##l(value);                                        \
+    return complex<T>(__real__ value, __imag__ value);                         \
+  } else
+
+template <typename T> complex<T> sin(const complex<T>& c) {
+  _PSYCHICSTD_COMPLEX_BUILTIN(csin, c)
+  return complex<T>(
+      __complex_detail::sin(c.real()) * __complex_detail::cosh(c.imag()),
+      __complex_detail::cos(c.real()) * __complex_detail::sinh(c.imag()));
+}
+template <typename T> complex<T> cos(const complex<T>& c) {
+  _PSYCHICSTD_COMPLEX_BUILTIN(ccos, c)
+  return complex<T>(
+      __complex_detail::cos(c.real()) * __complex_detail::cosh(c.imag()),
+      -__complex_detail::sin(c.real()) * __complex_detail::sinh(c.imag()));
+}
+template <typename T> complex<T> tan(const complex<T>& c) {
+  _PSYCHICSTD_COMPLEX_BUILTIN(ctan, c)
+  return sin(c) / cos(c);
+}
+template <typename T> complex<T> sinh(const complex<T>& c) {
+  _PSYCHICSTD_COMPLEX_BUILTIN(csinh, c)
+  return complex<T>(
+      __complex_detail::sinh(c.real()) * __complex_detail::cos(c.imag()),
+      __complex_detail::cosh(c.real()) * __complex_detail::sin(c.imag()));
+}
+template <typename T> complex<T> cosh(const complex<T>& c) {
+  _PSYCHICSTD_COMPLEX_BUILTIN(ccosh, c)
+  return complex<T>(
+      __complex_detail::cosh(c.real()) * __complex_detail::cos(c.imag()),
+      __complex_detail::sinh(c.real()) * __complex_detail::sin(c.imag()));
+}
+template <typename T> complex<T> tanh(const complex<T>& c) {
+  _PSYCHICSTD_COMPLEX_BUILTIN(ctanh, c)
+  return sinh(c) / cosh(c);
+}
+
+#undef _PSYCHICSTD_COMPLEX_BUILTIN
+
 // I/O
+namespace __complex_detail {
+template <typename CharT, typename Traits, typename T>
+basic_ostream<CharT, Traits>& write_complex(basic_ostream<CharT, Traits>&,
+                                            T real, T imag);
+} // namespace __complex_detail
+
 template <typename CharT, typename Traits, typename T>
 basic_ostream<CharT, Traits>& operator<<(basic_ostream<CharT, Traits>& os,
                                          const complex<T>& c) {
-  return os << '(' << c.real() << ',' << c.imag() << ')';
+  return __complex_detail::write_complex(os, c.real(), c.imag());
 }
 
 } // namespace std
