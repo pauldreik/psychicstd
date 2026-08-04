@@ -11,7 +11,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        project: [abseil-full, boost-test-full]
+        project: [abseil-full, boost-test-full, eigen-full]
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
