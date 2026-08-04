@@ -33,6 +33,12 @@
 #undef fpclassify
 #endif
 
+#if defined(__GNUC__) && !defined(__clang__)
+#define _PSYCHICSTD_CMATH_CONSTEXPR constexpr __attribute__((__always_inline__))
+#else
+#define _PSYCHICSTD_CMATH_CONSTEXPR __attribute__((__always_inline__))
+#endif
+
 namespace std {
 using ::acos;
 using ::acosh;
@@ -137,6 +143,14 @@ using ::rint;
 using ::scalbln;
 using ::scalbn;
 
+namespace __cmath_detail {
+template <typename T>
+concept integral = __builtin_classify_type(*(T*)nullptr) == 1 && !__is_enum(T);
+
+template <typename T>
+concept arithmetic = integral<T> || __builtin_classify_type(*(T*)nullptr) == 8;
+} // namespace __cmath_detail
+
 // float overloads
 using ::ceilf;
 using ::cosf;
@@ -159,18 +173,72 @@ using ::tgammaf;
 inline float abs(float x) { return ::fabsf(x); }
 inline double abs(double x) { return ::fabs(x); }
 inline long double abs(long double x) { return ::fabsl(x); }
-inline float sqrt(float x) { return ::sqrtf(x); }
-inline long double sqrt(long double x) { return ::sqrtl(x); }
-inline float exp(float x) { return ::expf(x); }
-inline long double exp(long double x) { return ::expl(x); }
-inline float log(float x) { return ::logf(x); }
-inline long double log(long double x) { return ::logl(x); }
+inline _PSYCHICSTD_CMATH_CONSTEXPR float sqrt(float x) { return ::sqrtf(x); }
+inline _PSYCHICSTD_CMATH_CONSTEXPR long double sqrt(long double x) {
+  return ::sqrtl(x);
+}
+inline _PSYCHICSTD_CMATH_CONSTEXPR float exp(float x) { return ::expf(x); }
+inline _PSYCHICSTD_CMATH_CONSTEXPR long double exp(long double x) {
+  return ::expl(x);
+}
+inline _PSYCHICSTD_CMATH_CONSTEXPR float log(float x) { return ::logf(x); }
+inline _PSYCHICSTD_CMATH_CONSTEXPR long double log(long double x) {
+  return ::logl(x);
+}
+inline _PSYCHICSTD_CMATH_CONSTEXPR float log10(float x) { return ::log10f(x); }
+inline _PSYCHICSTD_CMATH_CONSTEXPR long double log10(long double x) {
+  return ::log10l(x);
+}
+inline _PSYCHICSTD_CMATH_CONSTEXPR float sin(float x) { return ::sinf(x); }
+inline _PSYCHICSTD_CMATH_CONSTEXPR long double sin(long double x) {
+  return ::sinl(x);
+}
+inline _PSYCHICSTD_CMATH_CONSTEXPR float cos(float x) { return ::cosf(x); }
+inline _PSYCHICSTD_CMATH_CONSTEXPR long double cos(long double x) {
+  return ::cosl(x);
+}
+inline _PSYCHICSTD_CMATH_CONSTEXPR float tan(float x) { return ::tanf(x); }
+inline _PSYCHICSTD_CMATH_CONSTEXPR long double tan(long double x) {
+  return ::tanl(x);
+}
+inline _PSYCHICSTD_CMATH_CONSTEXPR float sinh(float x) { return ::sinhf(x); }
+inline _PSYCHICSTD_CMATH_CONSTEXPR long double sinh(long double x) {
+  return ::sinhl(x);
+}
+inline _PSYCHICSTD_CMATH_CONSTEXPR float cosh(float x) { return ::coshf(x); }
+inline _PSYCHICSTD_CMATH_CONSTEXPR long double cosh(long double x) {
+  return ::coshl(x);
+}
+inline _PSYCHICSTD_CMATH_CONSTEXPR float tanh(float x) { return ::tanhf(x); }
+inline _PSYCHICSTD_CMATH_CONSTEXPR long double tanh(long double x) {
+  return ::tanhl(x);
+}
+inline _PSYCHICSTD_CMATH_CONSTEXPR float atan2(float y, float x) {
+  return ::atan2f(y, x);
+}
+inline _PSYCHICSTD_CMATH_CONSTEXPR long double atan2(long double y,
+                                                     long double x) {
+  return ::atan2l(y, x);
+}
+inline _PSYCHICSTD_CMATH_CONSTEXPR float hypot(float x, float y) {
+  return ::hypotf(x, y);
+}
+inline _PSYCHICSTD_CMATH_CONSTEXPR long double hypot(long double x,
+                                                     long double y) {
+  return ::hypotl(x, y);
+}
+inline _PSYCHICSTD_CMATH_CONSTEXPR float pow(float base, float exponent) {
+  return ::powf(base, exponent);
+}
+inline _PSYCHICSTD_CMATH_CONSTEXPR long double pow(long double base,
+                                                   long double exponent) {
+  return ::powl(base, exponent);
+}
 inline float ldexp(float x, int exponent) { return ::ldexpf(x, exponent); }
 inline long double ldexp(long double x, int exponent) {
   return ::ldexpl(x, exponent);
 }
-template <typename Integer>
-  requires(__builtin_classify_type(*(Integer*)nullptr) == 1)
+template <__cmath_detail::integral Integer>
 inline double ldexp(Integer x, int exponent) {
   return ::ldexp(static_cast<double>(x), exponent);
 }
@@ -186,39 +254,80 @@ inline float fma(float x, float y, float z) { return ::fmaf(x, y, z); }
 inline long double fma(long double x, long double y, long double z) {
   return ::fmal(x, y, z);
 }
-#if _PSYCHICSTD_COMPATIBILITY_LEVEL >= _PSYCHICSTD_COMPAT_DROPIN
-template <typename T>
-  requires(is_integral_v<T>)
-inline double exp(T x) {
+template <__cmath_detail::integral T>
+inline _PSYCHICSTD_CMATH_CONSTEXPR double exp(T x) {
   return ::exp(static_cast<double>(x));
 }
-template <typename T>
-  requires(is_integral_v<T>)
-inline double log(T x) {
+template <__cmath_detail::integral T>
+inline _PSYCHICSTD_CMATH_CONSTEXPR double log(T x) {
   return ::log(static_cast<double>(x));
 }
-template <typename T>
-  requires(is_integral_v<T>)
-constexpr double sqrt(T x) {
+template <__cmath_detail::integral T>
+inline _PSYCHICSTD_CMATH_CONSTEXPR double sqrt(T x) {
   return __builtin_sqrt(static_cast<double>(x));
 }
-#else
-template <typename T>
-  requires(__builtin_classify_type(*(T*)nullptr) == 1)
-inline double exp(T x) {
-  return ::exp(static_cast<double>(x));
+template <__cmath_detail::integral T>
+inline _PSYCHICSTD_CMATH_CONSTEXPR double log10(T x) {
+  return ::log10(static_cast<double>(x));
 }
-template <typename T>
-  requires(__builtin_classify_type(*(T*)nullptr) == 1)
-inline double log(T x) {
-  return ::log(static_cast<double>(x));
+template <__cmath_detail::integral T>
+inline _PSYCHICSTD_CMATH_CONSTEXPR double sin(T x) {
+  return ::sin(static_cast<double>(x));
 }
-template <typename T>
-  requires(__builtin_classify_type(*(T*)nullptr) == 1)
-constexpr double sqrt(T x) {
-  return __builtin_sqrt(static_cast<double>(x));
+template <__cmath_detail::integral T>
+inline _PSYCHICSTD_CMATH_CONSTEXPR double cos(T x) {
+  return ::cos(static_cast<double>(x));
 }
-#endif
+template <__cmath_detail::integral T>
+inline _PSYCHICSTD_CMATH_CONSTEXPR double tan(T x) {
+  return ::tan(static_cast<double>(x));
+}
+template <__cmath_detail::integral T>
+inline _PSYCHICSTD_CMATH_CONSTEXPR double sinh(T x) {
+  return ::sinh(static_cast<double>(x));
+}
+template <__cmath_detail::integral T>
+inline _PSYCHICSTD_CMATH_CONSTEXPR double cosh(T x) {
+  return ::cosh(static_cast<double>(x));
+}
+template <__cmath_detail::integral T>
+inline _PSYCHICSTD_CMATH_CONSTEXPR double tanh(T x) {
+  return ::tanh(static_cast<double>(x));
+}
+
+template <typename T, typename U>
+  requires(__cmath_detail::arithmetic<T> && __cmath_detail::arithmetic<U>)
+inline _PSYCHICSTD_CMATH_CONSTEXPR auto atan2(T y, U x) {
+  if constexpr (__is_same(T, long double) || __is_same(U, long double))
+    return ::atan2l(static_cast<long double>(y), static_cast<long double>(x));
+  else if constexpr (__is_same(T, float) && __is_same(U, float))
+    return ::atan2f(y, x);
+  else
+    return ::atan2(static_cast<double>(y), static_cast<double>(x));
+}
+
+template <typename T, typename U>
+  requires(__cmath_detail::arithmetic<T> && __cmath_detail::arithmetic<U>)
+inline _PSYCHICSTD_CMATH_CONSTEXPR auto hypot(T x, U y) {
+  if constexpr (__is_same(T, long double) || __is_same(U, long double))
+    return ::hypotl(static_cast<long double>(x), static_cast<long double>(y));
+  else if constexpr (__is_same(T, float) && __is_same(U, float))
+    return ::hypotf(x, y);
+  else
+    return ::hypot(static_cast<double>(x), static_cast<double>(y));
+}
+
+template <typename T, typename U>
+  requires(__cmath_detail::arithmetic<T> && __cmath_detail::arithmetic<U>)
+inline _PSYCHICSTD_CMATH_CONSTEXPR auto pow(T base, U exponent) {
+  if constexpr (__is_same(T, long double) || __is_same(U, long double))
+    return ::powl(static_cast<long double>(base),
+                  static_cast<long double>(exponent));
+  else if constexpr (__is_same(T, float) && __is_same(U, float))
+    return ::powf(base, exponent);
+  else
+    return ::pow(static_cast<double>(base), static_cast<double>(exponent));
+}
 // integer abs overloads come from <__psychicstd_abs>
 inline float nextafter(float x, float y) { return ::nextafterf(x, y); }
 using ::nextafter;
@@ -255,3 +364,5 @@ inline long double expm1(long double x) { return ::expm1l(x); }
 inline double expm1(double x) { return ::expm1(x); }
 inline float expm1(float x) { return ::expm1f(x); }
 } // namespace std
+
+#undef _PSYCHICSTD_CMATH_CONSTEXPR
