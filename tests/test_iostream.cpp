@@ -79,8 +79,24 @@ int main() {
   unit_buffered << std::nounitbuf << "second";
   psyassert(synced.sync_calls == 1);
 
+  syncing_buffer tied_synced;
+  std::ostream tied_stream(&tied_synced);
   syncing_buffer sentry_synced;
   std::ostream sentry_stream(&sentry_synced);
+  sentry_stream.tie(&tied_stream);
+  {
+    std::ostream::sentry sentry(sentry_stream);
+    psyassert(sentry);
+    psyassert(tied_synced.sync_calls == 1);
+  }
+  std::ostream failed_sentry(nullptr);
+  failed_sentry.tie(&tied_stream);
+  {
+    std::ostream::sentry sentry(failed_sentry);
+    psyassert(!sentry);
+    psyassert(tied_synced.sync_calls == 1);
+  }
+  sentry_stream.tie(nullptr);
   {
     std::ostream::sentry sentry(sentry_stream);
     std::unitbuf(sentry_stream);

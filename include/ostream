@@ -37,7 +37,13 @@ public:
 
   class sentry {
   public:
-    explicit sentry(basic_ostream& os) : os_(os), ok_(os.good()) {}
+    explicit sentry(basic_ostream& os) : os_(os), ok_(os.good()) {
+      if (ok_) {
+        if (auto* tied = os.tie())
+          tied->flush();
+        ok_ = os.good();
+      }
+    }
     ~sentry() {
       if ((os_.flags() & ios_base::unitbuf) &&
           __ostream_sentry_should_flush()) {
