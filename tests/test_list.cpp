@@ -52,6 +52,14 @@ int main() {
   stable_end.push_back(7);
   psyassert(*--old_end == 7);
 
+  std::list<int> resized = {1, 2};
+  resized.resize(4, 7);
+  psyassert((resized == std::list<int>{1, 2, 7, 7}));
+  resized.resize(5);
+  psyassert(resized.back() == 0);
+  resized.resize(1);
+  psyassert((resized == std::list<int>{1}));
+
   std::list<int> recycled = {8};
   std::list<int> reactor_queue;
   auto queue_end = reactor_queue.end();

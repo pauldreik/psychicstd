@@ -212,6 +212,18 @@ public:
     unlink(n);
     delete n;
   }
+  void resize(size_type count) {
+    while (size_ > count)
+      pop_back();
+    while (size_ < count)
+      emplace_back();
+  }
+  void resize(size_type count, const value_type& value) {
+    while (size_ > count)
+      pop_back();
+    while (size_ < count)
+      push_back(value);
+  }
   template <typename... Args> iterator emplace_back(Args&&... args) {
     Node* n = new Node(static_cast<Args&&>(args)...);
     link_back(n);
