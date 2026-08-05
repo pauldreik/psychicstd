@@ -30,7 +30,7 @@ public:
   class id {};
 
   locale() noexcept = default;
-  locale(const char*) noexcept {}
+  explicit locale(const char* name);
   locale(const locale& o) noexcept : rep_(o.rep_) {
     if (rep_)
       ++rep_->refs;
@@ -62,9 +62,9 @@ public:
     return prev;
   }
 
-  bool operator==(const locale& o) const noexcept { return rep_ == o.rep_; }
-  bool operator!=(const locale& o) const noexcept { return rep_ != o.rep_; }
-  bool _has_facets() const noexcept { return rep_; }
+  bool operator==(const locale& o) const noexcept;
+  bool operator!=(const locale& o) const noexcept { return !(*this == o); }
+  bool _has_facets() const noexcept { return rep_ && rep_->head; }
 
   template <typename F> const F* _facet() const {
 #if _PSYCHICSTD_HAS_RTTI
@@ -91,8 +91,13 @@ private:
   struct _rep {
     long refs = 1;
     _node* head = nullptr;
+    char* name = nullptr;
     explicit _rep(facet* f, _node* inherited) : head(new _node(f, inherited)) {}
-    ~_rep() { _release_node(head); }
+    explicit _rep(const char* locale_name);
+    ~_rep() {
+      _release_node(head);
+      delete[] name;
+    }
 
   private:
     static void _release_node(_node* node) noexcept {
@@ -105,6 +110,7 @@ private:
     }
   };
   _rep* rep_ = nullptr;
+  static _rep* _make_named(const char* name);
   void _release() noexcept {
     if (rep_ && --rep_->refs == 0)
       delete rep_;
