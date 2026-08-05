@@ -28,7 +28,7 @@ It is not complete. It is not fully compliant. But it is good enough to quickly 
 | [llama.cpp](https://github.com/ggml-org/llama.cpp) | [1.52x](use_on_realworld_projects/llama.cpp_speed_report.md) | Builds `ggml-base` and `ggml-cpu` and compiles model-architecture and hyperparameter handling; excludes accelerator backends, tools, examples, server, and tests. |
 | [nlohmann json](https://json.nlohmann.me/) | [2.01x](use_on_realworld_projects/nlohmann_speed_report.md) | Uncovered a reliance on implementation-specific behaviour, fixed in [PR #5236](https://github.com/nlohmann/json/pull/5236). |
 | [cxxopts](https://github.com/jarro2783/cxxopts) | [2.67x](use_on_realworld_projects/cxxopts_speed_report.md) | Compiles the upstream example with cxxopts' documented no-regex fallback. |
-| [inipp](https://github.com/mcmtroffaes/inipp) | [4.71x](use_on_realworld_projects/inipp_speed_report.md) | Compiles the upstream header smoke test. |
+| [inipp](https://github.com/mcmtroffaes/inipp) | [3.14x](use_on_realworld_projects/inipp_speed_report.md) | Builds the header smoke test and runs the complete narrow-character upstream unit suite. |
 | [OpenCV](https://opencv.org/) | [1.81x](use_on_realworld_projects/opencv_speed_report.md) | Builds the core and imgproc modules and their tests. |
 | [pocketfft](https://github.com/mreineck/pocketfft) | [1.54x](use_on_realworld_projects/pocketfft_speed_report.md) | Compiles and runs the upstream demonstration. |
 | [pybind11](https://github.com/pybind/pybind11) | [2.36x](use_on_realworld_projects/pybind11_speed_report.md) | Builds pybind11's upstream CMake extension test, imports the module in Python, and calls its bound C++ function. |
