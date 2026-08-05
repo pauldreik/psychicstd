@@ -681,7 +681,7 @@ def _abseil(full: bool) -> Project:
 # --- googletest --------------------------------------------------------
 
 
-def _googletest() -> Project:
+def _googletest(full: bool) -> Project:
     version = "1.16.0"
     url = f"https://github.com/google/googletest/archive/refs/tags/v{version}.tar.gz"
     checksum = "78c676fc63881529bf97bf9d45948d905a66833fbfa5318ea2cd7478cb98f399"
@@ -691,7 +691,8 @@ def _googletest() -> Project:
         _fetch(url, tarball, checksum)
 
         with tempfile.TemporaryDirectory(
-            prefix="rw-googletest-", ignore_cleanup_errors=True
+            prefix="rw-googletest-full-" if full else "rw-googletest-",
+            ignore_cleanup_errors=True,
         ) as work_dir:
             work = Path(work_dir)
             with tarfile.open(tarball) as t:
@@ -712,8 +713,9 @@ def _googletest() -> Project:
                 "-DCMAKE_CXX_COMPILER=" + str(wrapper),
                 "-DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY",
                 "-Dgtest_build_tests=ON",
-                "-Dgtest_build_samples=OFF",
-                "-DBUILD_GMOCK=OFF",
+                "-Dgtest_build_samples=" + ("ON" if full else "OFF"),
+                "-DBUILD_GMOCK=" + ("ON" if full else "OFF"),
+                "-Dgmock_build_tests=" + ("ON" if full else "OFF"),
                 "-DINSTALL_GTEST=OFF",
             ]
             jobs = f"-j{tc.jobs}"
@@ -728,11 +730,18 @@ def _googletest() -> Project:
             }
 
     return Project(
-        version=version,
+        version=f"{version} (full)" if full else version,
         build=build,
-        expected_seconds={"debug": 32, "release": 69},
-        comment="Builds GoogleTest's upstream unit tests with GMock and samples "
-        "disabled, then runs the resulting CTest suite.",
+        expected_seconds=(
+            {"debug": 90, "release": 150} if full else {"debug": 32, "release": 69}
+        ),
+        comment=(
+            "Builds GoogleTest, GoogleMock, their complete configured upstream "
+            "test suites, and the samples, then runs the resulting CTest suite."
+            if full
+            else "Builds GoogleTest's upstream unit tests with GMock and samples "
+            "disabled, then runs the resulting CTest suite."
+        ),
     )
 
 
@@ -3984,7 +3993,8 @@ PROJECTS: dict[str, Project] = {
     "flatbuffers": _flatbuffers(),
     "fmt": _fmt(),
     "godot": _godot(),
-    "googletest": _googletest(),
+    "googletest": _googletest(full=False),
+    "googletest-full": _googletest(full=True),
     "harfbuzz": _harfbuzz(),
     "inipp": _inipp(),
     "cxxopts": _cxxopts(),
