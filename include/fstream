@@ -60,11 +60,11 @@ public:
     return open(path.c_str(), mode);
   }
   basic_filebuf* close() {
-    if (fp_) {
-      ::fclose(fp_);
-      fp_ = nullptr;
-    }
-    return this;
+    if (!fp_)
+      return nullptr;
+    FILE* fp = fp_;
+    fp_ = nullptr;
+    return ::fclose(fp) == 0 ? this : nullptr;
   }
 
   FILE* fp_ = nullptr;
@@ -170,7 +170,10 @@ public:
   void open(const string_type& path, ios_base::openmode mode = ios_base::out) {
     open(path.c_str(), mode);
   }
-  void close() { buf_.close(); }
+  void close() {
+    if (!buf_.close())
+      this->setstate(ios_base::failbit);
+  }
   bool is_open() const { return buf_.is_open(); }
 
   basic_filebuf<Char, Traits>* rdbuf() const {
@@ -220,7 +223,10 @@ public:
   void open(const string_type& path, ios_base::openmode mode = ios_base::in) {
     open(path.c_str(), mode);
   }
-  void close() { buf_.close(); }
+  void close() {
+    if (!buf_.close())
+      this->setstate(ios_base::failbit);
+  }
   bool is_open() const { return buf_.is_open(); }
 
   basic_filebuf<Char, Traits>* rdbuf() const {
@@ -284,7 +290,10 @@ public:
             ios_base::openmode mode = ios_base::in | ios_base::out) {
     open(path.c_str(), mode);
   }
-  void close() { buf_.close(); }
+  void close() {
+    if (!buf_.close())
+      this->setstate(ios_base::failbit);
+  }
   bool is_open() const { return buf_.is_open(); }
 
   basic_filebuf<Char, Traits>* rdbuf() const {

@@ -11,12 +11,15 @@ public:
   ~stdio_streambuf() override;
 
 protected:
+  int_type underflow() override;
+  std::streamsize xsgetn(char* text, std::streamsize size) override;
   std::streamsize xsputn(const char* text, std::streamsize size) override;
   int_type overflow(int_type value) override;
   int sync() override;
 
 private:
   FILE* file_;
+  char input_;
 };
 
 // ELF platforms use this to construct streams before ordinary user globals.

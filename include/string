@@ -421,6 +421,15 @@ public:
     insert(idx, n, c);
     return data_ + idx;
   }
+  template <typename It>
+  iterator insert(const_iterator pos, It first, It last) {
+    const size_type idx = size_ ? pos - data_ : 0;
+    basic_string added(first, last);
+    if (added.empty())
+      return data() + idx;
+    insert(idx, added.data(), added.size());
+    return data_ + idx;
+  }
   basic_string& insert(size_type pos, const basic_string& o) {
     return insert(pos, o.data(), o.size());
   }

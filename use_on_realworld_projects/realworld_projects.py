@@ -810,7 +810,7 @@ def _godot() -> Project:
 # --- cmake -------------------------------------------------------------
 
 
-def _cmake() -> Project:
+def _cmake(full: bool) -> Project:
     version = "4.3.4"
     url = f"https://cmake.org/files/v4.3/cmake-{version}.tar.gz"
     checksum = "fdeff897b9eb49d764539f2b1edc6eb7e1440df325678a97c1978499e931adda"
@@ -820,7 +820,8 @@ def _cmake() -> Project:
         _fetch(url, tarball, checksum)
 
         with tempfile.TemporaryDirectory(
-            prefix="rw-cmake-", ignore_cleanup_errors=True
+            prefix="rw-cmake-full-" if full else "rw-cmake-",
+            ignore_cleanup_errors=True,
         ) as work_dir:
             work = Path(work_dir)
             with tarfile.open(tarball) as t:
@@ -864,21 +865,42 @@ def _cmake() -> Project:
             ]
             jobs = f"-j{tc.jobs}"
             configure_ms = _timed(configure, src, env)
-            compile_ms = _timed(
+            targets = (
                 [
                     "cmake",
-                    "--build",
-                    "build",
-                    "--target",
+                    "ctest",
+                    "cpack",
+                    "CMakeLibTests",
+                    "cmsysTestsCxx",
+                    "testEncoding",
+                    "exit_code",
+                    "print_stdin",
+                    "pseudo_llvm-rc",
+                ]
+                if full
+                else [
                     "cmsysTestsCxx",
                     "testEncoding",
                     "cmjsoncpp",
                     "cmstd",
                     "CMakeLib",
-                    jobs,
-                ],
+                ]
+            )
+            compile_ms = _timed(
+                ["cmake", "--build", "build", "--target", *targets, jobs],
                 src,
                 env,
+            )
+            test_pattern = (
+                r"^(CMakeLib\.|CMakeOnly\.|CMake\.|"
+                r"RunCMake\.(CommandLine|cmake_language|configure_file|"
+                r"execute_process|file|if|list|math|string)$)"
+                if full
+                else (
+                    r"^kwsys\.test(Configure|Status|SystemTools|"
+                    r"CommandLineArguments1?|Directory|Encoding|"
+                    r"SystemInformation)$"
+                )
             )
             run_tests_ms = _timed(
                 [
@@ -886,12 +908,11 @@ def _cmake() -> Project:
                     "--test-dir",
                     "build",
                     "--output-on-failure",
+                    jobs,
                     "-R",
-                    (
-                        r"^kwsys\.test(Configure|Status|SystemTools|"
-                        r"CommandLineArguments1?|Directory|Encoding|"
-                        r"SystemInformation)$"
-                    ),
+                    test_pattern,
+                    "-E",
+                    r"^CMakeLib\.testUVProcessChain$" if full else r"$^",
                 ],
                 src,
                 env,
@@ -903,12 +924,21 @@ def _cmake() -> Project:
             }
 
     return Project(
-        version=version,
+        version=f"{version} (full)" if full else version,
         build=build,
-        expected_seconds={"debug": 65, "release": 70},
-        comment="Builds upstream CMake's core static library together with "
-        "its KWSys, std-compatibility, and JSON support targets, then runs "
-        "the supported KWSys tests. OpenSSL and debugger support are disabled.",
+        expected_seconds=(
+            {"debug": 180, "release": 180} if full else {"debug": 65, "release": 70}
+        ),
+        comment=(
+            "Builds the cmake, ctest, and cpack executables and runs the "
+            "self-contained CMakeLib, CMakeOnly, command-language, and core "
+            "RunCMake tests. OpenSSL and debugger support are disabled."
+            if full
+            else "Builds upstream CMake's core static library together with "
+            "its KWSys, std-compatibility, and JSON support targets, then runs "
+            "the supported KWSys tests. OpenSSL and debugger support are "
+            "disabled."
+        ),
     )
 
 
@@ -3809,7 +3839,8 @@ PROJECTS: dict[str, Project] = {
     "boost-test": _boost_test(full=False),
     "boost-test-full": _boost_test(full=True),
     "catch2": _catch2(),
-    "cmake": _cmake(),
+    "cmake": _cmake(full=False),
+    "cmake-full": _cmake(full=True),
     "cppcheck": _cppcheck(),
     "ctre": _ctre(),
     "eigen": _eigen(full=False),

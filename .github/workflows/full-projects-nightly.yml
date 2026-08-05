@@ -11,17 +11,18 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        project: [abseil-full, boost-test-full]
+        project: [abseil-full, boost-test-full, cmake-full]
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v7
-      - name: Install Ninja
-        run: sudo apt-get install -y ninja-build
+      - name: Install dependencies
+        run: sudo apt-get install -y ccache ninja-build
       - name: Build and test ${{ matrix.project }} with psychicstd
         run: >-
-          scripts/benchmark_realworld.py --check-only
-          --project ${{ matrix.project }} --build-type debug
+          PATH=/usr/lib/ccache:$PATH scripts/benchmark_realworld.py
+          --check-only --project ${{ matrix.project }}
+          --build-type debug --enable-ccache
   bitcoin:
     runs-on: ubuntu-latest
     timeout-minutes: 60

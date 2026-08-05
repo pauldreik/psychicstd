@@ -1,7 +1,10 @@
 #include "psyassert.h"
+#include <iterator>
+#include <sstream>
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include <vector>
 
 struct rvalue_resize_operation {
   std::size_t operator()(char* data, std::size_t size) && {
@@ -201,6 +204,45 @@ int main() {
   psyassert(s == "??h!!ellohel:lo");
   s.insert(s.cbegin() + 2, 1, '#');
   psyassert(s == "??#h!!ellohel:lo");
+  std::string range_insert;
+  const std::vector<char> inserted{'a', 'b', 'c'};
+  auto range_pos = range_insert.insert(range_insert.begin(), inserted.begin(),
+                                       inserted.end());
+  psyassert(range_pos == range_insert.begin());
+  psyassert(range_insert == "abc");
+
+  const std::vector<char> no_characters;
+  std::string empty_range_insert;
+  range_pos = empty_range_insert.insert(
+      empty_range_insert.begin(), no_characters.begin(), no_characters.end());
+  psyassert(range_pos == empty_range_insert.begin());
+  psyassert(empty_range_insert.empty());
+
+  range_pos = range_insert.insert(range_insert.begin() + 1,
+                                  no_characters.begin(), no_characters.end());
+  psyassert(range_pos == range_insert.begin() + 1);
+  psyassert(range_insert == "abc");
+
+  std::string self_insert = "abcd";
+  range_pos = self_insert.insert(self_insert.begin() + 2, self_insert.begin(),
+                                 self_insert.end());
+  psyassert(range_pos == self_insert.begin() + 2);
+  psyassert(self_insert == "ababcdcd");
+
+  std::string overlapping_insert = "abcd";
+  range_pos = overlapping_insert.insert(overlapping_insert.begin() + 1,
+                                        overlapping_insert.begin() + 2,
+                                        overlapping_insert.end());
+  psyassert(range_pos == overlapping_insert.begin() + 1);
+  psyassert(overlapping_insert == "acdbcd");
+
+  std::istringstream input("xyz");
+  std::string single_pass_insert = "ab";
+  range_pos = single_pass_insert.insert(single_pass_insert.begin() + 1,
+                                        std::istreambuf_iterator<char>(input),
+                                        std::istreambuf_iterator<char>());
+  psyassert(range_pos == single_pass_insert.begin() + 1);
+  psyassert(single_pass_insert == "axyzb");
   s.replace(s.begin(), s.begin() + 3, std::string("ok"));
   psyassert(s == "okh!!ellohel:lo");
   s.replace(0, 2, 3, '-');
