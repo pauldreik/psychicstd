@@ -6,6 +6,29 @@ stdio_streambuf::stdio_streambuf(FILE* file) : file_(file) {}
 
 stdio_streambuf::~stdio_streambuf() = default;
 
+stdio_streambuf::int_type stdio_streambuf::underflow() {
+  const int value = ::fgetc(file_);
+  if (value == EOF)
+    return traits_type::eof();
+  input_ = static_cast<char>(static_cast<unsigned char>(value));
+  setg(&input_, &input_, &input_ + 1);
+  return traits_type::to_int_type(input_);
+}
+
+std::streamsize stdio_streambuf::xsgetn(char* text, std::streamsize size) {
+  std::streamsize read = 0;
+  if (gptr() < egptr() && size > 0) {
+    *text++ = *gptr();
+    gbump(1);
+    --size;
+    ++read;
+  }
+  if (size > 0)
+    read += static_cast<std::streamsize>(
+        ::fread(text, 1, static_cast<size_t>(size), file_));
+  return read;
+}
+
 std::streamsize stdio_streambuf::xsputn(const char* text,
                                         std::streamsize size) {
   return static_cast<std::streamsize>(

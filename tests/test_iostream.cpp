@@ -4,6 +4,10 @@
 #include <sstream>
 #include <utility>
 
+#if defined(PSYCHICSTD_TEST_PSYCHICSTD)
+#include "../src/stdio_streambuf.h"
+#endif
+
 class available_buffer : public std::streambuf {
 public:
   char* buffer = nullptr;
@@ -46,6 +50,21 @@ std::ios& set_logging_defaults(std::ios& stream) {
 int main() {
   psyassert(iostream_was_ready_during_static_initialization());
   psyassert(iostream_cout_from_other_translation_unit() == &std::cout);
+
+#if defined(PSYCHICSTD_TEST_PSYCHICSTD)
+  FILE* input_file = std::tmpfile();
+  psyassert(input_file);
+  psyassert(std::fwrite("stream input", 1, 12, input_file) == 12);
+  std::rewind(input_file);
+  psychicstd_detail::stdio_streambuf input_buffer(input_file);
+  std::istream file_input(&input_buffer);
+  psyassert(file_input.peek() == 's');
+  char input_text[13] = {};
+  file_input.read(input_text, 12);
+  psyassert(file_input.gcount() == 12);
+  psyassert(std::string(input_text) == "stream input");
+  std::fclose(input_file);
+#endif
 
   std::streambuf::pos_type position = 0;
   std::streambuf::off_type offset = 0;
