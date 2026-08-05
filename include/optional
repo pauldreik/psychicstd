@@ -2,6 +2,7 @@
 #include <__psychicstd_config>
 #include <__psychicstd_exception_base>
 #include <__psychicstd_lifetime>
+#include <compare>
 #include <initializer_list>
 #include <type_traits>
 #include <utility>
@@ -26,6 +27,12 @@ template <typename T> class optional;
 template <typename T> struct __is_optional : false_type {};
 template <typename T> struct __is_optional<optional<T>> : true_type {};
 
+template <typename T>
+constexpr void __optional_swap(T& a, T& b) noexcept(is_nothrow_swappable_v<T>) {
+  using std::swap;
+  swap(a, b);
+}
+
 template <typename T> class optional {
   union {
     T val_;
@@ -48,12 +55,11 @@ public:
       has_ = true;
     }
   }
-  constexpr optional(optional&& o) noexcept : _dummy(0), has_(false) {
+  constexpr optional(optional&& o) noexcept(is_nothrow_move_constructible_v<T>)
+      : _dummy(0), has_(false) {
     if (o.has_) {
-      // move
       construct_at(ptr(), static_cast<T&&>(*o.ptr()));
       has_ = true;
-      o.reset();
     }
   }
   constexpr optional(const T& value) : val_(value), has_(true) {}
@@ -110,18 +116,16 @@ public:
     }
     return *this;
   }
-  constexpr optional& operator=(optional&& o) noexcept {
+  constexpr optional&
+  operator=(optional&& o) noexcept(is_nothrow_move_assignable_v<T> &&
+                                   is_nothrow_move_constructible_v<T>) {
     if (&o == this)
       return *this;
     if (has_ && o.has_) {
-      // move
       val_ = static_cast<T&&>(*o.ptr());
-      o.reset();
     } else if (o.has_) {
-      // move
       construct_at(ptr(), static_cast<T&&>(*o.ptr()));
       has_ = true;
-      o.reset();
     } else {
       reset();
     }
@@ -142,18 +146,32 @@ public:
   constexpr explicit operator bool() const noexcept { return has_; }
   constexpr bool has_value() const noexcept { return has_; }
 
-  constexpr T& value() {
+  constexpr T& value() & {
     if (!has_)
       _PSYCHICSTD_THROW_HELPER(__throw_bad_optional_access);
     return val_;
   }
-  constexpr const T& value() const {
+  constexpr const T& value() const& {
     if (!has_)
       _PSYCHICSTD_THROW_HELPER(__throw_bad_optional_access);
     return val_;
   }
-  constexpr T& operator*() noexcept { return val_; }
-  constexpr const T& operator*() const noexcept { return val_; }
+  constexpr T&& value() && {
+    if (!has_)
+      _PSYCHICSTD_THROW_HELPER(__throw_bad_optional_access);
+    return static_cast<T&&>(val_);
+  }
+  constexpr const T&& value() const&& {
+    if (!has_)
+      _PSYCHICSTD_THROW_HELPER(__throw_bad_optional_access);
+    return static_cast<const T&&>(val_);
+  }
+  constexpr T& operator*() & noexcept { return val_; }
+  constexpr const T& operator*() const& noexcept { return val_; }
+  constexpr T&& operator*() && noexcept { return static_cast<T&&>(val_); }
+  constexpr const T&& operator*() const&& noexcept {
+    return static_cast<const T&&>(val_);
+  }
   constexpr T* operator->() noexcept { return ptr(); }
   constexpr const T* operator->() const noexcept { return ptr(); }
 
@@ -161,11 +179,32 @@ public:
     // forward
     return has_ ? val_ : static_cast<T>(static_cast<U&&>(u));
   }
+  template <typename U> constexpr T value_or(U&& u) && {
+    return has_ ? static_cast<T&&>(val_) : static_cast<T>(static_cast<U&&>(u));
+  }
 
   constexpr void reset() noexcept {
     if (has_) {
       destroy_at(ptr());
       has_ = false;
+    }
+  }
+
+  constexpr void
+  swap(optional& other) noexcept(is_nothrow_move_constructible_v<T> &&
+                                 is_nothrow_swappable_v<T>)
+    requires(is_move_constructible_v<T> && is_swappable_v<T>)
+  {
+    if (has_ && other.has_) {
+      __optional_swap(val_, other.val_);
+    } else if (has_) {
+      construct_at(other.ptr(), static_cast<T&&>(val_));
+      other.has_ = true;
+      reset();
+    } else if (other.has_) {
+      construct_at(ptr(), static_cast<T&&>(other.val_));
+      has_ = true;
+      other.reset();
     }
   }
 
@@ -184,50 +223,80 @@ public:
   }
 };
 
+template <typename T>
+  requires(is_move_constructible_v<T> && is_swappable_v<T>)
+constexpr void swap(optional<T>& a,
+                    optional<T>& b) noexcept(noexcept(a.swap(b))) {
+  a.swap(b);
+}
+
 template <typename T, typename U>
 constexpr bool operator==(const optional<T>& a, const optional<U>& b) {
   if (a.has_value() != b.has_value())
     return false;
   return !a.has_value() || *a == *b;
 }
+template <typename T, typename U>
+constexpr bool operator!=(const optional<T>& a, const optional<U>& b) {
+  if (a.has_value() != b.has_value())
+    return true;
+  return a.has_value() && *a != *b;
+}
+template <typename T, typename U>
+constexpr bool operator<(const optional<T>& a, const optional<U>& b) {
+  return b.has_value() && (!a.has_value() || *a < *b);
+}
+template <typename T, typename U>
+constexpr bool operator>(const optional<T>& a, const optional<U>& b) {
+  return a.has_value() && (!b.has_value() || *a > *b);
+}
+template <typename T, typename U>
+constexpr bool operator<=(const optional<T>& a, const optional<U>& b) {
+  return !a.has_value() || (b.has_value() && *a <= *b);
+}
+template <typename T, typename U>
+constexpr bool operator>=(const optional<T>& a, const optional<U>& b) {
+  return !b.has_value() || (a.has_value() && *a >= *b);
+}
+template <typename T, typename U>
+  requires three_way_comparable_with<T, U>
+constexpr compare_three_way_result_t<T, U> operator<=>(const optional<T>& a,
+                                                       const optional<U>& b) {
+  if (a && b)
+    return *a <=> *b;
+  return a.has_value() <=> b.has_value();
+}
+
 template <typename T>
 constexpr bool operator==(const optional<T>& a, nullopt_t) noexcept {
   return !a.has_value();
 }
 template <typename T>
-constexpr bool operator==(nullopt_t, const optional<T>& b) noexcept {
-  return !b.has_value();
-}
-template <typename T, typename U>
-constexpr bool operator!=(const optional<T>& a, const optional<U>& b) {
-  return !(a == b);
-}
-template <typename T>
-constexpr bool operator<(const optional<T>& a, const optional<T>& b) {
-  return b.has_value() && (!a.has_value() || *a < *b);
-}
-template <typename T>
-constexpr bool operator>(const optional<T>& a, const optional<T>& b) {
-  return b < a;
-}
-template <typename T>
-constexpr bool operator<=(const optional<T>& a, const optional<T>& b) {
-  return !(b < a);
-}
-template <typename T>
-constexpr bool operator>=(const optional<T>& a, const optional<T>& b) {
-  return !(a < b);
+constexpr strong_ordering operator<=>(const optional<T>& a,
+                                      nullopt_t) noexcept {
+  return a.has_value() <=> false;
 }
 
 // Mixed comparisons: optional<T> vs a non-optional value.
 template <typename U>
 concept __non_optional = !__is_optional<remove_cvref_t<U>>::value;
+// Keep invalid mixed comparisons out of overload resolution. C++20 specifies
+// these expressions as mandates, but constraints give generic code a safe no.
 template <typename T, typename U>
 concept __optional_equality_comparable =
     requires(const T& a, const U& b) { a == b; };
 template <typename T, typename U>
 concept __optional_less_than_comparable =
     requires(const T& a, const U& b) { a < b; };
+template <typename T, typename U>
+concept __optional_greater_than_comparable =
+    requires(const T& a, const U& b) { a > b; };
+template <typename T, typename U>
+concept __optional_less_equal_comparable =
+    requires(const T& a, const U& b) { a <= b; };
+template <typename T, typename U>
+concept __optional_greater_equal_comparable =
+    requires(const T& a, const U& b) { a >= b; };
 
 template <typename T, typename U>
   requires __non_optional<U> && __optional_equality_comparable<T, U>
@@ -242,12 +311,12 @@ constexpr bool operator==(const U& a, const optional<T>& b) {
 template <typename T, typename U>
   requires __non_optional<U> && __optional_equality_comparable<T, U>
 constexpr bool operator!=(const optional<T>& a, const U& b) {
-  return !(a == b);
+  return !a.has_value() || *a != b;
 }
 template <typename T, typename U>
   requires __non_optional<U> && __optional_equality_comparable<U, T>
 constexpr bool operator!=(const U& a, const optional<T>& b) {
-  return !(a == b);
+  return !b.has_value() || a != *b;
 }
 template <typename T, typename U>
   requires __non_optional<U> && __optional_less_than_comparable<T, U>
@@ -260,34 +329,40 @@ constexpr bool operator<(const U& a, const optional<T>& b) {
   return b.has_value() && a < *b;
 }
 template <typename T, typename U>
-  requires __non_optional<U> && __optional_less_than_comparable<U, T>
+  requires __non_optional<U> && __optional_greater_than_comparable<T, U>
 constexpr bool operator>(const optional<T>& a, const U& b) {
-  return b < a;
+  return a.has_value() && *a > b;
 }
 template <typename T, typename U>
-  requires __non_optional<U> && __optional_less_than_comparable<T, U>
+  requires __non_optional<U> && __optional_greater_than_comparable<U, T>
 constexpr bool operator>(const U& a, const optional<T>& b) {
-  return b < a;
+  return !b.has_value() || a > *b;
 }
 template <typename T, typename U>
-  requires __non_optional<U> && __optional_less_than_comparable<U, T>
+  requires __non_optional<U> && __optional_less_equal_comparable<T, U>
 constexpr bool operator<=(const optional<T>& a, const U& b) {
-  return !(b < a);
+  return !a.has_value() || *a <= b;
 }
 template <typename T, typename U>
-  requires __non_optional<U> && __optional_less_than_comparable<T, U>
+  requires __non_optional<U> && __optional_less_equal_comparable<U, T>
 constexpr bool operator<=(const U& a, const optional<T>& b) {
-  return !(b < a);
+  return b.has_value() && a <= *b;
 }
 template <typename T, typename U>
-  requires __non_optional<U> && __optional_less_than_comparable<T, U>
+  requires __non_optional<U> && __optional_greater_equal_comparable<T, U>
 constexpr bool operator>=(const optional<T>& a, const U& b) {
-  return !(a < b);
+  return a.has_value() && *a >= b;
 }
 template <typename T, typename U>
-  requires __non_optional<U> && __optional_less_than_comparable<U, T>
+  requires __non_optional<U> && __optional_greater_equal_comparable<U, T>
 constexpr bool operator>=(const U& a, const optional<T>& b) {
-  return !(a < b);
+  return !b.has_value() || a >= *b;
+}
+template <typename T, typename U>
+  requires __non_optional<U> && three_way_comparable_with<T, U>
+constexpr compare_three_way_result_t<T, U> operator<=>(const optional<T>& a,
+                                                       const U& b) {
+  return a ? *a <=> b : strong_ordering::less;
 }
 
 template <typename T> constexpr optional<decay_t<T>> make_optional(T&& v) {
@@ -296,7 +371,7 @@ template <typename T> constexpr optional<decay_t<T>> make_optional(T&& v) {
 }
 template <typename T, typename... Args>
 constexpr optional<T> make_optional(Args&&... args) {
-  return optional<T>(T(static_cast<Args&&>(args)...));
+  return optional<T>(in_place, static_cast<Args&&>(args)...);
 }
 
 } // namespace std
