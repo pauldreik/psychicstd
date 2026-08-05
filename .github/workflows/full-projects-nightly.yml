@@ -71,3 +71,22 @@ jobs:
           scripts/benchmark_realworld.py
           --check-only --project harfbuzz
           --build-type debug
+  pybind11-full:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install dependencies
+        run: >-
+          sudo apt-get install -y
+          ccache
+          ninja-build
+          python3-dev
+          python3-numpy
+          python3-pytest
+      - name: Build and test pybind11's primary suite with psychicstd
+        run: >-
+          PATH=/usr/lib/ccache:$PATH scripts/benchmark_realworld.py
+          --check-only --project pybind11-full
+          --build-type debug
+          --enable-ccache

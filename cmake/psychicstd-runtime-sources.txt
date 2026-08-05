@@ -22,3 +22,4 @@ src/string.cpp
 src/string_instantiations.cpp
 src/system_error.cpp
 src/thread.cpp
+src/typeinfo.cpp

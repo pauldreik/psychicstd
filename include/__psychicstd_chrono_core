@@ -92,6 +92,14 @@ public:
     rep_ /= r;
     return *this;
   }
+  constexpr duration& operator%=(Rep r) {
+    rep_ %= r;
+    return *this;
+  }
+  constexpr duration& operator%=(const duration& d) {
+    rep_ %= d.rep_;
+    return *this;
+  }
 
   static constexpr duration zero() { return duration(0); }
   static constexpr duration min() { return duration(__duration_min<Rep>()); }
@@ -171,6 +179,19 @@ constexpr auto operator/(const duration<R1, P1>& a, const duration<R2, P2>& b) {
   using CD =
       duration<decltype(declval<R1>() / declval<R2>()), ratio_gcd<P1, P2>>;
   return CD(a).count() / CD(b).count();
+}
+template <typename Rep, typename Period, typename Scalar>
+  requires is_integral_v<Rep> && is_integral_v<Scalar>
+constexpr auto operator%(const duration<Rep, Period>& d, Scalar s) {
+  using CommonRep = common_type_t<Rep, Scalar>;
+  return duration<CommonRep, Period>(static_cast<CommonRep>(d.count()) %
+                                     static_cast<CommonRep>(s));
+}
+template <typename R1, typename P1, typename R2, typename P2>
+constexpr auto operator%(const duration<R1, P1>& a, const duration<R2, P2>& b) {
+  using CD =
+      duration<decltype(declval<R1>() % declval<R2>()), ratio_gcd<P1, P2>>;
+  return CD(CD(a).count() % CD(b).count());
 }
 
 template <typename ToDur, typename Rep, typename Period>

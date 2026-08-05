@@ -52,6 +52,13 @@ static void test_duration_fractional_conversion() {
   psyassert(seconds.count() == 1.23);
 }
 
+static void test_duration_scalar_remainder_promotes_rep() {
+  using int_seconds = duration<int>;
+  using result_type = decltype(int_seconds{5} % 2LL);
+  static_assert(std::is_same_v<result_type, duration<long long>>);
+  static_assert((int_seconds{5} % 2LL).count() == 1);
+}
+
 static void test_time_point_arithmetic() {
   time_point<system_clock, milliseconds> epoch(milliseconds(0));
   psyassert((epoch + milliseconds(5)).time_since_epoch().count() == 5);
@@ -88,6 +95,7 @@ static void test_integral_is_finite() {
 }
 
 int main() {
+  test_duration_scalar_remainder_promotes_rep();
   const std::chrono::sys_seconds epoch{std::chrono::seconds{0}};
   const auto epoch_days = std::chrono::floor<std::chrono::days>(epoch);
   const std::chrono::year_month_day epoch_date{epoch_days};
@@ -115,6 +123,15 @@ int main() {
   static_assert(7ns == std::chrono::nanoseconds(7));
   static_assert(10ms / 2ms == 5);
   static_assert(2s / 500ms == 4);
+  static_assert(1500ms % 1s == 500ms);
+  static_assert(1500ms % 1000 == 500ms);
+  constexpr auto remainder = [] {
+    auto value = 1500ms;
+    value %= 1s;
+    value %= 300;
+    return value;
+  }();
+  static_assert(remainder == 200ms);
 
   test_duration_cast_identity();
   test_duration_cast_down();

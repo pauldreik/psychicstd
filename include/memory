@@ -337,6 +337,11 @@ template <typename T> class enable_shared_from_this {
   template <typename U> friend class shared_ptr;
   template <typename U> friend class weak_ptr;
 
+  friend const enable_shared_from_this* __enable_shared_from_this_base(
+      const enable_shared_from_this* value) noexcept {
+    return value;
+  }
+
   void __accept(__detail::__sp_ctrl* ctrl, T* ptr) const noexcept {
     if (!ctrl_ || __atomic_load_n(&ctrl_->count, __ATOMIC_RELAXED) == 0) {
       if (ctrl_)
@@ -390,9 +395,8 @@ template <typename T> class shared_ptr {
   }
 
   template <typename U> void init_esft(U* p) noexcept {
-    using V = remove_cv_t<U>;
-    if constexpr (is_base_of_v<enable_shared_from_this<V>, V>)
-      static_cast<enable_shared_from_this<V>*>(p)->__accept(ctrl_, p);
+    if constexpr (requires { __enable_shared_from_this_base(p); })
+      __enable_shared_from_this_base(p)->__accept(ctrl_, p);
   }
 
   shared_ptr(__detail::__sp_ctrl* ctrl, T* ptr, __detail::__esft_tag)
