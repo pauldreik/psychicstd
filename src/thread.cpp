@@ -35,10 +35,14 @@ static pthread_t to_native_handle(unsigned long handle) noexcept {
   return result;
 }
 
-void* thread::__start(void* pointer) noexcept {
-  __state* state = static_cast<__state*>(pointer);
-  state->run();
-  delete state;
+void thread::__destroy_state(void* pointer) noexcept {
+  delete static_cast<__state*>(pointer);
+}
+
+void* thread::__start(void* pointer) {
+  pthread_cleanup_push(__destroy_state, pointer);
+  static_cast<__state*>(pointer)->run();
+  pthread_cleanup_pop(1);
   return nullptr;
 }
 

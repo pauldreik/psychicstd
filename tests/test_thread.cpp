@@ -2,6 +2,7 @@
 #include <atomic>
 #include <cstdlib>
 #include <exception>
+#include <pthread.h>
 #include <sstream>
 #include <stop_token>
 #include <sys/wait.h>
@@ -12,6 +13,31 @@
 struct worker {
   std::atomic<int>* runs;
   void run(int count) { runs->fetch_add(count, std::memory_order_relaxed); }
+};
+
+struct cancellation_worker {
+  std::atomic<bool>* started;
+  std::atomic<bool>* destroyed;
+
+  cancellation_worker(std::atomic<bool>& started_value,
+                      std::atomic<bool>& destroyed_value)
+      : started(&started_value), destroyed(&destroyed_value) {}
+  cancellation_worker(const cancellation_worker&) = delete;
+  cancellation_worker& operator=(const cancellation_worker&) = delete;
+  cancellation_worker(cancellation_worker&& other) noexcept
+      : started(other.started), destroyed(other.destroyed) {
+    other.destroyed = nullptr;
+  }
+  ~cancellation_worker() {
+    if (destroyed)
+      destroyed->store(true, std::memory_order_release);
+  }
+
+  void operator()() const {
+    started->store(true, std::memory_order_release);
+    while (true)
+      pthread_testcancel();
+  }
 };
 
 void expect_terminate(void (*operation)()) {
@@ -83,7 +109,23 @@ int main() {
   plain.join();
   psyassert(plain_runs == 1);
 
+  std::atomic<bool> cancellation_started(false);
+  std::atomic<bool> cancellation_state_destroyed(false);
+  std::thread cancelled(
+      cancellation_worker(cancellation_started, cancellation_state_destroyed));
+  while (!cancellation_started.load(std::memory_order_acquire))
+    std::this_thread::yield();
+  psyassert(pthread_cancel(cancelled.native_handle()) == 0);
+  cancelled.join();
+#if !defined(__APPLE__) || defined(PSYCHICSTD_TEST_PSYCHICSTD)
+  psyassert(cancellation_state_destroyed.load(std::memory_order_acquire));
+#endif
+
   expect_terminate(+[] { std::thread joinable([] {}); });
+  expect_terminate(+[] {
+    std::thread throwing([] { throw 1; });
+    throwing.join();
+  });
   expect_terminate(+[] {
     std::thread joinable([] {});
     std::thread empty;
