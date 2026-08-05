@@ -1539,6 +1539,7 @@ def _single_source_project(
     run_args: tuple[str, ...] = (),
     extra_cxxflags: tuple[str, ...] = (),
     run_binary: bool = True,
+    prepare: Callable[[Path], None] | None = None,
 ) -> Project:
     """Compile small upstream examples/tests individually.
 
@@ -1554,23 +1555,26 @@ def _single_source_project(
             with tarfile.open(tarball) as archive:
                 archive.extractall(work)
             src = work / source_dir
+            if prepare is not None:
+                prepare(src)
             env = _env(tc)
             includes = ["-I" + str(src / d) for d in include_dirs]
             compile_ms = 0.0
             run_ms = 0.0
             for index, relative in enumerate(source_files):
                 binary = work / f"example-{index}"
+                source = src / relative
                 command = [
                     tc.cxx,
                     *tc.cxxflags.split(),
                     *extra_cxxflags,
                     *includes,
-                    str(src / relative),
+                    str(source),
                 ]
                 command += tc.ldflags.split() + tc.libs.split() + ["-o", str(binary)]
                 compile_ms += _timed(command, src, env)
                 if run_binary:
-                    run_ms += _timed([str(binary), *run_args], src, env)
+                    run_ms += _timed([str(binary), *run_args], source.parent, env)
             result = {"compile": compile_ms}
             if run_binary:
                 result["run tests"] = run_ms
@@ -1585,14 +1589,66 @@ def _single_source_project(
 
 
 def _inipp() -> Project:
+    def prepare(src: Path) -> None:
+        # psychicstd deliberately omits global wide streams. Keep the complete
+        # narrow-character suite, which exercises all inipp operations.
+        source = src / "unittest" / "unittest.cpp"
+        text = source.read_text()
+        replacements = (
+            (
+                "\tvoid WriteMessage(const char *msg) {\n\t\tstd::wcout << msg;\n\t}\n",
+                "\tvoid WriteMessage(const char *msg) {\n\t\tstd::cout << msg;\n\t}\n",
+            ),
+            (
+                (
+                    "\n\tvoid WriteMessage(const wchar_t *msg) {\n"
+                    "\t\tstd::wcout << msg;\n"
+                    "\t}\n"
+                ),
+                "",
+            ),
+            (
+                (
+                    "\n\t\tTEST_METHOD(TestParseGenerate1W)\n"
+                    "\t\t{\n"
+                    "\t\t\tstd::basic_ostringstream<wchar_t> os;\n"
+                    '\t\t\tAssert::IsTrue(runtest<wchar_t>("test1.ini", '
+                    '"test1.output", os));\n'
+                    "\t\t\tLogger::WriteMessage(os.str().c_str());\n"
+                    "\t\t}\n"
+                ),
+                "",
+            ),
+            (
+                (
+                    "\n\t\tTEST_METHOD(TestParseGenerate2W)\n"
+                    "\t\t{\n"
+                    "\t\t\tstd::basic_ostringstream<wchar_t> os;\n"
+                    '\t\t\tAssert::IsTrue(runtest<wchar_t>("test2.ini", '
+                    '"test2.output", os));\n'
+                    "\t\t\tLogger::WriteMessage(os.str().c_str());\n"
+                    "\t\t}\n"
+                ),
+                "",
+            ),
+            ("\ttest.TestParseGenerate1W();\n", ""),
+            ("\ttest.TestParseGenerate2W();\n", ""),
+        )
+        for old, new in replacements:
+            if text.count(old) != 1:
+                raise RuntimeError("unexpected inipp unit-test source")
+            text = text.replace(old, new)
+        source.write_text(text)
+
     return _single_source_project(
         "inipp",
         "1.0.13",
         "https://github.com/mcmtroffaes/inipp/archive/refs/tags/1.0.13.tar.gz",
         "656c5d82db48f4da8ed70482839ad0da95ea1d576a3c890c272e9b9e0fb89571",
         "inipp-1.0.13",
-        ("unittest/headertest.cpp",),
+        ("unittest/headertest.cpp", "unittest/unittest.cpp"),
         ("inipp",),
+        prepare=prepare,
     )
 
 
