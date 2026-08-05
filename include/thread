@@ -56,7 +56,7 @@ class thread {
 
   struct __state {
     virtual ~__state() = default;
-    virtual void run() noexcept = 0;
+    virtual void run() = 0;
   };
   template <typename F, typename... Args> struct __state_impl final : __state {
     F function;
@@ -65,12 +65,13 @@ class thread {
     explicit __state_impl(Fn&& f, Ts&&... args)
         : function(static_cast<Fn&&>(f)),
           arguments(static_cast<Ts&&>(args)...) {}
-    void run() noexcept override {
+    void run() override {
       __thread_detail::__invoke_from_tuple(static_cast<F&&>(function),
                                            arguments);
     }
   };
-  static void* __start(void*) noexcept;
+  static void __destroy_state(void*) noexcept;
+  static void* __start(void*);
 
 public:
 #ifdef __APPLE__
@@ -136,7 +137,7 @@ class jthread {
     explicit __state(Fn&& f, stop_token t, Ts&&... args)
         : function(static_cast<Fn&&>(f)), token(static_cast<stop_token&&>(t)),
           arguments(static_cast<Ts&&>(args)...) {}
-    void run() noexcept {
+    void run() override {
       if constexpr (is_invocable_v<F, stop_token, Args...>) {
         __thread_detail::__invoke_from_tuple_token(
             static_cast<F&&>(function), static_cast<stop_token&&>(token),
