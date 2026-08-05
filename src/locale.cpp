@@ -50,6 +50,12 @@ locale::_rep* locale::_make_named(const char* name) {
   return new _rep(name);
 }
 
+void swap(locale& left, locale& right) noexcept {
+  locale::_rep* rep = left.rep_;
+  left.rep_ = right.rep_;
+  right.rep_ = rep;
+}
+
 namespace __locale_detail {
 
 size_t format_time(char* text, size_t size, const char* format,

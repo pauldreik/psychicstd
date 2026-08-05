@@ -119,6 +119,9 @@ private:
     static locale g;
     return g;
   }
+  friend void swap(locale&, locale&) noexcept;
 };
+
+void swap(locale&, locale&) noexcept;
 
 } // namespace std
