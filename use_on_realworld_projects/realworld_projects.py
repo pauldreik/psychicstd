@@ -1065,19 +1065,20 @@ _EIGEN_TEST_LIST = (
 )
 
 
-def _eigen() -> Project:
-    version = "3.4.0"
+def _eigen(full: bool) -> Project:
+    version = "5.0.1"
     url = (
         f"https://gitlab.com/libeigen/eigen/-/archive/{version}/eigen-{version}.tar.gz"
     )
-    checksum = "8586084f71f9bde545ee7fa6d00288b264a2b7ac3607b974e54d13e7162c1c72"
+    checksum = "e9c326dc8c05cd1e044c71f30f1b2e34a6161a3b6ecf445d56b53ff1669e3dec"
 
     def build(tc: Toolchain) -> dict[str, float]:
         tarball = RW_DIR / f"eigen-{version}.tar.gz"
         _fetch(url, tarball, checksum)
 
         with tempfile.TemporaryDirectory(
-            prefix="rw-eigen-", ignore_cleanup_errors=True
+            prefix="rw-eigen-full-" if full else "rw-eigen-",
+            ignore_cleanup_errors=True,
         ) as work_dir:
             work = Path(work_dir)
             with tarfile.open(tarball) as t:
@@ -1088,17 +1089,100 @@ def _eigen() -> Project:
             # main.h's FORBIDDEN_IDENTIFIER macros clash with psychicstd's names.
             main_h = test_dir / "main.h"
             text = main_h.read_text()
-            for name in (
-                "FORBIDDEN_IDENTIFIER",
-                "B0 FORBIDDEN_IDENTIFIER",
-                "I  FORBIDDEN_IDENTIFIER",
+            for declaration in (
+                (
+                    "#define FORBIDDEN_IDENTIFIER \\\n"
+                    "  (this_identifier_is_forbidden_to_avoid_clashes) "
+                    "this_identifier_is_forbidden_to_avoid_clashes\n"
+                ),
+                "#define B0 FORBIDDEN_IDENTIFIER\n",
+                "#define I FORBIDDEN_IDENTIFIER\n",
+                "#define _res FORBIDDEN_IDENTIFIER\n",
             ):
-                text = text.replace(f"#define {name}", f"// DISABLED: #define {name}")
+                if text.count(declaration) != 1:
+                    raise RuntimeError("unexpected Eigen forbidden-identifier block")
+                text = text.replace(declaration, "")
             main_h.write_text(text)
 
             env = _env(tc)
             # Keep randomized tests reproducible across benchmark variants.
             env["EIGEN_SEED"] = "1"
+            if full:
+                # Some Eigen test translation units consume several GiB while
+                # compiling. Keep memory-constrained nightly runners stable.
+                compile_jobs = f"-j{min(tc.jobs, 2)}"
+                test_jobs = f"-j{tc.jobs}"
+                configure = [
+                    "cmake",
+                    "-S",
+                    ".",
+                    "-B",
+                    "build",
+                    "-GNinja",
+                    "-DCMAKE_BUILD_TYPE=" + tc.build_type.capitalize(),
+                    "-DCMAKE_CXX_COMPILER=" + tc.cxx,
+                    "-DCMAKE_CXX_FLAGS=" + tc.cxxflags,
+                    "-DCMAKE_EXE_LINKER_FLAGS=" + tc.ldflags,
+                    "-DCMAKE_CXX_STANDARD_LIBRARIES=" + tc.libs,
+                    "-DCMAKE_CXX_STANDARD=20",
+                    "-DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY",
+                    # The overlay supplies libm explicitly in tc.libs, but
+                    # Eigen's probe clears the required library list.
+                    "-Dstandard_math_library_linked_to_automatically=ON",
+                    "-DBUILD_TESTING=ON",
+                    "-DEIGEN_BUILD_TESTING=ON",
+                    "-DEIGEN_BUILD_BLAS=OFF",
+                    "-DEIGEN_BUILD_CMAKE_PACKAGE=OFF",
+                    "-DEIGEN_BUILD_DEMOS=OFF",
+                    "-DEIGEN_BUILD_DOC=OFF",
+                    "-DEIGEN_BUILD_LAPACK=OFF",
+                    "-DEIGEN_BUILD_PKGCONFIG=OFF",
+                    "-DEIGEN_TEST_EXTERNAL_BLAS=OFF",
+                    "-DEIGEN_TEST_MAX_SIZE=320",
+                    "-DEIGEN_TEST_NOQT=ON",
+                    "-DEIGEN_TEST_OPENMP=OFF",
+                    "-DCMAKE_DISABLE_FIND_PACKAGE_Accelerate=ON",
+                    "-DCMAKE_DISABLE_FIND_PACKAGE_BLAS=ON",
+                    "-DCMAKE_DISABLE_FIND_PACKAGE_Boost=ON",
+                    "-DCMAKE_DISABLE_FIND_PACKAGE_CHOLMOD=ON",
+                    "-DCMAKE_DISABLE_FIND_PACKAGE_CUDA=ON",
+                    "-DCMAKE_DISABLE_FIND_PACKAGE_HIP=ON",
+                    "-DCMAKE_DISABLE_FIND_PACKAGE_KLU=ON",
+                    "-DCMAKE_DISABLE_FIND_PACKAGE_LAPACK=ON",
+                    "-DCMAKE_DISABLE_FIND_PACKAGE_PASTIX=ON",
+                    "-DCMAKE_DISABLE_FIND_PACKAGE_SPQR=ON",
+                    "-DCMAKE_DISABLE_FIND_PACKAGE_SuperLU=ON",
+                    "-DCMAKE_DISABLE_FIND_PACKAGE_UMFPACK=ON",
+                ]
+                return {
+                    "configure": _timed(configure, src, env),
+                    "compile": _timed(
+                        [
+                            "cmake",
+                            "--build",
+                            "build",
+                            "--target",
+                            "BuildOfficial",
+                            compile_jobs,
+                        ],
+                        src,
+                        env,
+                    ),
+                    "run tests": _timed(
+                        [
+                            "ctest",
+                            "--test-dir",
+                            "build",
+                            "--output-on-failure",
+                            "-L",
+                            "Official",
+                            test_jobs,
+                        ],
+                        src,
+                        env,
+                    ),
+                }
+
             cxxflags = [
                 *tc.cxxflags.split(),
                 "-I",
@@ -1127,10 +1211,18 @@ def _eigen() -> Project:
     return Project(
         version=version,
         build=build,
-        expected_seconds={"debug": 15, "release": 15},
+        expected_seconds=(
+            {"debug": 900, "release": 900} if full else {"debug": 15, "release": 15}
+        ),
+        expected_jobs=2 if full else 20,
         phases=("compile", "run tests"),
-        comment="eigen has no configure step; a fixed subset of its test "
-        "suite is compiled and run individually, with times summed.",
+        comment=(
+            "Builds and runs Eigen's complete upstream official test target; "
+            "optional third-party numerical backends are disabled."
+            if full
+            else "eigen has no configure step; a fixed subset of its test "
+            "suite is compiled and run individually, with times summed."
+        ),
     )
 
 
@@ -3639,7 +3731,8 @@ PROJECTS: dict[str, Project] = {
     "cmake": _cmake(),
     "cppcheck": _cppcheck(),
     "ctre": _ctre(),
-    "eigen": _eigen(),
+    "eigen": _eigen(full=False),
+    "eigen-full": _eigen(full=True),
     "electron": _electron(),
     "flatbuffers": _flatbuffers(),
     "fmt": _fmt(),

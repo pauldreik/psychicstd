@@ -13,8 +13,10 @@ set(TESTS
     test_charconv
     test_chrono
     test_cmath
+    test_cmath_surface
     test_compare
     test_complex
+    test_complex_math_surface
     test_concepts
     test_coroutine
     test_csetjmp
@@ -41,6 +43,7 @@ set(TESTS
     test_list
     test_locale
     test_map
+    test_math_h_surface
     test_memory
     test_memory_include_order
     test_mutex

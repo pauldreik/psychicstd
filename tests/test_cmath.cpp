@@ -21,6 +21,10 @@ int main() {
   static_assert(std::is_same_v<decltype(std::log(1.0F)), float>);
   static_assert(std::is_same_v<decltype(std::log(1.0L)), long double>);
   static_assert(std::is_same_v<decltype(std::log(1)), double>);
+  static_assert(std::is_same_v<decltype(std::sin(1.0F)), float>);
+  static_assert(std::is_same_v<decltype(std::sin(1.0L)), long double>);
+  static_assert(std::is_same_v<decltype(std::cos(1.0F)), float>);
+  static_assert(std::is_same_v<decltype(std::cos(1.0L)), long double>);
   static_assert(std::is_same_v<decltype(std::ldexp(1.0F, 1)), float>);
   static_assert(std::is_same_v<decltype(std::ldexp(1.0L, 1)), long double>);
   static_assert(std::is_same_v<decltype(std::ldexp(1, 1)), double>);
