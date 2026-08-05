@@ -1104,13 +1104,32 @@ def _eigen(full: bool) -> Project:
                 text = text.replace(declaration, "")
             main_h.write_text(text)
 
+            if full:
+                heavy_memory = 5 * 1024 * 1024 * 1024
+                available_memory = detect_parallelism().available_memory
+                heavy_jobs = max(1, min(tc.jobs, available_memory // heavy_memory))
+                # The pinned SVD split compilations peak near 5 GiB each.
+                # Ninja keeps all remaining slots busy with ordinary targets.
+                test_cmake = test_dir / "CMakeLists.txt"
+                test_cmake.write_text(
+                    test_cmake.read_text()
+                    + "\nset_property(GLOBAL APPEND PROPERTY JOB_POOLS "
+                    f"eigen_heavy={heavy_jobs})\n"
+                    "foreach(part RANGE 1 58)\n"
+                    "  set_property(TARGET jacobisvd_${part} PROPERTY "
+                    "JOB_POOL_COMPILE eigen_heavy)\n"
+                    "endforeach()\n"
+                    "foreach(part RANGE 1 49)\n"
+                    "  set_property(TARGET bdcsvd_${part} PROPERTY "
+                    "JOB_POOL_COMPILE eigen_heavy)\n"
+                    "endforeach()\n"
+                )
+
             env = _env(tc)
             # Keep randomized tests reproducible across benchmark variants.
             env["EIGEN_SEED"] = "1"
             if full:
-                # Some Eigen test translation units consume several GiB while
-                # compiling. Keep memory-constrained nightly runners stable.
-                compile_jobs = f"-j{min(tc.jobs, 2)}"
+                compile_jobs = f"-j{tc.jobs}"
                 test_jobs = f"-j{tc.jobs}"
                 configure = [
                     "cmake",
@@ -1212,13 +1231,15 @@ def _eigen(full: bool) -> Project:
         version=version,
         build=build,
         expected_seconds=(
-            {"debug": 900, "release": 900} if full else {"debug": 15, "release": 15}
+            {"debug": 1800, "release": 1800} if full else {"debug": 15, "release": 15}
         ),
-        expected_jobs=2 if full else 20,
+        expected_jobs=16 if full else 20,
         phases=("compile", "run tests"),
         comment=(
             "Builds and runs Eigen's complete upstream official test target; "
-            "optional third-party numerical backends are disabled."
+            "optional third-party numerical backends are disabled. This is a "
+            "manual workload because some translation units require several "
+            "GiB of memory."
             if full
             else "eigen has no configure step; a fixed subset of its test "
             "suite is compiled and run individually, with times summed."
