@@ -23,6 +23,13 @@ struct conflicting_wrapper {
 
 enum class hashable_enum : unsigned { value = 42 };
 
+struct immovable_result {
+  int value;
+  explicit immovable_result(int value_arg) : value(value_arg) {}
+  immovable_result(const immovable_result&) = delete;
+  immovable_result(immovable_result&&) = delete;
+};
+
 int main() {
   psyassert(std::divides<>{}(8.0, 2.0) == 4.0);
   psyassert(std::negate<>{}(3) == -3);
@@ -43,6 +50,17 @@ int main() {
   first.swap(second);
   psyassert(first() == 2);
   psyassert(second() == 1);
+  int discarded_result_calls = 0;
+  std::function<void()> discard_result = [&discarded_result_calls] {
+    ++discarded_result_calls;
+    return 42;
+  };
+  discard_result();
+  psyassert(discarded_result_calls == 1);
+  std::function<immovable_result()> return_immovable = [] {
+    return immovable_result{42};
+  };
+  psyassert(return_immovable().value == 42);
   struct callable {
     int value;
     int operator()() const { return value; }

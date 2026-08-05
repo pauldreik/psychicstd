@@ -30,6 +30,14 @@ struct NothrowCallable {
 struct MutableCallable {
   void operator()() {}
 };
+struct ImmovableResult {
+  ImmovableResult() = default;
+  ImmovableResult(const ImmovableResult&) = delete;
+  ImmovableResult(ImmovableResult&&) = delete;
+};
+struct ReturnsImmovable {
+  ImmovableResult operator()() const noexcept { return {}; }
+};
 
 int main() {
   static_assert(std::is_same_v<int, int>);
@@ -67,6 +75,10 @@ int main() {
   static_assert(!std::is_nothrow_invocable_v<int, int>);
   static_assert(std::is_invocable_v<MutableCallable&>);
   static_assert(!std::is_invocable_v<const MutableCallable&>);
+  static_assert(!std::is_convertible_v<ImmovableResult, ImmovableResult>);
+  static_assert(std::is_invocable_r_v<ImmovableResult, ReturnsImmovable>);
+  static_assert(
+      std::is_nothrow_invocable_r_v<ImmovableResult, ReturnsImmovable>);
   static_assert(std::alignment_of<int>::value == alignof(int));
   static_assert(std::alignment_of_v<int> == alignof(int));
   static_assert(std::is_standard_layout_v<Pod>);
