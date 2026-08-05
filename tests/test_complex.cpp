@@ -11,6 +11,16 @@ struct unrelated_expression {};
 template <typename T>
 concept has_std_arg = requires(T value) { std::arg(value); };
 
+template <typename T> void test_integral_output() {
+  std::ostringstream stream;
+  stream << std::complex<T>(12, 34);
+  psyassert(stream.str() == "(12,34)");
+
+  std::wostringstream wide_stream;
+  wide_stream << std::complex<T>(12, 34);
+  psyassert(wide_stream.str() == L"(12,34)");
+}
+
 static_assert(!has_std_arg<unrelated_expression>);
 } // namespace
 
@@ -98,4 +108,11 @@ int main() {
   std::wostringstream wide_stream;
   wide_stream << std::setw(9) << std::complex<double>(12.0, 34.0);
   psyassert(wide_stream.str() == L"  (12,34)");
+
+  test_integral_output<short>();
+  test_integral_output<unsigned short>();
+  test_integral_output<int>();
+  test_integral_output<unsigned int>();
+  test_integral_output<long>();
+  test_integral_output<unsigned long>();
 }
