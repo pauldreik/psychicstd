@@ -3333,7 +3333,7 @@ def _opencv() -> Project:
 # --- pybind11 ------------------------------------------------------------
 
 
-def _pybind11() -> Project:
+def _pybind11(full: bool) -> Project:
     version = "3.0.4"
     url = f"https://github.com/pybind/pybind11/archive/refs/tags/v{version}.tar.gz"
     checksum = "74b6a2c2b4573a400cafb6ecbf60c98df300cd3d0041296b913d02b2cbbb2676"
@@ -3343,13 +3343,13 @@ def _pybind11() -> Project:
         _fetch(url, tarball, checksum)
 
         with tempfile.TemporaryDirectory(
-            prefix="rw-pybind11-", ignore_cleanup_errors=True
+            prefix="rw-pybind11-full-" if full else "rw-pybind11-",
+            ignore_cleanup_errors=True,
         ) as work_dir:
             work = Path(work_dir)
             with tarfile.open(tarball) as t:
                 t.extractall(work)
             src = work / f"pybind11-{version}"
-            test_src = src / "tests" / "test_cmake_build" / "subdirectory_function"
             python = shutil.which("python3") or "python3"
 
             env = _env(tc)
@@ -3358,6 +3358,11 @@ def _pybind11() -> Project:
             cxxflags = tc.cxxflags
             if "-nostdinc++" in tc.cxxflags:
                 cxxflags += r" -DPYBIND11_BUILD_ABI=\"_psychicstd\""
+            source = (
+                src
+                if full
+                else src / "tests" / "test_cmake_build" / "subdirectory_function"
+            )
             configure = [
                 "cmake",
                 "-S",
@@ -3376,9 +3381,55 @@ def _pybind11() -> Project:
                 "-DPython_EXECUTABLE=" + python,
                 "-Dpybind11_SOURCE_DIR=" + str(src),
             ]
+            if full:
+                configure.extend(
+                    [
+                        "-DBUILD_TESTING=ON",
+                        "-DPYBIND11_TEST=ON",
+                        "-DPYBIND11_INSTALL=OFF",
+                        "-DPYBIND11_WERROR=OFF",
+                        "-DDOWNLOAD_CATCH=OFF",
+                        "-DDOWNLOAD_EIGEN=OFF",
+                        "-DCMAKE_DISABLE_FIND_PACKAGE_Boost=ON",
+                        "-DCMAKE_DISABLE_FIND_PACKAGE_Catch=ON",
+                        "-DCMAKE_DISABLE_FIND_PACKAGE_Eigen3=ON",
+                    ]
+                )
             jobs = f"-j{tc.jobs}"
+            if full:
+                test_targets = [
+                    "pybind11_tests",
+                    "pybind11_cross_module_tests",
+                    "cross_module_interleaved_error_already_set",
+                    "cross_module_gil_utils",
+                    "exo_planet_pybind11",
+                    "exo_planet_c_api",
+                    "home_planet_very_lonely_traveler",
+                    "standalone_enum_module",
+                ]
+                return {
+                    "configure": _timed(configure, source, env),
+                    "compile": _timed(
+                        [
+                            "cmake",
+                            "--build",
+                            "build",
+                            "--target",
+                            *test_targets,
+                            jobs,
+                        ],
+                        source,
+                        env,
+                    ),
+                    "run tests": _timed(
+                        ["cmake", "--build", "build", "--target", "pytest"],
+                        source,
+                        env,
+                    ),
+                }
+
             return {
-                "configure": _timed(configure, test_src, env),
+                "configure": _timed(configure, source, env),
                 "compile": _timed(
                     [
                         "cmake",
@@ -3388,7 +3439,7 @@ def _pybind11() -> Project:
                         "test_subdirectory_function",
                         jobs,
                     ],
-                    test_src,
+                    source,
                     env,
                 ),
                 "run tests": _timed(
@@ -3397,17 +3448,26 @@ def _pybind11() -> Project:
                         str(src / "tests" / "test_cmake_build" / "test.py"),
                         "subdirectory_function",
                     ],
-                    test_src,
-                    {**env, "PYTHONPATH": str(test_src / "build")},
+                    source,
+                    {**env, "PYTHONPATH": str(source / "build")},
                 ),
             }
 
     return Project(
-        version=version,
+        version=f"{version} (full)" if full else version,
         build=build,
-        expected_seconds={"debug": 3, "release": 3},
-        comment="Builds pybind11's upstream CMake extension test, then imports "
-        "the module in Python and calls its bound C++ function.",
+        expected_seconds=(
+            {"debug": 75, "release": 65} if full else {"debug": 3, "release": 3}
+        ),
+        expected_jobs=16 if full else 20,
+        comment=(
+            "Builds pybind11's complete primary C++/pytest module set and runs "
+            "its upstream pytest suite; optional Eigen, Boost, Catch, and "
+            "SciPy integrations are excluded."
+            if full
+            else "Builds pybind11's upstream CMake extension test, then imports "
+            "the module in Python and calls its bound C++ function."
+        ),
     )
 
 
@@ -3768,7 +3828,8 @@ PROJECTS: dict[str, Project] = {
     "nlohmann": _nlohmann(),
     "opencv": _opencv(),
     "pocketfft": _pocketfft(),
-    "pybind11": _pybind11(),
+    "pybind11": _pybind11(full=False),
+    "pybind11-full": _pybind11(full=True),
     "rapidjson": _rapidjson(),
     "react-native": _react_native(),
     "rdfind": _rdfind(),
