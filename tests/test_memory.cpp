@@ -375,6 +375,26 @@ struct VirtualBase {
 };
 struct VirtualDerived : virtual VirtualBase {};
 
+class PrivateSharedFromThis
+    : private std::enable_shared_from_this<PrivateSharedFromThis> {};
+
+struct SharedFromThisBase : std::enable_shared_from_this<SharedFromThisBase> {
+  virtual ~SharedFromThisBase() = default;
+};
+struct SharedFromThisDerived : virtual SharedFromThisBase {};
+
+static void test_inaccessible_enable_shared_from_this() {
+  auto value = std::make_shared<PrivateSharedFromThis>();
+  psyassert(value != nullptr);
+}
+
+static void test_inherited_enable_shared_from_this() {
+  auto derived = std::make_shared<SharedFromThisDerived>();
+  auto base = derived->shared_from_this();
+  psyassert(base.get() == derived.get());
+  psyassert(base.use_count() == 2);
+}
+
 static void test_expired_converting_weak_ptr() {
   std::weak_ptr<VirtualDerived> derived;
   {
@@ -452,5 +472,7 @@ int main() {
   test_shared_ptr_atomic_access();
   test_weak_ptr_shares_control_block();
   test_expired_converting_weak_ptr();
+  test_inaccessible_enable_shared_from_this();
+  test_inherited_enable_shared_from_this();
   test_member_init_from_template_prvalue();
 }
