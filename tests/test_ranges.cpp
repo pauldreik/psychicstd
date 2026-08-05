@@ -1,5 +1,6 @@
 #include "psyassert.h"
 #include <algorithm>
+#include <initializer_list>
 #include <ranges>
 #include <vector>
 
@@ -28,6 +29,25 @@ concept can_make_subrange = requires(Range&& range) {
 static_assert(can_make_subrange<std::vector<int>&>);
 static_assert(!can_make_subrange<std::vector<int>>);
 
+struct identity_transform {
+  constexpr int operator()(int value) const { return value; }
+};
+
+template <typename Range>
+concept can_pipe_transform = requires(Range&& range) {
+  static_cast<Range&&>(range) | std::views::transform(identity_transform{});
+};
+
+template <typename Range>
+concept can_call_transform = requires(Range&& range) {
+  std::views::transform(static_cast<Range&&>(range), identity_transform{});
+};
+
+static_assert(can_pipe_transform<std::vector<int>&>);
+static_assert(can_pipe_transform<std::vector<int>>);
+static_assert(!can_pipe_transform<std::initializer_list<int>>);
+static_assert(!can_call_transform<std::initializer_list<int>>);
+
 int main() {
   std::vector<int> v = {1, 2, 3};
   psyassert(*std::ranges::begin(v) == 1);
@@ -38,6 +58,17 @@ int main() {
   psyassert(*tail.begin() == 2);
   std::ranges::subrange whole(v);
   psyassert(*whole.begin() == 1);
+
+  auto doubled = v | std::views::transform([](int value) { return value * 2; });
+  auto transformed = doubled.begin();
+  psyassert(*transformed == 2);
+  ++transformed;
+  psyassert(*transformed == 4);
+  auto direct = std::views::transform(v, [](int value) { return value + 1; });
+  psyassert(*direct.begin() == 2);
+  auto owned = std::vector<int>{3, 4} |
+               std::views::transform([](int value) { return value + 1; });
+  psyassert(*owned.begin() == 4);
 
   int a = 4;
   int b = 5;

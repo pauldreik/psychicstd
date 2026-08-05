@@ -3,6 +3,10 @@
 #include <concepts>
 #include <type_traits>
 
+namespace std {
+template <typename T> class initializer_list;
+}
+
 namespace std::ranges {
 
 // -- CPOs: begin / end -------------------------------------------------------
@@ -118,8 +122,17 @@ concept output_range = range<T>;
 template <typename T>
 concept view = range<T> && std::movable<T>;
 
+namespace __detail {
+template <typename T> inline constexpr bool __is_initializer_list = false;
+template <typename T>
+inline constexpr bool __is_initializer_list<std::initializer_list<T>> = true;
+} // namespace __detail
+
 template <typename R>
-concept viewable_range = range<R> && (view<std::remove_cvref_t<R>> || true);
+concept viewable_range =
+    range<R> && (std::is_lvalue_reference_v<R> ||
+                 (std::movable<std::remove_reference_t<R>> &&
+                  !__detail::__is_initializer_list<std::remove_cvref_t<R>>));
 
 // range_value_t etc.
 template <typename R>
@@ -172,20 +185,100 @@ template <typename Range>
   requires std::is_lvalue_reference_v<Range>
 subrange(Range&&) -> subrange<iterator_t<Range>, sentinel_t<Range>>;
 
+template <typename Range, typename Function> class transform_view {
+  template <typename Iterator> class __iterator {
+  public:
+    Iterator current_{};
+    Function* function_ = nullptr;
+
+    constexpr decltype(auto) operator*() const {
+      return (*function_)(*current_);
+    }
+    constexpr __iterator& operator++() {
+      ++current_;
+      return *this;
+    }
+    constexpr void operator++(int) { ++current_; }
+    template <typename Other>
+    constexpr bool operator==(const __iterator<Other>& other) const {
+      return current_ == other.current_;
+    }
+    template <typename Other>
+    constexpr bool operator!=(const __iterator<Other>& other) const {
+      return !(*this == other);
+    }
+  };
+
+public:
+  constexpr transform_view(Range range, Function function)
+      : range_(static_cast<Range&&>(range)),
+        function_(static_cast<Function&&>(function)) {}
+
+  constexpr auto begin() {
+    return __iterator<decltype(std::ranges::begin(range_))>{
+        std::ranges::begin(range_), &function_};
+  }
+  constexpr auto end() {
+    return __iterator<decltype(std::ranges::end(range_))>{
+        std::ranges::end(range_), &function_};
+  }
+
+private:
+  Range range_;
+  Function function_;
+};
+
 } // namespace std::ranges
 
 namespace std::views {
 
-// all_t: for simplicity, wraps R as-is (our ranges are all "view-like" for test
-// purposes)
-template <typename R> using all_t = std::remove_cvref_t<R>;
+template <typename R>
+using all_t = std::conditional_t<std::is_lvalue_reference_v<R>, R,
+                                 std::remove_cvref_t<R>>;
 
 struct __all_fn {
-  template <typename R> constexpr auto operator()(R&& r) const noexcept -> R&& {
+  template <typename R>
+    requires std::ranges::viewable_range<R>
+  constexpr auto operator()(R&& r) const noexcept -> R&& {
     // forward
     return static_cast<R&&>(r);
   }
 };
 inline constexpr __all_fn all{};
+
+template <typename Function> class __transform_closure {
+public:
+  constexpr explicit __transform_closure(Function function)
+      : function_(static_cast<Function&&>(function)) {}
+
+  template <typename Range>
+    requires std::ranges::viewable_range<Range>
+  friend constexpr auto operator|(Range&& range,
+                                  const __transform_closure& closure) {
+    using View = all_t<Range>;
+    return std::ranges::transform_view<View, Function>(
+        all(static_cast<Range&&>(range)), closure.function_);
+  }
+
+private:
+  Function function_;
+};
+
+struct __transform_fn {
+  template <typename Function>
+  constexpr auto operator()(Function&& function) const {
+    using F = std::decay_t<Function>;
+    return __transform_closure<F>(static_cast<Function&&>(function));
+  }
+  template <typename Range, typename Function>
+    requires std::ranges::viewable_range<Range>
+  constexpr auto operator()(Range&& range, Function&& function) const {
+    using View = all_t<Range>;
+    using F = std::decay_t<Function>;
+    return std::ranges::transform_view<View, F>(
+        all(static_cast<Range&&>(range)), static_cast<Function&&>(function));
+  }
+};
+inline constexpr __transform_fn transform{};
 
 } // namespace std::views
