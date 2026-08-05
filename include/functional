@@ -38,7 +38,11 @@ template <typename R, typename... Args> class function<R(Args...)> {
     F f_;
     impl(F f) : f_(static_cast<F&&>(f)) {}
     R call(Args... args) override {
-      return detail::__invoke(f_, static_cast<Args&&>(args)...);
+      if constexpr (is_void_v<R>) {
+        detail::__invoke(f_, static_cast<Args&&>(args)...);
+      } else {
+        return detail::__invoke(f_, static_cast<Args&&>(args)...);
+      }
     }
     base* clone() override { return new impl(f_); }
     void* target(const void* id) noexcept override {
