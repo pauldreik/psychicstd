@@ -1720,28 +1720,129 @@ def _inipp() -> Project:
     )
 
 
-def _cxxopts() -> Project:
-    return _single_source_project(
-        "cxxopts",
-        "3.3.1",
-        "https://github.com/jarro2783/cxxopts/archive/refs/tags/v3.3.1.tar.gz",
-        "3bfc70542c521d4b55a46429d808178916a579b28d048bd8c727ee76c39e2072",
-        "cxxopts-3.3.1",
-        ("src/example.cpp",),
-        ("include",),
-        (
-            "--apple",
-            "--int",
-            "42",
-            "--float",
-            "1.5",
-            "input.txt",
-            "output.txt",
-            "extra",
-        ),
-        ("-DCXXOPTS_NO_REGEX",),
-        comment="Builds and runs cxxopts' upstream example with boolean, numeric, "
-        "positional, and unmatched arguments.",
+def _cxxopts(full: bool) -> Project:
+    version = "3.3.1"
+    url = f"https://github.com/jarro2783/cxxopts/archive/refs/tags/v{version}.tar.gz"
+    checksum = "3bfc70542c521d4b55a46429d808178916a579b28d048bd8c727ee76c39e2072"
+
+    if not full:
+        return _single_source_project(
+            "cxxopts",
+            version,
+            url,
+            checksum,
+            f"cxxopts-{version}",
+            ("src/example.cpp",),
+            ("include",),
+            (
+                "--apple",
+                "--int",
+                "42",
+                "--float",
+                "1.5",
+                "input.txt",
+                "output.txt",
+                "extra",
+            ),
+            ("-DCXXOPTS_NO_REGEX",),
+            comment="Builds and runs cxxopts' upstream example with boolean, "
+            "numeric, positional, and unmatched arguments.",
+        )
+
+    def build(tc: Toolchain) -> dict[str, float]:
+        tarball = RW_DIR / f"cxxopts-{version}.tar.gz"
+        _fetch(url, tarball, checksum)
+
+        with tempfile.TemporaryDirectory(
+            prefix="rw-cxxopts-full-", ignore_cleanup_errors=True
+        ) as work_dir:
+            work = Path(work_dir)
+            with tarfile.open(tarball) as archive:
+                archive.extractall(work)
+            src = work / f"cxxopts-{version}"
+            # Keep cxxopts' documented no-regex mode, but make its fallback
+            # parser accept the same tested option syntax as its regex path.
+            header = src / "include" / "cxxopts.hpp"
+            text = header.read_text()
+            replacements = (
+                (
+                    (
+                        "while (isalnum(*pdata, std::locale::classic()) || "
+                        "*pdata == '-' || *pdata == '_')"
+                    ),
+                    (
+                        "while (isalnum(*pdata, std::locale::classic()) || "
+                        "*pdata == '-' || *pdata == '_' || *pdata == '.')"
+                    ),
+                ),
+                (
+                    (
+                        "while (isalnum(*pdata, std::locale::classic()))\n"
+                        "    {\n"
+                        "      argu_desc.arg_name.push_back(*pdata);\n"
+                        "      pdata += 1;\n"
+                        "    }"
+                    ),
+                    (
+                        "if (isalnum(*pdata, std::locale::classic()))\n"
+                        "    {\n"
+                        "      while (*pdata != '\\0')\n"
+                        "      {\n"
+                        "        argu_desc.arg_name.push_back(*pdata);\n"
+                        "        pdata += 1;\n"
+                        "      }\n"
+                        "    }"
+                    ),
+                ),
+            )
+            for old, new in replacements:
+                if text.count(old) != 1:
+                    raise RuntimeError("unexpected cxxopts fallback parser source")
+                text = text.replace(old, new)
+            header.write_text(text)
+
+            wrapper = _compiler_wrapper(work / "cxx", tc, ("-DCXXOPTS_NO_REGEX",))
+            env = _env(tc)
+            configure = [
+                "cmake",
+                "-S",
+                ".",
+                "-B",
+                "build",
+                "-GNinja",
+                "-DCMAKE_BUILD_TYPE=" + tc.build_type.capitalize(),
+                "-DCMAKE_CXX_COMPILER=" + str(wrapper),
+                "-DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY",
+                "-DCXXOPTS_CXX_STANDARD=20",
+                "-DCXXOPTS_BUILD_EXAMPLES=ON",
+                "-DCXXOPTS_BUILD_TESTS=ON",
+                "-DCXXOPTS_ENABLE_INSTALL=ON",
+                "-DCXXOPTS_ENABLE_WARNINGS=OFF",
+                "-DCXXOPTS_USE_UNICODE_HELP=OFF",
+            ]
+            jobs = f"-j{tc.jobs}"
+            return {
+                "configure": _timed(configure, src, env),
+                "compile": _timed(["cmake", "--build", "build", jobs], src, env),
+                "run example": _timed(
+                    [str(src / "build" / "src" / "example"), "--help"], src, env
+                ),
+                "run tests": _timed(
+                    ["ctest", "--test-dir", "build", "--output-on-failure", jobs],
+                    src,
+                    env,
+                ),
+            }
+
+    return Project(
+        version=f"{version} (full)",
+        build=build,
+        expected_seconds={"debug": 20, "release": 20},
+        phases=("configure", "compile", "run example", "run tests"),
+        comment="Builds the example, complete option-parsing tests, multi-TU "
+        "link check, and CMake find-package/add-subdirectory integration tests. "
+        "Two fallback-parser gaps are corrected locally to match the tested "
+        "regex-path syntax.",
     )
 
 
@@ -4099,7 +4200,8 @@ PROJECTS: dict[str, Project] = {
     "googletest-full": _googletest(full=True),
     "harfbuzz": _harfbuzz(),
     "inipp": _inipp(),
-    "cxxopts": _cxxopts(),
+    "cxxopts": _cxxopts(full=False),
+    "cxxopts-full": _cxxopts(full=True),
     "libcamera": _libcamera(full=False),
     "libcamera-full": _libcamera(full=True),
     "libtorrent": _libtorrent(),
