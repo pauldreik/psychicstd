@@ -1,6 +1,6 @@
 #pragma once
+#include <__psychicstd_compare_core>
 #include <__psychicstd_traits_core>
-#include <compare>
 
 namespace std::__contiguous_detail {
 
