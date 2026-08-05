@@ -18,6 +18,8 @@ jobs:
             build_type: debug
           - project: cmake-full
             build_type: debug
+          - project: cxxopts-full
+            build_type: debug
           - project: googletest-full
             build_type: debug
           - project: nlohmann-full
