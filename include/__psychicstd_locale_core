@@ -3,8 +3,8 @@
 
 namespace std {
 
-// A small, process-local locale implementation. Facet types live in <locale>
-// so stream headers only parse the ownership core needed by ios_base.
+// A small, process-local locale implementation. Runtime ownership stays out of
+// line so stream headers only parse the interfaces needed by ios_base.
 class locale {
 public:
   using category = int;
@@ -29,47 +29,27 @@ public:
   };
   class id {};
 
-  locale() noexcept = default;
-  locale(const char*) noexcept {}
-  locale(const locale& o) noexcept : rep_(o.rep_) {
-    if (rep_)
-      ++rep_->refs;
-  }
-  locale& operator=(const locale& o) noexcept {
-    if (rep_ != o.rep_) {
-      if (o.rep_)
-        ++o.rep_->refs;
-      _release();
-      rep_ = o.rep_;
-    }
-    return *this;
-  }
-  ~locale() { _release(); }
+  locale() noexcept;
+  explicit locale(const char* name);
+  locale(const locale& o) noexcept;
+  locale& operator=(const locale& o) noexcept;
+  ~locale();
 
   // Install f into a copy of other. Inherited facets remain shared.
   template <typename Facet>
-  locale(const locale& other, Facet* f)
-      : rep_(new _rep(f, other.rep_ ? other.rep_->head : nullptr)) {}
+  locale(const locale& other, Facet* f) : rep_(_with_facet(other.rep_, f)) {}
 
-  static const locale& classic() {
-    static locale c;
-    return c;
-  }
-  static locale global(const locale& loc) {
-    locale& g = _global();
-    locale prev = g;
-    g = loc;
-    return prev;
-  }
+  static const locale& classic();
+  static locale global(const locale& loc);
 
-  bool operator==(const locale& o) const noexcept { return rep_ == o.rep_; }
-  bool operator!=(const locale& o) const noexcept { return rep_ != o.rep_; }
-  bool _has_facets() const noexcept { return rep_; }
+  bool operator==(const locale& o) const noexcept;
+  bool operator!=(const locale& o) const noexcept;
+  bool _has_facets() const noexcept;
 
   template <typename F> const F* _facet() const {
 #if _PSYCHICSTD_HAS_RTTI
-    for (_node* node = rep_ ? rep_->head : nullptr; node; node = node->next)
-      if (const auto* facet = dynamic_cast<const F*>(node->value))
+    for (_node* node = _first_facet(rep_); node; node = _next_facet(node))
+      if (const auto* facet = dynamic_cast<const F*>(_facet_value(node)))
         return facet;
 #else
     (void)sizeof(F);
@@ -78,41 +58,19 @@ public:
   }
 
 private:
-  struct _node {
-    long refs = 1;
-    facet* value;
-    _node* next;
-
-    _node(facet* f, _node* n) : value(f), next(n) {
-      if (next)
-        ++next->refs;
-    }
-  };
-  struct _rep {
-    long refs = 1;
-    _node* head = nullptr;
-    explicit _rep(facet* f, _node* inherited) : head(new _node(f, inherited)) {}
-    ~_rep() { _release_node(head); }
-
-  private:
-    static void _release_node(_node* node) noexcept {
-      if (node && --node->refs == 0) {
-        _node* next = node->next;
-        delete node->value;
-        delete node;
-        _release_node(next);
-      }
-    }
-  };
+  struct _node;
+  struct _rep;
   _rep* rep_ = nullptr;
-  void _release() noexcept {
-    if (rep_ && --rep_->refs == 0)
-      delete rep_;
-  }
-  static locale& _global() {
-    static locale g;
-    return g;
-  }
+  static _rep* _make_named(const char* name);
+  static _rep* _with_facet(_rep* other, facet* f);
+  static _node* _first_facet(_rep* rep) noexcept;
+  static _node* _next_facet(_node* node) noexcept;
+  static facet* _facet_value(_node* node) noexcept;
+  void _release() noexcept;
+  static locale& _global();
+  friend void swap(locale&, locale&) noexcept;
 };
+
+void swap(locale&, locale&) noexcept;
 
 } // namespace std

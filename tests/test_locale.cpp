@@ -84,6 +84,26 @@ int main() {
   auto copy = localized;
   localized = classic;
   psyassert(std::use_facet<std::numpunct<char>>(copy).decimal_point() == ',');
+
+  auto swap_left = classic;
+  auto swap_right = copy;
+  auto expected_left = swap_right;
+  auto expected_right = swap_left;
+  static_assert(noexcept(swap(swap_left, swap_right)));
+  swap(swap_left, swap_right);
+  psyassert(swap_left == expected_left);
+  psyassert(swap_right == expected_right);
+#if defined(PSYCHICSTD_TEST_PSYCHICSTD)
+  std::locale named("en_US.UTF-8");
+  psyassert(named != classic);
+  psyassert(named == std::locale("en_US.UTF-8"));
+  try {
+    (void)std::locale("sv_SE.UTF-8");
+    psyassert(false);
+  } catch (const std::runtime_error&) {
+  }
+#endif
+
   std::ostringstream number;
   number.imbue(copy);
   number << 12345.5;
