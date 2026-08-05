@@ -5,6 +5,12 @@
 #include <utility>
 
 int main() {
+  std::filebuf unopened_buffer;
+  psyassert(unopened_buffer.close() == nullptr);
+  std::ofstream unopened_stream;
+  unopened_stream.close();
+  psyassert(unopened_stream.fail());
+
   std::ofstream out("/tmp/psy_fstream_test.txt");
   out << "hello";
   out.close();
