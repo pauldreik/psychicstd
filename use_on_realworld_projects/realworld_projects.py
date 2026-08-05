@@ -3157,7 +3157,7 @@ def _harfbuzz() -> Project:
 # --- libcamera -----------------------------------------------------------
 
 
-def _libcamera() -> Project:
+def _libcamera(full: bool) -> Project:
     version = "0.7.2"
     url = (
         "https://gitlab.freedesktop.org/camera/libcamera/"
@@ -3170,7 +3170,8 @@ def _libcamera() -> Project:
         _fetch(url, tarball, checksum)
 
         with tempfile.TemporaryDirectory(
-            prefix="rw-libcamera-", ignore_cleanup_errors=True
+            prefix="rw-libcamera-full-" if full else "rw-libcamera-",
+            ignore_cleanup_errors=True,
         ) as work_dir:
             work = Path(work_dir)
             with tarfile.open(tarball) as t:
@@ -3195,6 +3196,48 @@ def _libcamera() -> Project:
             clock_cpp.write_text("#include <cmath>\n" + clock_cpp.read_text())
             ipa_proxy = src / "src" / "libcamera" / "ipa_proxy.cpp"
             ipa_proxy.write_text("#include <cctype>\n" + ipa_proxy.read_text())
+            if full:
+                # Keep hardware tests in the compile workload, but group the
+                # otherwise unlabelled ones so they can be omitted at runtime.
+                test_meson = src / "test" / "meson.build"
+                test_text = test_meson.read_text()
+
+                def replace_test_once(old: str, new: str) -> None:
+                    nonlocal test_text
+                    if test_text.count(old) != 1:
+                        raise RuntimeError(
+                            "unexpected libcamera test/meson.build layout"
+                        )
+                    test_text = test_text.replace(old, new, 1)
+
+                for name in (
+                    "camera-sensor",
+                    "delayed_controls",
+                    "hotplug-cameras",
+                ):
+                    replace_test_once(
+                        f"{{'name': '{name}',",
+                        f"{{'name': '{name}', 'suite': 'hardware',",
+                    )
+                replace_test_once(
+                    "    test(test['name'], exe, should_fail : "
+                    "test.get('should_fail', false))\n"
+                    "endforeach\n\n"
+                    "foreach test : internal_non_parallel_tests",
+                    "    test(test['name'], exe, "
+                    "suite : test.get('suite', []),\n"
+                    "         should_fail : "
+                    "test.get('should_fail', false))\n"
+                    "endforeach\n\n"
+                    "foreach test : internal_non_parallel_tests",
+                )
+                replace_test_once(
+                    "    test(test['name'], exe,\n         is_parallel : false,",
+                    "    test(test['name'], exe,\n"
+                    "         suite : 'hardware',\n"
+                    "         is_parallel : false,",
+                )
+                test_meson.write_text(test_text)
 
             env = _env(tc)
             wrapper = _compiler_wrapper(work / "cxx", tc)
@@ -3218,26 +3261,62 @@ def _libcamera() -> Project:
                 "-Dpycamera=disabled",
                 "-Dqcam=disabled",
                 "-Dsoftisp-gpu=disabled",
-                "-Dtest=false",
+                "-Dtest=" + ("true" if full else "false"),
                 "-Dtracing=disabled",
                 "-Dudev=disabled",
                 "-Dv4l2=disabled",
             ]
             jobs = f"-j{tc.jobs}"
-            return {
+            phases = {
                 "configure": _timed(configure, src, env),
                 "compile": _timed(["ninja", "-C", "build", jobs], src, env),
             }
+            if full:
+                phases["run tests"] = _timed(
+                    [
+                        "meson",
+                        "test",
+                        "-C",
+                        "build",
+                        "--print-errorlogs",
+                        "--no-rebuild",
+                        "--no-suite",
+                        "camera",
+                        "--no-suite",
+                        "controls",
+                        "--no-suite",
+                        "hardware",
+                        "--no-suite",
+                        "media_device",
+                        "--no-suite",
+                        "serialization",
+                        "--no-suite",
+                        "v4l2_subdevice",
+                        "--no-suite",
+                        "v4l2_videodevice",
+                    ],
+                    src,
+                    env,
+                )
+            return phases
 
     return Project(
-        version=version,
+        version=f"{version} (full)" if full else version,
         build=build,
-        expected_seconds={"debug": 6, "release": 8},
-        expected_jobs=14,
-        phases=("compile",),
-        comment="Builds libcamera's core libraries and UVC pipeline handler; "
-        "hardware-dependent applications, optional integrations, bindings, "
-        "and tests are disabled.",
+        expected_seconds=(
+            {"debug": 40, "release": 40} if full else {"debug": 6, "release": 8}
+        ),
+        expected_jobs=8 if full else 14,
+        phases=("compile", "run tests") if full else ("compile",),
+        comment=(
+            "Builds libcamera's core libraries, UVC pipeline handler, and "
+            "upstream C++ tests; optional integrations and bindings remain "
+            "disabled. Hardware-dependent tests are compiled but not run."
+            if full
+            else "Builds libcamera's core libraries and UVC pipeline handler; "
+            "hardware-dependent applications, optional integrations, bindings, "
+            "and tests are disabled."
+        ),
     )
 
 
@@ -3853,7 +3932,8 @@ PROJECTS: dict[str, Project] = {
     "harfbuzz": _harfbuzz(),
     "inipp": _inipp(),
     "cxxopts": _cxxopts(),
-    "libcamera": _libcamera(),
+    "libcamera": _libcamera(full=False),
+    "libcamera-full": _libcamera(full=True),
     "libtorrent": _libtorrent(),
     "llama.cpp": _llama_cpp(),
     "nlohmann": _nlohmann(),

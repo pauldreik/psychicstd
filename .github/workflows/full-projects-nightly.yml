@@ -91,3 +91,25 @@ jobs:
           --check-only --project pybind11-full
           --build-type debug
           --enable-ccache
+  libcamera-full:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install dependencies
+        run: >-
+          sudo apt-get install -y
+          ccache
+          libyaml-dev
+          meson
+          ninja-build
+          pkg-config
+          python3-jinja2
+          python3-ply
+          python3-yaml
+      - name: Build and test libcamera's self-contained suite with psychicstd
+        run: >-
+          PATH=/usr/lib/ccache:$PATH scripts/benchmark_realworld.py
+          --check-only --project libcamera-full
+          --build-type debug
+          --enable-ccache
