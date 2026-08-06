@@ -20,7 +20,8 @@ namespace std {
 // (front_/size_/cap_), grown by doubling-and-recentering. push_front/
 // push_back/pop_front/pop_back are O(1) amortized, and pop_front/pop_back
 // never move surviving elements (so pointers/iterators/references to them
-// stay valid), matching the standard's invalidation guarantees. Middle
+// stay valid). Growth recenters the contiguous buffer and invalidates
+// references to existing elements, contrary to the standard guarantee. Middle
 // insert/erase shift whichever side (front or back) is shorter.
 template <typename T, typename Allocator = allocator<T>> class deque {
 public:

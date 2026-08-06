@@ -4,6 +4,9 @@
 
 std/algorithms/alg.nonmodifying/alg.equal/equal_pred.pass.cpp
 
+# psychicstd's contiguous deque invalidates references when growth recenters it
+std/containers/container.adaptors/queue/queue.defn/emplace.pass.cpp
+
 # fails on deque not using the allocator - a design question
 std/containers/sequences/deque/deque.modifiers/push_front_exception_safety.pass.cpp
 
