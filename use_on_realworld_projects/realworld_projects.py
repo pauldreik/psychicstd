@@ -3118,7 +3118,7 @@ add_subdirectory("${BITCOIN_SOURCE}/src/crypto" crypto)
 # --- libtorrent ----------------------------------------------------------
 
 
-def _libtorrent() -> Project:
+def _libtorrent(full: bool) -> Project:
     version = "2.1.0"
     url = f"https://github.com/arvidn/libtorrent/archive/refs/tags/v{version}.tar.gz"
     checksum = "5d5b264eb960fafe4a5c935f6c71bc00e02d3dab8872e76dee9dadb27282f912"
@@ -3137,7 +3137,8 @@ def _libtorrent() -> Project:
         _fetch(try_signal_url, try_signal_tarball, try_signal_checksum)
 
         with _temporary_directory(
-            prefix="rw-libtorrent-", ignore_cleanup_errors=True
+            prefix="rw-libtorrent-full-" if full else "rw-libtorrent-",
+            ignore_cleanup_errors=True,
         ) as work_dir:
             work = Path(work_dir)
             with tarfile.open(tarball) as archive:
@@ -3185,9 +3186,9 @@ def _libtorrent() -> Project:
             )
 
             env = _env(tc)
-            cxxflags = (
-                tc.cxxflags + " -DBOOST_NO_AUTO_PTR=1" + " -DBOOST_ASIO_NO_IOSTREAM=1"
-            )
+            cxxflags = tc.cxxflags + " -DBOOST_NO_AUTO_PTR=1"
+            if not full:
+                cxxflags += " -DBOOST_ASIO_NO_IOSTREAM=1"
             configure = [
                 "cmake",
                 "-S",
@@ -3204,38 +3205,111 @@ def _libtorrent() -> Project:
                 "-DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY",
                 "-DBUILD_SHARED_LIBS=OFF",
                 "-Dbuild_examples=OFF",
-                "-Dbuild_tests=OFF",
+                "-Dbuild_tests=" + ("ON" if full else "OFF"),
                 "-Dbuild_tools=OFF",
                 "-Dpython-bindings=OFF",
                 "-Dwebtorrent=OFF",
             ]
-            return {
-                "configure": _timed(configure, src, env),
-                "compile": _timed(
+            configure_ms = _timed(configure, src, env)
+            if not full:
+                return {
+                    "configure": configure_ms,
+                    "compile": _timed(
+                        [
+                            "cmake",
+                            "--build",
+                            "build",
+                            "--target",
+                            "torrent-rasterbar",
+                            f"-j{tc.jobs}",
+                        ],
+                        src,
+                        env,
+                    ),
+                }
+
+            test_targets = sorted(
+                path.stem
+                for path in (src / "test").glob("test_*.cpp")
+                if path.name not in {"test_natpmp.cpp", "test_utils.cpp"}
+            )
+            # Web-seed tests start local servers and may otherwise choose the
+            # same ports. Spread them across batches; the HTTP test is also
+            # unusually heavy and is most reliable on its own.
+            serial_tests = {"test_web_seed_http"}
+            web_seed_tests = [
+                target
+                for target in test_targets
+                if target.startswith("test_web_seed") and target not in serial_tests
+            ]
+            regular_tests = [
+                target
+                for target in test_targets
+                if target not in serial_tests and target not in web_seed_tests
+            ]
+            batches = [
+                regular_tests[first : first + max(1, tc.jobs - 1)]
+                for first in range(0, len(regular_tests), max(1, tc.jobs - 1))
+            ]
+            for batch, target in zip(batches, web_seed_tests):
+                batch.append(target)
+            batches.extend([target] for target in web_seed_tests[len(batches) :])
+            batches.extend([target] for target in sorted(serial_tests))
+            compile_ms = 0.0
+            run_ms = 0.0
+            for batch in batches:
+                compile_ms += _timed(
                     [
                         "cmake",
                         "--build",
                         "build",
                         "--target",
-                        "torrent-rasterbar",
+                        *batch,
                         f"-j{tc.jobs}",
                     ],
                     src,
                     env,
-                ),
+                )
+                run_ms += _timed(
+                    [
+                        "ctest",
+                        "--test-dir",
+                        "build",
+                        "--output-on-failure",
+                        "--tests-regex",
+                        "^(" + "|".join(batch) + ")$",
+                        f"-j{tc.jobs}",
+                    ],
+                    src,
+                    env,
+                )
+                for target in batch:
+                    (src / "build" / "test" / target).unlink()
+            return {
+                "configure": configure_ms,
+                "compile": compile_ms,
+                "run tests": run_ms,
             }
 
     return Project(
-        version=version,
+        version=f"{version} (full)" if full else version,
         build=build,
-        expected_seconds={"debug": 90, "release": 90},
-        phases=("compile",),
-        comment="Builds the complete static libtorrent library with DHT, "
-        "encryption, extensions, I2P, logging, and streaming enabled. "
-        "WebTorrent is disabled because its bundled submodule dependencies "
-        "are not part of the release archive. Enables libtorrent's movable "
-        "deque-element fallback because psychicstd's compact deque relocates "
-        "elements when it grows.",
+        expected_seconds=(
+            {"debug": 900, "release": 900} if full else {"debug": 90, "release": 90}
+        ),
+        phases=("compile", "run tests") if full else ("compile",),
+        comment=(
+            "Builds the complete static libtorrent library and its upstream "
+            "unit-test executables. WebTorrent is disabled because its bundled "
+            "submodule dependencies are not part of the release archive."
+            if full
+            else "Builds the complete static libtorrent library with DHT, "
+            "encryption, extensions, I2P, logging, and streaming enabled. "
+            "WebTorrent is disabled because its bundled submodule dependencies "
+            "are not part of the release archive. Enables libtorrent's movable "
+            "deque-element fallback because psychicstd's compact deque relocates "
+            "elements when it grows."
+        ),
     )
 
 
@@ -4204,7 +4278,8 @@ PROJECTS: dict[str, Project] = {
     "cxxopts-full": _cxxopts(full=True),
     "libcamera": _libcamera(full=False),
     "libcamera-full": _libcamera(full=True),
-    "libtorrent": _libtorrent(),
+    "libtorrent": _libtorrent(full=False),
+    "libtorrent-full": _libtorrent(full=True),
     "llama.cpp": _llama_cpp(),
     "nlohmann": _nlohmann(full=False),
     "nlohmann-full": _nlohmann(full=True),

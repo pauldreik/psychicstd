@@ -204,6 +204,21 @@ int main() {
   psyassert(s == "??h!!ellohel:lo");
   s.insert(s.cbegin() + 2, 1, '#');
   psyassert(s == "??#h!!ellohel:lo");
+  std::string empty_single_insert;
+  pos = empty_single_insert.insert(empty_single_insert.begin(), '/');
+  psyassert(pos == empty_single_insert.begin());
+  psyassert(empty_single_insert == "/");
+  std::string empty_fill_insert;
+  pos = empty_fill_insert.insert(empty_fill_insert.cbegin(), 2, '!');
+  psyassert(pos == empty_fill_insert.begin());
+  psyassert(empty_fill_insert == "!!");
+  std::string empty_zero_insert;
+  pos = empty_zero_insert.insert(empty_zero_insert.cbegin(), 0, '?');
+  psyassert(pos == empty_zero_insert.begin());
+  psyassert(empty_zero_insert.empty());
+  empty_zero_insert.insert(0, 0, '?');
+  empty_zero_insert.insert(0, "", 0);
+  psyassert(empty_zero_insert.empty());
   std::string range_insert;
   const std::vector<char> inserted{'a', 'b', 'c'};
   auto range_pos = range_insert.insert(range_insert.begin(), inserted.begin(),
