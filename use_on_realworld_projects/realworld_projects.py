@@ -3388,7 +3388,7 @@ def _libcamera(full: bool) -> Project:
 # --- opencv --------------------------------------------------------------
 
 
-def _opencv() -> Project:
+def _opencv(full: bool) -> Project:
     version = "4.13.0"
     url = f"https://github.com/opencv/opencv/archive/refs/tags/{version}.tar.gz"
     checksum = "1d40ca017ea51c533cf9fd5cbde5b5fe7ae248291ddf2af99d4c17cf8e13017d"
@@ -3464,7 +3464,7 @@ def _opencv() -> Project:
                 "-DWITH_OPENJPEG=OFF",
             ]
             jobs = f"-j{tc.jobs}"
-            return {
+            result = {
                 "configure": _timed(configure, src, env),
                 "compile": _timed(
                     [
@@ -3479,7 +3479,9 @@ def _opencv() -> Project:
                     src,
                     env,
                 ),
-                "run tests": _timed(
+            }
+            if full:
+                result["run tests"] = _timed(
                     [
                         "ctest",
                         "--test-dir",
@@ -3491,16 +3493,24 @@ def _opencv() -> Project:
                     ],
                     src,
                     env,
-                ),
-            }
+                )
+            return result
 
     return Project(
-        version=version,
+        version=f"{version} (full)" if full else version,
         build=build,
-        expected_seconds={"debug": 540, "release": 189},
-        comment="Builds OpenCV's core and imgproc modules and runs their "
-        "upstream tests; optional codecs, bindings, and hardware backends "
-        "are disabled.",
+        expected_seconds=(
+            {"debug": 540, "release": 189} if full else {"debug": 120, "release": 90}
+        ),
+        phases=PHASES if full else ("configure", "compile"),
+        comment=(
+            "Builds OpenCV's core and imgproc modules and runs their upstream "
+            "tests; optional codecs, bindings, and hardware backends are disabled."
+            if full
+            else "Builds OpenCV's core and imgproc modules, including their test "
+            "executables, without running the tests. Optional codecs, bindings, "
+            "and hardware backends are disabled."
+        ),
     )
 
 
@@ -4003,7 +4013,8 @@ PROJECTS: dict[str, Project] = {
     "libtorrent": _libtorrent(),
     "llama.cpp": _llama_cpp(),
     "nlohmann": _nlohmann(),
-    "opencv": _opencv(),
+    "opencv": _opencv(full=False),
+    "opencv-full": _opencv(full=True),
     "pocketfft": _pocketfft(),
     "pybind11": _pybind11(full=False),
     "pybind11-full": _pybind11(full=True),
