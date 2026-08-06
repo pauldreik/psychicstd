@@ -46,7 +46,7 @@ jobs:
       - name: Build and test CMake with psychicstd
         run: >-
           scripts/benchmark_realworld.py --check-only
-          --project cmake --build-type both
+          --project cmake --build-type debug
   googletest:
     runs-on: ubuntu-latest
     steps:
