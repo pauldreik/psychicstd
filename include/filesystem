@@ -1,6 +1,8 @@
 #pragma once
 #include <__psychicstd_chrono_core>
+#include <__psychicstd_iterator_core>
 #include <cstdint>
+#include <iosfwd>
 #include <string>
 #include <string_view>
 #include <system_error>
@@ -15,19 +17,22 @@ class path {
 public:
   using value_type = char;
   using string_type = std::string;
+  static constexpr value_type preferred_separator = '/';
+  class iterator;
+  enum format { native_format, generic_format, auto_format };
 
   path() = default;
-  path(const char* s) : path_(s) {}
-  path(const __str& s) : path_(s) {}
-  path(__str&& s) : path_(static_cast<__str&&>(s)) {}
-  path(string_view s) : path_(s.data(), s.size()) {}
-  path(u8string_view s)
+  path(const char* s, format = auto_format) : path_(s) {}
+  path(const __str& s, format = auto_format) : path_(s) {}
+  path(__str&& s, format = auto_format) : path_(static_cast<__str&&>(s)) {}
+  path(string_view s, format = auto_format) : path_(s.data(), s.size()) {}
+  path(u8string_view s, format = auto_format)
       : path_(reinterpret_cast<const char*>(s.data()), s.size()) {}
-  path(const wchar_t* s)
+  path(const wchar_t* s, format = auto_format)
       : path_(from_wstring(s ? wstring_view(s) : wstring_view())) {}
-  path(const wstring& s) : path_(from_wstring(s)) {}
-  path(const u32string& s) : path_(from_u32string(s)) {}
-  path(const char32_t* s)
+  path(const wstring& s, format = auto_format) : path_(from_wstring(s)) {}
+  path(const u32string& s, format = auto_format) : path_(from_u32string(s)) {}
+  path(const char32_t* s, format = auto_format)
       : path_(from_u32string(s ? u32string_view(s) : u32string_view())) {}
 
   path& operator=(const char* s) {
@@ -38,8 +43,17 @@ public:
     path_ = s;
     return *this;
   }
+  path& assign(const __str& s) {
+    path_ = s;
+    return *this;
+  }
+  path& assign(__str&& s) {
+    path_ = static_cast<__str&&>(s);
+    return *this;
+  }
 
   bool empty() const noexcept { return path_.empty(); }
+  void clear() noexcept { path_.clear(); }
   const __str& string() const noexcept { return path_; }
   const __str& native() const noexcept { return path_; }
   operator __str() const { return path_; }
@@ -49,7 +63,13 @@ public:
   }
   auto wstring() const -> std::wstring;
   auto u32string() const -> std::u32string;
+  __str generic_string() const { return path_; }
+  auto generic_wstring() const -> std::wstring { return wstring(); }
+  __u8str generic_u8string() const { return u8string(); }
   const char* c_str() const noexcept { return path_.c_str(); }
+
+  iterator begin() const;
+  iterator end() const;
 
   path filename() const {
     auto pos = path_.find_last_of('/');
@@ -58,6 +78,8 @@ public:
 
   path stem() const {
     path name = filename();
+    if (name.path_ == "..")
+      return name;
     auto pos = name.path_.find_last_of('.');
     if (pos == __str::npos || pos == 0)
       return name;
@@ -66,20 +88,21 @@ public:
 
   path extension() const {
     path name = filename();
+    if (name.path_ == "..")
+      return {};
     auto pos = name.path_.find_last_of('.');
     if (pos == __str::npos || pos == 0)
       return path();
     return name.path_.substr(pos);
   }
 
-  path parent_path() const {
-    auto pos = path_.find_last_of('/');
-    return pos == __str::npos ? path() : path(path_.substr(0, pos));
-  }
+  path parent_path() const;
   bool has_parent_path() const noexcept {
     return path_.find_last_of('/') != __str::npos;
   }
   bool has_filename() const noexcept { return !filename().empty(); }
+  bool has_stem() const;
+  bool has_extension() const;
   bool is_absolute() const noexcept {
     return !path_.empty() && path_.front() == '/';
   }
@@ -87,14 +110,29 @@ public:
 
   path lexically_normal() const;
   path lexically_relative(const path& base) const;
+  path lexically_proximate(const path& base) const;
+  path root_name() const { return {}; }
+  path root_directory() const { return is_absolute() ? path("/") : path(); }
+  path root_path() const { return root_directory(); }
+  path relative_path() const;
+  bool has_root_path() const noexcept { return is_absolute(); }
+  bool has_root_name() const noexcept { return false; }
+  bool has_root_directory() const noexcept { return is_absolute(); }
+  bool has_relative_path() const noexcept;
+  int compare(const path& other) const noexcept;
+  path& remove_filename();
+  path& replace_filename(const path& replacement);
   path& replace_extension(const path& replacement = path());
+  path& make_preferred() noexcept { return *this; }
 
   path& operator/=(const path& p) {
-    if (!p.empty()) {
-      if (!path_.empty() && path_.back() != '/')
-        path_ += '/';
-      path_ += p.path_;
+    if (p.is_absolute()) {
+      path_ = p.path_;
+      return *this;
     }
+    if (!path_.empty() && path_.back() != '/')
+      path_ += '/';
+    path_ += p.path_;
     return *this;
   }
 
@@ -107,6 +145,15 @@ public:
     return *this;
   }
   path& append(const path& p) { return *this /= p; }
+  path& concat(const __str& value) {
+    path_ += value;
+    return *this;
+  }
+  path& concat(__str&& value) {
+    path_ += value;
+    return *this;
+  }
+  void swap(path& other) noexcept { path_.swap(other.path_); }
 
   friend path operator/(path lhs, const path& rhs) {
     lhs /= rhs;
@@ -114,13 +161,7 @@ public:
   }
 
   friend bool operator==(const path& a, const path& b) noexcept {
-    return a.path_ == b.path_;
-  }
-
-  template <typename Char, typename Traits>
-  friend basic_ostream<Char, Traits>&
-  operator<<(basic_ostream<Char, Traits>& output, const path& value) {
-    return output << '"' << value.string() << '"';
+    return a.compare(b) == 0;
   }
 
 private:
@@ -128,6 +169,55 @@ private:
   static __str from_u32string(u32string_view value);
   __str path_;
 };
+
+class path::iterator {
+public:
+  using iterator_category = bidirectional_iterator_tag;
+  using iterator_concept = bidirectional_iterator_tag;
+  using value_type = path;
+  using difference_type = ptrdiff_t;
+  using pointer = const path*;
+  using reference = const path&;
+
+  iterator() noexcept = default;
+
+  reference operator*() const noexcept { return component_; }
+  pointer operator->() const noexcept { return &component_; }
+  iterator& operator++();
+  iterator operator++(int) {
+    iterator previous = *this;
+    ++*this;
+    return previous;
+  }
+  iterator& operator--();
+  iterator operator--(int) {
+    iterator previous = *this;
+    --*this;
+    return previous;
+  }
+
+  friend bool operator==(const iterator& lhs, const iterator& rhs) noexcept {
+    return lhs.owner_ == rhs.owner_ && lhs.offset_ == rhs.offset_;
+  }
+
+private:
+  friend class path;
+  using size_type = string_type::size_type;
+
+  iterator(const path* owner, size_type offset);
+  void set_component(size_type offset);
+
+  const path* owner_ = nullptr;
+  size_type offset_ = string_type::npos;
+  path component_;
+};
+
+ostream& operator<<(ostream&, const path&);
+istream& operator>>(istream&, path&);
+wostream& operator<<(wostream&, const path&);
+wistream& operator>>(wistream&, path&);
+inline void swap(path& left, path& right) noexcept { left.swap(right); }
+size_t hash_value(const path&) noexcept;
 
 enum class directory_options : unsigned char {
   none = 0,
