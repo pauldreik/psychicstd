@@ -180,7 +180,8 @@ public:
   variant(const variant& o) : storage_(__variant::__uninitialized_t{}) {
     __copy_from(o);
   }
-  variant(variant&& o) noexcept : storage_(__variant::__uninitialized_t{}) {
+  variant(variant&& o) noexcept((is_nothrow_move_constructible_v<Ts> && ...))
+      : storage_(__variant::__uninitialized_t{}) {
     __move_from(static_cast<variant&&>(o));
   }
 
@@ -215,7 +216,9 @@ public:
     }
     return *this;
   }
-  variant& operator=(variant&& o) noexcept {
+  variant& operator=(variant&& o) noexcept(
+      (is_nothrow_move_constructible_v<Ts> && ...) &&
+      (is_nothrow_move_assignable_v<Ts> && ...)) {
     if (this != &o) {
       __destroy();
       __move_from(static_cast<variant&&>(o));

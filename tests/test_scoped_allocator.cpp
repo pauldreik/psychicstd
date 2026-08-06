@@ -28,6 +28,26 @@ template <typename T> struct counting_allocator {
   }
 };
 
+template <typename T> struct hooked_allocator : counting_allocator<T> {
+  using counting_allocator<T>::counting_allocator;
+  template <typename U>
+  hooked_allocator(const hooked_allocator<U>& other)
+      : counting_allocator<T>(other) {}
+
+  template <typename U, typename... Args>
+  void construct(U* value, Args&&... args) {
+    constructed = true;
+    std::construct_at(value, static_cast<Args&&>(args)...);
+  }
+  template <typename U> void destroy(U* value) {
+    destroyed = true;
+    std::destroy_at(value);
+  }
+
+  static inline bool constructed = false;
+  static inline bool destroyed = false;
+};
+
 int main() {
   using inner_vector = std::vector<int, counting_allocator<int>>;
   using outer_allocator = counting_allocator<inner_vector>;
@@ -45,4 +65,13 @@ int main() {
     allocator.deallocate(value, 1);
   }
   psyassert(allocated == 0);
+
+  using hooked_scoped = std::scoped_allocator_adaptor<hooked_allocator<int>>;
+  hooked_scoped hooked{hooked_allocator<int>{&allocated}};
+  int* integer = hooked.allocate(1);
+  hooked.construct(integer, 42);
+  psyassert(hooked_allocator<int>::constructed);
+  hooked.destroy(integer);
+  psyassert(hooked_allocator<int>::destroyed);
+  hooked.deallocate(integer, 1);
 }

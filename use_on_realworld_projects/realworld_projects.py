@@ -22,13 +22,45 @@ import tarfile
 import tempfile
 import time
 import urllib.request
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
 
 RW_DIR = Path(__file__).resolve().parent
 PHASES = ("configure", "compile", "run tests")
+
+
+@contextmanager
+def _temporary_directory(
+    prefix: str, ignore_cleanup_errors: bool = False
+) -> Iterator[str]:
+    """Use a stable CI work path so ccache can reuse debug compilations."""
+    stable_root = os.environ.get("PSYCHICSTD_REALWORLD_WORK_ROOT")
+    if stable_root is None:
+        with tempfile.TemporaryDirectory(
+            prefix=prefix, ignore_cleanup_errors=ignore_cleanup_errors
+        ) as work_dir:
+            yield work_dir
+        return
+
+    root = Path(stable_root)
+    name = prefix.rstrip("-")
+    if (
+        not root.is_absolute()
+        or not name
+        or name in (".", "..")
+        or Path(prefix).name != prefix
+    ):
+        raise ValueError("invalid stable real-world work directory")
+    work = root / name
+    shutil.rmtree(work, ignore_errors=True)
+    work.mkdir(parents=True)
+    try:
+        yield str(work)
+    finally:
+        shutil.rmtree(work, ignore_errors=ignore_cleanup_errors)
 
 
 @dataclass(frozen=True)
@@ -213,7 +245,7 @@ def _catch2() -> Project:
         tarball = RW_DIR / f"Catch2-v{version}.tar.gz"
         _fetch(url, tarball, checksum)
 
-        with tempfile.TemporaryDirectory(
+        with _temporary_directory(
             prefix="rw-catch2-", ignore_cleanup_errors=True
         ) as work_dir:
             work = Path(work_dir)
@@ -288,7 +320,7 @@ def _abseil(full: bool) -> Project:
         googletest_tarball = RW_DIR / f"googletest-{googletest_version}.tar.gz"
         _fetch(googletest_url, googletest_tarball, googletest_checksum)
 
-        with tempfile.TemporaryDirectory(
+        with _temporary_directory(
             prefix="rw-abseil-", ignore_cleanup_errors=True
         ) as work_dir:
             work = Path(work_dir)
@@ -690,7 +722,7 @@ def _googletest(full: bool) -> Project:
         tarball = RW_DIR / f"googletest-{version}.tar.gz"
         _fetch(url, tarball, checksum)
 
-        with tempfile.TemporaryDirectory(
+        with _temporary_directory(
             prefix="rw-googletest-full-" if full else "rw-googletest-",
             ignore_cleanup_errors=True,
         ) as work_dir:
@@ -757,7 +789,7 @@ def _godot() -> Project:
         tarball = RW_DIR / f"godot-{version}.tar.gz"
         _fetch(url, tarball, checksum)
 
-        with tempfile.TemporaryDirectory(
+        with _temporary_directory(
             prefix="rw-godot-", ignore_cleanup_errors=True
         ) as work_dir:
             work = Path(work_dir)
@@ -828,7 +860,7 @@ def _cmake(full: bool) -> Project:
         tarball = RW_DIR / f"cmake-{version}.tar.gz"
         _fetch(url, tarball, checksum)
 
-        with tempfile.TemporaryDirectory(
+        with _temporary_directory(
             prefix="rw-cmake-full-" if full else "rw-cmake-",
             ignore_cleanup_errors=True,
         ) as work_dir:
@@ -963,7 +995,7 @@ def _cppcheck() -> Project:
         tarball = RW_DIR / f"cppcheck-{version}.tar.gz"
         _fetch(url, tarball, checksum)
 
-        with tempfile.TemporaryDirectory(
+        with _temporary_directory(
             prefix="rw-cppcheck-", ignore_cleanup_errors=True
         ) as work_dir:
             work = Path(work_dir)
@@ -1042,7 +1074,7 @@ def _ctre() -> Project:
         tarball = RW_DIR / f"ctre-v{version}.tar.gz"
         _fetch(url, tarball, checksum)
 
-        with tempfile.TemporaryDirectory(
+        with _temporary_directory(
             prefix="rw-ctre-", ignore_cleanup_errors=True
         ) as work_dir:
             work = Path(work_dir)
@@ -1115,7 +1147,7 @@ def _eigen(full: bool) -> Project:
         tarball = RW_DIR / f"eigen-{version}.tar.gz"
         _fetch(url, tarball, checksum)
 
-        with tempfile.TemporaryDirectory(
+        with _temporary_directory(
             prefix="rw-eigen-full-" if full else "rw-eigen-",
             ignore_cleanup_errors=True,
         ) as work_dir:
@@ -1298,7 +1330,7 @@ def _flatbuffers() -> Project:
         tarball = RW_DIR / f"flatbuffers-v{version}.tar.gz"
         _fetch(url, tarball, checksum)
 
-        with tempfile.TemporaryDirectory(
+        with _temporary_directory(
             prefix="rw-flatbuffers-", ignore_cleanup_errors=True
         ) as work_dir:
             work = Path(work_dir)
@@ -1369,7 +1401,7 @@ def _fmt() -> Project:
         tarball = RW_DIR / f"fmt-{version}.tar.gz"
         _fetch(url, tarball, checksum)
 
-        with tempfile.TemporaryDirectory(
+        with _temporary_directory(
             prefix="rw-fmt-", ignore_cleanup_errors=True
         ) as work_dir:
             work = Path(work_dir)
@@ -1447,7 +1479,7 @@ def _fmt() -> Project:
 _NLOHMANN_TEST_EXCLUDE = "unicode|cbor|msgpack|algorithms|cmake_fetch|cmake_import"
 
 
-def _nlohmann() -> Project:
+def _nlohmann(full: bool) -> Project:
     version = "3.12.0"
     url = f"https://github.com/nlohmann/json/archive/refs/tags/v{version}.tar.gz"
     checksum = "4b92eb0c06d10683f7447ce9406cb97cd4b453be18d7279320f7b2f025c10187"
@@ -1456,7 +1488,7 @@ def _nlohmann() -> Project:
         tarball = RW_DIR / f"nlohmann-{version}.tar.gz"
         _fetch(url, tarball, checksum)
 
-        with tempfile.TemporaryDirectory(
+        with _temporary_directory(
             prefix="rw-nlohmann-", ignore_cleanup_errors=True
         ) as work_dir:
             work = Path(work_dir)
@@ -1486,51 +1518,75 @@ def _nlohmann() -> Project:
             configure_ms = _timed(configure, src, env)
             compile_ms = _timed(["cmake", "--build", "build", jobs], src, env)
 
-            # Compile (but don't run) the 217 documented API examples.
-            include_dir = src / "include"
-            example_cmds = []
-            for cpp in sorted(
-                (src / "docs" / "mkdocs" / "docs" / "examples").glob("*.cpp")
-            ):
-                binary = work / (cpp.stem + "_bin")
-                example_cmds.append(
-                    [tc.cxx, *tc.cxxflags.split(), "-I", str(include_dir), str(cpp)]
-                    + (tc.ldflags.split() if tc.ldflags else [])
-                    + (tc.libs.split() if tc.libs else [])
-                    + ["-o", str(binary)]
-                )
-            examples_ms = _timed_many(example_cmds, src, env, tc.jobs)
-            run_tests_ms = _timed(
-                [
-                    "ctest",
-                    "--test-dir",
-                    "build",
-                    "--output-on-failure",
-                    "-E",
-                    _NLOHMANN_TEST_EXCLUDE,
-                    jobs,
-                ],
-                src,
-                env,
-            )
-
-            return {
+            result = {
                 "configure": configure_ms,
                 "compile": compile_ms,
-                "run tests": run_tests_ms,
-                "examples": examples_ms,
             }
+            if full:
+                result["run tests"] = _timed(
+                    [
+                        "ctest",
+                        "--test-dir",
+                        "build",
+                        "--output-on-failure",
+                        "-E",
+                        _NLOHMANN_TEST_EXCLUDE,
+                        jobs,
+                    ],
+                    src,
+                    env,
+                )
+
+                # Compile (but don't run) the 217 documented API examples.
+                include_dir = src / "include"
+                example_cmds = []
+                for cpp in sorted(
+                    (src / "docs" / "mkdocs" / "docs" / "examples").glob("*.cpp")
+                ):
+                    binary = work / (cpp.stem + "_bin")
+                    example_cmds.append(
+                        [
+                            tc.cxx,
+                            *tc.cxxflags.split(),
+                            "-I",
+                            str(include_dir),
+                            str(cpp),
+                        ]
+                        + (tc.ldflags.split() if tc.ldflags else [])
+                        + (tc.libs.split() if tc.libs else [])
+                        + ["-o", str(binary)]
+                    )
+                result["examples"] = _timed_many(example_cmds, src, env, tc.jobs)
+            return result
 
     return Project(
-        version=version,
+        version=f"{version} (full)" if full else version,
         build=build,
-        expected_seconds={"debug": 57, "release": 60},
-        phases=("configure", "compile", "run tests", "examples"),
-        comments={
-            "run tests": "unicode/cbor/msgpack (slow), algorithms (unspecified "
-            "tail order), cmake_fetch/cmake_import (not applicable) excluded",
-            "examples": "217 documented API examples, compiled but not run",
-        },
+        expected_seconds=(
+            {"debug": 57, "release": 60} if full else {"debug": 20, "release": 35}
+        ),
+        phases=(
+            ("configure", "compile", "run tests", "examples")
+            if full
+            else ("configure", "compile")
+        ),
+        comment=(
+            "Builds and runs nlohmann JSON's upstream tests, then compiles its "
+            "217 documented API examples."
+            if full
+            else "Compiles nlohmann JSON's complete upstream test suite without "
+            "running it."
+        ),
+        comments=(
+            {
+                "run tests": "unicode/cbor/msgpack (slow), algorithms "
+                "(unspecified tail order), cmake_fetch/cmake_import (not "
+                "applicable) excluded",
+                "examples": "217 documented API examples, compiled but not run",
+            }
+            if full
+            else {}
+        ),
     )
 
 
@@ -1549,6 +1605,8 @@ def _single_source_project(
     extra_cxxflags: tuple[str, ...] = (),
     run_binary: bool = True,
     prepare: Callable[[Path], None] | None = None,
+    expected_seconds: dict[str, int] | None = None,
+    comment: str = "",
 ) -> Project:
     """Compile small upstream examples/tests individually.
 
@@ -1559,7 +1617,7 @@ def _single_source_project(
     def build(tc: Toolchain) -> dict[str, float]:
         tarball = RW_DIR / f"{name}-{version}.tar.gz"
         _fetch(url, tarball, checksum)
-        with tempfile.TemporaryDirectory(prefix=f"rw-{name}-") as work_dir:
+        with _temporary_directory(prefix=f"rw-{name}-") as work_dir:
             work = Path(work_dir)
             with tarfile.open(tarball) as archive:
                 archive.extractall(work)
@@ -1592,8 +1650,9 @@ def _single_source_project(
     return Project(
         version=version,
         build=build,
-        expected_seconds={"debug": 10, "release": 10},
+        expected_seconds=expected_seconds or {"debug": 10, "release": 10},
         phases=("compile", "run tests") if run_binary else ("compile",),
+        comment=comment,
     )
 
 
@@ -1670,13 +1729,23 @@ def _cxxopts() -> Project:
         "cxxopts-3.3.1",
         ("src/example.cpp",),
         ("include",),
-        ("--help",),
+        (
+            "--apple",
+            "--int",
+            "42",
+            "--float",
+            "1.5",
+            "input.txt",
+            "output.txt",
+            "extra",
+        ),
         ("-DCXXOPTS_NO_REGEX",),
-        run_binary=False,
+        comment="Builds and runs cxxopts' upstream example with boolean, numeric, "
+        "positional, and unmatched arguments.",
     )
 
 
-def _pocketfft() -> Project:
+def _pocketfft(full: bool) -> Project:
     commit = "c90e55b3d529f8efa40ed01a20de22405f45fc65"
     return _single_source_project(
         "pocketfft",
@@ -1686,6 +1755,16 @@ def _pocketfft() -> Project:
         f"pocketfft-{commit}",
         ("pocketfft_demo.cc",),
         (".",),
+        run_binary=full,
+        expected_seconds=(
+            {"debug": 210, "release": 30} if full else {"debug": 10, "release": 10}
+        ),
+        comment=(
+            "Compiles and runs pocketfft's demonstration workload."
+            if full
+            else "Compiles pocketfft's demonstration program without running its "
+            "long FFT workload."
+        ),
     )
 
 
@@ -1710,7 +1789,7 @@ def _rapidjson() -> Project:
         gtest_tarball = RW_DIR / f"googletest-release-{gtest_version}.tar.gz"
         _fetch(gtest_url, gtest_tarball, gtest_checksum)
 
-        with tempfile.TemporaryDirectory(
+        with _temporary_directory(
             prefix="rw-rapidjson-", ignore_cleanup_errors=True
         ) as work_dir:
             work = Path(work_dir)
@@ -1833,7 +1912,7 @@ def _react_native() -> Project:
         googletest_tarball = RW_DIR / f"googletest-{googletest_version}.tar.gz"
         _fetch(googletest_url, googletest_tarball, googletest_checksum)
 
-        with tempfile.TemporaryDirectory(
+        with _temporary_directory(
             prefix="rw-react-native-", ignore_cleanup_errors=True
         ) as work_dir:
             work = Path(work_dir)
@@ -1971,7 +2050,7 @@ def _rdfind() -> Project:
         tarball = RW_DIR / tarball_name
         _fetch(url, tarball, checksum)
 
-        with tempfile.TemporaryDirectory(
+        with _temporary_directory(
             prefix="rw-rdfind-", ignore_cleanup_errors=True
         ) as work_dir:
             work = Path(work_dir)
@@ -2024,7 +2103,7 @@ def _simdutf(strict: bool, strict_label: str) -> Project:
         tarball = RW_DIR / f"simdutf-{commithash}.tar.gz"
         _fetch(url, tarball, checksum)
 
-        with tempfile.TemporaryDirectory(
+        with _temporary_directory(
             prefix="rw-simdutf-", ignore_cleanup_errors=True
         ) as work_dir:
             work = Path(work_dir)
@@ -2103,7 +2182,7 @@ def _tesseract() -> Project:
         tarball = RW_DIR / f"tesseract-{version}.tar.gz"
         _fetch(url, tarball, checksum)
 
-        with tempfile.TemporaryDirectory(
+        with _temporary_directory(
             prefix="rw-tesseract-", ignore_cleanup_errors=True
         ) as work_dir:
             work = Path(work_dir)
@@ -2193,7 +2272,7 @@ def _tensorflow() -> Project:
         _fetch(bazel_url, bazel, bazel_checksum)
         bazel.chmod(0o755)
 
-        with tempfile.TemporaryDirectory(
+        with _temporary_directory(
             prefix="rw-tensorflow-", ignore_cleanup_errors=True
         ) as work_dir:
             work = Path(work_dir)
@@ -2324,7 +2403,7 @@ def _electron() -> Project:
         tarball = RW_DIR / f"electron-v{version}.tar.gz"
         _fetch(url, tarball, checksum)
 
-        with tempfile.TemporaryDirectory(
+        with _temporary_directory(
             prefix="rw-electron-", ignore_cleanup_errors=True
         ) as work_dir:
             work = Path(work_dir)
@@ -2517,7 +2596,7 @@ def _boost_asio(full: bool) -> Project:
         tarball = RW_DIR / f"boost_{version.replace('.', '_')}.tar.gz"
         _fetch(url, tarball, checksum)
 
-        with tempfile.TemporaryDirectory(
+        with _temporary_directory(
             prefix="rw-boost-asio-full-" if full else "rw-boost-asio-",
             ignore_cleanup_errors=True,
         ) as work_dir:
@@ -2669,7 +2748,7 @@ def _boost_test(full: bool) -> Project:
         tarball = RW_DIR / f"boost_{version.replace('.', '_')}.tar.gz"
         _fetch(url, tarball, checksum)
 
-        with tempfile.TemporaryDirectory(
+        with _temporary_directory(
             prefix="rw-boost-test-full-" if full else "rw-boost-test-",
             ignore_cleanup_errors=True,
         ) as work_dir:
@@ -2797,7 +2876,7 @@ def _bitcoin(full: bool) -> Project:
         tarball = RW_DIR / f"bitcoin-v{version}.tar.gz"
         _fetch(url, tarball, checksum)
 
-        with tempfile.TemporaryDirectory(
+        with _temporary_directory(
             prefix="rw-bitcoin-full-" if full else "rw-bitcoin-",
             ignore_cleanup_errors=True,
         ) as work_dir:
@@ -2956,7 +3035,7 @@ def _libtorrent() -> Project:
         _fetch(url, tarball, checksum)
         _fetch(try_signal_url, try_signal_tarball, try_signal_checksum)
 
-        with tempfile.TemporaryDirectory(
+        with _temporary_directory(
             prefix="rw-libtorrent-", ignore_cleanup_errors=True
         ) as work_dir:
             work = Path(work_dir)
@@ -3071,7 +3150,7 @@ def _llama_cpp() -> Project:
         tarball = RW_DIR / f"llama.cpp-{version}.tar.gz"
         _fetch(url, tarball, checksum)
 
-        with tempfile.TemporaryDirectory(
+        with _temporary_directory(
             prefix="rw-llama-cpp-", ignore_cleanup_errors=True
         ) as work_dir:
             work = Path(work_dir)
@@ -3167,7 +3246,7 @@ def _harfbuzz() -> Project:
         tarball = RW_DIR / f"harfbuzz-{version}.tar.gz"
         _fetch(url, tarball, checksum)
 
-        with tempfile.TemporaryDirectory(
+        with _temporary_directory(
             prefix="rw-harfbuzz-", ignore_cleanup_errors=True
         ) as work_dir:
             work = Path(work_dir)
@@ -3234,7 +3313,7 @@ def _libcamera(full: bool) -> Project:
         tarball = RW_DIR / f"libcamera-v{version}.tar.gz"
         _fetch(url, tarball, checksum)
 
-        with tempfile.TemporaryDirectory(
+        with _temporary_directory(
             prefix="rw-libcamera-full-" if full else "rw-libcamera-",
             ignore_cleanup_errors=True,
         ) as work_dir:
@@ -3388,7 +3467,7 @@ def _libcamera(full: bool) -> Project:
 # --- opencv --------------------------------------------------------------
 
 
-def _opencv() -> Project:
+def _opencv(full: bool) -> Project:
     version = "4.13.0"
     url = f"https://github.com/opencv/opencv/archive/refs/tags/{version}.tar.gz"
     checksum = "1d40ca017ea51c533cf9fd5cbde5b5fe7ae248291ddf2af99d4c17cf8e13017d"
@@ -3403,7 +3482,7 @@ def _opencv() -> Project:
         extra_tarball = RW_DIR / f"opencv_extra-{version}.tar.gz"
         _fetch(extra_url, extra_tarball, extra_checksum)
 
-        with tempfile.TemporaryDirectory(
+        with _temporary_directory(
             prefix="rw-opencv-", ignore_cleanup_errors=True
         ) as work_dir:
             work = Path(work_dir)
@@ -3464,7 +3543,7 @@ def _opencv() -> Project:
                 "-DWITH_OPENJPEG=OFF",
             ]
             jobs = f"-j{tc.jobs}"
-            return {
+            result = {
                 "configure": _timed(configure, src, env),
                 "compile": _timed(
                     [
@@ -3479,7 +3558,9 @@ def _opencv() -> Project:
                     src,
                     env,
                 ),
-                "run tests": _timed(
+            }
+            if full:
+                result["run tests"] = _timed(
                     [
                         "ctest",
                         "--test-dir",
@@ -3491,16 +3572,24 @@ def _opencv() -> Project:
                     ],
                     src,
                     env,
-                ),
-            }
+                )
+            return result
 
     return Project(
-        version=version,
+        version=f"{version} (full)" if full else version,
         build=build,
-        expected_seconds={"debug": 540, "release": 189},
-        comment="Builds OpenCV's core and imgproc modules and runs their "
-        "upstream tests; optional codecs, bindings, and hardware backends "
-        "are disabled.",
+        expected_seconds=(
+            {"debug": 540, "release": 189} if full else {"debug": 120, "release": 90}
+        ),
+        phases=PHASES if full else ("configure", "compile"),
+        comment=(
+            "Builds OpenCV's core and imgproc modules and runs their upstream "
+            "tests; optional codecs, bindings, and hardware backends are disabled."
+            if full
+            else "Builds OpenCV's core and imgproc modules, including their test "
+            "executables, without running the tests. Optional codecs, bindings, "
+            "and hardware backends are disabled."
+        ),
     )
 
 
@@ -3516,7 +3605,7 @@ def _pybind11(full: bool) -> Project:
         tarball = RW_DIR / f"pybind11-v{version}.tar.gz"
         _fetch(url, tarball, checksum)
 
-        with tempfile.TemporaryDirectory(
+        with _temporary_directory(
             prefix="rw-pybind11-full-" if full else "rw-pybind11-",
             ignore_cleanup_errors=True,
         ) as work_dir:
@@ -3665,7 +3754,7 @@ def _strong_type() -> Project:
         _fetch(url, tarball, checksum)
         _fetch(catch_url, catch_header, catch_checksum)
 
-        with tempfile.TemporaryDirectory(
+        with _temporary_directory(
             prefix="rw-strong-type-", ignore_cleanup_errors=True
         ) as work_dir:
             work = Path(work_dir)
@@ -3759,7 +3848,7 @@ def _ssvstart() -> Project:
         for url, tarball, checksum in archives:
             _fetch(url, tarball, checksum)
 
-        with tempfile.TemporaryDirectory(
+        with _temporary_directory(
             prefix="rw-ssvstart-", ignore_cleanup_errors=True
         ) as work_dir:
             work = Path(work_dir)
@@ -3787,20 +3876,33 @@ def _ssvstart() -> Project:
                 *shlex.split(tc.cxxflags),
                 "-std=c++23",
                 *(f"-I{path}" for path in includes),
-                "-c",
                 str(source),
+                str(
+                    work
+                    / f"zancle-{vrsfml_revision}"
+                    / "src"
+                    / "SFML"
+                    / "System"
+                    / "LifetimeTrackingABICheck.cpp"
+                ),
+                *shlex.split(tc.ldflags),
+                *shlex.split(tc.libs),
                 "-o",
-                str(work / "UtilsInput.o"),
+                str(work / "UtilsInput"),
             ]
-            return {"compile": _timed(command, src, _env(tc))}
+            env = _env(tc)
+            return {
+                "compile": _timed(command, src, env),
+                "run tests": _timed([str(work / "UtilsInput")], src, env),
+            }
 
     return Project(
         version=revision[:7],
         build=build,
         expected_seconds={"debug": 2, "release": 2},
-        phases=("compile",),
-        comment="Compiles SSVStart's upstream input-utility test against "
-        "its current header dependencies.",
+        phases=("compile", "run tests"),
+        comment="Builds and runs SSVStart's upstream input-utility assertions "
+        "against its current header dependencies.",
     )
 
 
@@ -3824,7 +3926,7 @@ def _trompeloeil() -> Project:
         _fetch(url, tarball, checksum)
         _fetch(catch_url, catch_header, catch_checksum)
 
-        with tempfile.TemporaryDirectory(
+        with _temporary_directory(
             prefix="rw-trompeloeil-", ignore_cleanup_errors=True
         ) as work_dir:
             work = Path(work_dir)
@@ -3906,7 +4008,7 @@ def _zancle() -> Project:
         tarball = RW_DIR / f"zancle-{version}.tar.gz"
         _fetch(url, tarball, checksum)
 
-        with tempfile.TemporaryDirectory(
+        with _temporary_directory(
             prefix="rw-zancle-", ignore_cleanup_errors=True
         ) as work_dir:
             work = Path(work_dir)
@@ -4002,9 +4104,12 @@ PROJECTS: dict[str, Project] = {
     "libcamera-full": _libcamera(full=True),
     "libtorrent": _libtorrent(),
     "llama.cpp": _llama_cpp(),
-    "nlohmann": _nlohmann(),
-    "opencv": _opencv(),
-    "pocketfft": _pocketfft(),
+    "nlohmann": _nlohmann(full=False),
+    "nlohmann-full": _nlohmann(full=True),
+    "opencv": _opencv(full=False),
+    "opencv-full": _opencv(full=True),
+    "pocketfft": _pocketfft(full=False),
+    "pocketfft-full": _pocketfft(full=True),
     "pybind11": _pybind11(full=False),
     "pybind11-full": _pybind11(full=True),
     "rapidjson": _rapidjson(),

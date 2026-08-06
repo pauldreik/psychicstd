@@ -10,25 +10,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup-realworld-ccache
+        with:
+          project: rdfind
+          build_type: debug
       - name: Enable deb-src
         run: |
           sudo sed -i 's/^Types: deb$/Types: deb deb-src/' /etc/apt/sources.list.d/ubuntu.sources
           sudo apt-get update
-      - name: Install Markdown formatter
-        run: pipx install mdformat
       - name: Install rdfind build dependencies
         run: sudo apt-get build-dep -y rdfind
-      - name: Build and benchmark rdfind with psychicstd
+      - name: Build and test rdfind with psychicstd
         run: >-
-          scripts/benchmark_realworld.py --project rdfind
-          --build-type both --reps 3
-          --output use_on_realworld_projects/rdfind_speed_report.md
-      - name: Upload speed report
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: rdfind-speed-report
-          path: use_on_realworld_projects/rdfind_speed_report.md
+          scripts/benchmark_realworld.py
+          --check-only --project rdfind
+          --build-type debug --enable-ccache
       # TODO: no project here is built with sanitizers yet. rdfind used to
       # have a "run with sanitizers" step, but it silently ignored its own
       # -a/-u flags and just rebuilt the same non-sanitized binary again.
@@ -36,41 +32,45 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - name: Install Markdown formatter
-        run: pipx install mdformat
-      - name: Install ninja
+      - uses: ./.github/actions/setup-realworld-ccache
+        with:
+          project: simdutf
+          build_type: debug
+      - name: Install dependencies
         run: sudo apt-get install -y ninja-build
       - name: Build and test simdutf with psychicstd
         run: >-
-          scripts/benchmark_realworld.py --project simdutf
-          --build-type debug --reps 1
-          --output use_on_realworld_projects/simdutf_speed_report.md
-      - name: Upload speed report
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: simdutf-speed-report
-          path: use_on_realworld_projects/simdutf_speed_report.md
+          scripts/benchmark_realworld.py
+          --check-only --project simdutf
+          --build-type debug --enable-ccache
   cmake:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup-realworld-ccache
+        with:
+          project: cmake
+          build_type: debug
       - name: Install ninja
         run: sudo apt-get install -y ninja-build
       - name: Build and test CMake with psychicstd
         run: >-
-          scripts/benchmark_realworld.py --check-only
-          --project cmake --build-type both
+          scripts/benchmark_realworld.py --check-only --project cmake
+          --build-type debug --enable-ccache
   googletest:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup-realworld-ccache
+        with:
+          project: googletest
+          build_type: debug
       - name: Install ninja
         run: sudo apt-get install -y ninja-build
       - name: Build and test GoogleTest with psychicstd
         run: >-
           scripts/benchmark_realworld.py --check-only
-          --project googletest --build-type debug
+          --project googletest --build-type debug --enable-ccache
   abseil:
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -87,21 +87,29 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup-realworld-ccache
+        with:
+          project: boost-asio
+          build_type: debug
       - name: Build and test Boost.Asio with psychicstd
         run: >-
           scripts/benchmark_realworld.py
           --check-only --project boost-asio
-          --build-type debug
+          --build-type debug --enable-ccache
   boost-test:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup-realworld-ccache
+        with:
+          project: boost-test
+          build_type: debug
       - name: Build and test Boost.Test with psychicstd
         run: >-
           scripts/benchmark_realworld.py
           --check-only --project boost-test
-          --build-type debug
+          --build-type debug --enable-ccache
   bitcoin:
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -114,6 +122,27 @@ jobs:
           scripts/benchmark_realworld.py
           --check-only --project bitcoin
           --build-type debug
+  libtorrent:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup-realworld-ccache
+        with:
+          project: libtorrent
+          build_type: debug
+      - name: Install dependencies
+        run: >-
+          sudo apt-get install -y
+          libboost-dev
+          libssl-dev
+          ninja-build
+          zlib1g-dev
+      - name: Build libtorrent with psychicstd
+        run: >-
+          scripts/benchmark_realworld.py
+          --check-only --project libtorrent --build-type debug
+          --enable-ccache
   electron:
     runs-on: ubuntu-latest
     steps:
@@ -127,13 +156,17 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup-realworld-ccache
+        with:
+          project: godot
+          build_type: debug
       - name: Install SCons and pkg-config
         run: sudo apt-get install -y scons pkg-config
       - name: Build Godot core library with psychicstd
         run: >-
           scripts/benchmark_realworld.py
           --check-only --project godot
-          --build-type debug
+          --build-type debug --enable-ccache
   llama-cpp:
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -150,154 +183,146 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - name: Install Markdown formatter
-        run: pipx install mdformat
-      - name: Install ninja
-        run: sudo apt-get install -y ninja-build
-      - name: Build nlohmann JSON examples with psychicstd
-        run: >-
-          scripts/benchmark_realworld.py --project nlohmann
-          --build-type debug --reps 1
-          --output use_on_realworld_projects/nlohmann_speed_report.md
-      - name: Upload speed report
-        if: always()
-        uses: actions/upload-artifact@v7
+      - uses: ./.github/actions/setup-realworld-ccache
         with:
-          name: nlohmann-speed-report
-          path: use_on_realworld_projects/nlohmann_speed_report.md
+          project: nlohmann
+          build_type: debug
+      - name: Install dependencies
+        run: sudo apt-get install -y ninja-build
+      - name: Build nlohmann JSON tests with psychicstd
+        run: >-
+          scripts/benchmark_realworld.py
+          --check-only --project nlohmann
+          --build-type debug --enable-ccache
   opencv:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup-realworld-ccache
+        with:
+          project: opencv
+          build_type: debug
       - name: Install Ninja
         run: sudo apt-get install -y ninja-build
       - name: Build and test OpenCV with psychicstd
         run: >-
           scripts/benchmark_realworld.py --check-only
-          --project opencv --build-type release
+          --project opencv --build-type debug --enable-ccache
   rapidjson:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup-realworld-ccache
+        with:
+          project: rapidjson
+          build_type: debug
       - name: Install ninja
         run: sudo apt-get install -y ninja-build
       - name: Build and run RapidJSON examples with psychicstd
         run: >-
           scripts/benchmark_realworld.py --check-only
-          --project rapidjson --build-type debug
+          --project rapidjson --build-type debug --enable-ccache
   fmt:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - name: Install Markdown formatter
-        run: pipx install mdformat
-      - name: Install ninja
+      - uses: ./.github/actions/setup-realworld-ccache
+        with:
+          project: fmt
+          build_type: debug
+      - name: Install dependencies
         run: sudo apt-get install -y ninja-build
       - name: Build and test fmt with psychicstd
         run: >-
-          scripts/benchmark_realworld.py --project fmt
-          --build-type debug --reps 1
-          --output use_on_realworld_projects/fmt_speed_report.md
-      - name: Upload speed report
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: fmt-speed-report
-          path: use_on_realworld_projects/fmt_speed_report.md
+          scripts/benchmark_realworld.py
+          --check-only --project fmt
+          --build-type debug --enable-ccache
   flatbuffers:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - name: Install Markdown formatter
-        run: pipx install mdformat
-      - name: Install ninja
+      - uses: ./.github/actions/setup-realworld-ccache
+        with:
+          project: flatbuffers
+          build_type: debug
+      - name: Install dependencies
         run: sudo apt-get install -y ninja-build
       - name: Build and test FlatBuffers with psychicstd
         run: >-
-          scripts/benchmark_realworld.py --project flatbuffers
-          --build-type debug --reps 1
-          --output use_on_realworld_projects/flatbuffers_speed_report.md
-      - name: Upload speed report
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: flatbuffers-speed-report
-          path: use_on_realworld_projects/flatbuffers_speed_report.md
+          scripts/benchmark_realworld.py
+          --check-only --project flatbuffers
+          --build-type debug --enable-ccache
   catch2:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - name: Install Markdown formatter
-        run: pipx install mdformat
-      - name: Install ninja
+      - uses: ./.github/actions/setup-realworld-ccache
+        with:
+          project: catch2
+          build_type: debug
+      - name: Install dependencies
         run: sudo apt-get install -y ninja-build
       - name: Build and test Catch2 with psychicstd
         run: >-
-          scripts/benchmark_realworld.py --project catch2
-          --build-type debug --reps 1
-          --output use_on_realworld_projects/catch2_speed_report.md
-      - name: Upload speed report
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: catch2-speed-report
-          path: use_on_realworld_projects/catch2_speed_report.md
+          scripts/benchmark_realworld.py
+          --check-only --project catch2
+          --build-type debug --enable-ccache
   eigen:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - name: Install Markdown formatter
-        run: pipx install mdformat
-      - name: Build and benchmark Eigen tests with psychicstd
-        run: >-
-          scripts/benchmark_realworld.py --project eigen
-          --build-type debug --reps 1
-          --output use_on_realworld_projects/eigen_speed_report.md
-      - name: Upload speed report
-        if: always()
-        uses: actions/upload-artifact@v7
+      - uses: ./.github/actions/setup-realworld-ccache
         with:
-          name: eigen-speed-report
-          path: use_on_realworld_projects/eigen_speed_report.md
+          project: eigen
+          build_type: debug
+      - name: Build and test Eigen with psychicstd
+        run: >-
+          scripts/benchmark_realworld.py
+          --check-only --project eigen
+          --build-type debug --enable-ccache
   cppcheck:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - name: Install Markdown formatter
-        run: pipx install mdformat
-      - name: Build and benchmark cppcheck with psychicstd
-        run: >-
-          scripts/benchmark_realworld.py --project cppcheck
-          --build-type debug --reps 1
-          --output use_on_realworld_projects/cppcheck_speed_report.md
-      - name: Upload speed report
-        if: always()
-        uses: actions/upload-artifact@v7
+      - uses: ./.github/actions/setup-realworld-ccache
         with:
-          name: cppcheck-speed-report
-          path: use_on_realworld_projects/cppcheck_speed_report.md
+          project: cppcheck
+          build_type: debug
+      - name: Build and test cppcheck with psychicstd
+        run: >-
+          scripts/benchmark_realworld.py
+          --check-only --project cppcheck
+          --build-type debug --enable-ccache
   tesseract:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup-realworld-ccache
+        with:
+          project: tesseract
+          build_type: debug
       - name: Install Tesseract build dependencies
         run: sudo apt-get install -y libleptonica-dev ninja-build
       - name: Build and test Tesseract with psychicstd
         run: >-
           scripts/benchmark_realworld.py --check-only
-          --project tesseract --build-type debug
+          --project tesseract --build-type debug --enable-ccache
   tensorflow:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup-realworld-ccache
+        with:
+          project: tensorflow
+          build_type: debug
       - name: Build TensorFlow core platform libraries with psychicstd
         run: >-
           scripts/benchmark_realworld.py --check-only
-          --project tensorflow --build-type debug
+          --project tensorflow --build-type debug --enable-ccache
   ctre:
     runs-on: ubuntu-latest
     steps:
@@ -312,12 +337,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup-realworld-ccache
+        with:
+          project: react-native
+          build_type: both
       - name: Install ninja
         run: sudo apt-get install -y ninja-build
       - name: Build React Native host core with psychicstd
         run: >-
           scripts/benchmark_realworld.py --check-only
-          --project react-native --build-type both
+          --project react-native --build-type both --enable-ccache
   inipp:
     runs-on: ubuntu-latest
     steps:
@@ -371,12 +400,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup-realworld-ccache
+        with:
+          project: trompeloeil
+          build_type: debug
       - name: Install Ninja
         run: sudo apt-get install -y ninja-build
       - name: Build and test Trompeloeil with psychicstd
         run: >-
           scripts/benchmark_realworld.py --check-only
-          --project trompeloeil --build-type debug
+          --project trompeloeil --build-type debug --enable-ccache
   zancle:
     runs-on: ubuntu-latest
     steps:

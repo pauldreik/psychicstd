@@ -50,8 +50,9 @@ tools/compliance.py --sanitize unordered_set deque
 tools/compliance.py --sanitize --sample 40 vector
 ```
 
-`--sanitize` uses its own cache (`.compliance_cache.sanitize.json`) and output
-(`compliance.sanitize.md`), both git-ignored, so it never disturbs the normal
+`--sanitize` uses its own git-ignored cache
+(`.compliance_cache.sanitize.json`) and writes the tracked
+`compliance.sanitize.md` report, so it never disturbs the normal
 `compliance.md` run.
 
 The sampled set is deterministic for a given `--sample` and header set (fixed

@@ -11,23 +11,45 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        project: [abseil-full, boost-test-full, cmake-full, googletest-full]
+        include:
+          - project: abseil-full
+            build_type: debug
+          - project: boost-test-full
+            build_type: debug
+          - project: cmake-full
+            build_type: debug
+          - project: googletest-full
+            build_type: debug
+          - project: nlohmann-full
+            build_type: debug
+          - project: opencv-full
+            build_type: release
+          - project: pocketfft-full
+            build_type: debug
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup-realworld-ccache
+        with:
+          project: ${{ matrix.project }}
+          build_type: ${{ matrix.build_type }}
       - name: Install dependencies
-        run: sudo apt-get install -y ccache ninja-build
+        run: sudo apt-get install -y ninja-build
       - name: Build and test ${{ matrix.project }} with psychicstd
         run: >-
-          PATH=/usr/lib/ccache:$PATH scripts/benchmark_realworld.py
+          scripts/benchmark_realworld.py
           --check-only --project ${{ matrix.project }}
-          --build-type debug --enable-ccache
+          --build-type ${{ matrix.build_type }} --enable-ccache
   bitcoin:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup-realworld-ccache
+        with:
+          project: bitcoin-full
+          build_type: debug
       - name: Install Ninja
         run: >-
           sudo apt-get install -y
@@ -41,12 +63,16 @@ jobs:
         run: >-
           scripts/benchmark_realworld.py
           --check-only --project bitcoin-full
-          --build-type debug
+          --build-type debug --enable-ccache
   boost-asio-full:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup-realworld-ccache
+        with:
+          project: boost-asio-full
+          build_type: debug
       - name: Install dependencies
         run: >-
           sudo apt-get install -y
@@ -56,12 +82,16 @@ jobs:
         run: >-
           scripts/benchmark_realworld.py
           --check-only --project boost-asio-full
-          --build-type debug
+          --build-type debug --enable-ccache
   harfbuzz:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup-realworld-ccache
+        with:
+          project: harfbuzz
+          build_type: debug
       - name: Install dependencies
         run: >-
           sudo apt-get install -y
@@ -71,23 +101,26 @@ jobs:
         run: >-
           scripts/benchmark_realworld.py
           --check-only --project harfbuzz
-          --build-type debug
+          --build-type debug --enable-ccache
   pybind11-full:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup-realworld-ccache
+        with:
+          project: pybind11-full
+          build_type: debug
       - name: Install dependencies
         run: >-
           sudo apt-get install -y
-          ccache
           ninja-build
           python3-dev
           python3-numpy
           python3-pytest
       - name: Build and test pybind11's primary suite with psychicstd
         run: >-
-          PATH=/usr/lib/ccache:$PATH scripts/benchmark_realworld.py
+          scripts/benchmark_realworld.py
           --check-only --project pybind11-full
           --build-type debug
           --enable-ccache
@@ -96,10 +129,13 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup-realworld-ccache
+        with:
+          project: libcamera-full
+          build_type: debug
       - name: Install dependencies
         run: >-
           sudo apt-get install -y
-          ccache
           libyaml-dev
           meson
           ninja-build
@@ -109,7 +145,7 @@ jobs:
           python3-yaml
       - name: Build and test libcamera's self-contained suite with psychicstd
         run: >-
-          PATH=/usr/lib/ccache:$PATH scripts/benchmark_realworld.py
+          scripts/benchmark_realworld.py
           --check-only --project libcamera-full
           --build-type debug
           --enable-ccache

@@ -12,8 +12,6 @@ jobs:
       fail-fast: false
       matrix:
         project:
-          - catch2
-          - cppcheck
           - eigen
           - flatbuffers
           - fmt

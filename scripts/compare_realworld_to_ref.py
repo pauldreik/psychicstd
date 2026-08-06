@@ -18,6 +18,7 @@ Usage:
 
 import argparse
 import json
+import os
 import re
 import subprocess
 import sys
@@ -330,6 +331,8 @@ def main() -> int:
         "for debugging the script/recipes, not for real measurements)",
     )
     args = ap.parse_args()
+    if not args.enable_ccache:
+        os.environ["CCACHE_DISABLE"] = "1"
     if args.reps is not None and args.reps <= 0:
         ap.error("--reps must be positive")
     if args.max_reps <= 0:

@@ -1,6 +1,6 @@
 # Compliance
 
-Last updated: 2026-08-06 13:37
+Last updated: 2026-08-06 13:38
 
 libc++ test revision: `4395e6ad2c876e2098adcc724f36e937b8f007fd`
 
@@ -12,8 +12,8 @@ The pass percentage uses all tests except those explicitly marked libc++-specifi
 
 | | header | psychicstd passes | tested | relevant tests | ignored libc++-specific | upstream total | lines |
 |--|--------|------------------:|-------:|---------------:|------------------------:|---------------:|------:|
-| 🟡 | `algorithm` | **101/329 (31%)** | 329/329 | 329 | 0 | 329 | 849 |
-| 🟡 | `any` | **10/18 (56%)** | 18/18 | 18 | 0 | 18 | 207 |
+| 🟡 | `algorithm` | **102/329 (31%)** | 329/329 | 329 | 0 | 329 | 849 |
+| 🟡 | `any` | **9/18 (50%)** | 18/18 | 18 | 0 | 18 | 207 |
 | 🟡 | `array` | **29/40 (72%)** | 40/40 | 40 | 1 | 41 | 268 |
 | 🟡 | `atomic` | **69/120 (58%)** | 120/120 | 120 | 0 | 120 | 782 |
 | 🔴 | `bit` | **2/15 (13%)** | 15/15 | 15 | 0 | 15 | 87 |
@@ -51,9 +51,9 @@ The pass percentage uses all tests except those explicitly marked libc++-specifi
 | 🔴 | `filesystem` | **16/146 (11%)** | 146/146 | 146 | 0 | 146 | 359 |
 | 🔴 | `forward_list` | **15/83 (18%)** | 83/83 | 83 | 0 | 83 | 177 |
 | 🟡 | `fstream` | **19/65 (29%)** | 65/65 | 65 | 0 | 65 | 317 |
-| 🟡 | `functional` | **62/165 (38%)** | 165/165 | 165 | 0 | 165 | 318 |
+| 🟡 | `functional` | **68/165 (41%)** | 165/165 | 165 | 0 | 165 | 318 |
 | 🔴 | `future` | **1/75 (1%)** | 75/75 | 75 | 0 | 75 | 131 |
-| 🟢 | `initializer_list` | **4/4 (100%)** | 4/4 | 4 | 0 | 4 | 38 |
+| 🟡 | `initializer_list` | **3/4 (75%)** | 4/4 | 4 | 0 | 4 | 38 |
 | 🟡 | `iomanip` | **80/129 (62%)** | 129/129 | 129 | 0 | 129 | 179 |
 | 🟡 | `ios` | **40/91 (44%)** | 91/91 | 91 | 0 | 91 | 243 |
 | 🔴 | `iosfwd` | **0/1 (0%)** | 1/1 | 1 | 0 | 1 | 73 |
@@ -61,12 +61,12 @@ The pass percentage uses all tests except those explicitly marked libc++-specifi
 | 🟡 | `istream` | **34/58 (59%)** | 58/58 | 58 | 0 | 58 | 461 |
 | 🟡 | `iterator` | **62/293 (21%)** | 293/293 | 293 | 0 | 293 | 460 |
 | 🟢 | `limits` | **36/37 (97%)** | 37/37 | 37 | 0 | 37 | 293 |
-| 🟡 | `list` | **31/86 (36%)** | 86/86 | 86 | 0 | 86 | 444 |
+| 🟡 | `list` | **30/86 (35%)** | 86/86 | 86 | 0 | 86 | 444 |
 | 🟡 | `locale` | **82/327 (25%)** | 327/327 | 327 | 0 | 327 | 254 |
 | 🟡 | `map` | **59/86 (69%)** | 86/86 | 86 | 0 | 86 | 199 |
-| 🟡 | `memory` | **65/198 (33%)** | 198/198 | 198 | 0 | 198 | 793 |
+| 🟡 | `memory` | **67/198 (34%)** | 198/198 | 198 | 0 | 198 | 793 |
 | 🟡 | `mutex` | **35/108 (32%)** | 108/108 | 108 | 0 | 108 | 183 |
-| 🟡 | `new` | **26/52 (50%)** | 52/52 | 52 | 0 | 52 | 42 |
+| 🟡 | `new` | **11/52 (21%)** | 52/52 | 52 | 0 | 52 | 42 |
 | 🔴 | `numeric` | **4/46 (9%)** | 46/46 | 46 | 0 | 46 | 136 |
 | 🟡 | `optional` | **41/79 (52%)** | 79/79 | 79 | 0 | 79 | 377 |
 | 🟢 | `ostream` | **43/53 (81%)** | 53/53 | 53 | 0 | 53 | 418 |
@@ -75,7 +75,7 @@ The pass percentage uses all tests except those explicitly marked libc++-specifi
 | 🔴 | `ranges` | **1/584 (0%)** | 584/584 | 584 | 0 | 584 | 284 |
 | 🟢 | `ratio` | **13/13 (100%)** | 13/13 | 13 | 0 | 13 | 91 |
 | 🔴 | `regex` | **14/171 (8%)** | 171/171 | 171 | 0 | 171 | 151 |
-| 🔴 | `scoped_allocator` | **5/32 (16%)** | 32/32 | 32 | 0 | 32 | 85 |
+| 🔴 | `scoped_allocator` | **4/32 (12%)** | 32/32 | 32 | 0 | 32 | 85 |
 | 🟡 | `set` | **23/69 (33%)** | 69/69 | 69 | 0 | 69 | 645 |
 | 🟡 | `shared_mutex` | **15/29 (52%)** | 29/29 | 29 | 0 | 29 | 114 |
 | 🔴 | `source_location` | **0/1 (0%)** | 1/1 | 1 | 0 | 1 | 45 |
@@ -88,7 +88,7 @@ The pass percentage uses all tests except those explicitly marked libc++-specifi
 | 🔴 | `string` | **5/227 (2%)** | 227/227 | 227 | 0 | 227 | 1179 |
 | 🟡 | `string_view` | **27/88 (31%)** | 88/88 | 88 | 0 | 88 | 351 |
 | 🟡 | `system_error` | **43/60 (72%)** | 60/60 | 60 | 0 | 60 | 19 |
-| 🟡 | `thread` | **97/318 (31%)** | 318/318 | 318 | 0 | 318 | 237 |
+| 🟡 | `thread` | **96/318 (30%)** | 318/318 | 318 | 0 | 318 | 237 |
 | 🟡 | `tuple` | **20/89 (22%)** | 89/89 | 89 | 0 | 89 | 357 |
 | 🟡 | `type_traits` | **88/149 (59%)** | 149/149 | 149 | 0 | 149 | 1101 |
 | 🟡 | `typeindex` | **7/9 (78%)** | 9/9 | 9 | 0 | 9 | 30 |
@@ -97,8 +97,8 @@ The pass percentage uses all tests except those explicitly marked libc++-specifi
 | 🟡 | `unordered_set` | **30/97 (31%)** | 97/97 | 97 | 0 | 97 | 588 |
 | 🔴 | `utility` | **29/154 (19%)** | 154/154 | 154 | 0 | 154 | 229 |
 | 🔴 | `valarray` | **7/207 (3%)** | 207/207 | 207 | 0 | 207 | 92 |
-| 🔴 | `variant` | **8/41 (20%)** | 41/41 | 41 | 0 | 41 | 444 |
-| 🟡 | `vector` | **57/76 (75%)** | 76/76 | 76 | 1 | 77 | 906 |
+| 🔴 | `variant` | **7/41 (17%)** | 41/41 | 41 | 0 | 41 | 444 |
+| 🟡 | `vector` | **39/76 (51%)** | 76/76 | 76 | 1 | 77 | 906 |
 | 🔴 | `version` | **0/78 (0%)** | 78/78 | 78 | 0 | 78 | 100 |
 
 ## Library comparison
@@ -107,8 +107,8 @@ Each tested case appears in exactly one of the first four result columns. Untest
 
 | header | both pass | libstdc++ only | psychicstd only | both fail | untested |
 |--------|----------:|----------------:|----------------:|----------:|---------:|
-| `algorithm` | 100 | 177 | 1 | 51 | 0 |
-| `any` | 10 | 8 | 0 | 0 | 0 |
+| `algorithm` | 101 | 179 | 1 | 48 | 0 |
+| `any` | 9 | 9 | 0 | 0 | 0 |
 | `array` | 27 | 3 | 2 | 8 | 0 |
 | `atomic` | 56 | 9 | 13 | 42 | 0 |
 | `bit` | 2 | 0 | 0 | 13 | 0 |
@@ -119,7 +119,7 @@ Each tested case appears in exactly one of the first four result columns. Untest
 | `cfenv` | 1 | 0 | 0 | 0 | 0 |
 | `cfloat` | 5 | 2 | 0 | 22 | 0 |
 | `charconv` | 1 | 2 | 0 | 5 | 0 |
-| `chrono` | 65 | 287 | 0 | 56 | 0 |
+| `chrono` | 65 | 286 | 0 | 57 | 0 |
 | `cinttypes` | 0 | 2 | 0 | 0 | 0 |
 | `ciso646` | 5 | 2 | 0 | 22 | 0 |
 | `climits` | 38 | 0 | 0 | 79 | 0 |
@@ -143,12 +143,12 @@ Each tested case appears in exactly one of the first four result columns. Untest
 | `cwctype` | 2 | 2 | 0 | 1 | 0 |
 | `deque` | 54 | 2 | 2 | 17 | 0 |
 | `exception` | 20 | 1 | 0 | 0 | 0 |
-| `filesystem` | 16 | 97 | 0 | 33 | 0 |
+| `filesystem` | 16 | 98 | 0 | 32 | 0 |
 | `forward_list` | 15 | 49 | 0 | 19 | 0 |
 | `fstream` | 19 | 14 | 0 | 32 | 0 |
-| `functional` | 62 | 61 | 0 | 42 | 0 |
-| `future` | 1 | 62 | 0 | 12 | 0 |
-| `initializer_list` | 4 | 0 | 0 | 0 | 0 |
+| `functional` | 68 | 54 | 0 | 43 | 0 |
+| `future` | 1 | 61 | 0 | 13 | 0 |
+| `initializer_list` | 3 | 0 | 0 | 1 | 0 |
 | `iomanip` | 80 | 43 | 0 | 6 | 0 |
 | `ios` | 40 | 50 | 0 | 1 | 0 |
 | `iosfwd` | 0 | 1 | 0 | 0 | 0 |
@@ -156,12 +156,12 @@ Each tested case appears in exactly one of the first four result columns. Untest
 | `istream` | 34 | 22 | 0 | 2 | 0 |
 | `iterator` | 62 | 143 | 0 | 88 | 0 |
 | `limits` | 36 | 0 | 0 | 1 | 0 |
-| `list` | 8 | 4 | 23 | 51 | 0 |
-| `locale` | 82 | 175 | 0 | 70 | 0 |
+| `list` | 8 | 4 | 22 | 52 | 0 |
+| `locale` | 82 | 176 | 0 | 69 | 0 |
 | `map` | 26 | 0 | 33 | 27 | 0 |
-| `memory` | 63 | 84 | 2 | 49 | 0 |
+| `memory` | 65 | 78 | 2 | 53 | 0 |
 | `mutex` | 35 | 52 | 0 | 21 | 0 |
-| `new` | 26 | 23 | 0 | 3 | 0 |
+| `new` | 11 | 5 | 0 | 36 | 0 |
 | `numeric` | 4 | 25 | 0 | 17 | 0 |
 | `optional` | 41 | 25 | 0 | 13 | 0 |
 | `ostream` | 43 | 9 | 0 | 1 | 0 |
@@ -170,7 +170,7 @@ Each tested case appears in exactly one of the first four result columns. Untest
 | `ranges` | 1 | 398 | 0 | 185 | 0 |
 | `ratio` | 13 | 0 | 0 | 0 | 0 |
 | `regex` | 14 | 132 | 0 | 25 | 0 |
-| `scoped_allocator` | 5 | 24 | 0 | 3 | 0 |
+| `scoped_allocator` | 4 | 25 | 0 | 3 | 0 |
 | `set` | 4 | 19 | 19 | 27 | 0 |
 | `shared_mutex` | 15 | 12 | 0 | 2 | 0 |
 | `source_location` | 0 | 1 | 0 | 0 | 0 |
@@ -183,15 +183,15 @@ Each tested case appears in exactly one of the first four result columns. Untest
 | `string` | 5 | 21 | 0 | 201 | 0 |
 | `string_view` | 27 | 52 | 0 | 9 | 0 |
 | `system_error` | 43 | 16 | 0 | 1 | 0 |
-| `thread` | 97 | 172 | 0 | 49 | 0 |
+| `thread` | 96 | 171 | 0 | 51 | 0 |
 | `tuple` | 20 | 54 | 0 | 15 | 0 |
 | `type_traits` | 88 | 46 | 0 | 15 | 0 |
 | `typeindex` | 7 | 1 | 0 | 1 | 0 |
-| `typeinfo` | 2 | 3 | 0 | 0 | 0 |
+| `typeinfo` | 2 | 2 | 0 | 1 | 0 |
 | `unordered_map` | 34 | 50 | 1 | 26 | 0 |
 | `unordered_set` | 30 | 43 | 0 | 24 | 0 |
-| `utility` | 28 | 99 | 1 | 26 | 0 |
+| `utility` | 28 | 103 | 1 | 22 | 0 |
 | `valarray` | 7 | 197 | 0 | 3 | 0 |
-| `variant` | 8 | 28 | 0 | 5 | 0 |
-| `vector` | 53 | 0 | 4 | 19 | 0 |
+| `variant` | 7 | 29 | 0 | 5 | 0 |
+| `vector` | 37 | 2 | 2 | 35 | 0 |
 | `version` | 0 | 0 | 0 | 78 | 0 |

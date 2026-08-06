@@ -76,6 +76,8 @@ int main() {
   std::function<int()> empty_function = null_function;
   psyassert(!empty_function);
   psyassert(empty_function.target<int (*)()>() == nullptr);
+  std::function<long()> converted_empty = empty_function;
+  psyassert(!converted_empty);
   int referred = 3;
   std::function<int&(int*)> reference = [](int* value) -> int& {
     return *value;
@@ -107,6 +109,12 @@ int main() {
       std::is_same_v<
           std::invoke_result_t<decltype(&member_target::value), member_target&>,
           int&>);
+  static_assert(std::is_invocable_v<decltype(&member_target::add),
+                                    std::shared_ptr<member_target>&, int>);
+  static_assert(
+      std::is_same_v<std::invoke_result_t<decltype(&member_target::value),
+                                          std::shared_ptr<member_target>&>,
+                     int&>);
   psyassert(std::mem_fn(&member_target::value)(target) == 4);
   psyassert(std::mem_fn(&member_target::add)(&target, 3) == 7);
 
@@ -115,6 +123,11 @@ int main() {
   const auto subtract = std::bind(std::minus<int>{}, std::placeholders::_2,
                                   std::placeholders::_1);
   psyassert(subtract(3, 8) == 5);
+  const auto bound_member =
+      std::bind(&member_target::add, shared_target, std::placeholders::_1);
+  static_assert(std::is_invocable_r_v<int, decltype(bound_member), int>);
+  std::function<int(int)> bound_member_function = bound_member;
+  psyassert(bound_member_function(3) == 7);
   const auto constrained =
       std::bind([](int value) { return value; }, std::placeholders::_1);
   static_assert(std::is_invocable_v<decltype(constrained), int>);

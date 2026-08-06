@@ -478,10 +478,13 @@ Psychicstd prioritizes getting real projects running (that is: compiling and pas
 tools/compliance.py
 ```
 
-It samples up to 15 libcxx test files per header, runs them against both the system STL (as a baseline filter) and psychicstd, and updates `compliance.md` with per-header results. Each header gets two indicators:
-
-- **Compliance** — what fraction of the sampled libcxx tests pass: 🟢 ≥80%, 🟡 compiles but fewer pass, 🔴 does not compile with psychicstd.
-- **Speed** — median compile time of the libcxx test files, psychicstd vs system: 🟢 >1.2×, 🟡 similar, 🔴 slower.
+It samples up to 15 libcxx test files per header, runs every selected test
+against both the system STL and psychicstd, and updates `compliance.md`. The
+summary table shows confirmed psychicstd passes across the complete relevant
+test corpus, along with sampling progress and explicitly ignored
+libc++-specific tests. A second table breaks tested cases into four groups:
+both libraries pass, only libstdc++ passes, only psychicstd passes, or both
+fail.
 
 See the results in [compliance.md](compliance.md).
 

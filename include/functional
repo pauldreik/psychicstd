@@ -23,6 +23,9 @@ struct identity {
 
 // function<R(Args...)> — type-erased callable
 template <typename> class function;
+template <typename T> inline constexpr bool __is_std_function_wrapper = false;
+template <typename Signature>
+inline constexpr bool __is_std_function_wrapper<function<Signature>> = true;
 
 template <typename R, typename... Args> class function<R(Args...)> {
   // Type ID by address.
@@ -52,8 +55,11 @@ template <typename R, typename... Args> class function<R(Args...)> {
 
   template <typename F> static base* make_target(F&& f) {
     using target_type = decay_t<F>;
-    if constexpr (is_pointer_v<target_type> ||
-                  is_member_pointer_v<target_type>) {
+    if constexpr (__is_std_function_wrapper<target_type>) {
+      if (!f)
+        return nullptr;
+    } else if constexpr (is_pointer_v<target_type> ||
+                         is_member_pointer_v<target_type>) {
       if (f == nullptr)
         return nullptr;
     }

@@ -1,0 +1,48 @@
+---
+name: Set up ccache
+description: Restore a path-stable, workload-specific compiler cache
+inputs:
+  project:
+    description: Workload name used to partition the cache
+    required: true
+  build_type:
+    description: Build type used to partition the cache
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Install ccache
+      shell: bash
+      run: sudo apt-get install -y ccache
+    - name: Select weekly cache generation
+      id: generation
+      shell: bash
+      env:
+        PROJECT: ${{ inputs.project }}
+        BUILD_TYPE: ${{ inputs.build_type }}
+      run: |
+        echo "prefix=psychicstd-ccache-v1-${RUNNER_OS}-${RUNNER_ARCH}-${PROJECT}-${BUILD_TYPE}-$(date -u +%G-%V)-" >> "$GITHUB_OUTPUT"
+    - name: Restore compiler cache
+      uses: actions/cache@v5
+      with:
+        path: ${{ runner.temp }}/psychicstd-ccache
+        key: ${{ steps.generation.outputs.prefix }}${{ github.sha }}
+        restore-keys: |
+          ${{ steps.generation.outputs.prefix }}
+    - name: Configure compiler cache
+      shell: bash
+      env:
+        CACHE_DIR: ${{ runner.temp }}/psychicstd-ccache
+        CACHE_TMP: ${{ runner.temp }}/psychicstd-ccache-tmp
+        WORK_ROOT: ${{ runner.temp }}/psychicstd-realworld
+      run: |
+        mkdir -p "$CACHE_DIR" "$CACHE_TMP" "$WORK_ROOT"
+        echo "/usr/lib/ccache" >> "$GITHUB_PATH"
+        echo "CCACHE_DIR=$CACHE_DIR" >> "$GITHUB_ENV"
+        echo "CCACHE_TEMPDIR=$CACHE_TMP" >> "$GITHUB_ENV"
+        echo "CCACHE_MAXSIZE=250M" >> "$GITHUB_ENV"
+        echo "PSYCHICSTD_REALWORLD_WORK_ROOT=$WORK_ROOT" >> "$GITHUB_ENV"
+        CCACHE_DIR="$CACHE_DIR" CCACHE_TEMPDIR="$CACHE_TMP" ccache --zero-stats
+    - name: Verify compiler wrapper
+      shell: bash
+      run: test "$(readlink -f "$(command -v c++)")" = "$(command -v ccache)"

@@ -115,9 +115,10 @@ public:
 
   any& operator=(const any& o) {
     if (this != &o) {
+      any copy(o);
       reset();
-      if (o.vt_)
-        o.vt_->copy(o, *this);
+      if (copy.vt_)
+        copy.vt_->move(copy, *this);
     }
     return *this;
   }
