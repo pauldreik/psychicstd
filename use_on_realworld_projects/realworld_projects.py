@@ -1573,6 +1573,8 @@ def _single_source_project(
     extra_cxxflags: tuple[str, ...] = (),
     run_binary: bool = True,
     prepare: Callable[[Path], None] | None = None,
+    expected_seconds: dict[str, int] | None = None,
+    comment: str = "",
 ) -> Project:
     """Compile small upstream examples/tests individually.
 
@@ -1616,8 +1618,9 @@ def _single_source_project(
     return Project(
         version=version,
         build=build,
-        expected_seconds={"debug": 10, "release": 10},
+        expected_seconds=expected_seconds or {"debug": 10, "release": 10},
         phases=("compile", "run tests") if run_binary else ("compile",),
+        comment=comment,
     )
 
 
@@ -1700,7 +1703,7 @@ def _cxxopts() -> Project:
     )
 
 
-def _pocketfft() -> Project:
+def _pocketfft(full: bool) -> Project:
     commit = "c90e55b3d529f8efa40ed01a20de22405f45fc65"
     return _single_source_project(
         "pocketfft",
@@ -1710,6 +1713,16 @@ def _pocketfft() -> Project:
         f"pocketfft-{commit}",
         ("pocketfft_demo.cc",),
         (".",),
+        run_binary=full,
+        expected_seconds=(
+            {"debug": 210, "release": 30} if full else {"debug": 10, "release": 10}
+        ),
+        comment=(
+            "Compiles and runs pocketfft's demonstration workload."
+            if full
+            else "Compiles pocketfft's demonstration program without running its "
+            "long FFT workload."
+        ),
     )
 
 
@@ -4040,7 +4053,8 @@ PROJECTS: dict[str, Project] = {
     "nlohmann-full": _nlohmann(full=True),
     "opencv": _opencv(full=False),
     "opencv-full": _opencv(full=True),
-    "pocketfft": _pocketfft(),
+    "pocketfft": _pocketfft(full=False),
+    "pocketfft-full": _pocketfft(full=True),
     "pybind11": _pybind11(full=False),
     "pybind11-full": _pybind11(full=True),
     "rapidjson": _rapidjson(),

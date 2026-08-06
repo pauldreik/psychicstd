@@ -296,9 +296,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+      - name: Install ccache
+        run: sudo apt-get install -y ccache
       - name: Build pocketfft with psychicstd
-        run: scripts/benchmark_realworld.py --check-only --project pocketfft --build-type
-          debug
+        run: >-
+          PATH=/usr/lib/ccache:$PATH scripts/benchmark_realworld.py
+          --check-only --project pocketfft
+          --build-type debug --enable-ccache
   pybind11:
     runs-on: ubuntu-latest
     steps:
