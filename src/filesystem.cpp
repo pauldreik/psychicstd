@@ -3,7 +3,9 @@
 #include <cstdlib>
 #include <dirent.h>
 #include <filesystem>
+#include <istream>
 #include <limits.h>
+#include <ostream>
 #include <sys/stat.h>
 #include <sys/statvfs.h>
 #include <unistd.h>
@@ -106,6 +108,74 @@ template <typename Output> Output decode_utf8(string_view input) {
   return result;
 }
 
+string_view next_path_component(string_view value, size_t& offset) noexcept {
+  if (offset == value.size()) {
+    offset = string_view::npos;
+    return {};
+  }
+  if (offset == 0 && value[0] == '/') {
+    while (offset < value.size() && value[offset] == '/')
+      ++offset;
+    if (offset == value.size())
+      offset = string_view::npos;
+    return "/";
+  }
+
+  size_t end = value.find('/', offset);
+  string_view component = value.substr(offset, end - offset);
+  if (end == string_view::npos) {
+    offset = string_view::npos;
+  } else {
+    while (end < value.size() && value[end] == '/')
+      ++end;
+    offset = end;
+  }
+  return component;
+}
+
+template <typename Char, typename Traits>
+basic_ostream<Char, Traits>& insert_path(basic_ostream<Char, Traits>& output,
+                                         basic_string<Char, Traits> value) {
+  basic_string<Char, Traits> quoted;
+  quoted.reserve(value.size() + 2);
+  quoted.push_back(Char('"'));
+  for (Char character : value) {
+    if (character == Char('"') || character == Char('\\'))
+      quoted.push_back(Char('\\'));
+    quoted.push_back(character);
+  }
+  quoted.push_back(Char('"'));
+  return output << quoted;
+}
+
+template <typename Char, typename Traits>
+basic_istream<Char, Traits>&
+extract_path_string(basic_istream<Char, Traits>& input,
+                    basic_string<Char, Traits>& value) {
+  input >> ws;
+  if (Traits::eq_int_type(input.peek(), Traits::eof()))
+    return input;
+  if (Traits::to_char_type(input.peek()) != Char('"'))
+    return input >> value;
+
+  (void)input.get();
+  value.clear();
+  bool escaped = false;
+  Char character;
+  while (input.get(character)) {
+    if (!escaped && character == Char('"'))
+      return input;
+    if (!escaped && character == Char('\\')) {
+      escaped = true;
+    } else {
+      value.push_back(character);
+      escaped = false;
+    }
+  }
+  input.setstate(ios_base::failbit);
+  return input;
+}
+
 } // namespace
 
 string path::from_wstring(wstring_view value) {
@@ -130,12 +200,124 @@ auto path::u32string() const -> std::u32string {
   return decode_utf8<std::u32string>(path_);
 }
 
+ostream& operator<<(ostream& output, const path& value) {
+  return insert_path(output, value.string());
+}
+
+istream& operator>>(istream& input, path& value) {
+  string decoded;
+  extract_path_string(input, decoded);
+  if (input)
+    value.assign(static_cast<string&&>(decoded));
+  return input;
+}
+
+wostream& operator<<(wostream& output, const path& value) {
+  return insert_path(output, value.wstring());
+}
+
+wistream& operator>>(wistream& input, path& value) {
+  wstring decoded;
+  extract_path_string(input, decoded);
+  if (input)
+    value = path(decoded);
+  return input;
+}
+
+path::iterator path::begin() const {
+  if (path_.empty())
+    return end();
+  return iterator(this, 0);
+}
+
+path::iterator path::end() const { return iterator(this, string::npos); }
+
+path::iterator::iterator(const path* owner, size_type offset) : owner_(owner) {
+  set_component(offset);
+}
+
+void path::iterator::set_component(size_type offset) {
+  offset_ = offset;
+  if (offset == string_type::npos) {
+    component_ = path();
+    return;
+  }
+
+  const string_type& value = owner_->path_;
+  if (offset == value.size()) {
+    component_ = path();
+  } else if (offset == 0 && value[0] == '/') {
+    component_ = "/";
+  } else {
+    size_type component_end = value.find('/', offset);
+    component_ = value.substr(offset, component_end - offset);
+  }
+}
+
+path::iterator& path::iterator::operator++() {
+  const string_type& value = owner_->path_;
+  if (offset_ == value.size()) {
+    set_component(string_type::npos);
+    return *this;
+  }
+
+  size_type next;
+  if (offset_ == 0 && value[0] == '/') {
+    next = 1;
+  } else {
+    next = value.find('/', offset_);
+    if (next == string_type::npos) {
+      set_component(string_type::npos);
+      return *this;
+    }
+  }
+
+  while (next < value.size() && value[next] == '/')
+    ++next;
+  if (next == value.size() && offset_ == 0 && value[0] == '/')
+    set_component(string_type::npos);
+  else
+    set_component(next);
+  return *this;
+}
+
+path::iterator& path::iterator::operator--() {
+  const string_type& value = owner_->path_;
+  if (offset_ == string_type::npos) {
+    if (value.back() == '/') {
+      size_type last = value.size();
+      while (last && value[last - 1] == '/')
+        --last;
+      set_component(last ? value.size() : 0);
+    } else {
+      size_type start = value.size();
+      while (start && value[start - 1] != '/')
+        --start;
+      set_component(start);
+    }
+    return *this;
+  }
+
+  size_type previous_end = offset_;
+  while (previous_end && value[previous_end - 1] == '/')
+    --previous_end;
+  if (!previous_end) {
+    set_component(0);
+    return *this;
+  }
+  size_type previous = previous_end;
+  while (previous && value[previous - 1] != '/')
+    --previous;
+  set_component(previous);
+  return *this;
+}
+
 path path::lexically_normal() const {
   if (path_.empty())
     return {};
 
   const bool absolute = path_[0] == '/';
-  const bool trailing_separator = path_.back() == '/';
+  bool trailing_separator = path_.back() == '/';
   vector<std::string> parts;
   for (size_t begin = 0; begin < path_.size();) {
     while (begin < path_.size() && path_[begin] == '/')
@@ -145,10 +327,15 @@ path path::lexically_normal() const {
       end = path_.size();
     std::string part = path_.substr(begin, end - begin);
     if (!part.empty() && part != ".") {
-      if (part == ".." && !parts.empty() && parts.back() != "..")
+      if (part == ".." && !parts.empty() && parts.back() != "..") {
         parts.pop_back();
-      else if (part != ".." || !absolute)
+        if (end == path_.size())
+          trailing_separator = true;
+      } else if (part != ".." || !absolute) {
         parts.push_back(static_cast<std::string&&>(part));
+      }
+    } else if (part == "." && end == path_.size()) {
+      trailing_separator = true;
     }
     begin = end + 1;
   }
@@ -167,16 +354,129 @@ path path::lexically_normal() const {
 }
 
 path path::lexically_relative(const path& base) const {
-  if (path_ == base.path_)
-    return ".";
-  if (path_.size() <= base.path_.size() ||
-      path_.compare(0, base.path_.size(), base.path_) != 0 ||
-      path_[base.path_.size()] != '/')
+  if (is_absolute() != base.is_absolute())
     return {};
-  auto pos = base.path_.size();
-  while (pos < path_.size() && path_[pos] == '/')
-    ++pos;
-  return path_.substr(pos);
+
+  vector<std::string> destination;
+  vector<std::string> origin;
+  for (const path& component : *this) {
+    if (component.empty())
+      destination.emplace_back();
+    else if (component != "/" && component != ".")
+      destination.push_back(component.string());
+  }
+  for (const path& component : base) {
+    if (!component.empty() && component != "/" && component != ".")
+      origin.push_back(component.string());
+  }
+
+  size_t common = 0;
+  while (common < destination.size() && common < origin.size() &&
+         destination[common] == origin[common])
+    ++common;
+
+  ptrdiff_t parents = 0;
+  for (size_t i = common; i < origin.size(); ++i)
+    parents += origin[i] == ".." ? -1 : 1;
+  if (parents < 0)
+    return {};
+
+  std::string result;
+  auto append = [&result](string_view component) {
+    if (!result.empty())
+      result += '/';
+    result += component;
+  };
+  while (parents--)
+    append("..");
+  for (size_t i = common; i < destination.size(); ++i)
+    append(destination[i]);
+  return result.empty() ? path(".") : path(static_cast<std::string&&>(result));
+}
+
+path path::lexically_proximate(const path& base) const {
+  path relative = lexically_relative(base);
+  return relative.empty() ? *this : relative;
+}
+
+path path::relative_path() const {
+  if (!is_absolute())
+    return *this;
+  size_t start = 0;
+  while (start < path_.size() && path_[start] == '/')
+    ++start;
+  return path_.substr(start);
+}
+
+path path::parent_path() const {
+  if (path_.empty())
+    return {};
+  size_t end = path_.size();
+  while (end > 1 && path_[end - 1] == '/')
+    --end;
+  if (end != path_.size())
+    return path_.substr(0, end);
+  if (end == 1 && path_[0] == '/')
+    return "/";
+  size_t separator = path_.rfind('/', end - 1);
+  if (separator == string::npos)
+    return {};
+  while (separator && path_[separator - 1] == '/')
+    --separator;
+  if (separator == 0)
+    return "/";
+  return path_.substr(0, separator);
+}
+
+bool path::has_relative_path() const noexcept {
+  size_t start = 0;
+  while (start < path_.size() && path_[start] == '/')
+    ++start;
+  return start != path_.size();
+}
+
+bool path::has_stem() const { return !stem().empty(); }
+
+bool path::has_extension() const { return !extension().empty(); }
+
+int path::compare(const path& other) const noexcept {
+  size_t left = path_.empty() ? string_view::npos : 0;
+  size_t right = other.path_.empty() ? string_view::npos : 0;
+  while (left != string_view::npos && right != string_view::npos) {
+    string_view left_component = next_path_component(path_, left);
+    string_view right_component = next_path_component(other.path_, right);
+    int difference = left_component.compare(right_component);
+    if (difference)
+      return difference;
+  }
+  return left == string_view::npos ? (right == string_view::npos ? 0 : -1) : 1;
+}
+
+path& path::remove_filename() {
+  if (path_.empty() || path_.back() == '/')
+    return *this;
+  size_t separator = path_.find_last_of('/');
+  path_.resize(separator == string::npos ? 0 : separator + 1);
+  return *this;
+}
+
+path& path::replace_filename(const path& replacement) {
+  remove_filename();
+  return *this /= replacement;
+}
+
+size_t hash_value(const path& value) noexcept {
+  size_t result = static_cast<size_t>(1469598103934665603ull);
+  size_t offset = value.empty() ? string_view::npos : 0;
+  while (offset != string_view::npos) {
+    for (unsigned char byte : next_path_component(value.native(), offset)) {
+      result ^= byte;
+      result *= static_cast<size_t>(1099511628211ull);
+    }
+    result ^= 0xff;
+    result *= static_cast<size_t>(1099511628211ull);
+  }
+  return result;
 }
 
 path& path::replace_extension(const path& replacement) {
