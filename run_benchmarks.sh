@@ -14,7 +14,7 @@ case $1 in
     cmake_parallel=()
     ;;
   FULL)
-    realworld_args=(--build-type both --max-reps 9 --time-budget 6h)
+    realworld_args=(--build-type both --max-reps 9 --time-budget 7h)
     benchmark_args=(--reps 10)
     startup_samples=(BENCH_N=300 BENCH_REPS=3)
     cmake_parallel=()
