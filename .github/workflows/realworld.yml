@@ -168,21 +168,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - name: Install Markdown formatter
-        run: pipx install mdformat
-      - name: Install ninja
-        run: sudo apt-get install -y ninja-build
-      - name: Build nlohmann JSON examples with psychicstd
+      - name: Install dependencies
+        run: sudo apt-get install -y ccache ninja-build
+      - name: Build nlohmann JSON tests with psychicstd
         run: >-
-          scripts/benchmark_realworld.py --project nlohmann
-          --build-type debug --reps 1
-          --output use_on_realworld_projects/nlohmann_speed_report.md
-      - name: Upload speed report
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: nlohmann-speed-report
-          path: use_on_realworld_projects/nlohmann_speed_report.md
+          PATH=/usr/lib/ccache:$PATH scripts/benchmark_realworld.py
+          --check-only --project nlohmann
+          --build-type debug --enable-ccache
   opencv:
     runs-on: ubuntu-latest
     timeout-minutes: 30

@@ -1447,7 +1447,7 @@ def _fmt() -> Project:
 _NLOHMANN_TEST_EXCLUDE = "unicode|cbor|msgpack|algorithms|cmake_fetch|cmake_import"
 
 
-def _nlohmann() -> Project:
+def _nlohmann(full: bool) -> Project:
     version = "3.12.0"
     url = f"https://github.com/nlohmann/json/archive/refs/tags/v{version}.tar.gz"
     checksum = "4b92eb0c06d10683f7447ce9406cb97cd4b453be18d7279320f7b2f025c10187"
@@ -1486,51 +1486,75 @@ def _nlohmann() -> Project:
             configure_ms = _timed(configure, src, env)
             compile_ms = _timed(["cmake", "--build", "build", jobs], src, env)
 
-            # Compile (but don't run) the 217 documented API examples.
-            include_dir = src / "include"
-            example_cmds = []
-            for cpp in sorted(
-                (src / "docs" / "mkdocs" / "docs" / "examples").glob("*.cpp")
-            ):
-                binary = work / (cpp.stem + "_bin")
-                example_cmds.append(
-                    [tc.cxx, *tc.cxxflags.split(), "-I", str(include_dir), str(cpp)]
-                    + (tc.ldflags.split() if tc.ldflags else [])
-                    + (tc.libs.split() if tc.libs else [])
-                    + ["-o", str(binary)]
-                )
-            examples_ms = _timed_many(example_cmds, src, env, tc.jobs)
-            run_tests_ms = _timed(
-                [
-                    "ctest",
-                    "--test-dir",
-                    "build",
-                    "--output-on-failure",
-                    "-E",
-                    _NLOHMANN_TEST_EXCLUDE,
-                    jobs,
-                ],
-                src,
-                env,
-            )
-
-            return {
+            result = {
                 "configure": configure_ms,
                 "compile": compile_ms,
-                "run tests": run_tests_ms,
-                "examples": examples_ms,
             }
+            if full:
+                result["run tests"] = _timed(
+                    [
+                        "ctest",
+                        "--test-dir",
+                        "build",
+                        "--output-on-failure",
+                        "-E",
+                        _NLOHMANN_TEST_EXCLUDE,
+                        jobs,
+                    ],
+                    src,
+                    env,
+                )
+
+                # Compile (but don't run) the 217 documented API examples.
+                include_dir = src / "include"
+                example_cmds = []
+                for cpp in sorted(
+                    (src / "docs" / "mkdocs" / "docs" / "examples").glob("*.cpp")
+                ):
+                    binary = work / (cpp.stem + "_bin")
+                    example_cmds.append(
+                        [
+                            tc.cxx,
+                            *tc.cxxflags.split(),
+                            "-I",
+                            str(include_dir),
+                            str(cpp),
+                        ]
+                        + (tc.ldflags.split() if tc.ldflags else [])
+                        + (tc.libs.split() if tc.libs else [])
+                        + ["-o", str(binary)]
+                    )
+                result["examples"] = _timed_many(example_cmds, src, env, tc.jobs)
+            return result
 
     return Project(
-        version=version,
+        version=f"{version} (full)" if full else version,
         build=build,
-        expected_seconds={"debug": 57, "release": 60},
-        phases=("configure", "compile", "run tests", "examples"),
-        comments={
-            "run tests": "unicode/cbor/msgpack (slow), algorithms (unspecified "
-            "tail order), cmake_fetch/cmake_import (not applicable) excluded",
-            "examples": "217 documented API examples, compiled but not run",
-        },
+        expected_seconds=(
+            {"debug": 57, "release": 60} if full else {"debug": 20, "release": 35}
+        ),
+        phases=(
+            ("configure", "compile", "run tests", "examples")
+            if full
+            else ("configure", "compile")
+        ),
+        comment=(
+            "Builds and runs nlohmann JSON's upstream tests, then compiles its "
+            "217 documented API examples."
+            if full
+            else "Compiles nlohmann JSON's complete upstream test suite without "
+            "running it."
+        ),
+        comments=(
+            {
+                "run tests": "unicode/cbor/msgpack (slow), algorithms "
+                "(unspecified tail order), cmake_fetch/cmake_import (not "
+                "applicable) excluded",
+                "examples": "217 documented API examples, compiled but not run",
+            }
+            if full
+            else {}
+        ),
     )
 
 
@@ -4012,7 +4036,8 @@ PROJECTS: dict[str, Project] = {
     "libcamera-full": _libcamera(full=True),
     "libtorrent": _libtorrent(),
     "llama.cpp": _llama_cpp(),
-    "nlohmann": _nlohmann(),
+    "nlohmann": _nlohmann(full=False),
+    "nlohmann-full": _nlohmann(full=True),
     "opencv": _opencv(full=False),
     "opencv-full": _opencv(full=True),
     "pocketfft": _pocketfft(),
