@@ -76,6 +76,8 @@ int main() {
   std::function<int()> empty_function = null_function;
   psyassert(!empty_function);
   psyassert(empty_function.target<int (*)()>() == nullptr);
+  std::function<long()> converted_empty = empty_function;
+  psyassert(!converted_empty);
   int referred = 3;
   std::function<int&(int*)> reference = [](int* value) -> int& {
     return *value;
