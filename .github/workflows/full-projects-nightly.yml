@@ -151,3 +151,26 @@ jobs:
           --check-only --project libcamera-full
           --build-type debug
           --enable-ccache
+  libtorrent-full:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup-realworld-ccache
+        with:
+          project: libtorrent-full
+          build_type: debug
+      - name: Install dependencies
+        run: >-
+          sudo apt-get install -y
+          libboost-dev
+          libssl-dev
+          ninja-build
+          python3
+          zlib1g-dev
+      - name: Build and test libtorrent's full suite with psychicstd
+        run: >-
+          scripts/benchmark_realworld.py
+          --check-only --project libtorrent-full
+          --build-type debug
+          --enable-ccache
