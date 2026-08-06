@@ -215,6 +215,8 @@ def main() -> int:
                     args.enable_ccache,
                     jobs,
                 )
+        if args.enable_ccache:
+            subprocess.run(["ccache", "--show-stats"], check=True)
         return 0
 
     results = {}

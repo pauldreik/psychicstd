@@ -22,13 +22,45 @@ import tarfile
 import tempfile
 import time
 import urllib.request
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
 
 RW_DIR = Path(__file__).resolve().parent
 PHASES = ("configure", "compile", "run tests")
+
+
+@contextmanager
+def _temporary_directory(
+    prefix: str, ignore_cleanup_errors: bool = False
+) -> Iterator[str]:
+    """Use a stable CI work path so ccache can reuse debug compilations."""
+    stable_root = os.environ.get("PSYCHICSTD_REALWORLD_WORK_ROOT")
+    if stable_root is None:
+        with tempfile.TemporaryDirectory(
+            prefix=prefix, ignore_cleanup_errors=ignore_cleanup_errors
+        ) as work_dir:
+            yield work_dir
+        return
+
+    root = Path(stable_root)
+    name = prefix.rstrip("-")
+    if (
+        not root.is_absolute()
+        or not name
+        or name in (".", "..")
+        or Path(prefix).name != prefix
+    ):
+        raise ValueError("invalid stable real-world work directory")
+    work = root / name
+    shutil.rmtree(work, ignore_errors=True)
+    work.mkdir(parents=True)
+    try:
+        yield str(work)
+    finally:
+        shutil.rmtree(work, ignore_errors=ignore_cleanup_errors)
 
 
 @dataclass(frozen=True)
@@ -213,7 +245,7 @@ def _catch2() -> Project:
         tarball = RW_DIR / f"Catch2-v{version}.tar.gz"
         _fetch(url, tarball, checksum)
 
-        with tempfile.TemporaryDirectory(
+        with _temporary_directory(
             prefix="rw-catch2-", ignore_cleanup_errors=True
         ) as work_dir:
             work = Path(work_dir)
@@ -288,7 +320,7 @@ def _abseil(full: bool) -> Project:
         googletest_tarball = RW_DIR / f"googletest-{googletest_version}.tar.gz"
         _fetch(googletest_url, googletest_tarball, googletest_checksum)
 
-        with tempfile.TemporaryDirectory(
+        with _temporary_directory(
             prefix="rw-abseil-", ignore_cleanup_errors=True
         ) as work_dir:
             work = Path(work_dir)
@@ -690,7 +722,7 @@ def _googletest(full: bool) -> Project:
         tarball = RW_DIR / f"googletest-{version}.tar.gz"
         _fetch(url, tarball, checksum)
 
-        with tempfile.TemporaryDirectory(
+        with _temporary_directory(
             prefix="rw-googletest-full-" if full else "rw-googletest-",
             ignore_cleanup_errors=True,
         ) as work_dir:
@@ -757,7 +789,7 @@ def _godot() -> Project:
         tarball = RW_DIR / f"godot-{version}.tar.gz"
         _fetch(url, tarball, checksum)
 
-        with tempfile.TemporaryDirectory(
+        with _temporary_directory(
             prefix="rw-godot-", ignore_cleanup_errors=True
         ) as work_dir:
             work = Path(work_dir)
@@ -828,7 +860,7 @@ def _cmake(full: bool) -> Project:
         tarball = RW_DIR / f"cmake-{version}.tar.gz"
         _fetch(url, tarball, checksum)
 
-        with tempfile.TemporaryDirectory(
+        with _temporary_directory(
             prefix="rw-cmake-full-" if full else "rw-cmake-",
             ignore_cleanup_errors=True,
         ) as work_dir:
@@ -963,7 +995,7 @@ def _cppcheck() -> Project:
         tarball = RW_DIR / f"cppcheck-{version}.tar.gz"
         _fetch(url, tarball, checksum)
 
-        with tempfile.TemporaryDirectory(
+        with _temporary_directory(
             prefix="rw-cppcheck-", ignore_cleanup_errors=True
         ) as work_dir:
             work = Path(work_dir)
@@ -1042,7 +1074,7 @@ def _ctre() -> Project:
         tarball = RW_DIR / f"ctre-v{version}.tar.gz"
         _fetch(url, tarball, checksum)
 
-        with tempfile.TemporaryDirectory(
+        with _temporary_directory(
             prefix="rw-ctre-", ignore_cleanup_errors=True
         ) as work_dir:
             work = Path(work_dir)
@@ -1115,7 +1147,7 @@ def _eigen(full: bool) -> Project:
         tarball = RW_DIR / f"eigen-{version}.tar.gz"
         _fetch(url, tarball, checksum)
 
-        with tempfile.TemporaryDirectory(
+        with _temporary_directory(
             prefix="rw-eigen-full-" if full else "rw-eigen-",
             ignore_cleanup_errors=True,
         ) as work_dir:
@@ -1298,7 +1330,7 @@ def _flatbuffers() -> Project:
         tarball = RW_DIR / f"flatbuffers-v{version}.tar.gz"
         _fetch(url, tarball, checksum)
 
-        with tempfile.TemporaryDirectory(
+        with _temporary_directory(
             prefix="rw-flatbuffers-", ignore_cleanup_errors=True
         ) as work_dir:
             work = Path(work_dir)
@@ -1369,7 +1401,7 @@ def _fmt() -> Project:
         tarball = RW_DIR / f"fmt-{version}.tar.gz"
         _fetch(url, tarball, checksum)
 
-        with tempfile.TemporaryDirectory(
+        with _temporary_directory(
             prefix="rw-fmt-", ignore_cleanup_errors=True
         ) as work_dir:
             work = Path(work_dir)
@@ -1456,7 +1488,7 @@ def _nlohmann(full: bool) -> Project:
         tarball = RW_DIR / f"nlohmann-{version}.tar.gz"
         _fetch(url, tarball, checksum)
 
-        with tempfile.TemporaryDirectory(
+        with _temporary_directory(
             prefix="rw-nlohmann-", ignore_cleanup_errors=True
         ) as work_dir:
             work = Path(work_dir)
@@ -1585,7 +1617,7 @@ def _single_source_project(
     def build(tc: Toolchain) -> dict[str, float]:
         tarball = RW_DIR / f"{name}-{version}.tar.gz"
         _fetch(url, tarball, checksum)
-        with tempfile.TemporaryDirectory(prefix=f"rw-{name}-") as work_dir:
+        with _temporary_directory(prefix=f"rw-{name}-") as work_dir:
             work = Path(work_dir)
             with tarfile.open(tarball) as archive:
                 archive.extractall(work)
@@ -1747,7 +1779,7 @@ def _rapidjson() -> Project:
         gtest_tarball = RW_DIR / f"googletest-release-{gtest_version}.tar.gz"
         _fetch(gtest_url, gtest_tarball, gtest_checksum)
 
-        with tempfile.TemporaryDirectory(
+        with _temporary_directory(
             prefix="rw-rapidjson-", ignore_cleanup_errors=True
         ) as work_dir:
             work = Path(work_dir)
@@ -1870,7 +1902,7 @@ def _react_native() -> Project:
         googletest_tarball = RW_DIR / f"googletest-{googletest_version}.tar.gz"
         _fetch(googletest_url, googletest_tarball, googletest_checksum)
 
-        with tempfile.TemporaryDirectory(
+        with _temporary_directory(
             prefix="rw-react-native-", ignore_cleanup_errors=True
         ) as work_dir:
             work = Path(work_dir)
@@ -2008,7 +2040,7 @@ def _rdfind() -> Project:
         tarball = RW_DIR / tarball_name
         _fetch(url, tarball, checksum)
 
-        with tempfile.TemporaryDirectory(
+        with _temporary_directory(
             prefix="rw-rdfind-", ignore_cleanup_errors=True
         ) as work_dir:
             work = Path(work_dir)
@@ -2061,7 +2093,7 @@ def _simdutf(strict: bool, strict_label: str) -> Project:
         tarball = RW_DIR / f"simdutf-{commithash}.tar.gz"
         _fetch(url, tarball, checksum)
 
-        with tempfile.TemporaryDirectory(
+        with _temporary_directory(
             prefix="rw-simdutf-", ignore_cleanup_errors=True
         ) as work_dir:
             work = Path(work_dir)
@@ -2140,7 +2172,7 @@ def _tesseract() -> Project:
         tarball = RW_DIR / f"tesseract-{version}.tar.gz"
         _fetch(url, tarball, checksum)
 
-        with tempfile.TemporaryDirectory(
+        with _temporary_directory(
             prefix="rw-tesseract-", ignore_cleanup_errors=True
         ) as work_dir:
             work = Path(work_dir)
@@ -2230,7 +2262,7 @@ def _tensorflow() -> Project:
         _fetch(bazel_url, bazel, bazel_checksum)
         bazel.chmod(0o755)
 
-        with tempfile.TemporaryDirectory(
+        with _temporary_directory(
             prefix="rw-tensorflow-", ignore_cleanup_errors=True
         ) as work_dir:
             work = Path(work_dir)
@@ -2361,7 +2393,7 @@ def _electron() -> Project:
         tarball = RW_DIR / f"electron-v{version}.tar.gz"
         _fetch(url, tarball, checksum)
 
-        with tempfile.TemporaryDirectory(
+        with _temporary_directory(
             prefix="rw-electron-", ignore_cleanup_errors=True
         ) as work_dir:
             work = Path(work_dir)
@@ -2554,7 +2586,7 @@ def _boost_asio(full: bool) -> Project:
         tarball = RW_DIR / f"boost_{version.replace('.', '_')}.tar.gz"
         _fetch(url, tarball, checksum)
 
-        with tempfile.TemporaryDirectory(
+        with _temporary_directory(
             prefix="rw-boost-asio-full-" if full else "rw-boost-asio-",
             ignore_cleanup_errors=True,
         ) as work_dir:
@@ -2706,7 +2738,7 @@ def _boost_test(full: bool) -> Project:
         tarball = RW_DIR / f"boost_{version.replace('.', '_')}.tar.gz"
         _fetch(url, tarball, checksum)
 
-        with tempfile.TemporaryDirectory(
+        with _temporary_directory(
             prefix="rw-boost-test-full-" if full else "rw-boost-test-",
             ignore_cleanup_errors=True,
         ) as work_dir:
@@ -2834,7 +2866,7 @@ def _bitcoin(full: bool) -> Project:
         tarball = RW_DIR / f"bitcoin-v{version}.tar.gz"
         _fetch(url, tarball, checksum)
 
-        with tempfile.TemporaryDirectory(
+        with _temporary_directory(
             prefix="rw-bitcoin-full-" if full else "rw-bitcoin-",
             ignore_cleanup_errors=True,
         ) as work_dir:
@@ -2993,7 +3025,7 @@ def _libtorrent() -> Project:
         _fetch(url, tarball, checksum)
         _fetch(try_signal_url, try_signal_tarball, try_signal_checksum)
 
-        with tempfile.TemporaryDirectory(
+        with _temporary_directory(
             prefix="rw-libtorrent-", ignore_cleanup_errors=True
         ) as work_dir:
             work = Path(work_dir)
@@ -3108,7 +3140,7 @@ def _llama_cpp() -> Project:
         tarball = RW_DIR / f"llama.cpp-{version}.tar.gz"
         _fetch(url, tarball, checksum)
 
-        with tempfile.TemporaryDirectory(
+        with _temporary_directory(
             prefix="rw-llama-cpp-", ignore_cleanup_errors=True
         ) as work_dir:
             work = Path(work_dir)
@@ -3204,7 +3236,7 @@ def _harfbuzz() -> Project:
         tarball = RW_DIR / f"harfbuzz-{version}.tar.gz"
         _fetch(url, tarball, checksum)
 
-        with tempfile.TemporaryDirectory(
+        with _temporary_directory(
             prefix="rw-harfbuzz-", ignore_cleanup_errors=True
         ) as work_dir:
             work = Path(work_dir)
@@ -3271,7 +3303,7 @@ def _libcamera(full: bool) -> Project:
         tarball = RW_DIR / f"libcamera-v{version}.tar.gz"
         _fetch(url, tarball, checksum)
 
-        with tempfile.TemporaryDirectory(
+        with _temporary_directory(
             prefix="rw-libcamera-full-" if full else "rw-libcamera-",
             ignore_cleanup_errors=True,
         ) as work_dir:
@@ -3440,7 +3472,7 @@ def _opencv(full: bool) -> Project:
         extra_tarball = RW_DIR / f"opencv_extra-{version}.tar.gz"
         _fetch(extra_url, extra_tarball, extra_checksum)
 
-        with tempfile.TemporaryDirectory(
+        with _temporary_directory(
             prefix="rw-opencv-", ignore_cleanup_errors=True
         ) as work_dir:
             work = Path(work_dir)
@@ -3563,7 +3595,7 @@ def _pybind11(full: bool) -> Project:
         tarball = RW_DIR / f"pybind11-v{version}.tar.gz"
         _fetch(url, tarball, checksum)
 
-        with tempfile.TemporaryDirectory(
+        with _temporary_directory(
             prefix="rw-pybind11-full-" if full else "rw-pybind11-",
             ignore_cleanup_errors=True,
         ) as work_dir:
@@ -3712,7 +3744,7 @@ def _strong_type() -> Project:
         _fetch(url, tarball, checksum)
         _fetch(catch_url, catch_header, catch_checksum)
 
-        with tempfile.TemporaryDirectory(
+        with _temporary_directory(
             prefix="rw-strong-type-", ignore_cleanup_errors=True
         ) as work_dir:
             work = Path(work_dir)
@@ -3806,7 +3838,7 @@ def _ssvstart() -> Project:
         for url, tarball, checksum in archives:
             _fetch(url, tarball, checksum)
 
-        with tempfile.TemporaryDirectory(
+        with _temporary_directory(
             prefix="rw-ssvstart-", ignore_cleanup_errors=True
         ) as work_dir:
             work = Path(work_dir)
@@ -3871,7 +3903,7 @@ def _trompeloeil() -> Project:
         _fetch(url, tarball, checksum)
         _fetch(catch_url, catch_header, catch_checksum)
 
-        with tempfile.TemporaryDirectory(
+        with _temporary_directory(
             prefix="rw-trompeloeil-", ignore_cleanup_errors=True
         ) as work_dir:
             work = Path(work_dir)
@@ -3953,7 +3985,7 @@ def _zancle() -> Project:
         tarball = RW_DIR / f"zancle-{version}.tar.gz"
         _fetch(url, tarball, checksum)
 
-        with tempfile.TemporaryDirectory(
+        with _temporary_directory(
             prefix="rw-zancle-", ignore_cleanup_errors=True
         ) as work_dir:
             work = Path(work_dir)
