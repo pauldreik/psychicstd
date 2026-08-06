@@ -1729,9 +1729,19 @@ def _cxxopts() -> Project:
         "cxxopts-3.3.1",
         ("src/example.cpp",),
         ("include",),
-        ("--help",),
+        (
+            "--apple",
+            "--int",
+            "42",
+            "--float",
+            "1.5",
+            "input.txt",
+            "output.txt",
+            "extra",
+        ),
         ("-DCXXOPTS_NO_REGEX",),
-        run_binary=False,
+        comment="Builds and runs cxxopts' upstream example with boolean, numeric, "
+        "positional, and unmatched arguments.",
     )
 
 
