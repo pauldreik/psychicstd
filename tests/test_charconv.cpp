@@ -3,6 +3,9 @@
 #include <cstdint>
 #include <limits>
 #include <string_view>
+#include <type_traits>
+
+static_assert(std::is_same_v<std::make_unsigned_t<int>, unsigned int>);
 
 template <typename T> void expect_value(std::string_view input, T expected) {
   T value{};
