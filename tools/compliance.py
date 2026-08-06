@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
 """
-Generates compliance.md showing per-header libcxx conformance and compile speed.
+Generates compliance.md showing per-header libcxx conformance.
 
 For each header:
   - Conformance: run uncached libcxx tests (up to N_SAMPLE new per run)
-  - Speed: median compile time of one libcxx test file, psychicstd vs system
-
 Conformance is shown as x/y/z/w where:
   x = psychicstd passes
   y = system STL passes (from all tests run so far)
@@ -26,11 +24,9 @@ import os
 import random
 import re
 import shlex
-import statistics
 import subprocess
 import sys
 import tempfile
-import time
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from pathlib import Path
@@ -45,11 +41,8 @@ LIBCXX_TEST = LLVM_ROOT / "libcxx" / "test"
 SUPPORT_DIR = LIBCXX_TEST / "support"
 
 N_SAMPLE = 15  # new tests to add per header per run (default)
-N_BENCH = 1  # compile runs for timing
 N_WORKERS = os.cpu_count() or 1
 SEED = 42
-SPEED_GREEN = 1.2
-SPEED_RED = 0.8
 
 CXX = os.environ.get("CXX", "c++")
 CXX_CMD = shlex.split(CXX)
@@ -161,22 +154,27 @@ def _tokens(line: str) -> list[str]:
     return [t.strip() for t in re.split(r"[,\s]+", line) if t.strip()]
 
 
-def should_skip(path: Path) -> bool:
+def classify_test(path: Path) -> str:
+    """Return eligible, libcpp-specific, or irrelevant for this test driver."""
     stem = path.stem
     if stem.endswith((".verify", ".fail")):
-        return True
+        return "irrelevant"
     if path.suffix != ".cpp":
-        return True
+        return "irrelevant"
     if not (stem.endswith((".pass", ".compile.pass"))):
-        return True
+        return "irrelevant"
     text = path.read_text(errors="replace")
     for m in _RE_UNSUPPORTED.finditer(text):
         if "c++23" in _tokens(m.group(1)):
-            return True
+            return "irrelevant"
     for m in _RE_REQUIRES.finditer(text):
         if any(t.startswith("libcpp-") for t in _tokens(m.group(1))):
-            return True
-    return False
+            return "libcpp-specific"
+    return "eligible"
+
+
+def should_skip(path: Path) -> bool:
+    return classify_test(path) != "eligible"
 
 
 def extra_flags(text: str) -> list[str]:
@@ -242,74 +240,87 @@ def try_compile_run(
     xflags: list[str],
     link_inputs: list[str],
     run_exe: bool,
-) -> tuple[str, float | None]:
-    """Returns ('pass'/'rfail'/'cfail', compile_ms or None if compile failed)."""
+) -> str:
+    """Compile, link and optionally run a test; return pass/rfail/cfail."""
     with tempfile.NamedTemporaryFile(suffix="", delete=False, dir="/tmp") as f:
         exe = f.name
+    obj = f"{exe}.o"
     try:
-        cmd = [
+        compile_cmd = [
             *CXX_CMD,
             "-std=c++23",
             *flags,
             *xflags,
             f"-I{SUPPORT_DIR}",
+            "-c",
             str(src),
-            *link_inputs,
             "-o",
-            exe,
+            obj,
         ]
-        t0 = time.perf_counter()
         try:
             r = subprocess.run(
-                cmd, capture_output=True, timeout=TEST_TIMEOUT, check=False
+                compile_cmd, capture_output=True, timeout=TEST_TIMEOUT, check=False
             )
         except (subprocess.TimeoutExpired, FileNotFoundError):
-            return "cfail", None
-        compile_ms = (time.perf_counter() - t0) * 1000
+            return "cfail"
         if r.returncode != 0:
-            return "cfail", None
+            return "cfail"
+
+        link_cmd = [*CXX_CMD, *flags, *xflags, obj, *link_inputs, "-o", exe]
+        try:
+            r = subprocess.run(
+                link_cmd, capture_output=True, timeout=TEST_TIMEOUT, check=False
+            )
+        except (subprocess.TimeoutExpired, FileNotFoundError):
+            return "cfail"
+        if r.returncode != 0:
+            return "cfail"
         if not run_exe:
-            return "pass", compile_ms
+            return "pass"
         env = {**os.environ, **SAN_ENV} if SANITIZE else None
         ok, _ = run_cmd([exe], timeout=TEST_TIMEOUT, env=env)
-        return ("pass" if ok else "rfail"), compile_ms
+        return "pass" if ok else "rfail"
     finally:
         try:
             os.unlink(exe)
         except OSError:
             pass
+        try:
+            os.unlink(obj)
+        except OSError:
+            pass
 
 
-def collect_eligible(dirs: list[str]) -> list[Path]:
+def collect_tests(dirs: list[str]) -> tuple[list[Path], int]:
     tests: list[Path] = []
     for d in dirs:
         base = LIBCXX_TEST / "std" / d
         if base.exists():
             tests.extend(base.rglob("*.cpp"))
-    return sorted(p for p in set(tests) if not should_skip(p))
+    classified = [(path, classify_test(path)) for path in set(tests)]
+    eligible = sorted(path for path, kind in classified if kind == "eligible")
+    ignored = sum(kind == "libcpp-specific" for _, kind in classified)
+    return eligible, ignored
 
 
-def speed_emoji(ratio: float) -> str:
-    if ratio > SPEED_GREEN:
-        return "\U0001f7e2"
-    if ratio >= SPEED_RED:
-        return "\U0001f7e1"
-    return "\U0001f534"
+def collect_eligible(dirs: list[str]) -> list[Path]:
+    return collect_tests(dirs)[0]
 
 
-def compliance_emoji(n_pass: int, n_compile_ok: int, useful: int) -> str:
-    if useful == 0:
+def compliance_emoji(n_pass: int, tested: int, relevant: int) -> str:
+    if relevant == 0 or tested == 0:
         return "\u2b1c"
-    if n_pass == useful:
+    pass_rate = n_pass / relevant
+    if pass_rate >= 0.8:
         return "\U0001f7e2"
-    if n_compile_ok > 0:
-        return "\U0001f7e1"
-    return "\U0001f534"
+    if pass_rate < 0.2:
+        return "\U0001f534"
+    return "\U0001f7e1"
 
 
 CACHE_FILE = REPO_ROOT / ".compliance_cache.json"
-# Required keys in each cache entry (new per-test format)
-_CACHE_KEYS = frozenset({"tests", "sys_ms", "psy_ms", "lines", "eligible"})
+# Required keys in each cache entry (per-test format).
+_CACHE_KEYS = frozenset({"tests", "lines", "eligible"})
 
 
 def load_cache() -> dict:
@@ -317,8 +328,20 @@ def load_cache() -> dict:
         return {}
     try:
         data = json.loads(CACHE_FILE.read_text())
-        # Reject entries missing any required key (handles old aggregate-only format)
-        return {k: v for k, v in data.items() if _CACHE_KEYS.issubset(v)}
+        # Reject the old aggregate-only format and discard obsolete timing data.
+        return {
+            header: {
+                "tests": {
+                    path: {"sys": test.get("sys"), "psy": test.get("psy")}
+                    for path, test in value["tests"].items()
+                },
+                "lines": value["lines"],
+                "eligible": value["eligible"],
+                "ignored": value.get("ignored", 0),
+            }
+            for header, value in data.items()
+            if _CACHE_KEYS.issubset(value)
+        }
     except (json.JSONDecodeError, OSError):
         return {}
 
@@ -364,51 +387,72 @@ def header_lines(name: str) -> int:
         return 0
 
 
+def libcxx_revision() -> str:
+    try:
+        return subprocess.run(
+            ["git", "-C", str(LLVM_ROOT), "rev-parse", "HEAD"],
+            capture_output=True,
+            text=True,
+            timeout=10,
+            check=True,
+        ).stdout.strip()
+    except (OSError, subprocess.SubprocessError):
+        return "unknown"
+
+
 def _test_one(
     src: Path, sys_flags: list[str], psy_flags: list[str]
 ) -> tuple[str, dict]:
     """Compile/run one test with both sys and psy flags; return (path_str, entry)."""
     xf = extra_flags(src.read_text(errors="replace"))
     is_exec = not src.stem.endswith(".compile.pass")
-    sys_status, sys_ms = try_compile_run(src, sys_flags, xf, [], is_exec)
-    entry: dict = {"sys": sys_status, "sys_ms": sys_ms, "psy": None, "psy_ms": None}
-    if sys_status == "pass":
-        assert RUNTIME_ARCHIVE is not None
-        psy_status, psy_ms = try_compile_run(
-            src, psy_flags, xf, [str(RUNTIME_ARCHIVE)], is_exec
-        )
-        entry["psy"] = psy_status
-        entry["psy_ms"] = psy_ms
+    sys_status = try_compile_run(src, sys_flags, xf, [], is_exec)
+    assert RUNTIME_ARCHIVE is not None
+    psy_status = try_compile_run(src, psy_flags, xf, [str(RUNTIME_ARCHIVE)], is_exec)
+    entry = {"sys": sys_status, "psy": psy_status}
     return str(src), entry
 
 
 def _empty_header_cache() -> dict:
     return {
         "tests": {},
-        "sys_ms": None,
-        "psy_ms": None,
         "lines": 0,
         "eligible": 0,
+        "ignored": 0,
     }
+
+
+def _result_counts(tests: dict) -> dict[str, int]:
+    counts = {"both_pass": 0, "system_only": 0, "psychic_only": 0, "both_fail": 0}
+    for result in tests.values():
+        system = result.get("sys") == "pass"
+        psychic_status = result.get("psy")
+        if psychic_status is None:
+            continue
+        psychic = psychic_status == "pass"
+        if system and psychic:
+            counts["both_pass"] += 1
+        elif system:
+            counts["system_only"] += 1
+        elif psychic:
+            counts["psychic_only"] += 1
+        else:
+            counts["both_fail"] += 1
+    return counts
 
 
 def _summary_from_cache(header: str, hc: dict) -> dict:
     """Build summary dict from cached data; no filesystem access."""
     tests: dict = hc.get("tests", {})
-    n_pass = sum(1 for v in tests.values() if v.get("psy") == "pass")
-    n_cfail = sum(1 for v in tests.values() if v.get("psy") == "cfail")
-    n_rfail = sum(1 for v in tests.values() if v.get("psy") == "rfail")
-    useful = n_pass + n_cfail + n_rfail
+    counts = _result_counts(tests)
+    tested = sum(counts.values())
     return {
         "header": header,
         "eligible": hc.get("eligible", 0),
-        "n_sampled": len(tests),
-        "useful": useful,
-        "n_pass": n_pass,
-        "n_cfail": n_cfail,
-        "n_rfail": n_rfail,
-        "sys_ms": hc.get("sys_ms"),
-        "psy_ms": hc.get("psy_ms"),
+        "ignored": hc.get("ignored", 0),
+        "tested": tested,
+        "psychic_passes": counts["both_pass"] + counts["psychic_only"],
+        **counts,
         "lines": hc.get("lines", 0),
     }
 
@@ -426,9 +470,14 @@ def check_header(
     Normal mode: run up to n_sample new (uncached) tests.
     recheck=True: re-run all previously cached tests to refresh their results.
     """
-    eligible = collect_eligible(dirs)
+    eligible, ignored = collect_tests(dirs)
+    eligible_paths = {str(path) for path in eligible}
 
-    cached_tests: dict = dict(header_cache.get("tests", {}))
+    cached_tests = {
+        path: result
+        for path, result in header_cache.get("tests", {}).items()
+        if path in eligible_paths
+    }
 
     san = SAN_CFLAGS if SANITIZE else []
     sys_flags: list[str] = [*san, *EXTRA_CFLAGS]
@@ -448,8 +497,12 @@ def check_header(
         to_run = sorted(Path(p) for p in cached_tests if Path(p).exists())
         cached_tests = {}
     else:
-        # Run up to n_sample tests not yet in the cache
-        uncached = sorted(p for p in eligible if str(p) not in cached_tests)
+        # Also run old entries where psychicstd was skipped after a system failure.
+        uncached = sorted(
+            p
+            for p in eligible
+            if str(p) not in cached_tests or cached_tests[str(p)].get("psy") is None
+        )
         rng = random.Random(SEED + len(cached_tests))
         to_run = rng.sample(uncached, min(n_sample, len(uncached)))
         to_run.sort()
@@ -460,41 +513,14 @@ def check_header(
             path_str, entry = fut.result()
             cached_tests[path_str] = entry
 
-    # Derive header-level timing as median of per-test measurements
-    sys_times = [
-        v["sys_ms"] for v in cached_tests.values() if v.get("sys_ms") is not None
-    ]
-    psy_times = [
-        v["psy_ms"] for v in cached_tests.values() if v.get("psy_ms") is not None
-    ]
-    sys_ms: float | None = statistics.median(sys_times) if sys_times else None
-    psy_ms: float | None = statistics.median(psy_times) if psy_times else None
-
-    n_pass = sum(1 for v in cached_tests.values() if v.get("psy") == "pass")
-    n_cfail = sum(1 for v in cached_tests.values() if v.get("psy") == "cfail")
-    n_rfail = sum(1 for v in cached_tests.values() if v.get("psy") == "rfail")
-    useful = n_pass + n_cfail + n_rfail
-
     lines = header_lines(header)
     updated = {
         "tests": cached_tests,
-        "sys_ms": sys_ms,
-        "psy_ms": psy_ms,
         "lines": lines,
         "eligible": len(eligible),
+        "ignored": ignored,
     }
-    summary = {
-        "header": header,
-        "eligible": len(eligible),
-        "n_sampled": len(cached_tests),
-        "useful": useful,
-        "n_pass": n_pass,
-        "n_cfail": n_cfail,
-        "n_rfail": n_rfail,
-        "sys_ms": sys_ms,
-        "psy_ms": psy_ms,
-        "lines": lines,
-    }
+    summary = _summary_from_cache(header, updated)
     return updated, summary
 
 
@@ -528,6 +554,7 @@ def _print_failing(headers: list[str], cache: dict) -> None:
 
 def main() -> None:
     global SANITIZE, CACHE_FILE, EXTRA_CFLAGS, TEST_TIMEOUT, RUNTIME_ARCHIVE
+    global N_WORKERS
     ap = argparse.ArgumentParser(description="Generate compliance.md")
     ap.add_argument("headers", nargs="*", help="Headers to filter; default: all")
     ap.add_argument(
@@ -571,10 +598,21 @@ def main() -> None:
         default=TEST_TIMEOUT,
         help=f"Per-test compile+run timeout in seconds (default: {TEST_TIMEOUT})",
     )
+    ap.add_argument(
+        "--jobs",
+        type=int,
+        default=N_WORKERS,
+        metavar="N",
+        help=f"Maximum parallel test jobs (default: {N_WORKERS})",
+    )
     args = ap.parse_args()
+
+    if args.jobs < 1:
+        ap.error("--jobs must be at least 1")
 
     EXTRA_CFLAGS = args.cxxflags.split()
     TEST_TIMEOUT = args.timeout
+    N_WORKERS = args.jobs
 
     if args.sanitize:
         SANITIZE = True
@@ -590,6 +628,8 @@ def main() -> None:
             sys.exit(1)
 
     cache = load_cache()
+    revision = libcxx_revision()
+    print(f"libc++ test revision: {revision}")
 
     if args.list_failing:
         headers_to_list = (
@@ -617,14 +657,9 @@ def main() -> None:
         )
         cache[h] = updated
         fresh_summaries[h] = summary
-        n_pass = summary["n_pass"]
-        useful = summary["useful"]
-        n_sampled = summary["n_sampled"]
+        n_pass = summary["psychic_passes"]
+        tested = summary["tested"]
         eligible = summary["eligible"]
-        speed_str = ""
-        if summary["sys_ms"] and summary["psy_ms"]:
-            ratio = summary["sys_ms"] / summary["psy_ms"]
-            speed_str = f"  {ratio:.1f}x"
         change_str = ""
         if args.recheck and old_tests:
             new_tests = updated["tests"]
@@ -642,7 +677,7 @@ def main() -> None:
                 change_str += f"  +{gained}"
             if lost:
                 change_str += f"  -{lost}"
-        print(f"  {n_pass}/{useful}/{n_sampled}/{eligible}{speed_str}{change_str}")
+        print(f"  {n_pass}/{eligible} passed  {tested}/{eligible} tested{change_str}")
 
     save_cache(cache)
 
@@ -660,65 +695,64 @@ def main() -> None:
         f.write(
             f"Last updated: {datetime.now().astimezone().strftime('%Y-%m-%d %H:%M')}\n\n"
         )
+        f.write(f"libc++ test revision: `{revision}`\n\n")
 
-        f.write("## Conformance\n\n")
+        f.write("## Summary\n\n")
         f.write(
-            "Conformance is shown as **x/y/z/w** where:\n\n"
-            "- **x** — tests that pass with psychicstd\n"
-            "- **y** — tests where the system STL (libstdc++) passes "
-            "(only these are run against psychicstd; the rest are excluded as libc++-specific)\n"
-            "- **z** — total tests run so far for this header (grows with each incremental run)\n"
-            "- **w** — total eligible tests available for that header in the LLVM suite\n\n"
+            "The pass percentage uses all tests except those explicitly marked "
+            "libc++-specific. Untested cases are not counted as passes.\n\n"
         )
         f.write(
-            "\U0001f7e2 all sampled tests pass  "
-            "\U0001f7e1 at least one test compiles (but not all pass)  "
-            "\U0001f534 nothing compiles\n\n"
+            "\U0001f7e2 at least 80% pass  "
+            "\U0001f7e1 20% to 79% pass  "
+            "\U0001f534 less than 20% pass  "
+            "\u2b1c no relevant case has been tested\n\n"
         )
 
-        f.write("## Compilation speed\n\n")
-        runs = "once" if N_BENCH == 1 else f"{N_BENCH} times (median reported)"
         f.write(
-            f"One libcxx test file (the first that passes the system STL) is compiled {runs} "
-            "with each STL. The speedup is the ratio of system time to psychicstd time — "
-            "higher is better. n/a means no test file compiled successfully with the system "
-            "STL in the sample, so no timing was available.\n\n"
+            "| | header | psychicstd passes | tested | relevant tests | "
+            "ignored libc++-specific | upstream total | lines |\n"
         )
         f.write(
-            f"\U0001f7e2 >{SPEED_GREEN}\u00d7  \U0001f7e1 {SPEED_RED}\u00d7\u2013{SPEED_GREEN}\u00d7  \U0001f534 <{SPEED_RED}\u00d7\n\n"
+            "|--|--------|------------------:|-------:|---------------:|"
+            "------------------------:|---------------:|------:|\n"
         )
-
-        f.write("## Results\n\n")
-        f.write("| | header | conformance | system | psychicstd | speedup | lines |\n")
-        f.write("|--|--------|------------|-------:|----------:|--------:|------:|\n")
 
         for r in rows:
             header = r["header"]
-            useful = r["useful"]
-            n_pass = r["n_pass"]
-            n_compile = n_pass + r["n_rfail"]
-
-            c_emoji = compliance_emoji(n_pass, n_compile, useful)
             eligible = r["eligible"]
-            n_sampled = r["n_sampled"]
-            if useful or n_sampled:
-                conform_cell = f"{c_emoji} {n_pass}/{useful}/{n_sampled}/{eligible}"
-            else:
-                conform_cell = f"\u2b1c 0/0/0/{eligible}"
-
-            if r["sys_ms"] and r["psy_ms"]:
-                ratio = r["sys_ms"] / r["psy_ms"]
-                s_emoji = speed_emoji(ratio)
-                sys_cell = f"{r['sys_ms']:.0f} ms"
-                psy_cell = f"{r['psy_ms']:.0f} ms"
-                spd_cell = f"{s_emoji} {ratio:.1f}\u00d7"
-            else:
-                sys_cell = "n/a"
-                psy_cell = "n/a"
-                spd_cell = "\u2b1c n/a"
+            tested = r["tested"]
+            n_pass = r["psychic_passes"]
+            ignored = r["ignored"]
+            c_emoji = compliance_emoji(n_pass, tested, eligible)
+            percentage = f"{100 * n_pass / eligible:.0f}%" if eligible else "n/a"
 
             f.write(
-                f"| {c_emoji} | `{header}` | {conform_cell} | {sys_cell} | {psy_cell} | {spd_cell} | {r['lines']} |\n"
+                f"| {c_emoji} | `{header}` | **{n_pass}/{eligible} "
+                f"({percentage})** | {tested}/{eligible} | {eligible} | {ignored} | "
+                f"{eligible + ignored} | {r['lines']} |\n"
+            )
+
+        f.write("\n## Library comparison\n\n")
+        f.write(
+            "Each tested case appears in exactly one of the first four result "
+            "columns. Untested means relevant tests that have not yet been "
+            "selected by incremental sampling. It does not include libc++-specific "
+            "tests; those are excluded from the relevant corpus and counted "
+            "separately in the summary table.\n\n"
+        )
+        f.write(
+            "| header | both pass | libstdc++ only | psychicstd only | both fail | "
+            "untested |\n"
+        )
+        f.write(
+            "|--------|----------:|----------------:|----------------:|----------:|---------:|\n"
+        )
+        for r in rows:
+            f.write(
+                f"| `{r['header']}` | {r['both_pass']} | {r['system_only']} | "
+                f"{r['psychic_only']} | {r['both_fail']} | "
+                f"{r['eligible'] - r['tested']} |\n"
             )
 
     subprocess.run(["mdformat", out], check=True)

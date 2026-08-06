@@ -15,6 +15,10 @@ jobs:
     timeout-minutes: 330
     steps:
       - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup-realworld-ccache
+        with:
+          project: compliance-nightly-sanitize
+          build_type: release
       - name: Install Markdown formatter
         run: pipx install mdformat
       - name: Sparse-clone llvm-project (libcxx/test only)

@@ -1,9 +1,9 @@
 ---
-name: Set up real-world ccache
-description: Restore a path-stable, project-specific compiler cache
+name: Set up ccache
+description: Restore a path-stable, workload-specific compiler cache
 inputs:
   project:
-    description: Real-world project name used to partition the cache
+    description: Workload name used to partition the cache
     required: true
   build_type:
     description: Build type used to partition the cache
