@@ -1,0 +1,85 @@
+#pragma once
+
+namespace std {
+
+// Public foundational traits shared by lightweight headers and <type_traits>.
+template <typename T, T Value> struct integral_constant {
+  static constexpr T value = Value;
+  using value_type = T;
+  using type = integral_constant;
+  constexpr operator value_type() const noexcept { return value; }
+  constexpr value_type operator()() const noexcept { return value; }
+};
+
+template <bool Value> using bool_constant = integral_constant<bool, Value>;
+using true_type = bool_constant<true>;
+using false_type = bool_constant<false>;
+
+template <typename T> struct remove_const {
+  using type = T;
+};
+template <typename T> struct remove_const<const T> {
+  using type = T;
+};
+template <typename T> using remove_const_t = typename remove_const<T>::type;
+
+template <typename T> struct remove_volatile {
+  using type = T;
+};
+template <typename T> struct remove_volatile<volatile T> {
+  using type = T;
+};
+template <typename T>
+using remove_volatile_t = typename remove_volatile<T>::type;
+
+template <typename T> struct remove_cv {
+  using type = remove_volatile_t<remove_const_t<T>>;
+};
+template <typename T> using remove_cv_t = typename remove_cv<T>::type;
+
+template <typename T, typename U>
+struct is_same : bool_constant<__is_same(T, U)> {};
+template <typename T, typename U>
+inline constexpr bool is_same_v = is_same<T, U>::value;
+
+template <typename T>
+struct is_trivially_copyable : bool_constant<__is_trivially_copyable(T)> {};
+template <typename T>
+inline constexpr bool is_trivially_copyable_v = is_trivially_copyable<T>::value;
+
+template <typename T> struct is_integral : false_type {};
+template <> struct is_integral<bool> : true_type {};
+template <> struct is_integral<char> : true_type {};
+template <> struct is_integral<signed char> : true_type {};
+template <> struct is_integral<unsigned char> : true_type {};
+template <> struct is_integral<short> : true_type {};
+template <> struct is_integral<unsigned short> : true_type {};
+template <> struct is_integral<int> : true_type {};
+template <> struct is_integral<unsigned int> : true_type {};
+template <> struct is_integral<long> : true_type {};
+template <> struct is_integral<unsigned long> : true_type {};
+template <> struct is_integral<long long> : true_type {};
+template <> struct is_integral<unsigned long long> : true_type {};
+template <> struct is_integral<char8_t> : true_type {};
+template <> struct is_integral<char16_t> : true_type {};
+template <> struct is_integral<char32_t> : true_type {};
+template <> struct is_integral<wchar_t> : true_type {};
+template <typename T> struct is_integral<const T> : is_integral<T> {};
+template <typename T> struct is_integral<volatile T> : is_integral<T> {};
+template <typename T> struct is_integral<const volatile T> : is_integral<T> {};
+template <typename T>
+inline constexpr bool is_integral_v = is_integral<T>::value;
+
+namespace detail {
+template <typename T, bool = is_integral<T>::value>
+struct is_unsigned_impl : false_type {};
+template <typename T>
+struct is_unsigned_impl<T, true> : bool_constant<(T(0) < T(-1))> {};
+} // namespace detail
+
+template <typename T>
+struct is_unsigned : detail::is_unsigned_impl<remove_cv_t<T>> {};
+template <typename T>
+inline constexpr bool is_unsigned_v = is_unsigned<T>::value;
+
+} // namespace std
