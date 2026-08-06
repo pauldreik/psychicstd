@@ -114,6 +114,24 @@ jobs:
           scripts/benchmark_realworld.py
           --check-only --project bitcoin
           --build-type debug
+  libtorrent:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install dependencies
+        run: >-
+          sudo apt-get install -y
+          ccache
+          libboost-dev
+          libssl-dev
+          ninja-build
+          zlib1g-dev
+      - name: Build libtorrent with psychicstd
+        run: >-
+          PATH=/usr/lib/ccache:$PATH scripts/benchmark_realworld.py
+          --check-only --project libtorrent --build-type debug
+          --enable-ccache
   electron:
     runs-on: ubuntu-latest
     steps:
