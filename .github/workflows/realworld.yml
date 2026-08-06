@@ -194,13 +194,13 @@ jobs:
       - uses: ./.github/actions/setup-realworld-ccache
         with:
           project: opencv
-          build_type: release
+          build_type: debug
       - name: Install Ninja
         run: sudo apt-get install -y ninja-build
       - name: Build and test OpenCV with psychicstd
         run: >-
           scripts/benchmark_realworld.py --check-only
-          --project opencv --build-type release --enable-ccache
+          --project opencv --build-type debug --enable-ccache
   rapidjson:
     runs-on: ubuntu-latest
     timeout-minutes: 15

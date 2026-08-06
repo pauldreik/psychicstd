@@ -11,14 +11,21 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        project:
-          - abseil-full
-          - boost-test-full
-          - cmake-full
-          - googletest-full
-          - nlohmann-full
-          - opencv-full
-          - pocketfft-full
+        include:
+          - project: abseil-full
+            build_type: debug
+          - project: boost-test-full
+            build_type: debug
+          - project: cmake-full
+            build_type: debug
+          - project: googletest-full
+            build_type: debug
+          - project: nlohmann-full
+            build_type: debug
+          - project: opencv-full
+            build_type: release
+          - project: pocketfft-full
+            build_type: debug
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
@@ -26,14 +33,14 @@ jobs:
       - uses: ./.github/actions/setup-realworld-ccache
         with:
           project: ${{ matrix.project }}
-          build_type: debug
+          build_type: ${{ matrix.build_type }}
       - name: Install dependencies
         run: sudo apt-get install -y ninja-build
       - name: Build and test ${{ matrix.project }} with psychicstd
         run: >-
           scripts/benchmark_realworld.py
           --check-only --project ${{ matrix.project }}
-          --build-type debug --enable-ccache
+          --build-type ${{ matrix.build_type }} --enable-ccache
   bitcoin:
     runs-on: ubuntu-latest
     timeout-minutes: 60
