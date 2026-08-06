@@ -20,6 +20,14 @@ struct derived_variant : variant<int, std::string> {
   using variant::variant;
 };
 
+struct throwing_move {
+  throwing_move() = default;
+  throwing_move(const throwing_move&) = default;
+  throwing_move(throwing_move&&) { throw 1; }
+  throwing_move& operator=(const throwing_move&) = default;
+  throwing_move& operator=(throwing_move&&) { throw 1; }
+};
+
 int main() {
   constexpr variant<monostate, char> compile_time_variant;
   static_assert(compile_time_variant.index() == 0);
@@ -84,6 +92,14 @@ int main() {
 
   variant<monostate, int> m;
   psyassert(m.index() == 0);
+
+  variant<int, throwing_move> becomes_empty;
+  variant<int, throwing_move> throwing(std::in_place_index<1>);
+  try {
+    becomes_empty = std::move(throwing);
+  } catch (int) {
+  }
+  psyassert(becomes_empty.valueless_by_exception());
 
   bool threw = false;
   try {
