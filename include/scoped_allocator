@@ -50,16 +50,22 @@ public:
     if constexpr (uses_allocator_v<T, inner_allocator_type>) {
       if constexpr (is_constructible_v<T, allocator_arg_t,
                                        inner_allocator_type&, Args...>)
-        construct_at(p, allocator_arg, inner_allocator(),
-                     static_cast<Args&&>(args)...);
+        allocator_traits<outer_allocator_type>::construct(
+            outer_allocator(), p, allocator_arg, inner_allocator(),
+            static_cast<Args&&>(args)...);
       else
-        construct_at(p, static_cast<Args&&>(args)..., inner_allocator());
+        allocator_traits<outer_allocator_type>::construct(
+            outer_allocator(), p, static_cast<Args&&>(args)...,
+            inner_allocator());
     } else {
-      construct_at(p, static_cast<Args&&>(args)...);
+      allocator_traits<outer_allocator_type>::construct(
+          outer_allocator(), p, static_cast<Args&&>(args)...);
     }
   }
 
-  template <typename T> void destroy(T* p) { destroy_at(p); }
+  template <typename T> void destroy(T* p) {
+    allocator_traits<outer_allocator_type>::destroy(outer_allocator(), p);
+  }
   pointer allocate(size_type n) { return outer_allocator().allocate(n); }
   void deallocate(pointer p, size_type n) {
     outer_allocator().deallocate(p, n);
