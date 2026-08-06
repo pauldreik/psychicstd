@@ -10,17 +10,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup-realworld-ccache
+        with:
+          project: rdfind
+          build_type: debug
       - name: Enable deb-src
         run: |
           sudo sed -i 's/^Types: deb$/Types: deb deb-src/' /etc/apt/sources.list.d/ubuntu.sources
           sudo apt-get update
       - name: Install rdfind build dependencies
-        run: |
-          sudo apt-get install -y ccache
-          sudo apt-get build-dep -y rdfind
+        run: sudo apt-get build-dep -y rdfind
       - name: Build and test rdfind with psychicstd
         run: >-
-          PATH=/usr/lib/ccache:$PATH scripts/benchmark_realworld.py
+          scripts/benchmark_realworld.py
           --check-only --project rdfind
           --build-type debug --enable-ccache
       # TODO: no project here is built with sanitizers yet. rdfind used to
@@ -30,23 +32,31 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup-realworld-ccache
+        with:
+          project: simdutf
+          build_type: debug
       - name: Install dependencies
-        run: sudo apt-get install -y ccache ninja-build
+        run: sudo apt-get install -y ninja-build
       - name: Build and test simdutf with psychicstd
         run: >-
-          PATH=/usr/lib/ccache:$PATH scripts/benchmark_realworld.py
+          scripts/benchmark_realworld.py
           --check-only --project simdutf
           --build-type debug --enable-ccache
   cmake:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup-realworld-ccache
+        with:
+          project: cmake
+          build_type: debug
       - name: Install ninja
         run: sudo apt-get install -y ninja-build
       - name: Build and test CMake with psychicstd
         run: >-
-          scripts/benchmark_realworld.py --check-only
-          --project cmake --build-type debug
+          scripts/benchmark_realworld.py --check-only --project cmake
+          --build-type debug --enable-ccache
   googletest:
     runs-on: ubuntu-latest
     steps:
@@ -73,11 +83,15 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup-realworld-ccache
+        with:
+          project: boost-asio
+          build_type: debug
       - name: Build and test Boost.Asio with psychicstd
         run: >-
           scripts/benchmark_realworld.py
           --check-only --project boost-asio
-          --build-type debug
+          --build-type debug --enable-ccache
   boost-test:
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -105,17 +119,20 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup-realworld-ccache
+        with:
+          project: libtorrent
+          build_type: debug
       - name: Install dependencies
         run: >-
           sudo apt-get install -y
-          ccache
           libboost-dev
           libssl-dev
           ninja-build
           zlib1g-dev
       - name: Build libtorrent with psychicstd
         run: >-
-          PATH=/usr/lib/ccache:$PATH scripts/benchmark_realworld.py
+          scripts/benchmark_realworld.py
           --check-only --project libtorrent --build-type debug
           --enable-ccache
   electron:
@@ -131,13 +148,17 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup-realworld-ccache
+        with:
+          project: godot
+          build_type: debug
       - name: Install SCons and pkg-config
         run: sudo apt-get install -y scons pkg-config
       - name: Build Godot core library with psychicstd
         run: >-
           scripts/benchmark_realworld.py
           --check-only --project godot
-          --build-type debug
+          --build-type debug --enable-ccache
   llama-cpp:
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -154,11 +175,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup-realworld-ccache
+        with:
+          project: nlohmann
+          build_type: debug
       - name: Install dependencies
-        run: sudo apt-get install -y ccache ninja-build
+        run: sudo apt-get install -y ninja-build
       - name: Build nlohmann JSON tests with psychicstd
         run: >-
-          PATH=/usr/lib/ccache:$PATH scripts/benchmark_realworld.py
+          scripts/benchmark_realworld.py
           --check-only --project nlohmann
           --build-type debug --enable-ccache
   opencv:
@@ -166,12 +191,16 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup-realworld-ccache
+        with:
+          project: opencv
+          build_type: release
       - name: Install Ninja
         run: sudo apt-get install -y ninja-build
       - name: Build and test OpenCV with psychicstd
         run: >-
           scripts/benchmark_realworld.py --check-only
-          --project opencv --build-type release
+          --project opencv --build-type release --enable-ccache
   rapidjson:
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -187,55 +216,71 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup-realworld-ccache
+        with:
+          project: fmt
+          build_type: debug
       - name: Install dependencies
-        run: sudo apt-get install -y ccache ninja-build
+        run: sudo apt-get install -y ninja-build
       - name: Build and test fmt with psychicstd
         run: >-
-          PATH=/usr/lib/ccache:$PATH scripts/benchmark_realworld.py
+          scripts/benchmark_realworld.py
           --check-only --project fmt
           --build-type debug --enable-ccache
   flatbuffers:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup-realworld-ccache
+        with:
+          project: flatbuffers
+          build_type: debug
       - name: Install dependencies
-        run: sudo apt-get install -y ccache ninja-build
+        run: sudo apt-get install -y ninja-build
       - name: Build and test FlatBuffers with psychicstd
         run: >-
-          PATH=/usr/lib/ccache:$PATH scripts/benchmark_realworld.py
+          scripts/benchmark_realworld.py
           --check-only --project flatbuffers
           --build-type debug --enable-ccache
   catch2:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup-realworld-ccache
+        with:
+          project: catch2
+          build_type: debug
       - name: Install dependencies
-        run: sudo apt-get install -y ccache ninja-build
+        run: sudo apt-get install -y ninja-build
       - name: Build and test Catch2 with psychicstd
         run: >-
-          PATH=/usr/lib/ccache:$PATH scripts/benchmark_realworld.py
+          scripts/benchmark_realworld.py
           --check-only --project catch2
           --build-type debug --enable-ccache
   eigen:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - name: Install ccache
-        run: sudo apt-get install -y ccache
+      - uses: ./.github/actions/setup-realworld-ccache
+        with:
+          project: eigen
+          build_type: debug
       - name: Build and test Eigen with psychicstd
         run: >-
-          PATH=/usr/lib/ccache:$PATH scripts/benchmark_realworld.py
+          scripts/benchmark_realworld.py
           --check-only --project eigen
           --build-type debug --enable-ccache
   cppcheck:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - name: Install ccache
-        run: sudo apt-get install -y ccache
+      - uses: ./.github/actions/setup-realworld-ccache
+        with:
+          project: cppcheck
+          build_type: debug
       - name: Build and test cppcheck with psychicstd
         run: >-
-          PATH=/usr/lib/ccache:$PATH scripts/benchmark_realworld.py
+          scripts/benchmark_realworld.py
           --check-only --project cppcheck
           --build-type debug --enable-ccache
   tesseract:
@@ -254,10 +299,14 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup-realworld-ccache
+        with:
+          project: tensorflow
+          build_type: debug
       - name: Build TensorFlow core platform libraries with psychicstd
         run: >-
           scripts/benchmark_realworld.py --check-only
-          --project tensorflow --build-type debug
+          --project tensorflow --build-type debug --enable-ccache
   ctre:
     runs-on: ubuntu-latest
     steps:
@@ -272,12 +321,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup-realworld-ccache
+        with:
+          project: react-native
+          build_type: both
       - name: Install ninja
         run: sudo apt-get install -y ninja-build
       - name: Build React Native host core with psychicstd
         run: >-
           scripts/benchmark_realworld.py --check-only
-          --project react-native --build-type both
+          --project react-native --build-type both --enable-ccache
   inipp:
     runs-on: ubuntu-latest
     steps:
@@ -296,13 +349,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - name: Install ccache
-        run: sudo apt-get install -y ccache
       - name: Build pocketfft with psychicstd
-        run: >-
-          PATH=/usr/lib/ccache:$PATH scripts/benchmark_realworld.py
-          --check-only --project pocketfft
-          --build-type debug --enable-ccache
+        run: scripts/benchmark_realworld.py --check-only --project pocketfft --build-type
+          debug
   pybind11:
     runs-on: ubuntu-latest
     steps:
