@@ -6,6 +6,5 @@ tests/conan_project/build/
 # sneakernet patch bundles produced by scripts/export-commits-sneakernet.sh
 patches-*.tar.gz
 .compliance_cache.sanitize.json
-compliance.sanitize.md
 libcxx.*
 __pycache__

@@ -80,7 +80,10 @@ HEADER_TO_DIRS: dict[str, list[str]] = {
     "cassert": ["language.support/support.runtime"],
     "cctype": ["strings/c.strings"],
     "cerrno": ["depr/depr.c.headers"],
+    "cfenv": ["numerics/cfenv"],
     "cfloat": ["depr/depr.c.headers"],
+    "charconv": ["utilities/charconv"],
+    "cinttypes": ["input.output/file.streams/c.files"],
     "clocale": ["depr/depr.c.headers"],
     "chrono": ["time"],
     "ciso646": ["depr/depr.c.headers"],
@@ -90,8 +93,10 @@ HEADER_TO_DIRS: dict[str, list[str]] = {
     "complex": ["numerics/complex.number"],
     "concepts": ["concepts"],
     "condition_variable": ["thread/thread.condition"],
+    "coroutine": ["language.support/support.coroutines"],
     "csetjmp": ["language.support/support.runtime"],
     "csignal": ["depr/depr.c.headers"],
+    "cstdarg": ["language.support/support.runtime"],
     "cstddef": ["language.support/support.types"],
     "cstdint": ["utilities/intseq"],
     "cstdio": ["depr/depr.c.headers"],
@@ -99,16 +104,19 @@ HEADER_TO_DIRS: dict[str, list[str]] = {
     "cstring": ["strings/c.strings"],
     "ctime": ["depr/depr.c.headers"],
     "cwchar": ["depr/depr.c.headers"],
+    "cwctype": ["strings/c.strings"],
     "deque": ["containers/sequences/deque"],
     "exception": ["language.support/support.exception"],
     "filesystem": ["input.output/filesystems"],
     "forward_list": ["containers/sequences/forwardlist"],
     "fstream": ["input.output/file.streams"],
     "functional": ["utilities/function.objects"],
-    "initializer_list": ["utilities/initializer.list"],
+    "future": ["thread/futures"],
+    "initializer_list": ["language.support/support.initlist"],
     "iomanip": ["input.output/iostream.format"],
     "iostream": ["input.output/iostream.objects"],
     "ios": ["input.output/iostreams.base"],
+    "iosfwd": ["input.output/iostream.forward"],
     "istream": ["input.output/iostream.format/input.streams"],
     "iterator": ["iterators"],
     "limits": ["language.support/support.limits/limits"],
@@ -121,14 +129,26 @@ HEADER_TO_DIRS: dict[str, list[str]] = {
     "numeric": ["numerics/numeric.ops"],
     "optional": ["utilities/optional"],
     "ostream": ["input.output/iostream.format/output.streams"],
+    "queue": [
+        "containers/container.adaptors/queue",
+        "containers/container.adaptors/priority.queue",
+    ],
     "random": ["numerics/rand"],
     "ranges": ["ranges"],
     "ratio": ["utilities/ratio"],
     "regex": ["re"],
+    "scoped_allocator": ["utilities/allocator.adaptor"],
     "set": ["containers/associative/set"],
+    "shared_mutex": [
+        "thread/thread.mutex/thread.lock/thread.lock.shared",
+        "thread/thread.mutex/thread.mutex.requirements/thread.shared_mutex.requirements",
+    ],
+    "source_location": ["language.support/support.srcloc"],
+    "span": ["containers/views/views.span"],
     "sstream": ["input.output/string.streams"],
     "stack": ["containers/container.adaptors/stack"],
     "stdexcept": ["diagnostics/std.exceptions"],
+    "stop_token": ["thread/thread.stoptoken"],
     "streambuf": ["input.output/stream.buffers"],
     "string": ["strings/basic.string"],
     "string_view": ["strings/string.view"],
@@ -137,13 +157,17 @@ HEADER_TO_DIRS: dict[str, list[str]] = {
     "tuple": ["utilities/tuple"],
     "typeinfo": ["language.support/support.rtti"],
     "type_traits": ["utilities/meta"],
+    "typeindex": ["utilities/type.index"],
     "unordered_map": ["containers/unord/unord.map"],
     "unordered_set": ["containers/unord/unord.set"],
     "utility": ["utilities/utility"],
     "valarray": ["numerics/numarray"],
+    "variant": ["utilities/variant"],
     "vector": ["containers/sequences/vector"],
     "version": ["language.support/support.limits/support.limits.general"],
 }
+
+EXCLUDED_PUBLIC_HEADERS = {"cxxabi.h", "uchar.h"}
 
 _RE_UNSUPPORTED = re.compile(r"^//\s*UNSUPPORTED:\s*(.+)$", re.MULTILINE)
 _RE_REQUIRES = re.compile(r"^//\s*REQUIRES:\s*(.+)$", re.MULTILINE)
@@ -377,6 +401,25 @@ def save_baseline(ids: set) -> None:
 
 def header_exists(name: str) -> bool:
     return (PSYCHICSTD / name).exists()
+
+
+def validate_public_headers() -> None:
+    public = {
+        path.name
+        for path in PSYCHICSTD.iterdir()
+        if path.is_file() and not path.name.startswith("__psychicstd_")
+    }
+    missing = public - HEADER_TO_DIRS.keys() - EXCLUDED_PUBLIC_HEADERS
+    stale = EXCLUDED_PUBLIC_HEADERS - public
+    if missing or stale:
+        problems = []
+        if missing:
+            problems.append(f"unmapped public headers: {', '.join(sorted(missing))}")
+        if stale:
+            problems.append(
+                f"stale public-header exclusions: {', '.join(sorted(stale))}"
+            )
+        sys.exit("; ".join(problems))
 
 
 def header_lines(name: str) -> int:
@@ -618,6 +661,7 @@ def main() -> None:
         SANITIZE = True
         CACHE_FILE = REPO_ROOT / ".compliance_cache.sanitize.json"
 
+    validate_public_headers()
     all_headers = sorted(h for h in HEADER_TO_DIRS if header_exists(h))
     filter_set = set(args.headers)
 
