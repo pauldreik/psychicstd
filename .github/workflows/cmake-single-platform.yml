@@ -12,6 +12,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup-realworld-ccache
+        with:
+          project: native
+          build_type: debug
       - name: Install Ninja
         run: sudo apt-get install -y ninja-build
       - name: Configure CMake
@@ -81,6 +85,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup-realworld-ccache
+        with:
+          project: native-ubsan
+          build_type: debug
       - name: Configure CMake (UBSan)
         run: cmake -B ${{github.workspace}}/build_ubsan -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
           -DPSYCHICSTD_BUILD_BENCHMARKS=ON -DCMAKE_CXX_FLAGS="-fsanitize=undefined
@@ -102,6 +110,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup-realworld-ccache
+        with:
+          project: native-asan
+          build_type: debug
       - name: Configure CMake (ASan)
         run: cmake -B ${{github.workspace}}/build_asan -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
           -DPSYCHICSTD_BUILD_BENCHMARKS=ON -DCMAKE_CXX_FLAGS="-fsanitize=address"
@@ -122,6 +134,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup-realworld-ccache
+        with:
+          project: native-strict
+          build_type: debug
       - name: Configure CMake (strict compatibility level)
         run: >
           cmake -B ${{github.workspace}}/build_strict
@@ -137,6 +153,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup-realworld-ccache
+        with:
+          project: native-gcc12
+          build_type: debug
       - name: Install GCC 12
         run: sudo apt-get update -qq && sudo apt-get install -y -qq g++-12
       - name: Configure CMake (GCC 12)

@@ -13,10 +13,15 @@ jobs:
       ASAN_OPTIONS: halt_on_error=1:abort_on_error=1
     steps:
       - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup-realworld-ccache
+        with:
+          project: clang-asan
+          build_type: debug
       - name: Configure
         run: |
           cmake -B "${{github.workspace}}/build" \
             -DCMAKE_CXX_COMPILER=clang++ \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
             -DCMAKE_BUILD_TYPE=Debug \
             -DPSYCHICSTD_BUILD_BENCHMARKS=OFF \
             -DCMAKE_CXX_FLAGS="-fsanitize=address -fno-omit-frame-pointer" \
@@ -33,10 +38,15 @@ jobs:
       UBSAN_OPTIONS: halt_on_error=1:abort_on_error=1:print_stacktrace=1
     steps:
       - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup-realworld-ccache
+        with:
+          project: clang-ubsan
+          build_type: debug
       - name: Configure
         run: |
           cmake -B "${{github.workspace}}/build" \
             -DCMAKE_CXX_COMPILER=clang++ \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
             -DCMAKE_BUILD_TYPE=Debug \
             -DPSYCHICSTD_BUILD_BENCHMARKS=OFF \
             -DCMAKE_CXX_FLAGS="-fsanitize=undefined" \
@@ -53,10 +63,15 @@ jobs:
       MSAN_OPTIONS: halt_on_error=1:abort_on_error=1:exit_code=1
     steps:
       - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup-realworld-ccache
+        with:
+          project: clang-msan
+          build_type: debug
       - name: Configure
         run: |
           cmake -B "${{github.workspace}}/build" \
             -DCMAKE_CXX_COMPILER=clang++ \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
             -DCMAKE_BUILD_TYPE=Debug \
             -DPSYCHICSTD_BUILD_BENCHMARKS=OFF \
             -DCMAKE_CXX_FLAGS="-fsanitize=memory -fno-omit-frame-pointer" \
@@ -73,10 +88,15 @@ jobs:
       TSAN_OPTIONS: halt_on_error=1:abort_on_error=1:exit_code=1
     steps:
       - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup-realworld-ccache
+        with:
+          project: clang-tsan
+          build_type: debug
       - name: Configure
         run: |
           cmake -B "${{github.workspace}}/build" \
             -DCMAKE_CXX_COMPILER=clang++ \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
             -DCMAKE_BUILD_TYPE=Debug \
             -DPSYCHICSTD_BUILD_BENCHMARKS=OFF \
             -DCMAKE_CXX_FLAGS="-fsanitize=thread -fno-omit-frame-pointer" \
