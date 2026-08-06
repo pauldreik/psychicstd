@@ -61,12 +61,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup-realworld-ccache
+        with:
+          project: googletest
+          build_type: debug
       - name: Install ninja
         run: sudo apt-get install -y ninja-build
       - name: Build and test GoogleTest with psychicstd
         run: >-
           scripts/benchmark_realworld.py --check-only
-          --project googletest --build-type debug
+          --project googletest --build-type debug --enable-ccache
   abseil:
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -97,11 +101,15 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup-realworld-ccache
+        with:
+          project: boost-test
+          build_type: debug
       - name: Build and test Boost.Test with psychicstd
         run: >-
           scripts/benchmark_realworld.py
           --check-only --project boost-test
-          --build-type debug
+          --build-type debug --enable-ccache
   bitcoin:
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -206,12 +214,16 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup-realworld-ccache
+        with:
+          project: rapidjson
+          build_type: debug
       - name: Install ninja
         run: sudo apt-get install -y ninja-build
       - name: Build and run RapidJSON examples with psychicstd
         run: >-
           scripts/benchmark_realworld.py --check-only
-          --project rapidjson --build-type debug
+          --project rapidjson --build-type debug --enable-ccache
   fmt:
     runs-on: ubuntu-latest
     steps:
@@ -288,12 +300,16 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup-realworld-ccache
+        with:
+          project: tesseract
+          build_type: debug
       - name: Install Tesseract build dependencies
         run: sudo apt-get install -y libleptonica-dev ninja-build
       - name: Build and test Tesseract with psychicstd
         run: >-
           scripts/benchmark_realworld.py --check-only
-          --project tesseract --build-type debug
+          --project tesseract --build-type debug --enable-ccache
   tensorflow:
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -384,12 +400,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup-realworld-ccache
+        with:
+          project: trompeloeil
+          build_type: debug
       - name: Install Ninja
         run: sudo apt-get install -y ninja-build
       - name: Build and test Trompeloeil with psychicstd
         run: >-
           scripts/benchmark_realworld.py --check-only
-          --project trompeloeil --build-type debug
+          --project trompeloeil --build-type debug --enable-ccache
   zancle:
     runs-on: ubuntu-latest
     steps:

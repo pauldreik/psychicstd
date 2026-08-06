@@ -46,6 +46,10 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup-realworld-ccache
+        with:
+          project: bitcoin-full
+          build_type: debug
       - name: Install Ninja
         run: >-
           sudo apt-get install -y
@@ -59,7 +63,7 @@ jobs:
         run: >-
           scripts/benchmark_realworld.py
           --check-only --project bitcoin-full
-          --build-type debug
+          --build-type debug --enable-ccache
   boost-asio-full:
     runs-on: ubuntu-latest
     timeout-minutes: 60
