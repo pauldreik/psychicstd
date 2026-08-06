@@ -1,6 +1,6 @@
 # Compliance
 
-Last updated: 2026-08-06 10:57
+Last updated: 2026-08-06 13:38
 
 libc++ test revision: `4395e6ad2c876e2098adcc724f36e937b8f007fd`
 
@@ -13,7 +13,7 @@ The pass percentage uses all tests except those explicitly marked libc++-specifi
 | | header | psychicstd passes | tested | relevant tests | ignored libc++-specific | upstream total | lines |
 |--|--------|------------------:|-------:|---------------:|------------------------:|---------------:|------:|
 | 🟡 | `algorithm` | **102/329 (31%)** | 329/329 | 329 | 0 | 329 | 849 |
-| 🟡 | `any` | **9/18 (50%)** | 18/18 | 18 | 0 | 18 | 206 |
+| 🟡 | `any` | **9/18 (50%)** | 18/18 | 18 | 0 | 18 | 207 |
 | 🟡 | `array` | **29/40 (72%)** | 40/40 | 40 | 1 | 41 | 268 |
 | 🟡 | `atomic` | **69/120 (58%)** | 120/120 | 120 | 0 | 120 | 782 |
 | 🔴 | `bit` | **2/15 (13%)** | 15/15 | 15 | 0 | 15 | 87 |
@@ -51,7 +51,7 @@ The pass percentage uses all tests except those explicitly marked libc++-specifi
 | 🔴 | `filesystem` | **16/146 (11%)** | 146/146 | 146 | 0 | 146 | 359 |
 | 🔴 | `forward_list` | **15/83 (18%)** | 83/83 | 83 | 0 | 83 | 177 |
 | 🟡 | `fstream` | **19/65 (29%)** | 65/65 | 65 | 0 | 65 | 317 |
-| 🟡 | `functional` | **68/165 (41%)** | 165/165 | 165 | 0 | 165 | 312 |
+| 🟡 | `functional` | **68/165 (41%)** | 165/165 | 165 | 0 | 165 | 318 |
 | 🔴 | `future` | **1/75 (1%)** | 75/75 | 75 | 0 | 75 | 131 |
 | 🟡 | `initializer_list` | **3/4 (75%)** | 4/4 | 4 | 0 | 4 | 38 |
 | 🟡 | `iomanip` | **80/129 (62%)** | 129/129 | 129 | 0 | 129 | 179 |
@@ -75,7 +75,7 @@ The pass percentage uses all tests except those explicitly marked libc++-specifi
 | 🔴 | `ranges` | **1/584 (0%)** | 584/584 | 584 | 0 | 584 | 284 |
 | 🟢 | `ratio` | **13/13 (100%)** | 13/13 | 13 | 0 | 13 | 91 |
 | 🔴 | `regex` | **14/171 (8%)** | 171/171 | 171 | 0 | 171 | 151 |
-| 🔴 | `scoped_allocator` | **4/32 (12%)** | 32/32 | 32 | 0 | 32 | 79 |
+| 🔴 | `scoped_allocator` | **4/32 (12%)** | 32/32 | 32 | 0 | 32 | 85 |
 | 🟡 | `set` | **23/69 (33%)** | 69/69 | 69 | 0 | 69 | 645 |
 | 🟡 | `shared_mutex` | **15/29 (52%)** | 29/29 | 29 | 0 | 29 | 114 |
 | 🔴 | `source_location` | **0/1 (0%)** | 1/1 | 1 | 0 | 1 | 45 |
@@ -97,7 +97,7 @@ The pass percentage uses all tests except those explicitly marked libc++-specifi
 | 🟡 | `unordered_set` | **30/97 (31%)** | 97/97 | 97 | 0 | 97 | 588 |
 | 🔴 | `utility` | **29/154 (19%)** | 154/154 | 154 | 0 | 154 | 229 |
 | 🔴 | `valarray` | **7/207 (3%)** | 207/207 | 207 | 0 | 207 | 92 |
-| 🔴 | `variant` | **7/41 (17%)** | 41/41 | 41 | 0 | 41 | 441 |
+| 🔴 | `variant` | **7/41 (17%)** | 41/41 | 41 | 0 | 41 | 444 |
 | 🟡 | `vector` | **39/76 (51%)** | 76/76 | 76 | 1 | 77 | 906 |
 | 🔴 | `version` | **0/78 (0%)** | 78/78 | 78 | 0 | 78 | 100 |
 
