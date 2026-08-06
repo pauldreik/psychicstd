@@ -3876,20 +3876,33 @@ def _ssvstart() -> Project:
                 *shlex.split(tc.cxxflags),
                 "-std=c++23",
                 *(f"-I{path}" for path in includes),
-                "-c",
                 str(source),
+                str(
+                    work
+                    / f"zancle-{vrsfml_revision}"
+                    / "src"
+                    / "SFML"
+                    / "System"
+                    / "LifetimeTrackingABICheck.cpp"
+                ),
+                *shlex.split(tc.ldflags),
+                *shlex.split(tc.libs),
                 "-o",
-                str(work / "UtilsInput.o"),
+                str(work / "UtilsInput"),
             ]
-            return {"compile": _timed(command, src, _env(tc))}
+            env = _env(tc)
+            return {
+                "compile": _timed(command, src, env),
+                "run tests": _timed([str(work / "UtilsInput")], src, env),
+            }
 
     return Project(
         version=revision[:7],
         build=build,
         expected_seconds={"debug": 2, "release": 2},
-        phases=("compile",),
-        comment="Compiles SSVStart's upstream input-utility test against "
-        "its current header dependencies.",
+        phases=("compile", "run tests"),
+        comment="Builds and runs SSVStart's upstream input-utility assertions "
+        "against its current header dependencies.",
     )
 
 
