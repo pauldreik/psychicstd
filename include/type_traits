@@ -138,6 +138,13 @@ template <typename T> typename __declval_type<T>::type declval() noexcept;
 // invoke_result / result_of (deprecated in C++17, removed in C++20 but Catch2
 // uses it)
 namespace detail {
+template <typename T> struct invoke_is_pointer : false_type {};
+template <typename T> struct invoke_is_pointer<T*> : true_type {};
+template <typename T> struct invoke_is_pointer<T* const> : true_type {};
+template <typename T> struct invoke_is_pointer<T* volatile> : true_type {};
+template <typename T>
+struct invoke_is_pointer<T* const volatile> : true_type {};
+
 template <typename F, typename... Args>
 auto invoke_expr(F&& f, Args&&... args) noexcept(
     noexcept(declval<F>()(declval<Args>()...)))
@@ -179,6 +186,16 @@ struct invoke_result_impl<
   using type =
       decltype((declval<Obj*>()->*declval<R C::*>())(declval<Args>()...));
 };
+template <typename R, typename C, typename Obj, typename... Args>
+  requires(!__is_base_of(C, remove_cvref_t<Obj>) &&
+           !invoke_is_pointer<remove_reference_t<Obj>>::value)
+struct invoke_result_impl<
+    void_t<decltype(((*declval<Obj>()).*
+                     declval<R C::*>())(declval<Args>()...))>,
+    R C::*, Obj, Args...> {
+  using type =
+      decltype(((*declval<Obj>()).*declval<R C::*>())(declval<Args>()...));
+};
 template <typename R, typename C, typename Obj>
 struct invoke_result_impl<void_t<decltype(declval<Obj>().*declval<R C::*>())>,
                           R C::*, Obj> {
@@ -188,6 +205,13 @@ template <typename R, typename C, typename Obj>
 struct invoke_result_impl<void_t<decltype(declval<Obj*>()->*declval<R C::*>())>,
                           R C::*, Obj*> {
   using type = decltype(declval<Obj*>()->*declval<R C::*>());
+};
+template <typename R, typename C, typename Obj>
+  requires(!__is_base_of(C, remove_cvref_t<Obj>) &&
+           !invoke_is_pointer<remove_reference_t<Obj>>::value)
+struct invoke_result_impl<
+    void_t<decltype((*declval<Obj>()).*declval<R C::*>())>, R C::*, Obj> {
+  using type = decltype((*declval<Obj>()).*declval<R C::*>());
 };
 template <typename Void, typename R, typename C, typename Obj, typename... Args>
 struct invoke_result_impl<Void, R C::*, Obj*&, Args...>
