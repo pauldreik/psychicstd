@@ -14,21 +14,15 @@ jobs:
         run: |
           sudo sed -i 's/^Types: deb$/Types: deb deb-src/' /etc/apt/sources.list.d/ubuntu.sources
           sudo apt-get update
-      - name: Install Markdown formatter
-        run: pipx install mdformat
       - name: Install rdfind build dependencies
-        run: sudo apt-get build-dep -y rdfind
-      - name: Build and benchmark rdfind with psychicstd
+        run: |
+          sudo apt-get install -y ccache
+          sudo apt-get build-dep -y rdfind
+      - name: Build and test rdfind with psychicstd
         run: >-
-          scripts/benchmark_realworld.py --project rdfind
-          --build-type both --reps 3
-          --output use_on_realworld_projects/rdfind_speed_report.md
-      - name: Upload speed report
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: rdfind-speed-report
-          path: use_on_realworld_projects/rdfind_speed_report.md
+          PATH=/usr/lib/ccache:$PATH scripts/benchmark_realworld.py
+          --check-only --project rdfind
+          --build-type debug --enable-ccache
       # TODO: no project here is built with sanitizers yet. rdfind used to
       # have a "run with sanitizers" step, but it silently ignored its own
       # -a/-u flags and just rebuilt the same non-sanitized binary again.
@@ -36,21 +30,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - name: Install Markdown formatter
-        run: pipx install mdformat
-      - name: Install ninja
-        run: sudo apt-get install -y ninja-build
+      - name: Install dependencies
+        run: sudo apt-get install -y ccache ninja-build
       - name: Build and test simdutf with psychicstd
         run: >-
-          scripts/benchmark_realworld.py --project simdutf
-          --build-type debug --reps 1
-          --output use_on_realworld_projects/simdutf_speed_report.md
-      - name: Upload speed report
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: simdutf-speed-report
-          path: use_on_realworld_projects/simdutf_speed_report.md
+          PATH=/usr/lib/ccache:$PATH scripts/benchmark_realworld.py
+          --check-only --project simdutf
+          --build-type debug --enable-ccache
   cmake:
     runs-on: ubuntu-latest
     steps:
@@ -201,93 +187,57 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - name: Install Markdown formatter
-        run: pipx install mdformat
-      - name: Install ninja
-        run: sudo apt-get install -y ninja-build
+      - name: Install dependencies
+        run: sudo apt-get install -y ccache ninja-build
       - name: Build and test fmt with psychicstd
         run: >-
-          scripts/benchmark_realworld.py --project fmt
-          --build-type debug --reps 1
-          --output use_on_realworld_projects/fmt_speed_report.md
-      - name: Upload speed report
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: fmt-speed-report
-          path: use_on_realworld_projects/fmt_speed_report.md
+          PATH=/usr/lib/ccache:$PATH scripts/benchmark_realworld.py
+          --check-only --project fmt
+          --build-type debug --enable-ccache
   flatbuffers:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - name: Install Markdown formatter
-        run: pipx install mdformat
-      - name: Install ninja
-        run: sudo apt-get install -y ninja-build
+      - name: Install dependencies
+        run: sudo apt-get install -y ccache ninja-build
       - name: Build and test FlatBuffers with psychicstd
         run: >-
-          scripts/benchmark_realworld.py --project flatbuffers
-          --build-type debug --reps 1
-          --output use_on_realworld_projects/flatbuffers_speed_report.md
-      - name: Upload speed report
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: flatbuffers-speed-report
-          path: use_on_realworld_projects/flatbuffers_speed_report.md
+          PATH=/usr/lib/ccache:$PATH scripts/benchmark_realworld.py
+          --check-only --project flatbuffers
+          --build-type debug --enable-ccache
   catch2:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - name: Install Markdown formatter
-        run: pipx install mdformat
-      - name: Install ninja
-        run: sudo apt-get install -y ninja-build
+      - name: Install dependencies
+        run: sudo apt-get install -y ccache ninja-build
       - name: Build and test Catch2 with psychicstd
         run: >-
-          scripts/benchmark_realworld.py --project catch2
-          --build-type debug --reps 1
-          --output use_on_realworld_projects/catch2_speed_report.md
-      - name: Upload speed report
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: catch2-speed-report
-          path: use_on_realworld_projects/catch2_speed_report.md
+          PATH=/usr/lib/ccache:$PATH scripts/benchmark_realworld.py
+          --check-only --project catch2
+          --build-type debug --enable-ccache
   eigen:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - name: Install Markdown formatter
-        run: pipx install mdformat
-      - name: Build and benchmark Eigen tests with psychicstd
+      - name: Install ccache
+        run: sudo apt-get install -y ccache
+      - name: Build and test Eigen with psychicstd
         run: >-
-          scripts/benchmark_realworld.py --project eigen
-          --build-type debug --reps 1
-          --output use_on_realworld_projects/eigen_speed_report.md
-      - name: Upload speed report
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: eigen-speed-report
-          path: use_on_realworld_projects/eigen_speed_report.md
+          PATH=/usr/lib/ccache:$PATH scripts/benchmark_realworld.py
+          --check-only --project eigen
+          --build-type debug --enable-ccache
   cppcheck:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - name: Install Markdown formatter
-        run: pipx install mdformat
-      - name: Build and benchmark cppcheck with psychicstd
+      - name: Install ccache
+        run: sudo apt-get install -y ccache
+      - name: Build and test cppcheck with psychicstd
         run: >-
-          scripts/benchmark_realworld.py --project cppcheck
-          --build-type debug --reps 1
-          --output use_on_realworld_projects/cppcheck_speed_report.md
-      - name: Upload speed report
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: cppcheck-speed-report
-          path: use_on_realworld_projects/cppcheck_speed_report.md
+          PATH=/usr/lib/ccache:$PATH scripts/benchmark_realworld.py
+          --check-only --project cppcheck
+          --build-type debug --enable-ccache
   tesseract:
     runs-on: ubuntu-latest
     timeout-minutes: 30
