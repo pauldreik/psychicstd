@@ -25,6 +25,12 @@ struct tracked {
 
 int tracked::live = 0;
 
+struct throwing_copy {
+  throwing_copy() = default;
+  throwing_copy(const throwing_copy&) { throw 1; }
+  throwing_copy(throwing_copy&&) noexcept = default;
+};
+
 int main() {
   std::any a = 42;
   psyassert(std::any_cast<int>(a) == 42);
@@ -48,6 +54,14 @@ int main() {
     psyassert(tracked::live == 1);
   }
   psyassert(tracked::live == 0);
+
+  std::any unchanged = 42;
+  const std::any throwing = throwing_copy{};
+  try {
+    unchanged = throwing;
+  } catch (int) {
+  }
+  psyassert(std::any_cast<int>(unchanged) == 42);
 
   bool bad_cast = false;
   try {
