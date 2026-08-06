@@ -1,5 +1,8 @@
 #include "psyassert.h"
 #include <ratio>
+#include <type_traits>
+
+static_assert(std::is_same_v<std::ratio<1, 2>::type, std::ratio<1, 2>>);
 
 int main() {
   static_assert(std::ratio<1, 1000>::num == 1);
