@@ -1,0 +1,32 @@
+#pragma once
+#include <__psychicstd_type_traits_classification>
+
+namespace std {
+namespace detail {
+template <typename From, typename To,
+          bool = is_void<From>::value || !is_referenceable_v<From> ||
+                 is_function<To>::value || is_array<To>::value>
+struct is_convertible_helper
+    : bool_constant<is_void<From>::value && is_void<To>::value> {};
+
+template <typename From, typename To>
+class is_convertible_helper<From, To, false> {
+  template <typename To1> static void __test_aux(To1) noexcept;
+
+  template <typename From1, typename To1,
+            typename = decltype(__test_aux<To1>(declval<From1>()))>
+  static true_type __test(int);
+
+  template <typename, typename> static false_type __test(...);
+
+public:
+  using type = decltype(__test<From, To>(0));
+};
+} // namespace detail
+
+template <typename From, typename To>
+struct is_convertible : detail::is_convertible_helper<From, To>::type {};
+template <typename From, typename To>
+inline constexpr bool is_convertible_v = is_convertible<From, To>::value;
+
+} // namespace std
