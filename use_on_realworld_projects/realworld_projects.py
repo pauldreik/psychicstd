@@ -2833,7 +2833,11 @@ def _boost_test(full: bool) -> Project:
                 wrapper = _compiler_wrapper(
                     work / "cxx",
                     tc,
-                    ("-DBOOST_NO_AUTO_PTR=1", "-DBOOST_NO_CXX98_BINDERS=1"),
+                    (
+                        "-DBOOST_NO_AUTO_PTR=1",
+                        "-DBOOST_NO_CXX98_BINDERS=1",
+                        "-D_PSYCHICSTD_COMPATIBILITY_LEVEL=0",
+                    ),
                 )
                 compiler_version = subprocess.run(
                     [*shlex.split(tc.cxx), "--version"],
@@ -2878,6 +2882,7 @@ def _boost_test(full: bool) -> Project:
                 "-DBOOST_ALL_NO_LIB=1",
                 "-DBOOST_NO_AUTO_PTR=1",
                 "-DBOOST_NO_CXX98_BINDERS=1",
+                "-D_PSYCHICSTD_COMPATIBILITY_LEVEL=0",
                 "-pthread",
             ]
             commands = [
