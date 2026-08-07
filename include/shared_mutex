@@ -48,14 +48,16 @@ public:
   using mutex_type = Mutex;
 
   shared_lock() noexcept = default;
-  explicit shared_lock(Mutex& mutex) : mutex_(&mutex), owns_(true) {
+  explicit shared_lock(Mutex& mutex)
+      : mutex_(__builtin_addressof(mutex)), owns_(true) {
     mutex_->lock_shared();
   }
-  shared_lock(Mutex& mutex, defer_lock_t) noexcept : mutex_(&mutex) {}
+  shared_lock(Mutex& mutex, defer_lock_t) noexcept
+      : mutex_(__builtin_addressof(mutex)) {}
   shared_lock(Mutex& mutex, try_to_lock_t)
-      : mutex_(&mutex), owns_(mutex.try_lock_shared()) {}
+      : mutex_(__builtin_addressof(mutex)), owns_(mutex.try_lock_shared()) {}
   shared_lock(Mutex& mutex, adopt_lock_t) noexcept
-      : mutex_(&mutex), owns_(true) {}
+      : mutex_(__builtin_addressof(mutex)), owns_(true) {}
   ~shared_lock() {
     if (owns_)
       mutex_->unlock_shared();
@@ -69,6 +71,8 @@ public:
     other.owns_ = false;
   }
   shared_lock& operator=(shared_lock&& other) noexcept {
+    if (this == __builtin_addressof(other))
+      return *this;
     if (owns_)
       mutex_->unlock_shared();
     mutex_ = other.mutex_;

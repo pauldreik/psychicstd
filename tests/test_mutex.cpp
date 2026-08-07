@@ -8,6 +8,20 @@
 
 inline int once_calls;
 
+struct address_hiding_mutex {
+  address_hiding_mutex* operator&() = delete;
+  void lock() noexcept {}
+  bool try_lock() noexcept { return true; }
+  void unlock() noexcept {}
+  void lock_shared() noexcept {}
+  bool try_lock_shared() noexcept { return true; }
+  void unlock_shared() noexcept {}
+};
+
+template <typename T> void self_move_assign(T& value) {
+  value = static_cast<T&&>(value);
+}
+
 template <typename Mutex> bool try_from_another_thread(Mutex& mutex) {
   std::atomic<bool> acquired(false);
   std::thread thread([&] {
@@ -99,6 +113,21 @@ int main() {
   m.unlock();
   psyassert(try_from_another_thread(m));
 
+// The standard requires these locks to preserve state on self-move; libstdc++
+// does not.
+#ifdef PSYCHICSTD_TEST_PSYCHICSTD
+  std::unique_lock unique_self_move(m, std::defer_lock);
+  self_move_assign(unique_self_move);
+  psyassert(unique_self_move.mutex() == &m);
+  psyassert(!unique_self_move.owns_lock());
+#endif
+
+  address_hiding_mutex hidden;
+  std::unique_lock hidden_unique(hidden, std::defer_lock);
+  psyassert(hidden_unique.mutex() == __builtin_addressof(hidden));
+  std::shared_lock hidden_shared(hidden, std::defer_lock);
+  psyassert(hidden_shared.mutex() == __builtin_addressof(hidden));
+
   std::shared_mutex shared;
   std::shared_lock first_reader(shared);
   std::shared_lock second_reader(shared, std::try_to_lock);
@@ -136,6 +165,15 @@ int main() {
     empty_threw = error.code() == std::errc::operation_not_permitted;
   }
   psyassert(empty_threw);
+
+// The standard requires these locks to preserve state on self-move; libstdc++
+// does not.
+#ifdef PSYCHICSTD_TEST_PSYCHICSTD
+  std::shared_lock shared_self_move(shared, std::defer_lock);
+  self_move_assign(shared_self_move);
+  psyassert(shared_self_move.mutex() == &shared);
+  psyassert(!shared_self_move.owns_lock());
+#endif
 
   std::shared_timed_mutex shared_timed;
   shared_timed.lock_shared();
