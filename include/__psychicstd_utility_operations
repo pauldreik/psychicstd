@@ -10,11 +10,14 @@ move(T&& t) noexcept {
   return static_cast<remove_reference_t<T>&&>(t);
 }
 
-template <typename T> constexpr T&& forward(remove_reference_t<T>& t) noexcept {
+template <typename T>
+[[gnu::always_inline]] constexpr T&&
+forward(remove_reference_t<T>& t) noexcept {
   return static_cast<T&&>(t);
 }
 template <typename T>
-constexpr T&& forward(remove_reference_t<T>&& t) noexcept {
+[[gnu::always_inline]] constexpr T&&
+forward(remove_reference_t<T>&& t) noexcept {
   return static_cast<T&&>(t);
 }
 
@@ -42,9 +45,9 @@ template <typename T>
   requires(is_move_constructible_v<T> && is_move_assignable_v<T>)
 constexpr void swap(T& a, T& b) noexcept(is_nothrow_move_constructible_v<T> &&
                                          is_nothrow_move_assignable_v<T>) {
-  T tmp = std::move(a);
-  a = std::move(b);
-  b = std::move(tmp);
+  T tmp = static_cast<remove_reference_t<T>&&>(a);
+  a = static_cast<remove_reference_t<T>&&>(b);
+  b = static_cast<remove_reference_t<T>&&>(tmp);
 }
 template <typename T, size_t N>
 constexpr void swap(T (&a)[N], T (&b)[N]) noexcept(noexcept(swap(*a, *b))) {
@@ -54,8 +57,8 @@ constexpr void swap(T (&a)[N], T (&b)[N]) noexcept(noexcept(swap(*a, *b))) {
 
 template <typename T, typename U = T>
 constexpr T exchange(T& obj, U&& new_val) {
-  T old = std::move(obj);
-  obj = std::forward<U>(new_val);
+  T old = static_cast<remove_reference_t<T>&&>(obj);
+  obj = static_cast<U&&>(new_val);
   return old;
 }
 

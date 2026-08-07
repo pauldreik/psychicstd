@@ -14,12 +14,13 @@ template <typename T1, typename T2> struct pair {
   template <typename U1, typename U2>
     requires(is_constructible_v<T1, U1> && is_constructible_v<T2, U2>)
   constexpr pair(U1&& a, U2&& b)
-      : first(std::forward<U1>(a)), second(std::forward<U2>(b)) {}
+      : first(static_cast<U1&&>(a)), second(static_cast<U2&&>(b)) {}
   template <typename U1, typename U2>
   constexpr pair(const pair<U1, U2>& p) : first(p.first), second(p.second) {}
   template <typename U1, typename U2>
   constexpr pair(pair<U1, U2>&& p)
-      : first(std::forward<U1>(p.first)), second(std::forward<U2>(p.second)) {}
+      : first(static_cast<U1&&>(p.first)), second(static_cast<U2&&>(p.second)) {
+  }
   template <typename... Args1, typename... Args2>
   constexpr pair(piecewise_construct_t, tuple<Args1...> first_args,
                  tuple<Args2...> second_args);
@@ -36,7 +37,7 @@ template <typename T1, typename T2> struct pair {
 
 template <typename T1, typename T2>
 constexpr pair<decay_t<T1>, decay_t<T2>> make_pair(T1&& a, T2&& b) {
-  return {std::forward<T1>(a), std::forward<T2>(b)};
+  return {static_cast<T1&&>(a), static_cast<T2&&>(b)};
 }
 
 template <typename T1, typename T2>
