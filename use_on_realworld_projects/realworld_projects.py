@@ -1273,6 +1273,7 @@ def _eigen(full: bool) -> Project:
                 "-I",
                 str(test_dir),
                 "-DEIGEN_TEST_MAX_SIZE=320",
+                "-D_PSYCHICSTD_COMPATIBILITY_LEVEL=0",
             ]
 
             compile_ms = 0.0
