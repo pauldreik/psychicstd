@@ -116,6 +116,10 @@ compile-time and linked-size effects of outlining these paths, explicitly
 instantiating narrow strings and stringstreams, and splitting the runtime into
 independently extracted archive members.
 
+[Implementation tricks](docs/implementation-tricks.md) collects the recurring
+techniques used to reduce frontend work and keep Debug builds pleasant to step
+through.
+
 ## Compatibility levels
 
 Real standard library headers pull in a lot of other headers transitively. A lot of real code accidentally relies on that — e.g. using `std::equal` after only `#include <string>`, which happens to work because libstdc++'s `<string>` drags in `<algorithm>`. That is technically a bug (the code should `#include <algorithm>`), but it is extremely common.
