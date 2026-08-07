@@ -2397,6 +2397,7 @@ def _tensorflow() -> Project:
             ]
 
             if psychicstd_include is not None:
+                cxxflags.append("-D_PSYCHICSTD_COMPATIBILITY_LEVEL=0")
                 overlay = src / "psychicstd-overlay"
                 shutil.copytree(psychicstd_include, overlay / "include")
                 include_env = str(overlay / "include")
