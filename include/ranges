@@ -189,6 +189,11 @@ subrange(Range&&) -> subrange<iterator_t<Range>, sentinel_t<Range>>;
 template <typename Range, typename Function> class transform_view {
   template <typename Iterator> class __iterator {
   public:
+    using iterator_category = forward_iterator_tag;
+    using reference = decltype(*declval<Iterator&>());
+    using value_type = remove_cvref_t<reference>;
+    using difference_type = ptrdiff_t;
+
     Iterator current_{};
     Function* function_ = nullptr;
 
@@ -199,7 +204,11 @@ template <typename Range, typename Function> class transform_view {
       ++current_;
       return *this;
     }
-    constexpr void operator++(int) { ++current_; }
+    constexpr __iterator operator++(int) {
+      auto old = *this;
+      ++current_;
+      return old;
+    }
     template <typename Other>
     constexpr bool operator==(const __iterator<Other>& other) const {
       return current_ == other.current_;
@@ -282,4 +291,32 @@ struct __transform_fn {
 };
 inline constexpr __transform_fn transform{};
 
+struct __keys_fn {
+  template <typename R>
+    requires std::ranges::viewable_range<R>
+  constexpr auto operator()(R&& range) const {
+    return transform(static_cast<R&&>(range),
+                     [](auto&& entry) -> decltype(auto) {
+                       return get<0>(static_cast<decltype(entry)&&>(entry));
+                     });
+  }
+};
+inline constexpr __keys_fn keys{};
+
+struct __values_fn {
+  template <typename R>
+    requires std::ranges::viewable_range<R>
+  constexpr auto operator()(R&& range) const {
+    return transform(static_cast<R&&>(range),
+                     [](auto&& entry) -> decltype(auto) {
+                       return get<1>(static_cast<decltype(entry)&&>(entry));
+                     });
+  }
+};
+inline constexpr __values_fn values{};
+
 } // namespace std::views
+
+namespace std::ranges {
+namespace views = std::views;
+}

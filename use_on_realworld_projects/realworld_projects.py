@@ -852,14 +852,13 @@ def _godot() -> Project:
 
 
 def _cmake(full: bool) -> Project:
-    version = "4.3.4"
-    url = f"https://cmake.org/files/v4.3/cmake-{version}.tar.gz"
-    checksum = "fdeff897b9eb49d764539f2b1edc6eb7e1440df325678a97c1978499e931adda"
+    version = "4.4.2"
+    url = f"https://cmake.org/files/v4.4/cmake-{version}.tar.gz"
+    checksum = "1db9e61e60b6e0874c86386340b910382f3c5e75b9fbfb44d122063129a2789d"
 
     def build(tc: Toolchain) -> dict[str, float]:
         tarball = RW_DIR / f"cmake-{version}.tar.gz"
         _fetch(url, tarball, checksum)
-
         with _temporary_directory(
             prefix="rw-cmake-full-" if full else "rw-cmake-",
             ignore_cleanup_errors=True,
@@ -868,25 +867,19 @@ def _cmake(full: bool) -> Project:
             with tarfile.open(tarball) as t:
                 t.extractall(work)
             src = work / f"cmake-{version}"
-            # CMake's std::filesystem wrapper requires path iteration, but its
-            # feature check does not test it. Extend the check so psychicstd's
-            # intentionally partial implementation selects CMake's fallback.
-            filesystem_check = src / "Source" / "Checks" / "cm_cxx_filesystem.cxx"
-            text = filesystem_check.read_text()
-            old = "  return 0;\n}\n"
-            assert old in text
-            filesystem_check.write_text(
-                text.replace(old, "  (void)p1.begin();\n\n" + old)
+            # Strict mode exposes a missing direct dependency in CMake's
+            # vendored jsoncpp allocator.
+            allocator_header = (
+                src / "Utilities" / "cmjsoncpp" / "include" / "json" / "allocator.h"
             )
-
-            # CMake relies on ADL finding these through its string iterator,
-            # which is not guaranteed when an implementation uses pointers.
-            compat_header = work / "cmake-compat.h"
-            compat_header.write_text(
-                "#include <algorithm>\nusing std::find;\nusing std::find_if_not;\n"
+            text = allocator_header.read_text()
+            marker = "#include <cstring>\n"
+            assert marker in text
+            allocator_header.write_text(
+                text.replace(marker, marker + "#include <utility>\n")
             )
             wrapper = _compiler_wrapper(
-                work / "cxx", tc, ("-include", str(compat_header))
+                work / "cxx", tc, ("-D_PSYCHICSTD_COMPATIBILITY_LEVEL=0",)
             )
 
             env = _env(tc)
@@ -900,7 +893,7 @@ def _cmake(full: bool) -> Project:
                 "-DCMAKE_BUILD_TYPE=" + tc.build_type.capitalize(),
                 "-DCMAKE_CXX_COMPILER=" + str(wrapper),
                 "-DCMAKE_CXX_STANDARD=20",
-                "-DCMAKE_USE_OPENSSL=OFF",
+                "-DCMAKE_USE_OPENSSL=ON" if full else "-DCMAKE_USE_OPENSSL=OFF",
                 "-DCMake_ENABLE_DEBUGGER=OFF",
                 "-DBUILD_TESTING=ON",
             ]
