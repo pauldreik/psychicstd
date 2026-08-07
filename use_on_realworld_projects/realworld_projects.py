@@ -2948,11 +2948,14 @@ def _bitcoin(full: bool) -> Project:
             jobs = f"-j{tc.jobs}"
             if full:
                 # Bitcoin relies on libstdc++ transitive includes in these
-                # files. Keep the workaround local instead of expanding
-                # psychicstd's drop-in header surface.
+                # files (including std::pair in common/messages.h). Keep the
+                # workaround local instead of expanding psychicstd's
+                # drop-in header surface.
                 explicit_includes = {
                     "src/common/system.cpp": "#include <limits>\n",
+                    "src/common/messages.h": "#include <utility>\n",
                     "src/init/common.cpp": "#include <ranges>\n",
+                    "src/util/check.h": "#include <type_traits>\n",
                     "src/util/sock.h": "#include <limits>\n",
                     "src/util/string.cpp": "#include <iterator>\n",
                 }
