@@ -1,6 +1,6 @@
 #pragma once
+#include <__psychicstd_type_traits_core>
 #include <cstdint>
-#include <type_traits>
 
 namespace std {
 

@@ -1,6 +1,6 @@
 #pragma once
 #include <__psychicstd_iterator_core>
-#include <type_traits>
+#include <__psychicstd_type_traits_arithmetic>
 
 namespace std {
 

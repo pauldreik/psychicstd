@@ -5,9 +5,9 @@
 #include <__psychicstd_contiguous_iterator>
 #include <__psychicstd_except>
 #include <__psychicstd_iterator_core>
+#include <__psychicstd_type_traits_object>
 #include <cstddef>
 #include <initializer_list>
-#include <type_traits>
 
 #if _PSYCHICSTD_COMPATIBILITY_LEVEL >= _PSYCHICSTD_COMPAT_DROPIN
 // libstdc++ exposes move_backward through <deque>.

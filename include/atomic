@@ -1,8 +1,8 @@
 #pragma once
 #include <__psychicstd_config>
+#include <__psychicstd_type_traits_object>
 #include <cstddef>
 #include <cstdint>
-#include <type_traits>
 
 #if _PSYCHICSTD_COMPATIBILITY_LEVEL >= _PSYCHICSTD_COMPAT_DROPIN
 // libstdc++ exposes errno through <atomic>; moodycamel relies on it.

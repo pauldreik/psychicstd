@@ -9,6 +9,7 @@ set(TESTS
     test_array
     test_atomic
     test_bit
+    test_bit_type_traits_order
     test_bitset
     test_charconv
     test_chrono
