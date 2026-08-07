@@ -4,6 +4,8 @@
 
 namespace std {
 
+[[noreturn, gnu::cold, gnu::noinline]] void __throw_lock_error(bool deadlock);
+
 struct mutex {
   using native_handle_type = pthread_mutex_t*;
 
@@ -141,11 +143,17 @@ template <typename Mutex> struct unique_lock {
     return *this;
   }
   void lock() {
+    check_lockable();
     m_->lock();
     owns_ = true;
   }
-  bool try_lock() { return owns_ = m_->try_lock(); }
+  bool try_lock() {
+    check_lockable();
+    return owns_ = m_->try_lock();
+  }
   void unlock() {
+    if (!owns_)
+      __throw_lock_error(false);
     m_->unlock();
     owns_ = false;
   }
@@ -168,6 +176,13 @@ template <typename Mutex> struct unique_lock {
   }
 
 private:
+  void check_lockable() const {
+    if (!m_)
+      __throw_lock_error(false);
+    if (owns_)
+      __throw_lock_error(true);
+  }
+
   Mutex* m_;
   bool owns_;
 };

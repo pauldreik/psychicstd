@@ -4,9 +4,6 @@
 
 namespace std {
 
-[[noreturn, gnu::cold, gnu::noinline]] void
-__throw_shared_lock_error(bool deadlock);
-
 class shared_mutex {
 public:
   using native_handle_type = pthread_rwlock_t*;
@@ -93,7 +90,7 @@ public:
   }
   void unlock() {
     if (!owns_)
-      __throw_shared_lock_error(false);
+      __throw_lock_error(false);
     mutex_->unlock_shared();
     owns_ = false;
   }
@@ -104,9 +101,9 @@ public:
 private:
   void check_lockable() const {
     if (!mutex_)
-      __throw_shared_lock_error(false);
+      __throw_lock_error(false);
     if (owns_)
-      __throw_shared_lock_error(true);
+      __throw_lock_error(true);
   }
 
   Mutex* mutex_ = nullptr;

@@ -167,11 +167,10 @@ bool regex_search(const string& subject, smatch& match,
                   const regex& expression) {
   if (!expression.valid())
     return false;
-  static constexpr size_t match_count = 16;
-  ::regmatch_t matches[match_count];
-  if (::regexec(&expression.native(), subject.c_str(), match_count, matches,
-                0) == 0) {
-    match.set(subject, matches, match_count);
+  vector<::regmatch_t> matches(expression.native().re_nsub + 1);
+  if (::regexec(&expression.native(), subject.c_str(), matches.size(),
+                matches.data(), 0) == 0) {
+    match.set(subject, matches.data(), matches.size());
     return true;
   }
   match.set(subject, nullptr, 0);

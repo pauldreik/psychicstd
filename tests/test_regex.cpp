@@ -8,6 +8,10 @@ int main() {
   psyassert(std::regex_match("hello", re));
   const std::string text = "say hello";
   psyassert(std::regex_search(text.begin(), text.end(), re));
+  const std::string search_text = "say hello";
+  std::smatch search_match;
+  psyassert(std::regex_search(search_text, search_match, re));
+  psyassert(search_match.size() == 1);
 
   std::regex insensitive("HELLO", std::regex_constants::icase);
   psyassert(std::regex_search(text.begin(), text.end(), insensitive,

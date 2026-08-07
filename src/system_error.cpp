@@ -4,7 +4,7 @@
 
 namespace std {
 
-void __throw_shared_lock_error(bool deadlock) {
+void __throw_lock_error(bool deadlock) {
   _PSYCHICSTD_THROW(system_error(
       make_error_code(deadlock ? errc::resource_deadlock_would_occur
                                : errc::operation_not_permitted)));
