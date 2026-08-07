@@ -7,6 +7,7 @@ set(TESTS
     test_algorithm
     test_any
     test_array
+    test_array_include_surface
     test_atomic
     test_bit
     test_bit_type_traits_order
@@ -78,6 +79,7 @@ set(TESTS
     test_valarray
     test_variant
     test_vector
+    test_vector_include_surface
     test_version
 )
 

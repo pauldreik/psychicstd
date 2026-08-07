@@ -1,9 +1,13 @@
 #pragma once
 #include <__psychicstd_config>
+#if _PSYCHICSTD_COMPATIBILITY_LEVEL >= _PSYCHICSTD_COMPAT_DROPIN
+#include <initializer_list>
+#endif
 #include <__psychicstd_except>
 #include <__psychicstd_iterator_core>
+#include <__psychicstd_utility_core>
+#include <__psychicstd_utility_operations>
 #include <cstddef>
-#include <utility>
 
 namespace std {
 
