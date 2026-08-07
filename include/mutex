@@ -110,10 +110,15 @@ inline constexpr adopt_lock_t adopt_lock{};
 template <typename Mutex> struct unique_lock {
   using mutex_type = Mutex;
   unique_lock() noexcept : m_(nullptr), owns_(false) {}
-  explicit unique_lock(Mutex& m) : m_(&m), owns_(true) { m_->lock(); }
-  unique_lock(Mutex& m, defer_lock_t) noexcept : m_(&m), owns_(false) {}
-  unique_lock(Mutex& m, try_to_lock_t) noexcept : m_(&m), owns_(m.try_lock()) {}
-  unique_lock(Mutex& m, adopt_lock_t) noexcept : m_(&m), owns_(true) {}
+  explicit unique_lock(Mutex& m) : m_(__builtin_addressof(m)), owns_(true) {
+    m_->lock();
+  }
+  unique_lock(Mutex& m, defer_lock_t) noexcept
+      : m_(__builtin_addressof(m)), owns_(false) {}
+  unique_lock(Mutex& m, try_to_lock_t) noexcept
+      : m_(__builtin_addressof(m)), owns_(m.try_lock()) {}
+  unique_lock(Mutex& m, adopt_lock_t) noexcept
+      : m_(__builtin_addressof(m)), owns_(true) {}
   ~unique_lock() {
     if (owns_)
       m_->unlock();
@@ -125,6 +130,8 @@ template <typename Mutex> struct unique_lock {
     o.owns_ = false;
   }
   unique_lock& operator=(unique_lock&& o) noexcept {
+    if (this == __builtin_addressof(o))
+      return *this;
     if (owns_)
       m_->unlock();
     m_ = o.m_;
