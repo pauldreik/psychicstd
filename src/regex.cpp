@@ -57,6 +57,10 @@ void append_escape(string& out, char escaped, bool in_class) {
 }
 
 string translate_ecmascript(const char* pattern) {
+  // Apple's regcomp rejects an empty pattern even though ECMAScript accepts it.
+  if (!*pattern)
+    return "x{0}";
+
   string result;
 
   for (const char* p = pattern; *p; ++p) {
@@ -132,7 +136,16 @@ regex::regex(regex&& other) noexcept : re_(other.re_), valid_(other.valid_) {
 }
 
 string smatch::str(size_t i) const {
-  return i < matches_.size() ? matches_[i] : string{};
+  return i < matches_.size() ? matches_[i].str() : string{};
+}
+
+size_t smatch::length(size_t i) const noexcept {
+  return i < matches_.size() ? matches_[i].length() : 0;
+}
+
+const __regex_sub_match& smatch::operator[](size_t i) const noexcept {
+  static const __regex_sub_match unmatched;
+  return i < matches_.size() ? matches_[i] : unmatched;
 }
 
 void smatch::set(const string& subject, const ::regmatch_t* matches, size_t n) {
@@ -140,11 +153,13 @@ void smatch::set(const string& subject, const ::regmatch_t* matches, size_t n) {
   ready_ = true;
   for (size_t i = 0; i < n; ++i) {
     if (matches[i].rm_so >= 0)
-      matches_.push_back(subject.substr(
-          static_cast<size_t>(matches[i].rm_so),
-          static_cast<size_t>(matches[i].rm_eo - matches[i].rm_so)));
+      matches_.emplace_back(
+          subject.substr(
+              static_cast<size_t>(matches[i].rm_so),
+              static_cast<size_t>(matches[i].rm_eo - matches[i].rm_so)),
+          true);
     else
-      matches_.push_back(string{});
+      matches_.emplace_back();
   }
 }
 
@@ -159,6 +174,7 @@ bool regex_search(const string& subject, smatch& match,
     match.set(subject, matches, match_count);
     return true;
   }
+  match.set(subject, nullptr, 0);
   return false;
 }
 
@@ -178,8 +194,15 @@ bool regex_search(const char* subject, const regex& expression) {
 
 bool regex_match(const string& subject, smatch& match,
                  const regex& expression) {
-  return regex_search(subject, match, expression) && !match.empty() &&
-         match.str(0) == subject;
+  if (regex_search(subject, match, expression) && !match.empty() &&
+      match.str(0) == subject)
+    return true;
+  match.set(subject, nullptr, 0);
+  return false;
+}
+
+bool regex_match(const char* subject, cmatch& match, const regex& expression) {
+  return regex_match(string(subject), static_cast<smatch&>(match), expression);
 }
 
 bool regex_match(const string& subject, const regex& expression) {
@@ -235,6 +258,47 @@ string regex_replace(const string& subject, const regex& expression,
   }
   result.append(subject.data() + offset, subject.size() - offset);
   return result;
+}
+
+sregex_token_iterator::sregex_token_iterator(string::const_iterator first,
+                                             string::const_iterator last,
+                                             const regex& expression,
+                                             int submatch) {
+  if (!expression.valid())
+    return;
+  string subject(first, last);
+  size_t token_start = 0;
+  size_t search_offset = 0;
+  bool found_match = false;
+  static constexpr size_t match_count = 16;
+  ::regmatch_t matches[match_count];
+  while (search_offset <= subject.size() &&
+         ::regexec(&expression.native(), subject.c_str() + search_offset,
+                   match_count, matches, search_offset ? REG_NOTBOL : 0) == 0) {
+    found_match = true;
+    const size_t match_begin = search_offset + matches[0].rm_so;
+    const size_t match_end = search_offset + matches[0].rm_eo;
+    if (submatch == -1) {
+      tokens_.push_back(subject.substr(token_start, match_begin - token_start));
+    } else if (submatch >= 0 && submatch < static_cast<int>(match_count) &&
+               matches[submatch].rm_so >= 0) {
+      tokens_.push_back(
+          subject.substr(search_offset + matches[submatch].rm_so,
+                         static_cast<size_t>(matches[submatch].rm_eo -
+                                             matches[submatch].rm_so)));
+    } else {
+      tokens_.emplace_back();
+    }
+    token_start = match_end;
+    search_offset = match_end;
+    if (match_begin == match_end) {
+      if (search_offset == subject.size())
+        break;
+      ++search_offset;
+    }
+  }
+  if (submatch == -1 && (token_start < subject.size() || !found_match))
+    tokens_.push_back(subject.substr(token_start));
 }
 
 } // namespace std

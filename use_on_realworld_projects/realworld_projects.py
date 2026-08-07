@@ -1744,7 +1744,7 @@ def _cxxopts(full: bool) -> Project:
                 "output.txt",
                 "extra",
             ),
-            ("-DCXXOPTS_NO_REGEX",),
+            (),
             comment="Builds and runs cxxopts' upstream example with boolean, "
             "numeric, positional, and unmatched arguments.",
         )
@@ -1760,48 +1760,7 @@ def _cxxopts(full: bool) -> Project:
             with tarfile.open(tarball) as archive:
                 archive.extractall(work)
             src = work / f"cxxopts-{version}"
-            # Keep cxxopts' documented no-regex mode, but make its fallback
-            # parser accept the same tested option syntax as its regex path.
-            header = src / "include" / "cxxopts.hpp"
-            text = header.read_text()
-            replacements = (
-                (
-                    (
-                        "while (isalnum(*pdata, std::locale::classic()) || "
-                        "*pdata == '-' || *pdata == '_')"
-                    ),
-                    (
-                        "while (isalnum(*pdata, std::locale::classic()) || "
-                        "*pdata == '-' || *pdata == '_' || *pdata == '.')"
-                    ),
-                ),
-                (
-                    (
-                        "while (isalnum(*pdata, std::locale::classic()))\n"
-                        "    {\n"
-                        "      argu_desc.arg_name.push_back(*pdata);\n"
-                        "      pdata += 1;\n"
-                        "    }"
-                    ),
-                    (
-                        "if (isalnum(*pdata, std::locale::classic()))\n"
-                        "    {\n"
-                        "      while (*pdata != '\\0')\n"
-                        "      {\n"
-                        "        argu_desc.arg_name.push_back(*pdata);\n"
-                        "        pdata += 1;\n"
-                        "      }\n"
-                        "    }"
-                    ),
-                ),
-            )
-            for old, new in replacements:
-                if text.count(old) != 1:
-                    raise RuntimeError("unexpected cxxopts fallback parser source")
-                text = text.replace(old, new)
-            header.write_text(text)
-
-            wrapper = _compiler_wrapper(work / "cxx", tc, ("-DCXXOPTS_NO_REGEX",))
+            wrapper = _compiler_wrapper(work / "cxx", tc)
             env = _env(tc)
             configure = [
                 "cmake",
@@ -1841,8 +1800,7 @@ def _cxxopts(full: bool) -> Project:
         phases=("configure", "compile", "run example", "run tests"),
         comment="Builds the example, complete option-parsing tests, multi-TU "
         "link check, and CMake find-package/add-subdirectory integration tests. "
-        "Two fallback-parser gaps are corrected locally to match the tested "
-        "regex-path syntax.",
+        "Uses cxxopts' default regex parser without source patches.",
     )
 
 

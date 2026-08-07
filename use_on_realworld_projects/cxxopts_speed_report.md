@@ -12,15 +12,15 @@ Builds and runs cxxopts' upstream example with boolean, numeric, positional, and
 
 | step | system (s) | psychicstd (s) | speedup | comment |
 | --- | ---: | ---: | ---: | --- |
-| compile | 1.45 | 0.54 | 🟢 2.66x [2.64x, 2.67x] | |
-| run tests | 0.00 | 0.00 | 🟢 1.58x [1.54x, 1.75x] | |
+| compile | 2.72 | 0.59 | 🟢 4.61x [4.58x, 4.69x] | |
+| run tests | 0.00 | 0.00 | 🟢 2.32x [2.01x, 2.46x] | |
 
 ### Release
 
 | step | system (s) | psychicstd (s) | speedup | comment |
 | --- | ---: | ---: | ---: | --- |
-| compile | 1.45 | 0.55 | 🟢 2.65x [2.64x, 2.66x] | |
-| run tests | 0.00 | 0.00 | 🟢 1.71x [1.55x, 1.79x] | |
+| compile | 2.74 | 0.59 | 🟢 4.66x [4.58x, 4.69x] | |
+| run tests | 0.00 | 0.00 | 🟢 2.36x [2.21x, 2.52x] | |
 
 ______________________________________________________________________
 

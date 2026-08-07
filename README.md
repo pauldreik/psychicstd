@@ -27,7 +27,7 @@ It is not complete. It is not fully compliant. But it is good enough to quickly 
 | [libtorrent](https://github.com/arvidn/libtorrent) | [1.92x](use_on_realworld_projects/libtorrent_speed_report.md) | Builds the complete static library with DHT, encryption, extensions, I2P, logging, and streaming enabled; WebTorrent is disabled because its bundled dependencies are absent from the release archive. |
 | [llama.cpp](https://github.com/ggml-org/llama.cpp) | [1.52x](use_on_realworld_projects/llama.cpp_speed_report.md) | Builds `ggml-base` and `ggml-cpu` and compiles model-architecture and hyperparameter handling; excludes accelerator backends, tools, examples, server, and tests. |
 | [nlohmann json](https://json.nlohmann.me/) | [2.00x](use_on_realworld_projects/nlohmann_speed_report.md) | Uncovered a reliance on implementation-specific behaviour, fixed in [PR #5236](https://github.com/nlohmann/json/pull/5236). |
-| [cxxopts](https://github.com/jarro2783/cxxopts) | [2.66x](use_on_realworld_projects/cxxopts_speed_report.md) | Compiles the upstream example with cxxopts' documented no-regex fallback; the nightly `cxxopts-full` variant runs the complete tests and CMake integration checks. |
+| [cxxopts](https://github.com/jarro2783/cxxopts) | [4.61x](use_on_realworld_projects/cxxopts_speed_report.md) | Compiles the upstream example with its default regex parser; the nightly `cxxopts-full` variant runs the complete tests and CMake integration checks. |
 | [inipp](https://github.com/mcmtroffaes/inipp) | [3.13x](use_on_realworld_projects/inipp_speed_report.md) | Builds the header smoke test and runs the complete narrow-character upstream unit suite. |
 | [OpenCV](https://opencv.org/) | [1.80x](use_on_realworld_projects/opencv_speed_report.md) | Builds the core and imgproc modules and their tests. |
 | [pocketfft](https://github.com/mreineck/pocketfft) | [1.53x](use_on_realworld_projects/pocketfft_speed_report.md) | Compiles and runs the upstream demonstration. |
@@ -43,7 +43,7 @@ It is not complete. It is not fully compliant. But it is good enough to quickly 
 | [Zancle](https://github.com/vittorioromeo/zancle) | [2.27x](use_on_realworld_projects/zancle_speed_report.md) | Builds the complete Base/System static library. |
 | [wordcounter](examples/wordcounter.cpp)| [3.63x](compile_time.md) | Example application using the STL. Counts word occurrences in text files. |
 
-Across the listed workloads, the geometric-mean compile-time speedup is **2.14x** and the median speedup is **2.10x**.
+Across the listed workloads, the geometric-mean compile-time speedup is **2.18x** and the median speedup is **2.10x**.
 
 <!-- README_BENCHMARK:realworld-speedups:end -->
 
