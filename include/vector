@@ -2,6 +2,9 @@
 #include <__psychicstd_allocator_traits>
 #include <__psychicstd_compare_core>
 #include <__psychicstd_config>
+#if _PSYCHICSTD_COMPATIBILITY_LEVEL >= _PSYCHICSTD_COMPAT_DROPIN
+#include <__psychicstd_utility_pair>
+#endif
 #include <__psychicstd_contiguous_compare>
 #include <__psychicstd_contiguous_iterator>
 #include <__psychicstd_except>

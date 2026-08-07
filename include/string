@@ -28,7 +28,7 @@
 #include <__psychicstd_minmax>
 #include <__psychicstd_string_algobase>
 // fmt also relies on libstdc++ exposing move and forward through <string>.
-#include <utility>
+#include <__psychicstd_utility_operations>
 // libstdc++ also makes the global ctype functions visible through <string>.
 // Catch2 3.8 relies on unqualified isspace after including only <string>.
 #include <ctype.h>

@@ -1,0 +1,57 @@
+#pragma once
+#include <cstddef>
+
+namespace std {
+
+struct piecewise_construct_t {
+  explicit piecewise_construct_t() = default;
+};
+inline constexpr piecewise_construct_t piecewise_construct{};
+
+struct allocator_arg_t {
+  explicit allocator_arg_t() = default;
+};
+inline constexpr allocator_arg_t allocator_arg{};
+
+struct in_place_t {
+  explicit in_place_t() = default;
+};
+inline constexpr in_place_t in_place{};
+
+template <typename T> struct in_place_type_t {
+  explicit in_place_type_t() = default;
+};
+template <typename T> inline constexpr in_place_type_t<T> in_place_type{};
+
+template <size_t Index> struct in_place_index_t {
+  explicit in_place_index_t() = default;
+};
+template <size_t Index>
+inline constexpr in_place_index_t<Index> in_place_index{};
+
+template <typename... Ts> class tuple;
+template <size_t Index, typename T> struct tuple_element;
+template <typename T> struct tuple_size;
+
+template <typename T, T... Is> struct integer_sequence {
+  using value_type = T;
+  static constexpr size_t size() noexcept { return sizeof...(Is); }
+};
+
+template <size_t... Is> using index_sequence = integer_sequence<size_t, Is...>;
+
+#if defined(__clang__)
+template <typename T, T N>
+using make_integer_sequence = __make_integer_seq<integer_sequence, T, N>;
+#else
+template <typename T, T N>
+using make_integer_sequence = integer_sequence<T, __integer_pack(N)...>;
+#endif
+
+template <size_t N>
+using make_index_sequence = make_integer_sequence<size_t, N>;
+
+template <typename... Ts>
+using index_sequence_for = make_index_sequence<sizeof...(Ts)>;
+
+} // namespace std
