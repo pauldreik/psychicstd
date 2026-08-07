@@ -1810,6 +1810,7 @@ def _pocketfft(full: bool) -> Project:
         f"pocketfft-{commit}",
         ("pocketfft_demo.cc",),
         (".",),
+        extra_cxxflags=("-D_PSYCHICSTD_COMPATIBILITY_LEVEL=0",),
         run_binary=full,
         expected_seconds=(
             {"debug": 210, "release": 30} if full else {"debug": 10, "release": 10}
