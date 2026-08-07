@@ -113,6 +113,34 @@ int main() {
   m.unlock();
   psyassert(try_from_another_thread(m));
 
+  std::unique_lock unique_deferred(m, std::defer_lock);
+  unique_deferred.lock();
+  bool unique_relock_threw = false;
+  try {
+    (void)unique_deferred.try_lock();
+  } catch (const std::system_error& error) {
+    unique_relock_threw =
+        error.code() == std::errc::resource_deadlock_would_occur;
+  }
+  psyassert(unique_relock_threw);
+  unique_deferred.unlock();
+  bool unique_reunlock_threw = false;
+  try {
+    unique_deferred.unlock();
+  } catch (const std::system_error& error) {
+    unique_reunlock_threw = error.code() == std::errc::operation_not_permitted;
+  }
+  psyassert(unique_reunlock_threw);
+
+  std::unique_lock<std::mutex> empty_unique;
+  bool empty_unique_threw = false;
+  try {
+    empty_unique.lock();
+  } catch (const std::system_error& error) {
+    empty_unique_threw = error.code() == std::errc::operation_not_permitted;
+  }
+  psyassert(empty_unique_threw);
+
 // The standard requires these locks to preserve state on self-move; libstdc++
 // does not.
 #ifdef PSYCHICSTD_TEST_PSYCHICSTD
