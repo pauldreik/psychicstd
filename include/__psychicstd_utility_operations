@@ -1,0 +1,84 @@
+#pragma once
+#include <__psychicstd_type_traits_object>
+#include <cstddef>
+
+namespace std {
+
+template <typename T>
+[[nodiscard, gnu::always_inline]] constexpr remove_reference_t<T>&&
+move(T&& t) noexcept {
+  return static_cast<remove_reference_t<T>&&>(t);
+}
+
+template <typename T> constexpr T&& forward(remove_reference_t<T>& t) noexcept {
+  return static_cast<T&&>(t);
+}
+template <typename T>
+constexpr T&& forward(remove_reference_t<T>&& t) noexcept {
+  return static_cast<T&&>(t);
+}
+
+template <typename T> constexpr const T& as_const(T& t) noexcept { return t; }
+template <typename T>
+  requires(!is_lvalue_reference_v<T>)
+constexpr const T& as_const(T&&) = delete;
+
+template <typename T>
+constexpr conditional_t<!is_nothrow_move_constructible_v<T> &&
+                            is_copy_constructible_v<T>,
+                        const T&, T&&>
+move_if_noexcept(T& x) noexcept {
+  return static_cast<conditional_t<!is_nothrow_move_constructible_v<T> &&
+                                       is_copy_constructible_v<T>,
+                                   const T&, T&&>>(x);
+}
+
+template <typename E>
+constexpr underlying_type_t<E> to_underlying(E e) noexcept {
+  return static_cast<underlying_type_t<E>>(e);
+}
+
+template <typename T>
+  requires(is_move_constructible_v<T> && is_move_assignable_v<T>)
+constexpr void swap(T& a, T& b) noexcept(is_nothrow_move_constructible_v<T> &&
+                                         is_nothrow_move_assignable_v<T>) {
+  T tmp = std::move(a);
+  a = std::move(b);
+  b = std::move(tmp);
+}
+template <typename T, size_t N>
+constexpr void swap(T (&a)[N], T (&b)[N]) noexcept(noexcept(swap(*a, *b))) {
+  for (size_t i = 0; i < N; ++i)
+    swap(a[i], b[i]);
+}
+
+template <typename T, typename U = T>
+constexpr T exchange(T& obj, U&& new_val) {
+  T old = std::move(obj);
+  obj = std::forward<U>(new_val);
+  return old;
+}
+
+namespace detail {
+template <typename T, typename = decltype(swap(declval<T&>(), declval<T&>()))>
+true_type is_swappable_test(int);
+template <typename T> false_type is_swappable_test(...);
+} // namespace detail
+template <typename T>
+struct is_swappable : decltype(detail::is_swappable_test<T>(0)) {};
+template <typename T>
+inline constexpr bool is_swappable_v = is_swappable<T>::value;
+
+namespace detail {
+template <typename T>
+auto is_nothrow_swappable_test(int)
+    -> bool_constant<noexcept(swap(declval<T&>(), declval<T&>()))>;
+template <typename T> false_type is_nothrow_swappable_test(...);
+} // namespace detail
+template <typename T>
+struct is_nothrow_swappable
+    : decltype(detail::is_nothrow_swappable_test<T>(0)) {};
+template <typename T>
+inline constexpr bool is_nothrow_swappable_v = is_nothrow_swappable<T>::value;
+
+} // namespace std
