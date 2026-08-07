@@ -13,15 +13,23 @@ void operator delete(void*, std::size_t) noexcept;
 void operator delete[](void*, std::size_t) noexcept;
 
 // placement new — constexpr so it works in C++20 constexpr contexts
-inline constexpr void* operator new(std::size_t, void* p) noexcept { return p; }
-inline constexpr void* operator new[](std::size_t, void* p) noexcept {
+[[gnu::always_inline]] inline constexpr void* operator new(std::size_t,
+                                                           void* p) noexcept {
   return p;
 }
-inline constexpr void operator delete(void*, void*) noexcept {}
-inline constexpr void operator delete[](void*, void*) noexcept {}
+[[gnu::always_inline]] inline constexpr void* operator new[](std::size_t,
+                                                             void* p) noexcept {
+  return p;
+}
+[[gnu::always_inline]] inline constexpr void operator delete(void*,
+                                                             void*) noexcept {}
+[[gnu::always_inline]] inline constexpr void operator delete[](void*,
+                                                               void*) noexcept {
+}
 
 namespace std {
-template <typename T> constexpr T* launder(T* p) noexcept {
+template <typename T>
+[[gnu::always_inline]] constexpr T* launder(T* p) noexcept {
   return __builtin_launder(p);
 }
 

@@ -3,7 +3,8 @@
 
 namespace std {
 
-template <typename T> constexpr T* addressof(T& value) noexcept {
+template <typename T>
+[[gnu::always_inline]] constexpr T* addressof(T& value) noexcept {
   return __builtin_addressof(value);
 }
 template <typename T> const T* addressof(const T&&) = delete;
