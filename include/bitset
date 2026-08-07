@@ -55,7 +55,7 @@ public:
       _PSYCHICSTD_THROW_HELPER(__throw_out_of_range, "bitset::test");
     return (*this)[pos];
   }
-  constexpr size_t size() const noexcept { return N; }
+  [[gnu::always_inline]] constexpr size_t size() const noexcept { return N; }
 
   bitset& set() noexcept {
     for (auto& word : words_)

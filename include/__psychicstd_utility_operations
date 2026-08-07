@@ -21,15 +21,18 @@ forward(remove_reference_t<T>&& t) noexcept {
   return static_cast<T&&>(t);
 }
 
-template <typename T> constexpr const T& as_const(T& t) noexcept { return t; }
+template <typename T>
+[[gnu::always_inline]] constexpr const T& as_const(T& t) noexcept {
+  return t;
+}
 template <typename T>
   requires(!is_lvalue_reference_v<T>)
 constexpr const T& as_const(T&&) = delete;
 
 template <typename T>
-constexpr conditional_t<!is_nothrow_move_constructible_v<T> &&
-                            is_copy_constructible_v<T>,
-                        const T&, T&&>
+[[gnu::always_inline]] constexpr conditional_t<
+    !is_nothrow_move_constructible_v<T> && is_copy_constructible_v<T>, const T&,
+    T&&>
 move_if_noexcept(T& x) noexcept {
   return static_cast<conditional_t<!is_nothrow_move_constructible_v<T> &&
                                        is_copy_constructible_v<T>,
@@ -37,7 +40,8 @@ move_if_noexcept(T& x) noexcept {
 }
 
 template <typename E>
-constexpr underlying_type_t<E> to_underlying(E e) noexcept {
+[[gnu::always_inline]] constexpr underlying_type_t<E>
+to_underlying(E e) noexcept {
   return static_cast<underlying_type_t<E>>(e);
 }
 

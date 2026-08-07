@@ -220,9 +220,13 @@ public:
   const Char& front() const noexcept { return data_[0]; }
   Char& back() noexcept { return data_[size_ - 1]; }
   const Char& back() const noexcept { return data_[size_ - 1]; }
-  Char* data() noexcept { return data_ ? data_ : empty_str(); }
-  const Char* data() const noexcept { return data_ ? data_ : empty_str(); }
-  const Char* c_str() const noexcept { return data(); }
+  [[gnu::always_inline]] Char* data() noexcept {
+    return data_ ? data_ : empty_str();
+  }
+  [[gnu::always_inline]] const Char* data() const noexcept {
+    return data_ ? data_ : empty_str();
+  }
+  [[gnu::always_inline]] const Char* c_str() const noexcept { return data(); }
   operator basic_string_view<Char>() const noexcept { return {data(), size_}; }
 
   size_type copy(Char* dest, size_type count, size_type pos = 0) const {
@@ -234,10 +238,10 @@ public:
   }
 
   // Capacity
-  size_type size() const noexcept { return size_; }
-  size_type length() const noexcept { return size_; }
-  size_type capacity() const noexcept { return cap_; }
-  bool empty() const noexcept { return size_ == 0; }
+  [[gnu::always_inline]] size_type size() const noexcept { return size_; }
+  [[gnu::always_inline]] size_type length() const noexcept { return size_; }
+  [[gnu::always_inline]] size_type capacity() const noexcept { return cap_; }
+  [[gnu::always_inline]] bool empty() const noexcept { return size_ == 0; }
   size_type max_size() const noexcept { return size_type(-1) / sizeof(Char); }
 
   void reserve(size_type n) {

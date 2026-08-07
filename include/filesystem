@@ -52,7 +52,7 @@ public:
     return *this;
   }
 
-  bool empty() const noexcept { return path_.empty(); }
+  [[gnu::always_inline]] bool empty() const noexcept { return path_.empty(); }
   void clear() noexcept { path_.clear(); }
   const __str& string() const noexcept { return path_; }
   const __str& native() const noexcept { return path_; }

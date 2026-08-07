@@ -277,8 +277,12 @@ template <typename Alloc> struct allocator_traits {
 };
 
 // to_address: obtain pointer from fancy pointer or raw pointer
-template <typename T> constexpr T* to_address(T* p) noexcept { return p; }
-template <typename Ptr> constexpr auto to_address(const Ptr& p) noexcept {
+template <typename T>
+[[gnu::always_inline]] constexpr T* to_address(T* p) noexcept {
+  return p;
+}
+template <typename Ptr>
+[[gnu::always_inline]] constexpr auto to_address(const Ptr& p) noexcept {
   return to_address(p.operator->());
 }
 

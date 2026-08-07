@@ -125,7 +125,9 @@ public:
   const_iterator cbegin() const noexcept { return begin(); }
   const_iterator cend() const noexcept { return end(); }
 
-  bool empty() const noexcept { return head_ == nullptr; }
+  [[gnu::always_inline]] bool empty() const noexcept {
+    return head_ == nullptr;
+  }
 
   T& front() { return head_->value; }
   const T& front() const { return head_->value; }
