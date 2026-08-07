@@ -43,6 +43,8 @@ It is not complete. It is not fully compliant. But it is good enough to quickly 
 | [Zancle](https://github.com/vittorioromeo/zancle) | [2.27x](use_on_realworld_projects/zancle_speed_report.md) | Builds the complete Base/System static library. |
 | [wordcounter](examples/wordcounter.cpp)| [3.63x](compile_time.md) | Example application using the STL. Counts word occurrences in text files. |
 
+Across the listed workloads, the geometric-mean compile-time speedup is **2.14x** and the median speedup is **2.10x**.
+
 <!-- README_BENCHMARK:realworld-speedups:end -->
 
 The real-world project recipes and reports live in [use_on_realworld_projects/](use_on_realworld_projects). Focused compile-time and compiler-memory measurements are in [compile_time.md](compile_time.md), with separate process-startup results for [Linux](startup.md) and [macOS](startup_macos.md).

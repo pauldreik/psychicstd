@@ -2,6 +2,7 @@
 """Sync selected inline README benchmark snippets from generated reports."""
 
 import re
+import statistics
 import sys
 from pathlib import Path
 
@@ -16,6 +17,10 @@ REALWORLD_REPORT_LINK = re.compile(
 )
 COMPILE_SPEEDUP_ROW = re.compile(
     r"^\| compile \|.*?\|[^|]*?([0-9]+(?:\.[0-9]+)?)x(?: |\|)"
+)
+README_SPEEDUP_ROW = re.compile(r"^\|.*?\|\s*\[([0-9]+(?:\.[0-9]+)?)x\]\([^)]*\)\s*\|")
+REALWORLD_SUMMARY = re.compile(
+    r"^Across the listed workloads, the geometric-mean compile-time speedup is .*"
 )
 
 
@@ -96,6 +101,36 @@ def _replace_realworld_rows(readme: str, marker: str) -> str:
         + match.group("start")
         + "\n"
         + updated_body
+        + "\n"
+        + match.group("end")
+        + readme[match.end("end") :]
+    )
+
+
+def _replace_realworld_summary(readme: str, marker: str) -> str:
+    match = _find_marker_match(readme, marker)
+    lines = _coerce_marker_body_lines(match.group("body"))
+    lines = [line for line in lines if not REALWORLD_SUMMARY.match(line)]
+    while lines and not lines[-1].strip():
+        lines.pop()
+    speedups = [
+        float(row.group(1))
+        for line in lines
+        if (row := README_SPEEDUP_ROW.match(line)) is not None
+    ]
+    if not speedups:
+        raise RuntimeError(f"README marker {marker}: no speedups found for summary")
+    summary = (
+        "Across the listed workloads, the geometric-mean compile-time speedup is "
+        f"**{statistics.geometric_mean(speedups):.2f}x** and the median speedup is "
+        f"**{statistics.median(speedups):.2f}x**."
+    )
+    lines.extend(("", summary, ""))
+    return (
+        readme[: match.start("start")]
+        + match.group("start")
+        + "\n"
+        + "\n".join(lines)
         + "\n"
         + match.group("end")
         + readme[match.end("end") :]
@@ -251,6 +286,7 @@ def main() -> int:
         "realworld-speedups",
         {"| [wordcounter](": wordcounter_row},
     )
+    text = _replace_realworld_summary(text, "realworld-speedups")
     text = _replace_block_rows(
         text,
         "benchmark-peak-rss",
