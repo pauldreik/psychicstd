@@ -2603,6 +2603,7 @@ int main() {
             compile = [
                 tc.cxx,
                 *shlex.split(tc.cxxflags),
+                "-D_PSYCHICSTD_COMPATIBILITY_LEVEL=0",
                 _ELECTRON_OPT_FLAG[tc.build_type],
                 "-I",
                 str(driver),
