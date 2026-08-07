@@ -2,6 +2,8 @@
 #include <__psychicstd_allocator_traits>
 #include <__psychicstd_config>
 #include <__psychicstd_ordering>
+#include <__psychicstd_type_traits_common>
+#include <__psychicstd_type_traits_object>
 #include <iosfwd>
 #include <typeinfo>
 

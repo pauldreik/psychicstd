@@ -1,8 +1,9 @@
 #pragma once
 #include <__psychicstd_config>
+#include <__psychicstd_type_traits_arithmetic>
+#include <__psychicstd_type_traits_convert>
 #include <cstdint>
 #include <initializer_list>
-#include <type_traits>
 #include <vector>
 
 #if _PSYCHICSTD_COMPATIBILITY_LEVEL >= _PSYCHICSTD_COMPAT_DROPIN

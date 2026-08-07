@@ -7,10 +7,11 @@
 #if _PSYCHICSTD_COMPATIBILITY_LEVEL >= _PSYCHICSTD_COMPAT_DROPIN
 #include <concepts>
 #endif
+#include <__psychicstd_type_traits_classification>
+#include <__psychicstd_type_traits_common>
 #include <cstddef>
 #include <initializer_list>
 #include <iosfwd>
-#include <type_traits>
 
 namespace std {
 

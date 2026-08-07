@@ -1,8 +1,8 @@
 #pragma once
 #include <__psychicstd_allocator>
 #include <__psychicstd_lifetime>
+#include <__psychicstd_type_traits_classification>
 #include <cstddef>
-#include <type_traits>
 
 namespace std {
 

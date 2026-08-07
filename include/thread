@@ -1,12 +1,12 @@
 #pragma once
 #include <__psychicstd_hash>
 #include <__psychicstd_invoke>
+#include <__psychicstd_type_traits_invoke>
 #include <chrono>
 #include <compare>
 #include <iosfwd>
 #include <stop_token>
 #include <tuple>
-#include <type_traits>
 
 #ifdef __APPLE__
 struct _opaque_pthread_t;

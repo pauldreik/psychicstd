@@ -1,7 +1,7 @@
 #pragma once
+#include <__psychicstd_type_traits_meta>
 #include <compare>
 #include <cstddef>
-#include <type_traits>
 
 #if !defined(__cpp_impl_coroutine)
 #error "<coroutine> requires compiler coroutine support"

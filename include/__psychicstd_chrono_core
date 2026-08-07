@@ -1,7 +1,8 @@
 #pragma once
+#include <__psychicstd_type_traits_arithmetic>
+#include <__psychicstd_type_traits_common>
 #include <cstdint>
 #include <ratio>
-#include <type_traits>
 
 // For common_type deduction of Rep types (e.g. long long + int → long long).
 // We use decltype(d1.count() + d2.count()) instead of std::common_type to keep

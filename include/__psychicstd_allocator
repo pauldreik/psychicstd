@@ -1,7 +1,7 @@
 #pragma once
+#include <__psychicstd_type_traits_core>
 #include <cstddef>
 #include <new>
-#include <type_traits>
 
 namespace std {
 
