@@ -1,7 +1,10 @@
 #include "psyassert.h"
 #include <algorithm>
 #include <initializer_list>
+#include <map>
 #include <ranges>
+#include <tuple>
+#include <utility>
 #include <vector>
 
 namespace custom {
@@ -69,6 +72,18 @@ int main() {
   auto owned = std::vector<int>{3, 4} |
                std::views::transform([](int value) { return value + 1; });
   psyassert(*owned.begin() == 4);
+
+  std::map<int, int> map{{1, 2}, {3, 4}};
+  auto map_keys = std::views::keys(map);
+  auto map_values = std::views::values(map);
+  psyassert(*map_keys.begin() == 1);
+  psyassert(*map_values.begin() == 2);
+  std::vector<std::pair<int, int>> pairs{{5, 6}};
+  psyassert(*std::views::keys(pairs).begin() == 5);
+  psyassert(*std::views::values(pairs).begin() == 6);
+  std::vector<std::tuple<int, int>> tuples{{7, 8}};
+  psyassert(*std::views::keys(tuples).begin() == 7);
+  psyassert(*std::views::values(tuples).begin() == 8);
 
   int a = 4;
   int b = 5;
