@@ -38,8 +38,8 @@ public:
   iterator end() noexcept { return size_ ? data_ + size_ : data_; }
   const_iterator begin() const noexcept { return data_; }
   const_iterator end() const noexcept { return size_ ? data_ + size_ : data_; }
-  bool empty() const noexcept { return size_ == 0; }
-  size_type size() const noexcept { return size_; }
+  [[gnu::always_inline]] bool empty() const noexcept { return size_ == 0; }
+  [[gnu::always_inline]] size_type size() const noexcept { return size_; }
   size_type max_size() const noexcept { return size_type(-1) / sizeof(T*); }
   T*& operator[](size_type i) noexcept { return data_[i]; }
   T* const& operator[](size_type i) const noexcept { return data_[i]; }

@@ -66,10 +66,18 @@ private:
   }
 
 public:
-  constexpr const Char* data() const noexcept { return data_; }
-  constexpr size_type size() const noexcept { return size_; }
-  constexpr size_type length() const noexcept { return size_; }
-  constexpr bool empty() const noexcept { return size_ == 0; }
+  [[gnu::always_inline]] constexpr const Char* data() const noexcept {
+    return data_;
+  }
+  [[gnu::always_inline]] constexpr size_type size() const noexcept {
+    return size_;
+  }
+  [[gnu::always_inline]] constexpr size_type length() const noexcept {
+    return size_;
+  }
+  [[gnu::always_inline]] constexpr bool empty() const noexcept {
+    return size_ == 0;
+  }
   constexpr const Char& operator[](size_type i) const noexcept {
     return data_[i];
   }
@@ -81,8 +89,12 @@ public:
   constexpr const Char& front() const noexcept { return data_[0]; }
   constexpr const Char& back() const noexcept { return data_[size_ - 1]; }
 
-  constexpr iterator begin() const noexcept { return data_; }
-  constexpr iterator end() const noexcept { return data_ + size_; }
+  [[gnu::always_inline]] constexpr iterator begin() const noexcept {
+    return data_;
+  }
+  [[gnu::always_inline]] constexpr iterator end() const noexcept {
+    return data_ + size_;
+  }
   constexpr const_iterator cbegin() const noexcept { return begin(); }
   constexpr const_iterator cend() const noexcept { return end(); }
   constexpr reverse_iterator rbegin() const noexcept {

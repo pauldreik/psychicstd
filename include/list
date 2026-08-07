@@ -187,8 +187,8 @@ public:
   const_reverse_iterator crbegin() const { return rbegin(); }
   const_reverse_iterator crend() const { return rend(); }
 
-  size_type size() const noexcept { return size_; }
-  bool empty() const noexcept { return size_ == 0; }
+  [[gnu::always_inline]] size_type size() const noexcept { return size_; }
+  [[gnu::always_inline]] bool empty() const noexcept { return size_ == 0; }
   allocator_type get_allocator() const noexcept { return alloc_; }
 
   T& front() { return node(sentinel_.next)->value; }

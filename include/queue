@@ -23,8 +23,8 @@ public:
   explicit queue(const Container& c) : c(c) {}
   explicit queue(Container&& c) : c(static_cast<Container&&>(c)) {}
 
-  bool empty() const { return c.empty(); }
-  size_type size() const { return c.size(); }
+  [[gnu::always_inline]] bool empty() const { return c.empty(); }
+  [[gnu::always_inline]] size_type size() const { return c.size(); }
   reference front() { return c.front(); }
   const_reference front() const { return c.front(); }
   reference back() { return c.back(); }
@@ -89,8 +89,8 @@ public:
     make_heap(this->c.begin(), this->c.end(), comp_);
   }
 
-  bool empty() const { return c.empty(); }
-  size_type size() const { return c.size(); }
+  [[gnu::always_inline]] bool empty() const { return c.empty(); }
+  [[gnu::always_inline]] size_type size() const { return c.size(); }
   const_reference top() const { return c.front(); }
   void push(const T& v) {
     c.push_back(v);
