@@ -2247,6 +2247,7 @@ def _tesseract() -> Project:
             src = work / f"tesseract-{version}"
 
             env = _env(tc)
+            cxxflags = tc.cxxflags + " -D_PSYCHICSTD_COMPATIBILITY_LEVEL=0"
             configure = [
                 "cmake",
                 "-S",
@@ -2257,7 +2258,7 @@ def _tesseract() -> Project:
                 "-DCMAKE_BUILD_TYPE=" + tc.build_type.capitalize(),
                 "-DCMAKE_CXX_COMPILER=" + tc.cxx,
                 "-DCMAKE_CXX_STANDARD=20",
-                "-DCMAKE_CXX_FLAGS=" + tc.cxxflags,
+                "-DCMAKE_CXX_FLAGS=" + cxxflags,
                 "-DCMAKE_EXE_LINKER_FLAGS=" + tc.ldflags,
                 "-DCMAKE_CXX_STANDARD_LIBRARIES=" + tc.libs,
                 "-DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY",
