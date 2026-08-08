@@ -3398,7 +3398,11 @@ def _harfbuzz() -> Project:
             src = work / f"harfbuzz-{version}"
 
             env = _env(tc)
-            wrapper = _compiler_wrapper(work / "cxx", tc)
+            wrapper = _compiler_wrapper(
+                work / "cxx",
+                tc,
+                ("-D_PSYCHICSTD_COMPATIBILITY_LEVEL=0",),
+            )
             env["CXX"] = str(wrapper)
             configure = [
                 "meson",
