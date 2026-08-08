@@ -1085,7 +1085,9 @@ def _ctre() -> Project:
                 "-GNinja",
                 "-DCMAKE_BUILD_TYPE=" + tc.build_type.capitalize(),
                 "-DCMAKE_CXX_COMPILER=" + tc.cxx,
-                "-DCMAKE_CXX_FLAGS=" + tc.cxxflags,
+                "-DCMAKE_CXX_FLAGS="
+                + tc.cxxflags
+                + " -D_PSYCHICSTD_COMPATIBILITY_LEVEL=0",
                 "-DCMAKE_EXE_LINKER_FLAGS=" + tc.ldflags,
                 "-DCMAKE_CXX_STANDARD_LIBRARIES=" + tc.libs,
                 "-DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY",
@@ -1273,6 +1275,7 @@ def _eigen(full: bool) -> Project:
                 "-I",
                 str(test_dir),
                 "-DEIGEN_TEST_MAX_SIZE=320",
+                "-D_PSYCHICSTD_COMPATIBILITY_LEVEL=0",
             ]
 
             compile_ms = 0.0
@@ -1499,7 +1502,9 @@ def _nlohmann(full: bool) -> Project:
                 "-GNinja",
                 "-DCMAKE_BUILD_TYPE=" + tc.build_type.capitalize(),
                 "-DCMAKE_CXX_COMPILER=" + tc.cxx,
-                "-DCMAKE_CXX_FLAGS=" + tc.cxxflags,
+                "-DCMAKE_CXX_FLAGS="
+                + tc.cxxflags
+                + " -D_PSYCHICSTD_COMPATIBILITY_LEVEL=0",
                 "-DCMAKE_EXE_LINKER_FLAGS=" + tc.ldflags,
                 "-DCMAKE_CXX_STANDARD_LIBRARIES=" + tc.libs,
                 "-DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY",
@@ -1807,6 +1812,7 @@ def _pocketfft(full: bool) -> Project:
         f"pocketfft-{commit}",
         ("pocketfft_demo.cc",),
         (".",),
+        extra_cxxflags=("-D_PSYCHICSTD_COMPATIBILITY_LEVEL=0",),
         run_binary=full,
         expected_seconds=(
             {"debug": 210, "release": 30} if full else {"debug": 10, "release": 10}
@@ -2243,6 +2249,7 @@ def _tesseract() -> Project:
             src = work / f"tesseract-{version}"
 
             env = _env(tc)
+            cxxflags = tc.cxxflags + " -D_PSYCHICSTD_COMPATIBILITY_LEVEL=0"
             configure = [
                 "cmake",
                 "-S",
@@ -2253,7 +2260,7 @@ def _tesseract() -> Project:
                 "-DCMAKE_BUILD_TYPE=" + tc.build_type.capitalize(),
                 "-DCMAKE_CXX_COMPILER=" + tc.cxx,
                 "-DCMAKE_CXX_STANDARD=20",
-                "-DCMAKE_CXX_FLAGS=" + tc.cxxflags,
+                "-DCMAKE_CXX_FLAGS=" + cxxflags,
                 "-DCMAKE_EXE_LINKER_FLAGS=" + tc.ldflags,
                 "-DCMAKE_CXX_STANDARD_LIBRARIES=" + tc.libs,
                 "-DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY",
@@ -2393,6 +2400,7 @@ def _tensorflow() -> Project:
             ]
 
             if psychicstd_include is not None:
+                cxxflags.append("-D_PSYCHICSTD_COMPATIBILITY_LEVEL=0")
                 overlay = src / "psychicstd-overlay"
                 shutil.copytree(psychicstd_include, overlay / "include")
                 include_env = str(overlay / "include")
@@ -2602,6 +2610,7 @@ int main() {
             compile = [
                 tc.cxx,
                 *shlex.split(tc.cxxflags),
+                "-D_PSYCHICSTD_COMPATIBILITY_LEVEL=0",
                 _ELECTRON_OPT_FLAG[tc.build_type],
                 "-I",
                 str(driver),
@@ -2833,7 +2842,11 @@ def _boost_test(full: bool) -> Project:
                 wrapper = _compiler_wrapper(
                     work / "cxx",
                     tc,
-                    ("-DBOOST_NO_AUTO_PTR=1", "-DBOOST_NO_CXX98_BINDERS=1"),
+                    (
+                        "-DBOOST_NO_AUTO_PTR=1",
+                        "-DBOOST_NO_CXX98_BINDERS=1",
+                        "-D_PSYCHICSTD_COMPATIBILITY_LEVEL=0",
+                    ),
                 )
                 compiler_version = subprocess.run(
                     [*shlex.split(tc.cxx), "--version"],
@@ -2878,6 +2891,7 @@ def _boost_test(full: bool) -> Project:
                 "-DBOOST_ALL_NO_LIB=1",
                 "-DBOOST_NO_AUTO_PTR=1",
                 "-DBOOST_NO_CXX98_BINDERS=1",
+                "-D_PSYCHICSTD_COMPATIBILITY_LEVEL=0",
                 "-pthread",
             ]
             commands = [
@@ -3384,7 +3398,11 @@ def _harfbuzz() -> Project:
             src = work / f"harfbuzz-{version}"
 
             env = _env(tc)
-            wrapper = _compiler_wrapper(work / "cxx", tc)
+            wrapper = _compiler_wrapper(
+                work / "cxx",
+                tc,
+                ("-D_PSYCHICSTD_COMPATIBILITY_LEVEL=0",),
+            )
             env["CXX"] = str(wrapper)
             configure = [
                 "meson",
