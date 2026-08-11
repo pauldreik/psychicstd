@@ -88,6 +88,20 @@ static void test_duration_bounds() {
                 std::numeric_limits<float>::max());
 }
 
+static void test_duration_increment_decrement() {
+  static_assert([] {
+    seconds s(5);
+    const seconds pre_inc = ++s;
+    bool ok = pre_inc.count() == 6 && s.count() == 6;
+    const seconds post_inc = s++;
+    ok = ok && post_inc.count() == 6 && s.count() == 7;
+    const seconds pre_dec = --s;
+    ok = ok && pre_dec.count() == 6 && s.count() == 6;
+    const seconds post_dec = s--;
+    ok = ok && post_dec.count() == 6 && s.count() == 5;
+    return ok;
+  }());
+}
 static void test_integral_is_finite() {
   static_assert(std::isfinite(0));
   static_assert(!std::isinf(0LL));
@@ -141,5 +155,6 @@ int main() {
   test_duration_cast_same_period();
   test_time_point_arithmetic();
   test_duration_bounds();
+  test_duration_increment_decrement();
   test_integral_is_finite();
 }

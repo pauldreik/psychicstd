@@ -101,6 +101,16 @@ public:
     rep_ %= d.rep_;
     return *this;
   }
+  constexpr duration& operator++() {
+    ++rep_;
+    return *this;
+  }
+  constexpr duration operator++(int) { return duration(rep_++); }
+  constexpr duration& operator--() {
+    --rep_;
+    return *this;
+  }
+  constexpr duration operator--(int) { return duration(rep_--); }
 
   static constexpr duration zero() { return duration(0); }
   static constexpr duration min() { return duration(__duration_min<Rep>()); }
