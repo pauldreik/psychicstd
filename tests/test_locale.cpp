@@ -37,7 +37,7 @@ protected:
 };
 
 struct missing_facet : std::locale::facet {
-  inline static std::locale::id id;
+  static inline std::locale::id id;
 };
 
 int main() {
