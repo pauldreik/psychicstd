@@ -1,6 +1,7 @@
 #pragma once
 #include <__psychicstd_type_traits_arithmetic>
 #include <__psychicstd_type_traits_common>
+#include <__psychicstd_type_traits_convert>
 #include <cstdint>
 #include <ratio>
 
@@ -65,7 +66,10 @@ public:
   using period = Period;
 
   constexpr duration() = default;
-  constexpr explicit duration(Rep v) : rep_(v) {}
+  template <typename Rep2>
+    requires(is_convertible_v<const Rep2&, Rep> &&
+             (is_floating_point_v<Rep> || !is_floating_point_v<Rep2>))
+  constexpr explicit duration(const Rep2& v) : rep_(static_cast<Rep>(v)) {}
   template <typename Rep2, typename Period2>
     requires((is_floating_point_v<Rep> ||
               ratio_divide<Period2, Period>::den == 1) &&

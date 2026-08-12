@@ -102,6 +102,23 @@ static void test_duration_increment_decrement() {
     return ok;
   }());
 }
+
+static void test_duration_converting_constructor() {
+  // [time.duration.cons]: the converting constructor is a template over
+  // Rep2, not a fixed-Rep parameter -- brace-init from a differently-typed
+  // (but convertible) integer must not narrowing-fail at the call site.
+  const std::size_t value = 5;
+  static_assert(std::is_same_v<decltype(milliseconds{value}), milliseconds>);
+  static_assert(milliseconds{value}.count() == 5);
+  const int negative_ok = -3;
+  static_assert(seconds{negative_ok}.count() == -3);
+
+  // The floating-point guardrail survives: a float can't silently truncate
+  // into an integral-rep duration (matching real libstdc++/libc++).
+  static_assert(!std::is_constructible_v<milliseconds, double>);
+  static_assert(std::is_constructible_v<duration<double>, int>);
+}
+
 static void test_integral_is_finite() {
   static_assert(std::isfinite(0));
   static_assert(!std::isinf(0LL));
@@ -156,5 +173,6 @@ int main() {
   test_time_point_arithmetic();
   test_duration_bounds();
   test_duration_increment_decrement();
+  test_duration_converting_constructor();
   test_integral_is_finite();
 }
