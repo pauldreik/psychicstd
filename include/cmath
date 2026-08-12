@@ -155,10 +155,12 @@ concept arithmetic = integral<T> || __builtin_classify_type(*(T*)nullptr) == 8;
 
 // float overloads
 using ::ceilf;
+using ::ceill;
 using ::cosf;
 using ::expf;
 using ::fabsf;
 using ::floorf;
+using ::floorl;
 using ::fmaf;
 using ::fmal;
 using ::fmodf;
@@ -167,14 +169,49 @@ using ::lgammaf;
 using ::logf;
 using ::powf;
 using ::roundf;
+using ::roundl;
 using ::sinf;
 using ::sqrtf;
 using ::tanf;
 using ::tgammaf;
+using ::truncf;
+using ::truncl;
 
 inline float abs(float x) { return ::fabsf(x); }
 inline double abs(double x) { return ::fabs(x); }
 inline long double abs(long double x) { return ::fabsl(x); }
+inline _PSYCHICSTD_CMATH_CONSTEXPR float ceil(float x) { return ::ceilf(x); }
+inline _PSYCHICSTD_CMATH_CONSTEXPR long double ceil(long double x) {
+  return ::ceill(x);
+}
+template <__cmath_detail::integral T>
+inline _PSYCHICSTD_CMATH_CONSTEXPR double ceil(T x) {
+  return ::ceil(static_cast<double>(x));
+}
+inline _PSYCHICSTD_CMATH_CONSTEXPR float floor(float x) { return ::floorf(x); }
+inline _PSYCHICSTD_CMATH_CONSTEXPR long double floor(long double x) {
+  return ::floorl(x);
+}
+template <__cmath_detail::integral T>
+inline _PSYCHICSTD_CMATH_CONSTEXPR double floor(T x) {
+  return ::floor(static_cast<double>(x));
+}
+inline _PSYCHICSTD_CMATH_CONSTEXPR float round(float x) { return ::roundf(x); }
+inline _PSYCHICSTD_CMATH_CONSTEXPR long double round(long double x) {
+  return ::roundl(x);
+}
+template <__cmath_detail::integral T>
+inline _PSYCHICSTD_CMATH_CONSTEXPR double round(T x) {
+  return ::round(static_cast<double>(x));
+}
+inline _PSYCHICSTD_CMATH_CONSTEXPR float trunc(float x) { return ::truncf(x); }
+inline _PSYCHICSTD_CMATH_CONSTEXPR long double trunc(long double x) {
+  return ::truncl(x);
+}
+template <__cmath_detail::integral T>
+inline _PSYCHICSTD_CMATH_CONSTEXPR double trunc(T x) {
+  return ::trunc(static_cast<double>(x));
+}
 inline _PSYCHICSTD_CMATH_CONSTEXPR float sqrt(float x) { return ::sqrtf(x); }
 inline _PSYCHICSTD_CMATH_CONSTEXPR long double sqrt(long double x) {
   return ::sqrtl(x);

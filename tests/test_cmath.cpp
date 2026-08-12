@@ -35,6 +35,29 @@ int main() {
   static_assert(std::is_same_v<decltype(std::cos(1.0L)), long double>);
   static_assert(std::is_same_v<decltype(std::ldexp(1.0F, 1)), float>);
   static_assert(std::is_same_v<decltype(std::ldexp(1.0L, 1)), long double>);
+
+  static_assert(std::is_same_v<decltype(std::round(1.0F)), float>);
+  static_assert(std::is_same_v<decltype(std::round(1.0)), double>);
+  static_assert(std::is_same_v<decltype(std::round(1.0L)), long double>);
+  static_assert(std::is_same_v<decltype(std::round(1)), double>);
+  static_assert(std::is_same_v<decltype(std::ceil(1.0F)), float>);
+  static_assert(std::is_same_v<decltype(std::ceil(1.0)), double>);
+  static_assert(std::is_same_v<decltype(std::ceil(1.0L)), long double>);
+  static_assert(std::is_same_v<decltype(std::ceil(1)), double>);
+  static_assert(std::is_same_v<decltype(std::floor(1.0F)), float>);
+  static_assert(std::is_same_v<decltype(std::floor(1.0)), double>);
+  static_assert(std::is_same_v<decltype(std::floor(1.0L)), long double>);
+  static_assert(std::is_same_v<decltype(std::floor(1)), double>);
+  static_assert(std::is_same_v<decltype(std::trunc(1.0F)), float>);
+  static_assert(std::is_same_v<decltype(std::trunc(1.0)), double>);
+  static_assert(std::is_same_v<decltype(std::trunc(1.0L)), long double>);
+  static_assert(std::is_same_v<decltype(std::trunc(1)), double>);
+  psyassert(std::round(2.5F) == 3.0F);
+  psyassert(std::round(-2.5) == -3.0);
+  psyassert(std::ceil(1.5L) == 2.0L);
+  psyassert(std::floor(1.5F) == 1.0F);
+  psyassert(std::trunc(-1.5) == -1.0);
+
   static_assert(std::is_same_v<decltype(std::ldexp(1, 1)), double>);
   int exponent = 0;
   static_assert(std::is_same_v<decltype(std::frexp(1.0F, &exponent)), float>);
