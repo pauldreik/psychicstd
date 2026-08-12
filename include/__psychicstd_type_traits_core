@@ -64,6 +64,10 @@ template <> struct is_integral<char8_t> : true_type {};
 template <> struct is_integral<char16_t> : true_type {};
 template <> struct is_integral<char32_t> : true_type {};
 template <> struct is_integral<wchar_t> : true_type {};
+#ifdef __SIZEOF_INT128__
+template <> struct is_integral<__int128> : true_type {};
+template <> struct is_integral<unsigned __int128> : true_type {};
+#endif
 template <typename T> struct is_integral<const T> : is_integral<T> {};
 template <typename T> struct is_integral<volatile T> : is_integral<T> {};
 template <typename T> struct is_integral<const volatile T> : is_integral<T> {};
