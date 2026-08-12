@@ -71,6 +71,23 @@ int main() {
   psyassert(std::abs(std::erfc(1.0) - 0.15729920705028513) < 1e-12);
   psyassert(std::abs(std::erf(1.0F) - 0.8427008F) < 1e-5F);
 
+  // hypot's 3-arg overload (C++17).
+  static_assert(std::is_same_v<decltype(std::hypot(1.0F, 1.0F, 1.0F)), float>);
+  static_assert(std::is_same_v<decltype(std::hypot(1.0, 1.0, 1.0)), double>);
+  static_assert(
+      std::is_same_v<decltype(std::hypot(1.0L, 1.0L, 1.0L)), long double>);
+  static_assert(std::is_same_v<decltype(std::hypot(1, 1.0F, 1.0)), double>);
+  psyassert(std::hypot(2.0, 3.0, 6.0) == 7.0);
+  // float: don't require bit-exact equality across implementations --
+  // Implementations may use different scaling strategies and need not be
+  // bit-identical.
+  psyassert(std::abs(std::hypot(2.0F, 3.0F, 6.0F) - 7.0F) < 1e-5F);
+  const double large_hypot = std::hypot(1e308, 1e308, 1e308);
+  psyassert(std::isfinite(large_hypot));
+  psyassert(large_hypot > 1.7e308);
+  const double small_hypot = std::hypot(1e-308, 1e-308, 1e-308);
+  psyassert(small_hypot > 1.7e-308);
+
   static_assert(std::is_same_v<decltype(std::ldexp(1, 1)), double>);
   int exponent = 0;
   static_assert(std::is_same_v<decltype(std::frexp(1.0F, &exponent)), float>);

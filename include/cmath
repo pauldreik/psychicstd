@@ -376,6 +376,50 @@ inline _PSYCHICSTD_CMATH_CONSTEXPR auto hypot(T x, U y) {
     return ::hypot(static_cast<double>(x), static_cast<double>(y));
 }
 
+template <typename T>
+inline _PSYCHICSTD_CMATH_CONSTEXPR T __hypot3(T x, T y, T z) {
+  x = std::abs(x);
+  y = std::abs(y);
+  z = std::abs(z);
+  T scale = x > y ? x : y;
+  scale = scale > z ? scale : z;
+  if (std::isinf(scale))
+    return scale;
+  if (scale == T(0))
+    return T(0);
+  x /= scale;
+  y /= scale;
+  z /= scale;
+  return scale * std::sqrt(x * x + y * y + z * z);
+}
+
+inline _PSYCHICSTD_CMATH_CONSTEXPR float hypot(float x, float y, float z) {
+  return __hypot3(x, y, z);
+}
+inline _PSYCHICSTD_CMATH_CONSTEXPR double hypot(double x, double y, double z) {
+  return __hypot3(x, y, z);
+}
+inline _PSYCHICSTD_CMATH_CONSTEXPR long double
+hypot(long double x, long double y, long double z) {
+  return __hypot3(x, y, z);
+}
+
+template <typename T, typename U, typename V>
+  requires(__cmath_detail::arithmetic<T> && __cmath_detail::arithmetic<U> &&
+           __cmath_detail::arithmetic<V>)
+inline _PSYCHICSTD_CMATH_CONSTEXPR auto hypot(T x, U y, V z) {
+  if constexpr (__is_same(T, long double) || __is_same(U, long double) ||
+                __is_same(V, long double))
+    return hypot(static_cast<long double>(x), static_cast<long double>(y),
+                 static_cast<long double>(z));
+  else if constexpr (__is_same(T, float) && __is_same(U, float) &&
+                     __is_same(V, float))
+    return hypot(x, y, z);
+  else
+    return hypot(static_cast<double>(x), static_cast<double>(y),
+                 static_cast<double>(z));
+}
+
 template <typename T, typename U>
   requires(__cmath_detail::arithmetic<T> && __cmath_detail::arithmetic<U>)
 inline _PSYCHICSTD_CMATH_CONSTEXPR auto pow(T base, U exponent) {
