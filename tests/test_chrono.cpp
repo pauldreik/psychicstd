@@ -5,33 +5,30 @@
 
 using namespace std::chrono;
 
-static void test_duration_cast_same_period() {
-  // Converting nanoseconds to nanoseconds with a large value should not
-  // overflow.  The intermediate d.count() * Period::num * ToPer::den
-  // can overflow int64 even when the periods are identical (num == den).
-  // Catch2's catch_timer.cpp hits this: getCurrentNanosecondsSinceEpoch()
-  // calls duration_cast<nanoseconds>(steady_clock::now().time_since_epoch()).
-  nanoseconds large(63'514'168'108'767LL); // ~17.6 hours in ns
-  auto result = duration_cast<nanoseconds>(large);
-  psyassert(result.count() == 63'514'168'108'767LL);
-}
+static void test_duration_cast_paths() {
+  // num == 1, den == 1: neither multiply nor divide. Cross-cancelling before
+  // forming num and den also keeps these large period factors representable.
+  using large_period = std::ratio<INTMAX_MAX / 2, INTMAX_MAX / 2 - 1>;
+  using large_duration = std::chrono::duration<long long, large_period>;
+  constexpr auto largest = std::numeric_limits<long long>::max();
+  static_assert(
+      duration_cast<large_duration>(large_duration(largest)).count() ==
+      largest);
 
-static void test_duration_cast_identity() {
-  milliseconds ms(42);
-  auto ns = duration_cast<nanoseconds>(ms);
-  psyassert(ns.count() == 42'000'000);
-}
+  // num == 1, den != 1: divide only. Multiplying this count by the
+  // unreduced numerator of 1'000'000 overflows before the division.
+  static_assert(duration_cast<microseconds>(nanoseconds(largest)).count() ==
+                largest / 1'000);
 
-static void test_duration_cast_down() {
-  nanoseconds ns(1'500'000'000);
-  auto sec = duration_cast<seconds>(ns);
-  psyassert(sec.count() == 1);
-}
+  // num != 1, den == 1: multiply only. Converting floating-point seconds to
+  // integral milliseconds requires duration_cast and truncates the result.
+  static_assert(duration_cast<milliseconds>(duration<double>(1.2345)).count() ==
+                1'234);
 
-static void test_duration_cast_up() {
-  seconds sec(2);
-  auto ms = duration_cast<milliseconds>(sec);
-  psyassert(ms.count() == 2'000);
+  // num != 1, den != 1: multiply and divide. The period ratio is 14/15.
+  using two_thirds = duration<int, std::ratio<2, 3>>;
+  using five_sevenths = duration<int, std::ratio<5, 7>>;
+  static_assert(duration_cast<five_sevenths>(two_thirds(30)).count() == 28);
 }
 
 static void test_duration_cast_wide_intermediate() {
@@ -164,12 +161,9 @@ int main() {
   }();
   static_assert(remainder == 200ms);
 
-  test_duration_cast_identity();
-  test_duration_cast_down();
-  test_duration_cast_up();
+  test_duration_cast_paths();
   test_duration_cast_wide_intermediate();
   test_duration_fractional_conversion();
-  test_duration_cast_same_period();
   test_time_point_arithmetic();
   test_duration_bounds();
   test_duration_increment_decrement();
