@@ -92,6 +92,16 @@ int main() {
   psyassert(std::to_string(2.5) == "2.500000");
   psyassert(std::to_string(3.5L) == "3.500000");
 
+  psyassert(std::to_wstring(-42) == L"-42");
+  psyassert(std::to_wstring(42L) == L"42");
+  psyassert(std::to_wstring(42LL) == L"42");
+  psyassert(std::to_wstring(42U) == L"42");
+  psyassert(std::to_wstring(42UL) == L"42");
+  psyassert(std::to_wstring(42ULL) == L"42");
+  psyassert(std::to_wstring(1.5F) == L"1.500000");
+  psyassert(std::to_wstring(2.5) == L"2.500000");
+  psyassert(std::to_wstring(3.5L) == L"3.500000");
+
   conversion_threw = false;
   try {
     (void)std::stoi("999999999999999999999999999999999");

@@ -1002,6 +1002,16 @@ string to_string(float value);
 string to_string(double value);
 string to_string(long double value);
 
+wstring to_wstring(int value);
+wstring to_wstring(long value);
+wstring to_wstring(long long value);
+wstring to_wstring(unsigned value);
+wstring to_wstring(unsigned long value);
+wstring to_wstring(unsigned long long value);
+wstring to_wstring(float value);
+wstring to_wstring(double value);
+wstring to_wstring(long double value);
+
 #if defined(__cpp_exceptions)
 int stoi(const string& value, size_t* pos = nullptr, int base = 10);
 long stol(const string& value, size_t* pos = nullptr, int base = 10);

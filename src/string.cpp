@@ -1,6 +1,7 @@
 #include <cerrno>
 #include <cstdlib>
 #include <string>
+#include <wchar.h>
 
 namespace std {
 
@@ -22,6 +23,34 @@ string to_string(unsigned long long value) {
 string to_string(float value) { return format_number("%f", value); }
 string to_string(double value) { return format_number("%f", value); }
 string to_string(long double value) { return format_number("%Lf", value); }
+
+namespace {
+template <typename Value>
+wstring format_wide_number(const wchar_t* format, Value value) {
+  wchar_t buffer[8192];
+  int length =
+      ::swprintf(buffer, sizeof(buffer) / sizeof(*buffer), format, value);
+  return {buffer, static_cast<size_t>(length)};
+}
+} // namespace
+
+wstring to_wstring(int value) { return format_wide_number(L"%d", value); }
+wstring to_wstring(long value) { return format_wide_number(L"%ld", value); }
+wstring to_wstring(long long value) {
+  return format_wide_number(L"%lld", value);
+}
+wstring to_wstring(unsigned value) { return format_wide_number(L"%u", value); }
+wstring to_wstring(unsigned long value) {
+  return format_wide_number(L"%lu", value);
+}
+wstring to_wstring(unsigned long long value) {
+  return format_wide_number(L"%llu", value);
+}
+wstring to_wstring(float value) { return format_wide_number(L"%f", value); }
+wstring to_wstring(double value) { return format_wide_number(L"%f", value); }
+wstring to_wstring(long double value) {
+  return format_wide_number(L"%Lf", value);
+}
 
 #if defined(__cpp_exceptions)
 template <typename Value>
