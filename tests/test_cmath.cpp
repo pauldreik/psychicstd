@@ -7,6 +7,14 @@
 using std::nextafter;
 static_assert(std::is_same_v<decltype(nextafter(1.0, 2.0)), double>);
 
+static_assert(std::is_same_v<std::float_t, float>);
+static_assert(std::is_same_v<std::double_t, double>);
+static_assert([] {
+  std::float_t f = 1.5F;
+  std::double_t d = 2.5;
+  return f + d == 4.0;
+}());
+
 int main() {
   psyassert(std::fpclassify(0.0) == FP_ZERO);
   psyassert(std::fpclassify(1.0F) == FP_NORMAL);
