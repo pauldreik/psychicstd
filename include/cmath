@@ -157,6 +157,10 @@ concept arithmetic = integral<T> || __builtin_classify_type(*(T*)nullptr) == 8;
 using ::ceilf;
 using ::ceill;
 using ::cosf;
+using ::erfcf;
+using ::erfcl;
+using ::erff;
+using ::erfl;
 using ::expf;
 using ::fabsf;
 using ::floorf;
@@ -178,6 +182,22 @@ using ::truncf;
 using ::truncl;
 
 inline float abs(float x) { return ::fabsf(x); }
+inline _PSYCHICSTD_CMATH_CONSTEXPR float erf(float x) { return ::erff(x); }
+inline _PSYCHICSTD_CMATH_CONSTEXPR long double erf(long double x) {
+  return ::erfl(x);
+}
+template <__cmath_detail::integral T>
+inline _PSYCHICSTD_CMATH_CONSTEXPR double erf(T x) {
+  return ::erf(static_cast<double>(x));
+}
+inline _PSYCHICSTD_CMATH_CONSTEXPR float erfc(float x) { return ::erfcf(x); }
+inline _PSYCHICSTD_CMATH_CONSTEXPR long double erfc(long double x) {
+  return ::erfcl(x);
+}
+template <__cmath_detail::integral T>
+inline _PSYCHICSTD_CMATH_CONSTEXPR double erfc(T x) {
+  return ::erfc(static_cast<double>(x));
+}
 inline double abs(double x) { return ::fabs(x); }
 inline long double abs(long double x) { return ::fabsl(x); }
 inline _PSYCHICSTD_CMATH_CONSTEXPR float ceil(float x) { return ::ceilf(x); }

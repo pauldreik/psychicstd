@@ -58,6 +58,19 @@ int main() {
   psyassert(std::floor(1.5F) == 1.0F);
   psyassert(std::trunc(-1.5) == -1.0);
 
+  static_assert(std::is_same_v<decltype(std::erf(1.0F)), float>);
+  static_assert(std::is_same_v<decltype(std::erf(1.0)), double>);
+  static_assert(std::is_same_v<decltype(std::erf(1.0L)), long double>);
+  static_assert(std::is_same_v<decltype(std::erf(1)), double>);
+  static_assert(std::is_same_v<decltype(std::erfc(1.0F)), float>);
+  static_assert(std::is_same_v<decltype(std::erfc(1.0)), double>);
+  static_assert(std::is_same_v<decltype(std::erfc(1.0L)), long double>);
+  static_assert(std::is_same_v<decltype(std::erfc(1)), double>);
+  psyassert(std::abs(std::erf(0.0) - 0.0) < 1e-12);
+  psyassert(std::abs(std::erf(1.0) - 0.8427007929497149) < 1e-12);
+  psyassert(std::abs(std::erfc(1.0) - 0.15729920705028513) < 1e-12);
+  psyassert(std::abs(std::erf(1.0F) - 0.8427008F) < 1e-5F);
+
   static_assert(std::is_same_v<decltype(std::ldexp(1, 1)), double>);
   int exponent = 0;
   static_assert(std::is_same_v<decltype(std::frexp(1.0F, &exponent)), float>);
