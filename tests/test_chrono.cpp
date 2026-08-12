@@ -1,37 +1,47 @@
 #include "psyassert.h"
 #include <chrono>
+
+#ifndef __cpp_lib_chrono
+#error "<chrono> must define __cpp_lib_chrono"
+#endif
+
 #include <cmath>
 #include <limits>
+#include <type_traits>
 
 using namespace std::chrono;
 
-static void test_duration_cast_same_period() {
-  // Converting nanoseconds to nanoseconds with a large value should not
-  // overflow.  The intermediate d.count() * Period::num * ToPer::den
-  // can overflow int64 even when the periods are identical (num == den).
-  // Catch2's catch_timer.cpp hits this: getCurrentNanosecondsSinceEpoch()
-  // calls duration_cast<nanoseconds>(steady_clock::now().time_since_epoch()).
-  nanoseconds large(63'514'168'108'767LL); // ~17.6 hours in ns
-  auto result = duration_cast<nanoseconds>(large);
-  psyassert(result.count() == 63'514'168'108'767LL);
-}
+template <typename T>
+concept has_chrono_abs = requires(T value) { std::chrono::abs(value); };
 
-static void test_duration_cast_identity() {
-  milliseconds ms(42);
-  auto ns = duration_cast<nanoseconds>(ms);
-  psyassert(ns.count() == 42'000'000);
-}
+template <typename ToDuration, typename From>
+concept has_chrono_round =
+    requires(From value) { std::chrono::round<ToDuration>(value); };
 
-static void test_duration_cast_down() {
-  nanoseconds ns(1'500'000'000);
-  auto sec = duration_cast<seconds>(ns);
-  psyassert(sec.count() == 1);
-}
+static void test_duration_cast_paths() {
+  // num == 1, den == 1: neither multiply nor divide. Cross-cancelling before
+  // forming num and den also keeps these large period factors representable.
+  using large_period = std::ratio<INTMAX_MAX / 2, INTMAX_MAX / 2 - 1>;
+  using large_duration = std::chrono::duration<long long, large_period>;
+  constexpr auto largest = std::numeric_limits<long long>::max();
+  static_assert(
+      duration_cast<large_duration>(large_duration(largest)).count() ==
+      largest);
 
-static void test_duration_cast_up() {
-  seconds sec(2);
-  auto ms = duration_cast<milliseconds>(sec);
-  psyassert(ms.count() == 2'000);
+  // num == 1, den != 1: divide only. Multiplying this count by the
+  // unreduced numerator of 1'000'000 overflows before the division.
+  static_assert(duration_cast<microseconds>(nanoseconds(largest)).count() ==
+                largest / 1'000);
+
+  // num != 1, den == 1: multiply only. Converting floating-point seconds to
+  // integral milliseconds requires duration_cast and truncates the result.
+  static_assert(duration_cast<milliseconds>(duration<double>(1.2345)).count() ==
+                1'234);
+
+  // num != 1, den != 1: multiply and divide. The period ratio is 14/15.
+  using two_thirds = duration<int, std::ratio<2, 3>>;
+  using five_sevenths = duration<int, std::ratio<5, 7>>;
+  static_assert(duration_cast<five_sevenths>(two_thirds(30)).count() == 28);
 }
 
 static void test_duration_cast_wide_intermediate() {
@@ -88,6 +98,69 @@ static void test_duration_bounds() {
                 std::numeric_limits<float>::max());
 }
 
+static void test_duration_increment_decrement() {
+  static_assert([] {
+    seconds s(5);
+    const seconds pre_inc = ++s;
+    bool ok = pre_inc.count() == 6 && s.count() == 6;
+    const seconds post_inc = s++;
+    ok = ok && post_inc.count() == 6 && s.count() == 7;
+    const seconds pre_dec = --s;
+    ok = ok && pre_dec.count() == 6 && s.count() == 6;
+    const seconds post_dec = s--;
+    ok = ok && post_dec.count() == 6 && s.count() == 5;
+    return ok;
+  }());
+}
+
+static void test_chrono_ceil_round_abs() {
+  static_assert(floor<seconds>(milliseconds(1500)) == seconds(1));
+  static_assert(floor<seconds>(milliseconds(2000)) == seconds(2));
+  static_assert(floor<seconds>(milliseconds(-1500)) == seconds(-2));
+  static_assert(ceil<seconds>(milliseconds(1500)) == seconds(2));
+  static_assert(ceil<seconds>(milliseconds(2000)) == seconds(2));
+  static_assert(ceil<seconds>(milliseconds(-1500)) == seconds(-1));
+  static_assert(round<seconds>(milliseconds(1400)) == seconds(1));
+  static_assert(round<seconds>(milliseconds(1600)) == seconds(2));
+  static_assert(round<seconds>(milliseconds(-1400)) == seconds(-1));
+  static_assert(round<seconds>(milliseconds(-1600)) == seconds(-2));
+  // Exact tie rounds to even.
+  static_assert(round<seconds>(milliseconds(1500)) == seconds(2));
+  static_assert(round<seconds>(milliseconds(2500)) == seconds(2));
+  static_assert(round<seconds>(milliseconds(-1500)) == seconds(-2));
+  static_assert(round<seconds>(milliseconds(-2500)) == seconds(-2));
+#ifdef PSYCHICSTD_TEST_PSYCHICSTD
+  // Apple libc++ leaves these overloads visible to a requires-expression and
+  // rejects them only when their bodies are instantiated.
+  static_assert(!has_chrono_round<duration<double>, milliseconds>);
+  using milliseconds_time_point = time_point<system_clock, milliseconds>;
+  static_assert(!has_chrono_round<duration<double>, milliseconds_time_point>);
+#endif
+  static_assert(abs(seconds(-5)) == seconds(5));
+  static_assert(abs(seconds(5)) == seconds(5));
+  static_assert(!has_chrono_abs<duration<unsigned>>);
+
+  const time_point<system_clock, milliseconds> tp(milliseconds(1500));
+  psyassert(ceil<seconds>(tp).time_since_epoch() == seconds(2));
+  psyassert(round<seconds>(tp).time_since_epoch() == seconds(2));
+}
+
+static void test_duration_converting_constructor() {
+  // [time.duration.cons]: the converting constructor is a template over
+  // Rep2, not a fixed-Rep parameter -- brace-init from a differently-typed
+  // (but convertible) integer must not narrowing-fail at the call site.
+  const std::size_t value = 5;
+  static_assert(std::is_same_v<decltype(milliseconds{value}), milliseconds>);
+  static_assert(milliseconds{value}.count() == 5);
+  const int negative_ok = -3;
+  static_assert(seconds{negative_ok}.count() == -3);
+
+  // The floating-point guardrail survives: a float can't silently truncate
+  // into an integral-rep duration (matching real libstdc++/libc++).
+  static_assert(!std::is_constructible_v<milliseconds, double>);
+  static_assert(std::is_constructible_v<duration<double>, int>);
+}
+
 static void test_integral_is_finite() {
   static_assert(std::isfinite(0));
   static_assert(!std::isinf(0LL));
@@ -133,13 +206,13 @@ int main() {
   }();
   static_assert(remainder == 200ms);
 
-  test_duration_cast_identity();
-  test_duration_cast_down();
-  test_duration_cast_up();
+  test_duration_cast_paths();
   test_duration_cast_wide_intermediate();
   test_duration_fractional_conversion();
-  test_duration_cast_same_period();
   test_time_point_arithmetic();
   test_duration_bounds();
+  test_duration_increment_decrement();
+  test_chrono_ceil_round_abs();
+  test_duration_converting_constructor();
   test_integral_is_finite();
 }

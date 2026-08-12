@@ -3,6 +3,10 @@
 #include <ctime>
 #include <time.h>
 
+#ifndef __cpp_lib_chrono
+#define __cpp_lib_chrono 201611L
+#endif
+
 namespace std::chrono {
 // Clocks
 struct system_clock {
@@ -43,6 +47,14 @@ using high_resolution_clock = steady_clock;
 using sys_seconds = sys_time<seconds>;
 using sys_days = sys_time<days>;
 
+template <typename Rep> struct treat_as_floating_point : false_type {};
+template <> struct treat_as_floating_point<float> : true_type {};
+template <> struct treat_as_floating_point<double> : true_type {};
+template <> struct treat_as_floating_point<long double> : true_type {};
+template <typename Rep>
+inline constexpr bool treat_as_floating_point_v =
+    treat_as_floating_point<Rep>::value;
+
 template <typename ToDuration, typename Rep, typename Period>
 constexpr ToDuration floor(const duration<Rep, Period>& value) {
   auto result = duration_cast<ToDuration>(value);
@@ -56,6 +68,52 @@ constexpr time_point<Clock, ToDuration>
 floor(const time_point<Clock, Duration>& value) {
   return time_point<Clock, ToDuration>(
       chrono::floor<ToDuration>(value.time_since_epoch()));
+}
+
+template <typename ToDuration, typename Rep, typename Period>
+constexpr ToDuration ceil(const duration<Rep, Period>& value) {
+  auto result = duration_cast<ToDuration>(value);
+  if (result < value)
+    return result + ToDuration(1);
+  return result;
+}
+
+template <typename ToDuration, typename Clock, typename Duration>
+constexpr time_point<Clock, ToDuration>
+ceil(const time_point<Clock, Duration>& value) {
+  return time_point<Clock, ToDuration>(
+      chrono::ceil<ToDuration>(value.time_since_epoch()));
+}
+
+template <typename ToDuration, typename Rep, typename Period>
+  requires(!treat_as_floating_point_v<typename ToDuration::rep>)
+constexpr ToDuration round(const duration<Rep, Period>& value) {
+  ToDuration t0 = chrono::floor<ToDuration>(value);
+  ToDuration t1 = t0 + ToDuration(1);
+  auto diff0 = value - t0;
+  auto diff1 = t1 - value;
+  if (diff0 < diff1)
+    return t0;
+  if (diff1 < diff0)
+    return t1;
+  // Tie: round to even.
+  if (t0.count() % 2 == 0)
+    return t0;
+  return t1;
+}
+
+template <typename ToDuration, typename Clock, typename Duration>
+  requires(!treat_as_floating_point_v<typename ToDuration::rep>)
+constexpr time_point<Clock, ToDuration>
+round(const time_point<Clock, Duration>& value) {
+  return time_point<Clock, ToDuration>(
+      chrono::round<ToDuration>(value.time_since_epoch()));
+}
+
+template <typename Rep, typename Period>
+  requires(is_signed_v<Rep>)
+constexpr duration<Rep, Period> abs(duration<Rep, Period> value) {
+  return value >= value.zero() ? value : -value;
 }
 
 class year {
@@ -179,10 +237,6 @@ private:
 
 template <typename Duration> hh_mm_ss(Duration) -> hh_mm_ss<Duration>;
 
-template <typename Rep> struct treat_as_floating_point : false_type {};
-template <> struct treat_as_floating_point<float> : true_type {};
-template <> struct treat_as_floating_point<double> : true_type {};
-template <> struct treat_as_floating_point<long double> : true_type {};
 } // namespace std::chrono
 
 namespace std {

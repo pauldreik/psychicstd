@@ -1,2 +1,4 @@
 BasedOnStyle: LLVM
 PointerAlignment: Left
+QualifierAlignment: Custom
+QualifierOrder: [static, inline, friend, constexpr, restrict, const, volatile, type]

@@ -6,6 +6,7 @@ static_assert(__cpp_lib_logical_traits >= 201510L);
 static_assert(__cpp_lib_byte >= 201603L);
 static_assert(__cpp_lib_is_invocable >= 201703L);
 static_assert(__cpp_lib_variant >= 201606L);
+static_assert(__cpp_lib_chrono >= 201611L);
 
 static_assert(__cpp_lib_char8_t >= 201907L);
 static_assert(__cpp_lib_three_way_comparison >= 201907L);

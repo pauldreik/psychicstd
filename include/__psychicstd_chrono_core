@@ -1,6 +1,7 @@
 #pragma once
 #include <__psychicstd_type_traits_arithmetic>
 #include <__psychicstd_type_traits_common>
+#include <__psychicstd_type_traits_convert>
 #include <cstdint>
 #include <ratio>
 
@@ -65,7 +66,10 @@ public:
   using period = Period;
 
   constexpr duration() = default;
-  constexpr explicit duration(Rep v) : rep_(v) {}
+  template <typename Rep2>
+    requires(is_convertible_v<const Rep2&, Rep> &&
+             (is_floating_point_v<Rep> || !is_floating_point_v<Rep2>))
+  constexpr explicit duration(const Rep2& v) : rep_(static_cast<Rep>(v)) {}
   template <typename Rep2, typename Period2>
     requires((is_floating_point_v<Rep> ||
               ratio_divide<Period2, Period>::den == 1) &&
@@ -101,6 +105,16 @@ public:
     rep_ %= d.rep_;
     return *this;
   }
+  constexpr duration& operator++() {
+    ++rep_;
+    return *this;
+  }
+  constexpr duration operator++(int) { return duration(rep_++); }
+  constexpr duration& operator--() {
+    --rep_;
+    return *this;
+  }
+  constexpr duration operator--(int) { return duration(rep_--); }
 
   static constexpr duration zero() { return duration(0); }
   static constexpr duration min() { return duration(__duration_min<Rep>()); }
@@ -201,17 +215,31 @@ constexpr ToDur duration_cast(const duration<Rep, Period>& d) {
   using ToPer = typename ToDur::period;
   using CalcRep =
       decltype(declval<Rep>() + declval<ToRep>() + declval<intmax_t>());
-  // scale = Period / ToPer = Period::num * ToPer::den / (Period::den *
-  // ToPer::num)
-  constexpr auto num = Period::num * ToPer::den;
-  constexpr auto den = Period::den * ToPer::num;
-  // When periods are identical, skip multiply-divide to avoid overflow.
-  if constexpr (num == den) {
+  // Cross-cancel before multiplying. Forming the unreduced products first
+  // can itself overflow intmax_t even when the final ratio is representable.
+  constexpr auto g1 = detail::gcd(Period::num < 0 ? -Period::num : Period::num,
+                                  ToPer::num < 0 ? -ToPer::num : ToPer::num);
+  constexpr auto g2 = detail::gcd(Period::den, ToPer::den);
+  constexpr auto num = (Period::num / g1) * (ToPer::den / g2);
+  constexpr auto den = (Period::den / g2) * (ToPer::num / g1);
+
+  if constexpr (num == 1 && den != 1) {
+    // this is likely the most common case - typical example is going from ns to
+    // ms
+    return ToDur(static_cast<ToRep>(static_cast<CalcRep>(d.count()) /
+                                    static_cast<CalcRep>(den)));
+  } else if constexpr (num != 1 && den != 1) {
+    // converting between different bases, like "1/24:th seconds" and
+    // microseconds
+    return ToDur(static_cast<ToRep>(static_cast<CalcRep>(d.count()) *
+                                    static_cast<CalcRep>(num) /
+                                    static_cast<CalcRep>(den)));
+  } else if constexpr (num != 1) {
+    return ToDur(static_cast<ToRep>(static_cast<CalcRep>(d.count()) *
+                                    static_cast<CalcRep>(num)));
+  } else {
     return ToDur(static_cast<ToRep>(d.count()));
   }
-  return ToDur(static_cast<ToRep>(static_cast<CalcRep>(d.count()) *
-                                  static_cast<CalcRep>(num) /
-                                  static_cast<CalcRep>(den)));
 }
 
 using nanoseconds = duration<long long, nano>;
