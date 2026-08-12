@@ -1,9 +1,22 @@
 #include "psyassert.h"
 #include <chrono>
+
+#ifndef __cpp_lib_chrono
+#error "<chrono> must define __cpp_lib_chrono"
+#endif
+
 #include <cmath>
 #include <limits>
+#include <type_traits>
 
 using namespace std::chrono;
+
+template <typename T>
+concept has_chrono_abs = requires(T value) { std::chrono::abs(value); };
+
+template <typename ToDuration, typename From>
+concept has_chrono_round =
+    requires(From value) { std::chrono::round<ToDuration>(value); };
 
 static void test_duration_cast_paths() {
   // num == 1, den == 1: neither multiply nor divide. Cross-cancelling before
@@ -100,6 +113,38 @@ static void test_duration_increment_decrement() {
   }());
 }
 
+static void test_chrono_ceil_round_abs() {
+  static_assert(floor<seconds>(milliseconds(1500)) == seconds(1));
+  static_assert(floor<seconds>(milliseconds(2000)) == seconds(2));
+  static_assert(floor<seconds>(milliseconds(-1500)) == seconds(-2));
+  static_assert(ceil<seconds>(milliseconds(1500)) == seconds(2));
+  static_assert(ceil<seconds>(milliseconds(2000)) == seconds(2));
+  static_assert(ceil<seconds>(milliseconds(-1500)) == seconds(-1));
+  static_assert(round<seconds>(milliseconds(1400)) == seconds(1));
+  static_assert(round<seconds>(milliseconds(1600)) == seconds(2));
+  static_assert(round<seconds>(milliseconds(-1400)) == seconds(-1));
+  static_assert(round<seconds>(milliseconds(-1600)) == seconds(-2));
+  // Exact tie rounds to even.
+  static_assert(round<seconds>(milliseconds(1500)) == seconds(2));
+  static_assert(round<seconds>(milliseconds(2500)) == seconds(2));
+  static_assert(round<seconds>(milliseconds(-1500)) == seconds(-2));
+  static_assert(round<seconds>(milliseconds(-2500)) == seconds(-2));
+#ifdef PSYCHICSTD_TEST_PSYCHICSTD
+  // Apple libc++ leaves these overloads visible to a requires-expression and
+  // rejects them only when their bodies are instantiated.
+  static_assert(!has_chrono_round<duration<double>, milliseconds>);
+  using milliseconds_time_point = time_point<system_clock, milliseconds>;
+  static_assert(!has_chrono_round<duration<double>, milliseconds_time_point>);
+#endif
+  static_assert(abs(seconds(-5)) == seconds(5));
+  static_assert(abs(seconds(5)) == seconds(5));
+  static_assert(!has_chrono_abs<duration<unsigned>>);
+
+  const time_point<system_clock, milliseconds> tp(milliseconds(1500));
+  psyassert(ceil<seconds>(tp).time_since_epoch() == seconds(2));
+  psyassert(round<seconds>(tp).time_since_epoch() == seconds(2));
+}
+
 static void test_duration_converting_constructor() {
   // [time.duration.cons]: the converting constructor is a template over
   // Rep2, not a fixed-Rep parameter -- brace-init from a differently-typed
@@ -167,6 +212,7 @@ int main() {
   test_time_point_arithmetic();
   test_duration_bounds();
   test_duration_increment_decrement();
+  test_chrono_ceil_round_abs();
   test_duration_converting_constructor();
   test_integral_is_finite();
 }

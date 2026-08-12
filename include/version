@@ -49,6 +49,11 @@
 #define __cpp_lib_variant 201606L
 #endif
 
+// std::chrono::floor/ceil/round/abs for durations and time_points (<chrono>)
+#ifndef __cpp_lib_chrono
+#define __cpp_lib_chrono 201611L
+#endif
+
 // ---------------------------------------------------------------------------
 // C++20 library features
 // ---------------------------------------------------------------------------
