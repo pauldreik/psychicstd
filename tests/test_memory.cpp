@@ -1,4 +1,5 @@
 #include "psyassert.h"
+#include <cstdint>
 #include <memory>
 #include <sstream>
 #include <string>
@@ -102,6 +103,26 @@ static void test_forwarding() {
   std::construct_at(range, value);
   std::construct_at(range + 1, value);
   std::destroy(range, range + 2);
+}
+
+static void test_overaligned_allocation() {
+  // std::allocator<T>::allocate must request extended alignment for T
+  // over-aligned past __STDCPP_DEFAULT_NEW_ALIGNMENT__ (typically 16) --
+  // the plain, unaligned operator new has no way to honor a stricter
+  // alignment, so silently using it is undefined behavior (the real-world
+  // trigger is any SIMD-vectorizable type, e.g. Eigen's fixed-size
+  // vectors, going through std::vector/make_shared/etc.).
+  struct alignas(64) over_aligned {
+    char payload[64];
+  };
+  std::allocator<over_aligned> aligned_alloc;
+  auto* aligned_ptr = aligned_alloc.allocate(4);
+  psyassert(reinterpret_cast<std::uintptr_t>(aligned_ptr) % 64 == 0);
+  aligned_alloc.deallocate(aligned_ptr, 4);
+
+  std::vector<over_aligned> aligned_vector(4);
+  for (auto& item : aligned_vector)
+    psyassert(reinterpret_cast<std::uintptr_t>(&item) % 64 == 0);
 }
 
 static void test_unique_ptr_equality() {
@@ -475,4 +496,5 @@ int main() {
   test_inaccessible_enable_shared_from_this();
   test_inherited_enable_shared_from_this();
   test_member_init_from_template_prvalue();
+  test_overaligned_allocation();
 }

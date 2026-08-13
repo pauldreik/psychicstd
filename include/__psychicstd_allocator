@@ -18,9 +18,20 @@ template <typename T> struct allocator {
   template <typename U> constexpr allocator(const allocator<U>&) noexcept {}
 
   [[nodiscard]] constexpr T* allocate(size_t n) {
-    return static_cast<T*>(::operator new(n * sizeof(T)));
+    if constexpr (alignof(T) > __STDCPP_DEFAULT_NEW_ALIGNMENT__) {
+      return static_cast<T*>(
+          ::operator new(n * sizeof(T), align_val_t(alignof(T))));
+    } else {
+      return static_cast<T*>(::operator new(n * sizeof(T)));
+    }
   }
-  constexpr void deallocate(T* p, size_t) noexcept { ::operator delete(p); }
+  constexpr void deallocate(T* p, size_t) noexcept {
+    if constexpr (alignof(T) > __STDCPP_DEFAULT_NEW_ALIGNMENT__) {
+      ::operator delete(p, align_val_t(alignof(T)));
+    } else {
+      ::operator delete(p);
+    }
+  }
 };
 
 template <> struct allocator<void> {
