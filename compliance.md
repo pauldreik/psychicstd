@@ -1,6 +1,6 @@
 # Compliance
 
-Last updated: 2026-08-13 19:17
+Last updated: 2026-08-13 21:40
 
 libc++ test revision: `4395e6ad2c876e2098adcc724f36e937b8f007fd`
 
@@ -24,7 +24,7 @@ The pass percentage uses all tests except those explicitly marked libc++-specifi
 | 🟢 | `cfenv` | **1/1 (100%)** | 1/1 | 1 | 0 | 1 | 18 |
 | 🔴 | `cfloat` | **5/29 (17%)** | 29/29 | 29 | 0 | 29 | 2 |
 | 🔴 | `charconv` | **1/8 (12%)** | 8/8 | 8 | 0 | 8 | 88 |
-| 🔴 | `chrono` | **73/408 (18%)** | 408/408 | 408 | 0 | 408 | 292 |
+| 🔴 | `chrono` | **75/408 (18%)** | 408/408 | 408 | 0 | 408 | 292 |
 | 🔴 | `cinttypes` | **0/2 (0%)** | 2/2 | 2 | 0 | 2 | 3 |
 | 🔴 | `ciso646` | **5/29 (17%)** | 29/29 | 29 | 0 | 29 | 2 |
 | 🟡 | `climits` | **38/117 (32%)** | 117/117 | 117 | 0 | 117 | 2 |
@@ -119,7 +119,7 @@ Each tested case appears in exactly one of the first four result columns. Untest
 | `cfenv` | 1 | 0 | 0 | 0 | 0 |
 | `cfloat` | 5 | 2 | 0 | 22 | 0 |
 | `charconv` | 1 | 2 | 0 | 5 | 0 |
-| `chrono` | 73 | 279 | 0 | 56 | 0 |
+| `chrono` | 75 | 277 | 0 | 56 | 0 |
 | `cinttypes` | 0 | 2 | 0 | 0 | 0 |
 | `ciso646` | 5 | 2 | 0 | 22 | 0 |
 | `climits` | 38 | 0 | 0 | 79 | 0 |
