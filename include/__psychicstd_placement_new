@@ -1,0 +1,16 @@
+#pragma once
+#include <cstddef>
+
+[[gnu::always_inline]] inline constexpr void* operator new(std::size_t,
+                                                           void* p) noexcept {
+  return p;
+}
+[[gnu::always_inline]] inline constexpr void* operator new[](std::size_t,
+                                                             void* p) noexcept {
+  return p;
+}
+[[gnu::always_inline]] inline constexpr void operator delete(void*,
+                                                             void*) noexcept {}
+[[gnu::always_inline]] inline constexpr void operator delete[](void*,
+                                                               void*) noexcept {
+}

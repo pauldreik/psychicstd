@@ -8,6 +8,7 @@ src/complex.cpp
 src/condition_variable.cpp
 src/cout.cpp
 src/filesystem.cpp
+src/future.cpp
 src/ios.cpp
 src/iostream_macos.cpp
 src/istream.cpp
