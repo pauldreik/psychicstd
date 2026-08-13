@@ -4,6 +4,7 @@
 #include <sstream>
 #include <string>
 #include <thread>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -468,6 +469,40 @@ static void test_member_init_from_template_prvalue() {
   psyassert(s2.use_count() == 2);
 }
 
+static void test_shared_pointer_hash() {
+  auto shared = std::make_shared<int>(42);
+  int* raw = shared.get();
+  psyassert(std::hash<std::shared_ptr<int>>{}(shared) ==
+            std::hash<int*>{}(raw));
+
+  std::shared_ptr<int> empty;
+  psyassert(std::hash<std::shared_ptr<int>>{}(empty) ==
+            std::hash<int*>{}(empty.get()));
+
+  std::unordered_set<std::shared_ptr<int>> shared_set;
+  shared_set.insert(shared);
+  psyassert(shared_set.count(shared) == 1);
+}
+
+static void test_unique_pointer_hash() {
+  auto unique = std::make_unique<int>(7);
+  int* unique_raw = unique.get();
+  psyassert(std::hash<std::unique_ptr<int>>{}(unique) ==
+            std::hash<int*>{}(unique_raw));
+
+  std::unique_ptr<int> empty;
+  psyassert(std::hash<std::unique_ptr<int>>{}(empty) ==
+            std::hash<int*>{}(empty.get()));
+
+  auto array = std::make_unique<int[]>(2);
+  psyassert(std::hash<std::unique_ptr<int[]>>{}(array) ==
+            std::hash<int*>{}(array.get()));
+
+  std::unordered_set<std::unique_ptr<int>> unique_set;
+  unique_set.insert(std::make_unique<int>(9));
+  psyassert(unique_set.size() == 1);
+}
+
 int main() {
   std::unique_ptr<void, void (*)(void*)> void_unique(nullptr, [](void*) {});
   std::shared_ptr<void> void_shared;
@@ -497,4 +532,6 @@ int main() {
   test_inherited_enable_shared_from_this();
   test_member_init_from_template_prvalue();
   test_overaligned_allocation();
+  test_shared_pointer_hash();
+  test_unique_pointer_hash();
 }

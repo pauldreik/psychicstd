@@ -1,6 +1,7 @@
 #pragma once
 #include <__psychicstd_allocator_traits>
 #include <__psychicstd_config>
+#include <__psychicstd_hash>
 #include <__psychicstd_ordering>
 #include <__psychicstd_type_traits_common>
 #include <__psychicstd_type_traits_object>
@@ -789,6 +790,23 @@ public:
   template <typename U>
   bool owner_before(const weak_ptr<U>& other) const noexcept {
     return less<__detail::__sp_ctrl*>{}(ctrl_, other.ctrl_);
+  }
+};
+
+template <typename T, typename D>
+  requires requires(typename unique_ptr<T, D>::pointer pointer) {
+    hash<typename unique_ptr<T, D>::pointer>{}(pointer);
+  }
+struct hash<unique_ptr<T, D>> {
+  size_t operator()(const unique_ptr<T, D>& p) const
+      noexcept(noexcept(hash<typename unique_ptr<T, D>::pointer>{}(p.get()))) {
+    using pointer = typename unique_ptr<T, D>::pointer;
+    return hash<pointer>{}(p.get());
+  }
+};
+template <typename T> struct hash<shared_ptr<T>> {
+  size_t operator()(const shared_ptr<T>& p) const noexcept {
+    return hash<typename shared_ptr<T>::element_type*>{}(p.get());
   }
 };
 
