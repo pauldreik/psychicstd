@@ -13,6 +13,21 @@ struct from_chars_result {
                          const from_chars_result&) = default;
 };
 
+enum class chars_format {
+  scientific = 1,
+  fixed = 2,
+  hex = 4,
+  general = fixed | scientific,
+};
+
+from_chars_result from_chars(const char* first, const char* last, float& value,
+                             chars_format fmt = chars_format::general) noexcept;
+from_chars_result from_chars(const char* first, const char* last, double& value,
+                             chars_format fmt = chars_format::general) noexcept;
+from_chars_result from_chars(const char* first, const char* last,
+                             long double& value,
+                             chars_format fmt = chars_format::general) noexcept;
+
 template <typename T>
   requires(is_integral_v<T> && !is_same_v<remove_cv_t<T>, bool>)
 constexpr from_chars_result from_chars(const char* first, const char* last,

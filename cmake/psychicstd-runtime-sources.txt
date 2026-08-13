@@ -1,6 +1,7 @@
 # Compiled runtime sources, relative to the repository root.
 src/atomic.cpp
 src/cerr.cpp
+src/charconv.cpp
 src/cin.cpp
 src/clog.cpp
 src/complex.cpp
