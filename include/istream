@@ -28,9 +28,12 @@ public:
         auto* sb = is.rdbuf();
         if (sb) {
           int_type c;
-          while (!Traits::eq_int_type(c = sb->sgetc(), Traits::eof()) &&
-                 Traits::to_char_type(c) == ' ')
+          while (!Traits::eq_int_type(c = sb->sgetc(), Traits::eof())) {
+            Char ch = Traits::to_char_type(c);
+            if (!is._is_space(ch))
+              break;
             sb->sbumpc();
+          }
         }
       }
       ok_ = is.good();

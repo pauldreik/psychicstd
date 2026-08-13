@@ -63,6 +63,12 @@ locale ios_base::imbue(const locale& loc) {
   return old;
 }
 
+bool ios_base::_is_space(char c) const { return std::isspace(c, loc_); }
+bool ios_base::_is_space(wchar_t c) const { return std::isspace(c, loc_); }
+bool ios_base::_is_space(char8_t c) const { return std::isspace(c, loc_); }
+bool ios_base::_is_space(char16_t c) const { return std::isspace(c, loc_); }
+bool ios_base::_is_space(char32_t c) const { return std::isspace(c, loc_); }
+
 int ios_base::_localize_number_with_locale(char* out, size_t out_size,
                                            const char* input, int input_size,
                                            int character_kind) const {
