@@ -1,9 +1,12 @@
 #include "psyassert.h"
 #include <regex>
 #include <string>
+#include <utility>
 #include <vector>
 
-int main() {
+namespace {
+
+void test_basic_matching_and_replacement() {
   std::regex re("hello");
   psyassert(std::regex_match("hello", re));
   const std::string text = "say hello";
@@ -86,7 +89,9 @@ int main() {
                                  comma, -1),
       std::sregex_token_iterator());
   psyassert(empty_subject_tokens == (std::vector<std::string>{""}));
+}
 
+void test_errors() {
   bool threw = false;
   try {
     (void)std::regex("*");
@@ -94,4 +99,125 @@ int main() {
     threw = true;
   }
   psyassert(threw);
+
+  bool threw_regex_error = false;
+  try {
+    (void)std::regex("a(b");
+  } catch (const std::regex_error& e) {
+    threw_regex_error = true;
+    psyassert(e.code() == std::regex_constants::error_paren);
+  }
+  psyassert(threw_regex_error);
+}
+
+void test_match_results() {
+  const std::string haystack = "before-MATCH-after";
+  std::smatch parts;
+  psyassert(std::regex_search(haystack, parts, std::regex("MATCH")));
+  psyassert(parts.prefix().str() == "before-");
+  psyassert(parts.suffix().str() == "-after");
+  psyassert(parts.prefix().matched);
+  psyassert(parts.suffix().matched);
+
+  const std::string whole_subject = "MATCH";
+  psyassert(std::regex_search(whole_subject, parts, std::regex("MATCH")));
+  psyassert(parts.prefix().str().empty());
+  psyassert(parts.suffix().str().empty());
+  psyassert(!parts.prefix().matched);
+  psyassert(!parts.suffix().matched);
+
+  const std::string missing_subject = "missing";
+  psyassert(!std::regex_search(missing_subject, parts, std::regex("MATCH")));
+  psyassert(parts.prefix().str().empty());
+  psyassert(parts.suffix().str().empty());
+  psyassert(!parts.prefix().matched);
+  psyassert(!parts.suffix().matched);
+
+  std::smatch no_submatches;
+  const std::regex no_subexpression_results("(M)(ATCH)",
+                                            std::regex_constants::nosubs);
+  psyassert(no_subexpression_results.mark_count() == 0);
+  psyassert(std::regex_search(whole_subject, no_submatches,
+                              no_subexpression_results));
+  psyassert(no_submatches.size() == 1);
+  psyassert(no_submatches.str() == "MATCH");
+}
+
+void test_copy_and_move() {
+  std::regex original("[0-9]+");
+  std::regex copy = original;
+  psyassert(std::regex_match("123", copy));
+  psyassert(std::regex_match("123", original));
+  std::regex assigned("placeholder");
+  assigned = original;
+  psyassert(std::regex_match("456", assigned));
+  std::regex moved = std::move(copy);
+  psyassert(std::regex_match("789", moved));
+}
+
+void test_noncapturing_groups() {
+  psyassert(std::regex_search("123ms", std::regex("(?:\\d+)(?:ms|us)")));
+  psyassert(!std::regex_search("123xy", std::regex("(?:\\d+)(?:ms|us)")));
+
+  std::smatch mixed;
+  const std::string mixed_subject = "abc123";
+  psyassert(
+      std::regex_match(mixed_subject, mixed, std::regex("(?:[a-z]+)([0-9]+)")));
+  psyassert(mixed.size() == 2);
+  psyassert(mixed[1].str() == "123");
+  psyassert(std::regex_match("abcabc", std::regex("(?:x)?(abc)\\1")));
+  psyassert(std::regex_replace("abc123", std::regex("(?:[a-z]+)([0-9]+)"),
+                               "$1") == "123");
+}
+
+void test_sub_match_members() {
+  std::smatch member_match;
+  const std::string member_subject = "ac";
+  psyassert(
+      std::regex_match(member_subject, member_match, std::regex("(a)(x)?(c)")));
+  psyassert(member_match[1].matched);
+  psyassert(!member_match[2].matched);
+  psyassert(member_match[3].matched);
+  {
+    std::smatch optional_match;
+    const std::string timestamp_subject = "2024-01-02 03:04:05.123456";
+    psyassert(std::regex_match(
+        timestamp_subject, optional_match,
+        std::regex(
+            R"((\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2}):(\d{2})(?:\.(\d{1,6}))?(?:([+-]\d{2}:\d{2}|Z))?)")));
+    psyassert(optional_match[7].str() == "123456");
+  }
+}
+
+void test_escaped_character_classes() {
+  psyassert(std::regex_search("MyCourt-42", std::regex("[A-Za-z0-9\\-\\_]+")));
+  {
+    std::smatch hyphen_match;
+    const std::string hyphen_subject = "MyCourt-42";
+    psyassert(std::regex_match(hyphen_subject, hyphen_match,
+                               std::regex("[A-Za-z0-9\\-\\_]+")));
+    psyassert(hyphen_match.str(0) == "MyCourt-42");
+  }
+  {
+    std::smatch full_path_match;
+    const std::string full_path_subject = "sports/tennis/courts/MyCourt-42";
+    psyassert(std::regex_search(
+        full_path_subject, full_path_match,
+        std::regex("sports/tennis/courts/([A-Za-z0-9\\-\\_]+)$")));
+    psyassert(full_path_match[1].str() == "MyCourt-42");
+  }
+  psyassert(std::regex_match(std::string("a_b-c"), std::regex("[a\\_b\\-c]+")));
+  psyassert(std::regex_match(std::string("a-]"), std::regex("[a\\-\\]]+")));
+}
+
+}
+
+int main() {
+  test_basic_matching_and_replacement();
+  test_errors();
+  test_match_results();
+  test_copy_and_move();
+  test_noncapturing_groups();
+  test_sub_match_members();
+  test_escaped_character_classes();
 }

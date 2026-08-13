@@ -14,6 +14,23 @@ enum syntax_option_type : int {
   ECMAScript = 0,
   icase = REG_ICASE,
   extended = REG_EXTENDED,
+  nosubs = REG_NOSUB,
+};
+
+enum error_type {
+  error_collate,
+  error_ctype,
+  error_escape,
+  error_backref,
+  error_brack,
+  error_paren,
+  error_brace,
+  error_badbrace,
+  error_range,
+  error_space,
+  error_badrepeat,
+  error_complexity,
+  error_stack,
 };
 
 constexpr syntax_option_type operator|(syntax_option_type lhs,
@@ -85,28 +102,46 @@ constexpr match_flag_type& operator^=(match_flag_type& lhs,
 }
 } // namespace regex_constants
 
+class regex_error : public runtime_error {
+public:
+  explicit regex_error(regex_constants::error_type code);
+  regex_constants::error_type code() const;
+
+private:
+  regex_constants::error_type code_;
+};
+
 class regex {
 public:
   using flag_type = regex_constants::syntax_option_type;
   static constexpr flag_type ECMAScript = regex_constants::ECMAScript;
   static constexpr flag_type icase = regex_constants::icase;
   static constexpr flag_type extended = regex_constants::extended;
+  static constexpr flag_type nosubs = regex_constants::nosubs;
 
   regex();
   explicit regex(const string& pattern, flag_type flags = ECMAScript);
   explicit regex(const char* pattern, flag_type flags = ECMAScript);
   ~regex();
 
-  regex(const regex&) = delete;
-  regex& operator=(const regex&) = delete;
+  regex(const regex&);
+  regex& operator=(const regex&);
   regex(regex&&) noexcept;
+  regex& operator=(regex&&) noexcept;
 
   bool valid() const noexcept { return valid_; }
   const ::regex_t& native() const noexcept { return re_; }
+  size_t native_submatch(size_t logical) const noexcept;
+  size_t mark_count() const noexcept;
 
 private:
+  void compile();
+
   ::regex_t re_{};
-  bool valid_;
+  bool valid_ = false;
+  string pattern_;
+  flag_type flags_ = ECMAScript;
+  vector<size_t> submatches_;
 };
 
 template <typename Char, typename Traits = regex_traits<Char>>
@@ -114,18 +149,17 @@ using basic_regex = regex;
 
 class __regex_sub_match {
 public:
-  __regex_sub_match() = default;
-  __regex_sub_match(string value, bool matched)
-      : value_(static_cast<string&&>(value)), matched_(matched) {}
+  bool matched = false;
 
-  string str() const { return value_; }
-  size_t length() const noexcept { return value_.size(); }
-  operator string() const { return value_; }
-  bool matched() const noexcept { return matched_; }
+  __regex_sub_match() = default;
+  __regex_sub_match(string value, bool didMatch);
+
+  string str() const;
+  size_t length() const noexcept;
+  operator string() const;
 
 private:
   string value_;
-  bool matched_ = false;
 };
 
 class smatch {
@@ -135,18 +169,18 @@ public:
   string str(size_t i = 0) const;
   size_t length(size_t i = 0) const noexcept;
   const __regex_sub_match& operator[](size_t i) const noexcept;
-  [[gnu::always_inline]] size_t size() const noexcept {
-    return matches_.size();
-  }
-  [[gnu::always_inline]] bool empty() const noexcept {
-    return matches_.empty();
-  }
-  bool ready() const noexcept { return ready_; }
+  size_t size() const noexcept;
+  bool empty() const noexcept;
+  bool ready() const noexcept;
+  const __regex_sub_match& prefix() const noexcept;
+  const __regex_sub_match& suffix() const noexcept;
 
   void set(const string& subject, const ::regmatch_t* pm, size_t n);
 
 private:
   vector<__regex_sub_match> matches_;
+  __regex_sub_match prefix_;
+  __regex_sub_match suffix_;
   bool ready_ = false;
 };
 
@@ -192,26 +226,13 @@ public:
                         string::const_iterator last, const regex& expression,
                         int submatch = 0);
 
-  reference operator*() const noexcept { return tokens_[position_]; }
-  pointer operator->() const noexcept { return &tokens_[position_]; }
-  sregex_token_iterator& operator++() {
-    ++position_;
-    return *this;
-  }
-  sregex_token_iterator operator++(int) {
-    sregex_token_iterator previous = *this;
-    ++*this;
-    return previous;
-  }
+  reference operator*() const noexcept;
+  pointer operator->() const noexcept;
+  sregex_token_iterator& operator++();
+  sregex_token_iterator operator++(int);
 
   friend bool operator==(const sregex_token_iterator& left,
-                         const sregex_token_iterator& right) noexcept {
-    const bool left_end = left.position_ == left.tokens_.size();
-    const bool right_end = right.position_ == right.tokens_.size();
-    if (left_end || right_end)
-      return left_end == right_end;
-    return left.position_ == right.position_ && left.tokens_ == right.tokens_;
-  }
+                         const sregex_token_iterator& right) noexcept;
 
 private:
   vector<string> tokens_;
