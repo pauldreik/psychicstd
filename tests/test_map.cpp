@@ -1,4 +1,5 @@
 #include "psyassert.h"
+#include <algorithm>
 #include <map>
 #include <tuple>
 
@@ -32,6 +33,12 @@ struct partially_ordered {
 };
 
 int main() {
+  const std::map<int, int> for_crbegin{{1, 10}, {2, 20}, {3, 30}};
+  psyassert(std::equal(for_crbegin.crbegin(), for_crbegin.crend(),
+                       for_crbegin.rbegin(), for_crbegin.rend()));
+  psyassert(for_crbegin.crbegin()->first == 3);
+  psyassert(for_crbegin.crend() == for_crbegin.rend());
+
   std::map<int, int> m;
   m[1] = 42;
   psyassert(m[1] == 42);

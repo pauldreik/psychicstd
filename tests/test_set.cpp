@@ -1,4 +1,5 @@
 #include "psyassert.h"
+#include <algorithm>
 #include <memory>
 #include <set>
 
@@ -32,6 +33,18 @@ struct unique_pointer_less {
 };
 
 int main() {
+  const std::set<int> for_crbegin{1, 2, 3};
+  psyassert(std::equal(for_crbegin.crbegin(), for_crbegin.crend(),
+                       for_crbegin.rbegin(), for_crbegin.rend()));
+  psyassert(*for_crbegin.crbegin() == 3);
+  psyassert(for_crbegin.crend() == for_crbegin.rend());
+
+  const std::multiset<int> multiset_for_crbegin{1, 2, 2, 3};
+  psyassert(
+      std::equal(multiset_for_crbegin.crbegin(), multiset_for_crbegin.crend(),
+                 multiset_for_crbegin.rbegin(), multiset_for_crbegin.rend()));
+  psyassert(*multiset_for_crbegin.crbegin() == 3);
+
   static_assert(std::is_nothrow_move_constructible_v<std::set<int>>);
   static_assert(
       !std::is_nothrow_move_constructible_v<std::set<int, throwing_move_less>>);

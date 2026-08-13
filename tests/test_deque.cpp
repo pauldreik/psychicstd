@@ -1,4 +1,5 @@
 #include "psyassert.h"
+#include <algorithm>
 #include <deque>
 #include <iterator>
 
@@ -34,6 +35,12 @@ struct throwing_move_only {
 };
 
 int main() {
+  const std::deque<int> for_crbegin{1, 2, 3};
+  psyassert(std::equal(for_crbegin.crbegin(), for_crbegin.crend(),
+                       for_crbegin.rbegin(), for_crbegin.rend()));
+  psyassert(*for_crbegin.crbegin() == 3);
+  psyassert(for_crbegin.crend() == for_crbegin.rend());
+
   std::deque<int> empty;
   empty.insert(empty.end(), 1);
   psyassert(empty.size() == 1);
