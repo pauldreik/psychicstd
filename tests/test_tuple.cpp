@@ -1,4 +1,5 @@
 #include "psyassert.h"
+#include <array>
 #include <functional>
 #include <string_view>
 #include <tuple>
@@ -43,11 +44,74 @@ struct AssignmentCategory {
 std::tuple<const char*, int, bool> make_result(const char* p, int n) {
   return {p, n, false};
 }
+
+static void test_tuple_cat_values() {
+  static_assert(std::tuple_size_v<decltype(std::tuple_cat())> == 0);
+  static_assert(std::tuple_cat(std::tuple(1, 2)) == std::tuple(1, 2));
+  static_assert(std::tuple_cat(std::tuple(1), std::tuple(2.5)) ==
+                std::tuple(1, 2.5));
+
+  constexpr auto values = std::tuple_cat(
+      std::tuple(1), std::tuple(2, 3), std::tuple(4), std::tuple(5),
+      std::tuple(6), std::tuple(7), std::tuple(8));
+  static_assert(std::tuple_size_v<decltype(values)> == 8);
+  static_assert(values == std::tuple(1, 2, 3, 4, 5, 6, 7, 8));
+  static_assert(std::tuple_cat(std::tuple<>(), std::tuple(1), std::tuple<>()) ==
+                std::tuple(1));
+}
+
+static void test_tuple_cat_forwarding() {
+  std::tuple<Tracker> source;
+  auto copied = std::tuple_cat(source);
+  psyassert(std::get<0>(copied).copies == 1);
+  psyassert(std::get<0>(copied).moves == 0);
+
+  auto moved = std::tuple_cat(static_cast<std::tuple<Tracker>&&>(source));
+  psyassert(std::get<0>(moved).copies == 0);
+  psyassert(std::get<0>(moved).moves == 1);
+
+  auto multiple = std::tuple_cat(std::tuple<Tracker>{}, std::tuple<Tracker>{},
+                                 std::tuple<Tracker>{});
+  psyassert(std::get<0>(multiple).moves == 1);
+  psyassert(std::get<1>(multiple).moves == 1);
+  psyassert(std::get<2>(multiple).moves == 1);
+
+  auto move_only =
+      std::tuple_cat(std::tuple<MoveOnly>{}, std::tuple<MoveOnly, MoveOnly>{});
+  static_assert(std::is_same_v<decltype(move_only),
+                               std::tuple<MoveOnly, MoveOnly, MoveOnly>>);
+
+  int first = 1;
+  int second = 2;
+  std::tuple<int&> references(first);
+  auto concatenated_references =
+      std::tuple_cat(references, std::tuple<int&>(second));
+  static_assert(std::is_same_v<decltype(concatenated_references),
+                               std::tuple<int&, int&>>);
+  std::get<0>(concatenated_references) = 3;
+  std::get<1>(concatenated_references) = 4;
+  psyassert(first == 3 && second == 4);
+}
+
+static void test_tuple_cat_tuple_like() {
+  constexpr auto mixed =
+      std::tuple_cat(std::pair<int, long>{1, 2}, std::array<short, 2>{3, 4},
+                     std::tuple<char>{5});
+  static_assert(
+      std::is_same_v<decltype(mixed),
+                     const std::tuple<int, long, short, short, char>>);
+  static_assert(mixed ==
+                std::tuple<int, long, short, short, char>{1, 2, 3, 4, 5});
+}
 } // namespace
 
 int main() {
   constexpr std::tuple compile_time_tuple(1, 2, 3);
   static_assert(std::get<1>(compile_time_tuple) == 2);
+
+  test_tuple_cat_values();
+  test_tuple_cat_forwarding();
+  test_tuple_cat_tuple_like();
 
   auto move_only_tuple = std::tuple(MoveOnly{});
   static_assert(

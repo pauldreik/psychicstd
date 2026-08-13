@@ -329,15 +329,92 @@ struct _ignore_t {
 };
 inline constexpr _ignore_t ignore{};
 
-// tuple_cat (two tuples — simple version)
-template <typename... Ts, typename... Us>
-constexpr tuple<Ts..., Us...> tuple_cat(tuple<Ts...> a, tuple<Us...> b) {
-  // use index sequences to unpack
-  return [&]<size_t... Is, size_t... Js>(index_sequence<Is...>,
-                                         index_sequence<Js...>) {
-    return tuple<Ts..., Us...>(get<Is>(static_cast<tuple<Ts...>&&>(a))...,
-                               get<Js>(static_cast<tuple<Us...>&&>(b))...);
-  }(make_index_sequence<sizeof...(Ts)>{}, make_index_sequence<sizeof...(Us)>{});
+namespace detail {
+template <typename Tuple, size_t... Indices>
+constexpr auto tuple_cat_one(Tuple&& value, index_sequence<Indices...>) {
+  using source = remove_cvref_t<Tuple>;
+  return tuple<tuple_element_t<Indices, source>...>(
+      get<Indices>(static_cast<Tuple&&>(value))...);
+}
+
+template <typename First, typename Second, size_t... FirstIndices,
+          size_t... SecondIndices>
+constexpr auto tuple_cat_two(First&& first, Second&& second,
+                             index_sequence<FirstIndices...>,
+                             index_sequence<SecondIndices...>) {
+  using first_type = remove_cvref_t<First>;
+  using second_type = remove_cvref_t<Second>;
+  return tuple<tuple_element_t<FirstIndices, first_type>...,
+               tuple_element_t<SecondIndices, second_type>...>(
+      get<FirstIndices>(static_cast<First&&>(first))...,
+      get<SecondIndices>(static_cast<Second&&>(second))...);
+}
+
+template <typename Tuples, typename ElementIndices, typename TupleIndices,
+          size_t NextTuple, typename... Sequences>
+struct tuple_cat_indices;
+
+template <typename Tuples, size_t... ElementIndices, size_t... TupleIndices,
+          size_t NextTuple>
+struct tuple_cat_indices<Tuples, index_sequence<ElementIndices...>,
+                         index_sequence<TupleIndices...>, NextTuple> {
+  using type = tuple<tuple_element_t<
+      ElementIndices,
+      remove_cvref_t<tuple_element_t<TupleIndices, Tuples>>>...>;
+  using element_indices = index_sequence<ElementIndices...>;
+  using tuple_indices = index_sequence<TupleIndices...>;
+};
+
+template <typename Tuples, size_t... ElementIndices, size_t... TupleIndices,
+          size_t NextTuple, size_t... NextIndices, typename... Rest>
+struct tuple_cat_indices<Tuples, index_sequence<ElementIndices...>,
+                         index_sequence<TupleIndices...>, NextTuple,
+                         index_sequence<NextIndices...>, Rest...>
+    : tuple_cat_indices<
+          Tuples, index_sequence<ElementIndices..., NextIndices...>,
+          index_sequence<TupleIndices..., (NextTuple + 0 * NextIndices)...>,
+          NextTuple + 1, Rest...> {};
+
+template <typename Result, typename Tuples, size_t... ElementIndices,
+          size_t... TupleIndices>
+constexpr Result tuple_cat_many(index_sequence<ElementIndices...>,
+                                index_sequence<TupleIndices...>,
+                                Tuples&& tuples) {
+  return Result(
+      get<ElementIndices>(get<TupleIndices>(static_cast<Tuples&&>(tuples)))...);
+}
+} // namespace detail
+
+constexpr tuple<> tuple_cat() { return {}; }
+
+template <typename Tuple> constexpr auto tuple_cat(Tuple&& value) {
+  return detail::tuple_cat_one(
+      static_cast<Tuple&&>(value),
+      make_index_sequence<tuple_size_v<remove_cvref_t<Tuple>>>{});
+}
+
+template <typename First, typename Second>
+constexpr auto tuple_cat(First&& first, Second&& second) {
+  return detail::tuple_cat_two(
+      static_cast<First&&>(first), static_cast<Second&&>(second),
+      make_index_sequence<tuple_size_v<remove_cvref_t<First>>>{},
+      make_index_sequence<tuple_size_v<remove_cvref_t<Second>>>{});
+}
+
+template <typename First, typename Second, typename... Rest>
+  requires(sizeof...(Rest) > 0)
+constexpr auto tuple_cat(First&& first, Second&& second, Rest&&... rest) {
+  using inputs = tuple<First&&, Second&&, Rest&&...>;
+  using indices = detail::tuple_cat_indices<
+      inputs, index_sequence<>, index_sequence<>, 0,
+      make_index_sequence<tuple_size_v<remove_cvref_t<First>>>,
+      make_index_sequence<tuple_size_v<remove_cvref_t<Second>>>,
+      make_index_sequence<tuple_size_v<remove_cvref_t<Rest>>>...>;
+  return detail::tuple_cat_many<typename indices::type>(
+      typename indices::element_indices{}, typename indices::tuple_indices{},
+      forward_as_tuple(static_cast<First&&>(first),
+                       static_cast<Second&&>(second),
+                       static_cast<Rest&&>(rest)...));
 }
 
 // apply (C++17)
