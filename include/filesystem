@@ -10,6 +10,8 @@
 namespace std {
 namespace filesystem {
 
+class file_status;
+
 class path {
   using __str = std::string;
   using __u8str = std::u8string;
@@ -291,6 +293,9 @@ public:
 
   const filesystem::path& path() const noexcept { return path_; }
   bool is_regular_file() const noexcept;
+  bool is_directory() const noexcept;
+  file_status status() const;
+  file_status symlink_status() const;
 
 private:
   filesystem::path path_;
@@ -392,16 +397,47 @@ public:
   const path& path1() const noexcept { return path1_; }
 };
 
+enum class file_type {
+  none,
+  not_found,
+  regular,
+  directory,
+  symlink,
+  block,
+  character,
+  fifo,
+  socket,
+  unknown
+};
+
 class file_status {
 public:
   file_status() noexcept = default;
-  explicit file_status(filesystem::perms permissions) noexcept
-      : permissions_(permissions) {}
+  explicit file_status(
+      filesystem::file_type type,
+      filesystem::perms permissions = filesystem::perms::unknown) noexcept
+      : type_(type), permissions_(permissions) {}
+  filesystem::file_type type() const noexcept { return type_; }
+  void type(filesystem::file_type new_type) noexcept { type_ = new_type; }
   filesystem::perms permissions() const noexcept { return permissions_; }
+  void permissions(filesystem::perms new_permissions) noexcept {
+    permissions_ = new_permissions;
+  }
 
 private:
+  filesystem::file_type type_ = filesystem::file_type::none;
   filesystem::perms permissions_ = filesystem::perms::unknown;
 };
+
+inline bool is_directory(file_status s) noexcept {
+  return s.type() == file_type::directory;
+}
+inline bool is_regular_file(file_status s) noexcept {
+  return s.type() == file_type::regular;
+}
+inline bool is_symlink(file_status s) noexcept {
+  return s.type() == file_type::symlink;
+}
 
 struct space_info {
   uintmax_t capacity;
@@ -422,6 +458,9 @@ bool is_symlink(const path&, error_code&) noexcept;
 bool equivalent(const path&, const path&);
 bool equivalent(const path&, const path&, error_code&) noexcept;
 file_status status(const path&);
+file_status status(const path&, error_code&) noexcept;
+file_status symlink_status(const path&);
+file_status symlink_status(const path&, error_code&) noexcept;
 space_info space(const path&);
 uintmax_t file_size(const path&);
 uintmax_t file_size(const path&, error_code&) noexcept;
@@ -429,14 +468,20 @@ uintmax_t file_size(const path&, error_code&) noexcept;
 using file_time_type = chrono::time_point<chrono::file_clock>;
 
 path temp_directory_path(error_code&);
+path temp_directory_path();
 path current_path(error_code&);
+path current_path();
 void current_path(const path&, error_code&) noexcept;
 path absolute(const path&, error_code&);
 path absolute(const path&);
 path weakly_canonical(const path&, error_code&);
+path canonical(const path&, error_code&) noexcept;
+path canonical(const path&);
 file_time_type last_write_time(const path&, error_code&) noexcept;
 bool remove(const path&, error_code&) noexcept;
 bool remove(const path&);
+uintmax_t remove_all(const path&, error_code&);
+uintmax_t remove_all(const path&);
 bool copy_file(const path&, const path&, error_code&);
 bool copy_file(const path&, const path&, copy_options);
 bool create_directory(const path&, error_code&) noexcept;

@@ -25,6 +25,24 @@ bool missing_path_error(int value) noexcept {
   return value == ENOENT || value == ENOTDIR;
 }
 
+file_type file_type_from_mode(mode_t mode) noexcept {
+  if (S_ISREG(mode))
+    return file_type::regular;
+  if (S_ISDIR(mode))
+    return file_type::directory;
+  if (S_ISLNK(mode))
+    return file_type::symlink;
+  if (S_ISBLK(mode))
+    return file_type::block;
+  if (S_ISCHR(mode))
+    return file_type::character;
+  if (S_ISFIFO(mode))
+    return file_type::fifo;
+  if (S_ISSOCK(mode))
+    return file_type::socket;
+  return file_type::unknown;
+}
+
 bool same_file(FILE* source, const path& destination, error_code& ec) {
   struct stat source_status;
   if (::fstat(::fileno(source), &source_status) != 0) {
@@ -790,6 +808,18 @@ bool directory_entry::is_regular_file() const noexcept {
   return filesystem::is_regular_file(path_);
 }
 
+bool directory_entry::is_directory() const noexcept {
+  return filesystem::is_directory(path_);
+}
+
+file_status directory_entry::status() const {
+  return filesystem::status(path_);
+}
+
+file_status directory_entry::symlink_status() const {
+  return filesystem::symlink_status(path_);
+}
+
 bool is_symlink(const path& value, error_code& ec) noexcept {
   struct stat status;
   if (::lstat(value.c_str(), &status) == 0) {
@@ -837,13 +867,49 @@ bool equivalent(const path& first, const path& second) {
 }
 
 file_status status(const path& value) {
+  error_code ec;
+  file_status result = status(value, ec);
+  if (ec)
+    _PSYCHICSTD_THROW(filesystem_error("status", value, ec));
+  return result;
+}
+
+file_status status(const path& value, error_code& ec) noexcept {
   struct stat result;
   if (::stat(value.c_str(), &result) != 0) {
-    error_code ec;
+    if (missing_path_error(errno)) {
+      clear_error(ec);
+      return file_status(file_type::not_found);
+    }
     set_error(ec);
-    _PSYCHICSTD_THROW(filesystem_error("status", value, ec));
+    return file_status(file_type::none);
   }
-  return file_status(static_cast<perms>(result.st_mode & 07777));
+  clear_error(ec);
+  return file_status(file_type_from_mode(result.st_mode),
+                     static_cast<perms>(result.st_mode & 07777));
+}
+
+file_status symlink_status(const path& value) {
+  error_code ec;
+  file_status result = symlink_status(value, ec);
+  if (ec)
+    _PSYCHICSTD_THROW(filesystem_error("symlink_status", value, ec));
+  return result;
+}
+
+file_status symlink_status(const path& value, error_code& ec) noexcept {
+  struct stat result;
+  if (::lstat(value.c_str(), &result) != 0) {
+    if (missing_path_error(errno)) {
+      clear_error(ec);
+      return file_status(file_type::not_found);
+    }
+    set_error(ec);
+    return file_status(file_type::none);
+  }
+  clear_error(ec);
+  return file_status(file_type_from_mode(result.st_mode),
+                     static_cast<perms>(result.st_mode & 07777));
 }
 
 space_info space(const path& value) {
@@ -886,6 +952,14 @@ path temp_directory_path(error_code& ec) {
   return result;
 }
 
+path temp_directory_path() {
+  error_code ec;
+  path result = temp_directory_path(ec);
+  if (ec)
+    _PSYCHICSTD_THROW(filesystem_error("temp_directory_path", ec));
+  return result;
+}
+
 path current_path(error_code& ec) {
   char buffer[PATH_MAX];
   if (!::getcwd(buffer, sizeof(buffer))) {
@@ -894,6 +968,14 @@ path current_path(error_code& ec) {
   }
   clear_error(ec);
   return buffer;
+}
+
+path current_path() {
+  error_code ec;
+  path result = current_path(ec);
+  if (ec)
+    _PSYCHICSTD_THROW(filesystem_error("current_path", ec));
+  return result;
 }
 
 void current_path(const path& value, error_code& ec) noexcept {
@@ -937,6 +1019,29 @@ path weakly_canonical(const path& value, error_code& ec) {
   return {};
 }
 
+path canonical(const path& value, error_code& ec) noexcept {
+  // Unlike weakly_canonical, the path must actually exist: realpath()
+  // failing (e.g. ENOENT) is a real error here, not something to fall back
+  // on.
+  char* resolved = ::realpath(value.c_str(), nullptr);
+  if (!resolved) {
+    set_error(ec);
+    return {};
+  }
+  path result(resolved);
+  ::free(resolved);
+  clear_error(ec);
+  return result;
+}
+
+path canonical(const path& value) {
+  error_code ec;
+  path result = canonical(value, ec);
+  if (ec)
+    _PSYCHICSTD_THROW(filesystem_error("canonical", value, ec));
+  return result;
+}
+
 file_time_type last_write_time(const path& value, error_code& ec) noexcept {
   struct stat status;
   if (::stat(value.c_str(), &status) != 0) {
@@ -973,6 +1078,68 @@ bool remove(const path& value) {
   bool result = remove(value, ec);
   if (ec)
     _PSYCHICSTD_THROW(filesystem_error("remove", value, ec));
+  return result;
+}
+
+namespace {
+
+constexpr uintmax_t remove_all_error = static_cast<uintmax_t>(-1);
+
+uintmax_t remove_all_impl(const path& value, error_code& ec) {
+  struct stat status;
+  if (::lstat(value.c_str(), &status) != 0) {
+    if (missing_path_error(errno)) {
+      clear_error(ec);
+      return 0;
+    }
+    set_error(ec);
+    return remove_all_error;
+  }
+
+  uintmax_t count = 0;
+  if (S_ISDIR(status.st_mode)) {
+    DIR* dir = ::opendir(value.c_str());
+    if (!dir) {
+      set_error(ec);
+      return remove_all_error;
+    }
+    while (struct dirent* entry = ::readdir(dir)) {
+      string_view name(entry->d_name);
+      if (name == "." || name == "..")
+        continue;
+      uintmax_t sub = remove_all_impl(value / entry->d_name, ec);
+      if (ec) {
+        ::closedir(dir);
+        return remove_all_error;
+      }
+      count += sub;
+    }
+    ::closedir(dir);
+  }
+
+  if (::remove(value.c_str()) != 0) {
+    if (!missing_path_error(errno)) {
+      set_error(ec);
+      return remove_all_error;
+    }
+  } else {
+    ++count;
+  }
+  clear_error(ec);
+  return count;
+}
+
+} // namespace
+
+uintmax_t remove_all(const path& value, error_code& ec) {
+  return remove_all_impl(value, ec);
+}
+
+uintmax_t remove_all(const path& value) {
+  error_code ec;
+  uintmax_t result = remove_all(value, ec);
+  if (ec)
+    _PSYCHICSTD_THROW(filesystem_error("remove_all", value, ec));
   return result;
 }
 

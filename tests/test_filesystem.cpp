@@ -318,10 +318,111 @@ int main() {
   psyassert(!fs::weakly_canonical(renamed_file, ec).empty());
   psyassert(!ec);
 
+  // canonical() differs from weakly_canonical() in requiring the path to
+  // actually exist: an existing path resolves cleanly, a nonexistent one
+  // sets an error_code (or throws, for the no-error_code overload).
+  fs::path canonical_result = fs::canonical(renamed_file, ec);
+  psyassert(!ec && !canonical_result.empty());
+  psyassert(canonical_result.is_absolute());
+  psyassert(!fs::canonical(renamed_file).empty());
+
+  fs::path missing = ops_root / "does-not-exist.txt";
+  psyassert(fs::status(missing).type() == fs::file_type::not_found);
+  psyassert(fs::status(missing, ec).type() == fs::file_type::not_found);
+  psyassert(fs::symlink_status(missing).type() == fs::file_type::not_found);
+  psyassert(fs::symlink_status(missing, ec).type() == fs::file_type::not_found);
+  (void)fs::canonical(missing, ec);
+  psyassert(static_cast<bool>(ec));
+  bool canonical_threw = false;
+  try {
+    (void)fs::canonical(missing);
+  } catch (const fs::filesystem_error&) {
+    canonical_threw = true;
+  }
+  psyassert(canonical_threw);
+
   psyassert(fs::remove(source_file, ec));
   psyassert(fs::remove(renamed_file, ec));
   psyassert(fs::remove(nested, ec));
   psyassert(fs::remove(ops_root / "a", ec));
   psyassert(fs::remove(ops_root, ec));
+  psyassert(!ec);
+
+  // remove_all: recursively removes a whole tree, returning the count of
+  // entries removed (dirs + files, root inclusive).
+  fs::path remove_all_root = unique + "_remove_all";
+  fs::create_directories(remove_all_root / "a" / "b", ec);
+  psyassert(!ec);
+  {
+    std::ofstream(remove_all_root / "a" / "one.txt") << "x";
+    std::ofstream(remove_all_root / "a" / "b" / "two.txt") << "x";
+  }
+  // remove_all_root, remove_all_root/a, remove_all_root/a/b,
+  // remove_all_root/a/one.txt, remove_all_root/a/b/two.txt.
+  psyassert(fs::remove_all(remove_all_root, ec) == 5);
+  psyassert(!ec);
+  psyassert(!fs::exists(remove_all_root, ec));
+
+  // A second remove_all on an already-gone path returns 0, not an error.
+  psyassert(fs::remove_all(remove_all_root, ec) == 0);
+  psyassert(!ec);
+  psyassert(fs::remove_all(remove_all_root) == 0);
+
+  // file_status/file_type: status()/symlink_status()/type(), each is_*
+  // overload (both the path and file_status forms), and a symlink pointed
+  // at a directory -- status() follows it (reports directory),
+  // symlink_status() doesn't (reports symlink).
+  fs::path status_root = unique + "_status";
+  fs::path status_dir = status_root / "dir";
+  fs::path status_file = status_root / "file.txt";
+  fs::path status_link = status_root / "link";
+  fs::create_directories(status_dir, ec);
+  psyassert(!ec);
+  {
+    std::ofstream(status_file) << "x";
+  }
+  // Use an absolute target -- a relative one is resolved relative to the
+  // symlink's own directory, not the CWD, so the plain relative path built
+  // above would point at the wrong place.
+  bool have_symlink =
+      ::symlink(fs::absolute(status_dir).c_str(), status_link.c_str()) == 0;
+
+  fs::file_status dir_status = fs::status(status_dir);
+  psyassert(dir_status.type() == fs::file_type::directory);
+  psyassert(fs::is_directory(dir_status));
+  psyassert(!fs::is_regular_file(dir_status));
+  psyassert(fs::is_directory(status_dir));
+
+  fs::file_status file_status_value = fs::status(status_file);
+  psyassert(file_status_value.type() == fs::file_type::regular);
+  psyassert(fs::is_regular_file(file_status_value));
+  psyassert(!fs::is_directory(file_status_value));
+  psyassert(fs::is_regular_file(status_file));
+
+  fs::directory_entry dir_entry(status_dir);
+  psyassert(dir_entry.is_directory());
+  psyassert(dir_entry.status().type() == fs::file_type::directory);
+
+  if (have_symlink) {
+    fs::file_status link_status = fs::symlink_status(status_link);
+    psyassert(link_status.type() == fs::file_type::symlink);
+    psyassert(fs::is_symlink(link_status));
+    // status() follows the symlink to the directory it points at;
+    // symlink_status() reports the link itself.
+    psyassert(fs::status(status_link).type() == fs::file_type::directory);
+    psyassert(fs::symlink_status(status_link).type() == fs::file_type::symlink);
+    psyassert(fs::directory_entry(status_link).symlink_status().type() ==
+              fs::file_type::symlink);
+    psyassert(fs::remove(status_link, ec));
+  }
+
+  psyassert(fs::remove_all(status_root, ec) == 3);
+
+  // temp_directory_path()/current_path(): only the error_code& overloads
+  // existed; these throwing no-arg overloads were an isolated oversight
+  // (everything else here already had both forms).
+  psyassert(!fs::temp_directory_path().empty());
+  psyassert(!fs::current_path().empty());
+  psyassert(fs::current_path() == fs::current_path(ec));
   psyassert(!ec);
 }
