@@ -100,7 +100,7 @@ constexpr match_flag_type& operator^=(match_flag_type& lhs,
                                       match_flag_type rhs) noexcept {
   return lhs = lhs ^ rhs;
 }
-} // namespace regex_constants
+}
 
 class regex_error : public runtime_error {
 public:
@@ -239,4 +239,4 @@ private:
   size_t position_ = 0;
 };
 
-} // namespace std
+}

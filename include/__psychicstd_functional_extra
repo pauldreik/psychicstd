@@ -42,4 +42,4 @@ template <typename T> reference_wrapper<const T> cref(const T& r) noexcept {
   return {r};
 }
 
-} // namespace std
+}

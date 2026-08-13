@@ -922,4 +922,4 @@ constexpr typename vector<T, A>::size_type erase_if(vector<T, A>& c,
   return n;
 }
 
-} // namespace std
+}

@@ -144,7 +144,7 @@ bool operator==(const mt19937_64& lhs, const mt19937_64& rhs) {
   return true;
 }
 
-} // namespace std
+}
 
 #undef _PSYCHICSTD_O_RDONLY
 #undef _PSYCHICSTD_O_CLOEXEC

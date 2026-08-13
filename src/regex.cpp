@@ -162,7 +162,7 @@ string translate_ecmascript(const char* pattern, vector<size_t>& submatches) {
   return result;
 }
 
-} // namespace
+}
 
 namespace {
 
@@ -204,7 +204,7 @@ regex_constants::error_type to_error_type(int posix_code) {
   }
 }
 
-} // namespace
+}
 
 regex_error::regex_error(regex_constants::error_type code)
     : runtime_error("regex_error"), code_(code) {}
@@ -533,4 +533,4 @@ bool operator==(const sregex_token_iterator& left,
   return left.position_ == right.position_ && left.tokens_ == right.tokens_;
 }
 
-} // namespace std
+}

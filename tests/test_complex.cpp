@@ -22,7 +22,7 @@ template <typename T> void test_integral_output() {
 }
 
 static_assert(!has_std_arg<unrelated_expression>);
-} // namespace
+}
 
 int main() {
   static_assert(

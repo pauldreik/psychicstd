@@ -5,4 +5,4 @@ namespace std {
 using ::lconv;
 using ::localeconv;
 using ::setlocale;
-} // namespace std
+}

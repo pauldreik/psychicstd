@@ -245,4 +245,4 @@ protected:
   basic_ostream<Char, Traits>* tie_ = nullptr;
 };
 
-} // namespace std
+}

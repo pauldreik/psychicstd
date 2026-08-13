@@ -14,4 +14,4 @@ using ::strftime;
 using ::time;
 using ::time_t;
 using ::tm;
-} // namespace std
+}

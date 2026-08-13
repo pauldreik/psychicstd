@@ -67,4 +67,4 @@ struct hash<T> {
   }
 };
 
-} // namespace std
+}

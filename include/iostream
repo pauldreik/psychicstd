@@ -15,4 +15,4 @@ extern ostream clog;
 static ios_base::Init __ioinit;
 #endif
 
-} // namespace std
+}

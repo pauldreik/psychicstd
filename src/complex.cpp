@@ -39,4 +39,4 @@ _PSYCHICSTD_INSTANTIATE_COMPLEX_OUTPUT(wchar_t, unsigned long);
 
 #undef _PSYCHICSTD_INSTANTIATE_COMPLEX_OUTPUT
 
-} // namespace std::__complex_detail
+}

@@ -77,7 +77,7 @@ struct __iter_swap_fn {
     }
   }
 };
-} // namespace __detail
+}
 
 inline constexpr __detail::__begin_fn begin{};
 inline constexpr __detail::__end_fn end{};
@@ -127,7 +127,7 @@ namespace __detail {
 template <typename T> inline constexpr bool __is_initializer_list = false;
 template <typename T>
 inline constexpr bool __is_initializer_list<std::initializer_list<T>> = true;
-} // namespace __detail
+}
 
 template <typename R>
 concept viewable_range =
@@ -238,7 +238,7 @@ private:
   Function function_;
 };
 
-} // namespace std::ranges
+}
 
 namespace std::views {
 
@@ -315,7 +315,7 @@ struct __values_fn {
 };
 inline constexpr __values_fn values{};
 
-} // namespace std::views
+}
 
 namespace std::ranges {
 namespace views = std::views;

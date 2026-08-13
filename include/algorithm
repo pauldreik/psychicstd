@@ -135,7 +135,7 @@ constexpr void stable_sort_impl(It first, It last, Compare& cmp) {
   stable_sort_impl(middle, last, cmp);
   stable_merge_without_buffer(first, middle, last, cmp);
 }
-} // namespace detail
+}
 
 template <typename It> constexpr void sort(It first, It last) {
   if (last - first > 1)
@@ -846,4 +846,4 @@ constexpr OutIt set_symmetric_difference(It1 f1, It1 l1, It2 f2, It2 l2,
 // is_heap_until) live in <__psychicstd_algoheap>, included above, so that
 // <queue> can get them without all of <algorithm>.
 
-} // namespace std
+}

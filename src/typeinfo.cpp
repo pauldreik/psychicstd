@@ -15,7 +15,7 @@ bool unique(const char* name) noexcept {
   return !(reinterpret_cast<size_t>(name) >> 63);
 }
 
-} // namespace
+}
 #endif
 
 bool type_info::__equal(const type_info& rhs) const noexcept {
@@ -55,4 +55,4 @@ size_t type_info::hash_code() const noexcept {
   return hash;
 }
 
-} // namespace std
+}

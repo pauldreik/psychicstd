@@ -73,4 +73,4 @@ constexpr byte& operator^=(byte& l, byte r) noexcept { return l = l ^ r; }
 template <class Int> constexpr Int to_integer(byte b) noexcept {
   return Int(b);
 }
-} // namespace std
+}

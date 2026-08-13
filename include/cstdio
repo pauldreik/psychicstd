@@ -48,4 +48,4 @@ using ::vscanf;
 using ::vsnprintf;
 using ::vsprintf;
 using ::vsscanf;
-} // namespace std
+}

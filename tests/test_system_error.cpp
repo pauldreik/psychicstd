@@ -9,7 +9,7 @@ enum class error { failed = 42 };
 std::error_code make_error_code(error value) {
   return {static_cast<int>(value), std::generic_category()};
 }
-} // namespace custom
+}
 
 template <> struct std::is_error_code_enum<custom::error> : std::true_type {};
 

@@ -38,4 +38,4 @@ cv_status condition_variable::__wait_for_ns(unique_lock<mutex>& lock,
   __builtin_trap();
 }
 
-} // namespace std
+}

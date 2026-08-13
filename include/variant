@@ -125,7 +125,7 @@ template <typename First, typename... Rest> union __storage {
   constexpr ~__storage() {}
 };
 
-} // namespace __variant
+}
 
 template <typename... Ts> class variant {
   static_assert(sizeof...(Ts) > 0,
@@ -364,7 +364,7 @@ constexpr R __visit_impl(Visitor&& vis, V&& v) {
   else
     _PSYCHICSTD_THROW_HELPER(__throw_bad_variant_access);
 }
-} // namespace __variant
+}
 
 template <typename Visitor, typename V>
 constexpr decltype(auto) visit(Visitor&& vis, V&& v) {
@@ -442,4 +442,4 @@ template <typename... Ts> void swap(variant<Ts...>& a, variant<Ts...>& b) {
   a.swap(b);
 }
 
-} // namespace std
+}

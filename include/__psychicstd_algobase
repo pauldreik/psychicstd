@@ -202,7 +202,7 @@ struct __none_of_fn {
   }
 };
 inline constexpr __none_of_fn none_of{};
-} // namespace ranges
+}
 
 // for_each
 template <typename It, typename F>
@@ -591,4 +591,4 @@ constexpr bool is_sorted(It first, It last, Compare cmp) {
   return true;
 }
 
-} // namespace std
+}

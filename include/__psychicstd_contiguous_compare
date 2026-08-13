@@ -30,4 +30,4 @@ template <typename T> constexpr __cmp_t<T> __cmp(const T& a, const T& b) {
                    : weak_ordering::greater;
 }
 
-} // namespace std::__contiguous_detail
+}

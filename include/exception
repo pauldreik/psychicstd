@@ -102,7 +102,7 @@ public:
   template <typename U>
   explicit nested(U&& value) : T(static_cast<U&&>(value)) {}
 };
-} // namespace __exception_detail
+}
 
 template <typename T> [[noreturn]] void throw_with_nested(T&& value) {
   (void)value;
@@ -138,4 +138,4 @@ template <typename E> exception_ptr make_exception_ptr(E e) noexcept {
 #endif
 }
 
-} // namespace std
+}

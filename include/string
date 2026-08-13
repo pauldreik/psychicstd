@@ -1192,7 +1192,7 @@ inline namespace string_literals {
 #pragma GCC diagnostic ignored "-Wliteral-suffix"
 inline string operator""s(const char* s, size_t n) { return {s, n}; }
 #pragma GCC diagnostic pop
-} // namespace string_literals
-} // namespace literals
+}
+}
 
-} // namespace std
+}

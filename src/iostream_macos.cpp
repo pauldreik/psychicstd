@@ -15,7 +15,7 @@ alignas(ostream) unsigned char cout[sizeof(ostream)];
 alignas(ostream) unsigned char cerr[sizeof(ostream)];
 alignas(ostream) unsigned char clog[sizeof(ostream)];
 
-} // namespace std
+}
 
 namespace {
 
@@ -50,13 +50,13 @@ void initialize_standard_streams() {
   streams_initialized = true;
 }
 
-} // namespace
+}
 
 namespace std {
 
 ios_base::Init::Init() { initialize_standard_streams(); }
 ios_base::Init::~Init() = default;
 
-} // namespace std
+}
 
 #endif

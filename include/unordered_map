@@ -940,4 +940,4 @@ erase_if(unordered_multimap<Key, T, Hash, KeyEqual, Allocator>& c, Pred pred) {
   return removed;
 }
 
-} // namespace std
+}

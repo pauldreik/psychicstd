@@ -176,4 +176,4 @@ basic_ostream<Char, Traits>& operator<<(basic_ostream<Char, Traits>& os,
   return os;
 }
 
-} // namespace std
+}

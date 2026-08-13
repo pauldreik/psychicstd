@@ -21,7 +21,7 @@ void check(bool ok, std::string_view message) {
     throw std::runtime_error(std::string(message));
 }
 
-} // namespace
+}
 
 int main() {
   // I/O — verifies <iostream> + <ostream> + streambuf work

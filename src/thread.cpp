@@ -27,7 +27,7 @@ void __sleep_for(long long nanoseconds) noexcept {
   ::nanosleep(&duration, nullptr);
 }
 
-} // namespace __thread_detail
+}
 
 static pthread_t to_native_handle(unsigned long handle) noexcept {
   pthread_t result;
@@ -118,5 +118,5 @@ thread::id get_id() noexcept {
 
 void yield() noexcept { ::sched_yield(); }
 
-} // namespace this_thread
-} // namespace std
+}
+}

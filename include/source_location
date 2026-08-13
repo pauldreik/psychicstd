@@ -42,4 +42,4 @@ private:
   const __impl* impl_ = nullptr;
 };
 
-} // namespace std
+}

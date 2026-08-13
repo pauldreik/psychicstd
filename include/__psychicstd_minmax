@@ -17,4 +17,4 @@ constexpr const T& max(const T& a, const T& b, Compare cmp) {
   return cmp(a, b) ? b : a;
 }
 
-} // namespace std
+}

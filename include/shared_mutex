@@ -112,4 +112,4 @@ private:
 
 template <typename Mutex> shared_lock(Mutex&) -> shared_lock<Mutex>;
 
-} // namespace std
+}

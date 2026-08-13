@@ -228,4 +228,4 @@ erase_if(multimap<Key, T, Compare, Alloc>& c, Pred pred) {
   return removed;
 }
 
-} // namespace std
+}

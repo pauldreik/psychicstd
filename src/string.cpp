@@ -32,7 +32,7 @@ wstring format_wide_number(const wchar_t* format, Value value) {
       ::swprintf(buffer, sizeof(buffer) / sizeof(*buffer), format, value);
   return {buffer, static_cast<size_t>(length)};
 }
-} // namespace
+}
 
 wstring to_wstring(int value) { return format_wide_number(L"%d", value); }
 wstring to_wstring(long value) { return format_wide_number(L"%ld", value); }
@@ -125,4 +125,4 @@ long double stold(const string& input, size_t* pos) {
 }
 #endif
 
-} // namespace std
+}

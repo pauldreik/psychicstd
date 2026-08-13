@@ -53,4 +53,4 @@ void notify_platform(const volatile void* ptr, size_t size,
 #endif
 }
 
-} // namespace std::__atomic_detail
+}

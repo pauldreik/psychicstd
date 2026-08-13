@@ -23,7 +23,7 @@ extern "C" void __cxa_increment_exception_refcount(void*) noexcept;
 extern "C" void __cxa_decrement_exception_refcount(void*) noexcept;
 extern "C" void __cxa_rethrow_primary_exception(void*);
 #endif
-} // namespace __cxxabiv1
+}
 
 namespace __exception_ptr {
 class exception_ptr;
@@ -82,7 +82,7 @@ public:
     return !(a == b);
   }
 };
-} // namespace __exception_ptr
+}
 
 using __exception_ptr::exception_ptr;
 
@@ -97,4 +97,4 @@ inline exception_ptr current_exception() noexcept {
 }
 #endif
 
-} // namespace std
+}

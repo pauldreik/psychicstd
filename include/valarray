@@ -89,4 +89,4 @@ public:
   const T* end() const noexcept { return data_ + size_; }
 };
 
-} // namespace std
+}

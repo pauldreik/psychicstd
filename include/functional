@@ -147,7 +147,7 @@ inline constexpr __placeholder<5> _6{};
 inline constexpr __placeholder<6> _7{};
 inline constexpr __placeholder<7> _8{};
 inline constexpr __placeholder<8> _9{};
-} // namespace placeholders
+}
 
 namespace detail {
 template <typename F, typename... Bound> struct __bind_wrapper;
@@ -290,7 +290,7 @@ template <typename R, typename F, typename... Bound> struct __bind_r_wrapper {
       return static_cast<R>(bound_(static_cast<Args&&>(args)...));
   }
 };
-} // namespace detail
+}
 
 template <typename F, typename... Args>
 constexpr decltype(auto) invoke(F&& f, Args&&... args) {
@@ -316,4 +316,4 @@ template <typename R, typename T> constexpr auto mem_fn(R T::* pm) {
   };
 }
 
-} // namespace std
+}

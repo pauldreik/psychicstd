@@ -90,7 +90,7 @@ from_chars_result parse_float(const char* first, const char* last, T& value,
   return {result_ptr, errc{}};
 }
 
-} // namespace
+}
 
 from_chars_result from_chars(const char* first, const char* last, float& value,
                              chars_format fmt) noexcept {
@@ -113,4 +113,4 @@ from_chars_result from_chars(const char* first, const char* last,
   });
 }
 
-} // namespace std
+}

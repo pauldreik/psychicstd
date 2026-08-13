@@ -15,7 +15,7 @@ void operator delete[](void*, std::size_t) noexcept;
 
 namespace std {
 enum class align_val_t : size_t {};
-} // namespace std
+}
 
 void* operator new(std::size_t, std::align_val_t) noexcept(false);
 void* operator new[](std::size_t, std::align_val_t) noexcept(false);
@@ -39,7 +39,7 @@ inline constexpr nothrow_t nothrow{};
 #else
 extern const nothrow_t nothrow;
 #endif
-} // namespace std
+}
 
 void* operator new(std::size_t, const std::nothrow_t&) noexcept;
 void* operator new[](std::size_t, const std::nothrow_t&) noexcept;

@@ -83,7 +83,7 @@ struct __common_ref2 : __ternary_cr<T, U> {};
 template <typename T, typename U>
 struct __common_ref2<T, U, void_t<typename __basic_cr<T, U>::type>>
     : __basic_cr<T, U> {};
-} // namespace __cr_detail
+}
 
 template <typename... Ts> struct common_reference {};
 
@@ -101,4 +101,4 @@ struct common_reference<T, U, Rest...>
 template <typename... Ts>
 using common_reference_t = typename common_reference<Ts...>::type;
 
-} // namespace std
+}

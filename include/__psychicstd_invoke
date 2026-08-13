@@ -30,4 +30,4 @@ constexpr decltype(auto) __invoke(R T::* pm, Obj&& obj, Args&&... args) {
   }
 }
 
-} // namespace std::detail
+}

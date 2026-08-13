@@ -690,4 +690,4 @@ erase_if(multiset<Key, Compare, Alloc>& c, Pred pred) {
   return removed;
 }
 
-} // namespace std
+}

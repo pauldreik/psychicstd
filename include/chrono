@@ -237,7 +237,7 @@ private:
 
 template <typename Duration> hh_mm_ss(Duration) -> hh_mm_ss<Duration>;
 
-} // namespace std::chrono
+}
 
 namespace std {
 inline namespace literals {
@@ -287,6 +287,6 @@ constexpr chrono::duration<long double, nano> operator""ns(long double value) {
   return chrono::duration<long double, nano>(value);
 }
 #pragma GCC diagnostic pop
-} // namespace chrono_literals
-} // namespace literals
-} // namespace std
+}
+}
+}

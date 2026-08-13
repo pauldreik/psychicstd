@@ -84,4 +84,4 @@ constexpr T rotr(T value, int shift) noexcept {
   return static_cast<T>((value >> rotation) | (value << (digits - rotation)));
 }
 
-} // namespace std
+}

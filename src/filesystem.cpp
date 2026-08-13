@@ -194,7 +194,7 @@ extract_path_string(basic_istream<Char, Traits>& input,
   return input;
 }
 
-} // namespace
+}
 
 string path::from_wstring(wstring_view value) {
   std::string result;
@@ -1129,7 +1129,7 @@ uintmax_t remove_all_impl(const path& value, error_code& ec) {
   return count;
 }
 
-} // namespace
+}
 
 uintmax_t remove_all(const path& value, error_code& ec) {
   return remove_all_impl(value, ec);
@@ -1282,4 +1282,4 @@ void rename(const path& source, const path& destination,
     clear_error(ec);
 }
 
-} // namespace std::filesystem
+}

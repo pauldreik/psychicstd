@@ -321,7 +321,7 @@ template <typename T, typename Alloc> struct __sp_alloc_del {
   }
 };
 struct __esft_tag {};
-} // namespace __detail
+}
 
 template <typename T> class shared_ptr;
 template <typename T> class weak_ptr;
@@ -573,7 +573,7 @@ inline void __shared_ptr_atomic_acquire() noexcept {
 inline void __shared_ptr_atomic_release() noexcept {
   __atomic_clear(&__shared_ptr_atomic_lock, __ATOMIC_RELEASE);
 }
-} // namespace __detail
+}
 
 template <typename T>
 shared_ptr<T> atomic_load(const shared_ptr<T>* pointer) noexcept {
@@ -810,4 +810,4 @@ template <typename T> struct hash<shared_ptr<T>> {
   }
 };
 
-} // namespace std
+}

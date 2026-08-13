@@ -16,7 +16,7 @@ template <typename OuterAlloc, typename InnerAlloc, typename... Rest>
 struct __scoped_inner<OuterAlloc, InnerAlloc, Rest...> {
   using type = scoped_allocator_adaptor<InnerAlloc, Rest...>;
 };
-} // namespace __detail
+}
 
 // A compact scoped allocator adaptor. It provides the allocator propagation
 // and construction hooks needed by standard containers without duplicating
@@ -82,4 +82,4 @@ private:
   inner_allocator_type inner_{};
 };
 
-} // namespace std
+}

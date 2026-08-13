@@ -217,7 +217,7 @@ struct __compare_three_way_result<
   using type = decltype(declval<const remove_reference_t<T>&>() <=>
                         declval<const remove_reference_t<U>&>());
 };
-} // namespace __psychicstd_detail
+}
 
 template <typename T, typename U = T>
 struct compare_three_way_result
@@ -227,4 +227,4 @@ template <typename T, typename U = T>
 using compare_three_way_result_t =
     typename compare_three_way_result<T, U>::type;
 
-} // namespace std
+}

@@ -16,4 +16,4 @@ using ::isupper;
 using ::isxdigit;
 using ::tolower;
 using ::toupper;
-} // namespace std
+}

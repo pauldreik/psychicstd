@@ -161,4 +161,4 @@ private:
   condition_variable condition_;
 };
 
-} // namespace std
+}

@@ -85,7 +85,7 @@ template <> struct __state<void> : __state_base {
   void set_value();
 };
 
-} // namespace __future_detail
+}
 
 template <typename T> class future {
   using state = __future_detail::__state<T>;
@@ -405,4 +405,4 @@ public:
   }
 };
 
-} // namespace std
+}

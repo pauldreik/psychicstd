@@ -290,4 +290,4 @@ template <typename T> struct numeric_limits<volatile T> : numeric_limits<T> {};
 template <typename T>
 struct numeric_limits<const volatile T> : numeric_limits<T> {};
 
-} // namespace std
+}

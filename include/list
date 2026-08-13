@@ -441,4 +441,4 @@ bool operator<(const list<T, A>& a, const list<T, A>& b) {
   return __lexicographical_compare(a.begin(), a.end(), b.begin(), b.end());
 }
 
-} // namespace std
+}

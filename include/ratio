@@ -11,7 +11,7 @@ constexpr intmax_t gcd(intmax_t a, intmax_t b) noexcept {
 constexpr intmax_t lcm(intmax_t a, intmax_t b) noexcept {
   return (a / gcd(a, b)) * b;
 }
-} // namespace detail
+}
 
 template <intmax_t Num, intmax_t Den = 1> struct ratio {
   static_assert(Den != 0, "ratio: zero denominator");
@@ -88,4 +88,4 @@ using tera = ratio<1000000000000LL, 1>;
 using peta = ratio<1000000000000000LL, 1>;
 using exa = ratio<1000000000000000000LL, 1>;
 
-} // namespace std
+}

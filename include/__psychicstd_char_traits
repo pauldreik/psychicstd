@@ -129,4 +129,4 @@ template <> struct char_traits<char> {
   static constexpr int not_eof(int i) noexcept { return i == -1 ? 0 : i; }
 };
 
-} // namespace std
+}

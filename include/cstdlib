@@ -149,4 +149,4 @@ using ::strtoull;
 using ::system;
 using ::wcstombs;
 using ::wctomb;
-} // namespace std
+}

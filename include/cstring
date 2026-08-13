@@ -25,4 +25,4 @@ using ::strspn;
 using ::strstr;
 using ::strtok;
 using ::strxfrm;
-} // namespace std
+}

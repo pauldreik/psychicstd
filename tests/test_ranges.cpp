@@ -22,7 +22,7 @@ void iter_swap(iterator a, iterator b) {
   *a = *b;
   *b = tmp;
 }
-} // namespace custom
+}
 
 template <typename Range>
 concept can_make_subrange = requires(Range&& range) {

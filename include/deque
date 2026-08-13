@@ -836,4 +836,4 @@ typename deque<T, A>::size_type erase_if(deque<T, A>& c, Pred pred) {
   return n;
 }
 
-} // namespace std
+}

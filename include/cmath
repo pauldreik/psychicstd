@@ -151,7 +151,7 @@ concept integral = __builtin_classify_type(*(T*)nullptr) == 1 && !__is_enum(T);
 
 template <typename T>
 concept arithmetic = integral<T> || __builtin_classify_type(*(T*)nullptr) == 8;
-} // namespace __cmath_detail
+}
 
 // float overloads
 using ::ceilf;
@@ -466,6 +466,6 @@ inline float log1p(float x) { return ::log1pf(x); }
 inline long double expm1(long double x) { return ::expm1l(x); }
 inline double expm1(double x) { return ::expm1(x); }
 inline float expm1(float x) { return ::expm1f(x); }
-} // namespace std
+}
 
 #undef _PSYCHICSTD_CMATH_CONSTEXPR

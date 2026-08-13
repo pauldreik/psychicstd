@@ -490,5 +490,5 @@ bool create_directories(const path&);
 void permissions(const path&, perms, perm_options, error_code&) noexcept;
 void rename(const path&, const path&, error_code&) noexcept;
 
-} // namespace filesystem
-} // namespace std
+}
+}

@@ -44,7 +44,7 @@ struct throwing_move_result {
   }
 };
 
-} // namespace
+}
 
 template <typename F> static void expect_exception(F&& function) {
   bool threw = false;

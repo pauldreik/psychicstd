@@ -66,7 +66,7 @@ void __state<void>::set_value() {
   condition_.notify_all();
 }
 
-} // namespace std::__future_detail
+}
 
 namespace std {
 
@@ -165,4 +165,4 @@ void promise<void>::set_exception(exception_ptr exception) {
   state_->set_exception(exception);
 }
 
-} // namespace std
+}

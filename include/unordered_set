@@ -618,4 +618,4 @@ erase_if(unordered_multiset<Key, Hash, KeyEqual, Allocator>& c, Pred pred) {
   return removed;
 }
 
-} // namespace std
+}

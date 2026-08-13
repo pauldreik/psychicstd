@@ -44,7 +44,7 @@ struct tuple_impl<index_sequence<Is...>, Ts...> : tuple_leaf<Is, Ts>... {
   constexpr explicit tuple_impl(Us&&... args)
       : tuple_leaf<Is, Ts>(static_cast<Us&&>(args))... {}
 };
-} // namespace detail
+}
 
 template <typename... Ts>
 class tuple
@@ -182,7 +182,7 @@ template <typename Head, typename... Tail> struct type_at<0, Head, Tail...> {
   using type = Head;
 };
 #endif
-} // namespace detail
+}
 
 template <size_t Index, typename... Ts>
 struct tuple_element<Index, tuple<Ts...>> {
@@ -233,7 +233,7 @@ template <typename T, typename... Ts> constexpr size_t tuple_index_of() {
     return ((is_same_v<T, Ts> ? Is : 0) + ...);
   }(index_sequence_for<Ts...>{});
 }
-} // namespace detail
+}
 
 template <typename T, typename... Ts>
 constexpr T& get(tuple<Ts...>& t) noexcept {
@@ -257,7 +257,7 @@ constexpr bool tuple_lt(const Tup& a, const Tup& b) {
   else
     return tuple_lt<Index + 1>(a, b);
 }
-} // namespace detail
+}
 
 template <typename... Ts, typename... Us>
   requires(sizeof...(Ts) == sizeof...(Us))
@@ -383,7 +383,7 @@ constexpr Result tuple_cat_many(index_sequence<ElementIndices...>,
   return Result(
       get<ElementIndices>(get<TupleIndices>(static_cast<Tuples&&>(tuples)))...);
 }
-} // namespace detail
+}
 
 constexpr tuple<> tuple_cat() { return {}; }
 
@@ -431,4 +431,4 @@ template <typename T, typename Tuple> constexpr T make_from_tuple(Tuple&& t) {
                static_cast<Tuple&&>(t));
 }
 
-} // namespace std
+}

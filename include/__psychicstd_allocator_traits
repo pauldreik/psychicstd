@@ -26,7 +26,7 @@ template <typename Ptr, typename U>
 struct __pointer_rebind<Ptr, U, void_t<typename Ptr::template rebind<U>>> {
   using type = typename Ptr::template rebind<U>;
 };
-} // namespace __detail
+}
 
 // pointer_traits
 template <typename Ptr> struct pointer_traits {
@@ -187,7 +187,7 @@ struct __alloc_rebind<Alloc, T,
                       void_t<typename Alloc::template rebind<T>::other>> {
   using type = typename Alloc::template rebind<T>::other;
 };
-} // namespace __detail
+}
 
 namespace __detail {
 template <typename A, typename = void> struct __alloc_ptr {
@@ -218,7 +218,7 @@ template <typename A>
 struct __alloc_cptr<A, void_t<typename A::const_pointer>> {
   using type = typename A::const_pointer;
 };
-} // namespace __detail
+}
 
 // allocator_traits
 template <typename Alloc> struct allocator_traits {
@@ -286,4 +286,4 @@ template <typename Ptr>
   return to_address(p.operator->());
 }
 
-} // namespace std
+}

@@ -113,4 +113,4 @@ void ios_base::_throw_failure_with_exceptions() {
   _PSYCHICSTD_THROW(failure("basic_ios::clear"));
 }
 
-} // namespace std
+}

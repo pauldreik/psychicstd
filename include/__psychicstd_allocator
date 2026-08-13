@@ -43,4 +43,4 @@ constexpr bool operator==(const allocator<T>&, const allocator<U>&) noexcept {
   return true;
 }
 
-} // namespace std
+}

@@ -103,7 +103,7 @@ static void test_tuple_cat_tuple_like() {
   static_assert(mixed ==
                 std::tuple<int, long, short, short, char>{1, 2, 3, 4, 5});
 }
-} // namespace
+}
 
 int main() {
   constexpr std::tuple compile_time_tuple(1, 2, 3);

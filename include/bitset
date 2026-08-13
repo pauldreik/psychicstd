@@ -200,4 +200,4 @@ template <size_t N> struct hash<bitset<N>> {
   }
 };
 
-} // namespace std
+}

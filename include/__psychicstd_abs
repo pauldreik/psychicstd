@@ -16,4 +16,4 @@ constexpr int abs(T __x) {
 #endif
 inline constexpr long abs(long __x) { return __x < 0 ? -__x : __x; }
 inline constexpr long long abs(long long __x) { return __x < 0 ? -__x : __x; }
-} // namespace std
+}

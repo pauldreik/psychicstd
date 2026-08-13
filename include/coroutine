@@ -169,4 +169,4 @@ template <typename Promise> struct hash<coroutine_handle<Promise>> {
   }
 };
 
-} // namespace std
+}
