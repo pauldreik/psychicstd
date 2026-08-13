@@ -273,7 +273,7 @@ constexpr array<remove_cv_t<T>, N> to_array_move_impl(T (&&a)[N],
                                                       index_sequence<I...>) {
   return {{static_cast<T&&>(a[I])...}};
 }
-} // namespace detail
+}
 
 template <typename T, size_t N>
 constexpr array<remove_cv_t<T>, N> to_array(T (&a)[N]) {
@@ -285,4 +285,4 @@ constexpr array<remove_cv_t<T>, N> to_array(T (&&a)[N]) {
                                     make_index_sequence<N>{});
 }
 
-} // namespace std
+}

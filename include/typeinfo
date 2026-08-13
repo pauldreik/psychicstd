@@ -35,4 +35,4 @@ private:
   type_info(const type_info&) = delete;
 };
 
-} // namespace std
+}

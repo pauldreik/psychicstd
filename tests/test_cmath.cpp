@@ -7,6 +7,14 @@
 using std::nextafter;
 static_assert(std::is_same_v<decltype(nextafter(1.0, 2.0)), double>);
 
+static_assert(std::is_same_v<std::float_t, float>);
+static_assert(std::is_same_v<std::double_t, double>);
+static_assert([] {
+  std::float_t f = 1.5F;
+  std::double_t d = 2.5;
+  return f + d == 4.0;
+}());
+
 int main() {
   psyassert(std::fpclassify(0.0) == FP_ZERO);
   psyassert(std::fpclassify(1.0F) == FP_NORMAL);
@@ -27,6 +35,59 @@ int main() {
   static_assert(std::is_same_v<decltype(std::cos(1.0L)), long double>);
   static_assert(std::is_same_v<decltype(std::ldexp(1.0F, 1)), float>);
   static_assert(std::is_same_v<decltype(std::ldexp(1.0L, 1)), long double>);
+
+  static_assert(std::is_same_v<decltype(std::round(1.0F)), float>);
+  static_assert(std::is_same_v<decltype(std::round(1.0)), double>);
+  static_assert(std::is_same_v<decltype(std::round(1.0L)), long double>);
+  static_assert(std::is_same_v<decltype(std::round(1)), double>);
+  static_assert(std::is_same_v<decltype(std::ceil(1.0F)), float>);
+  static_assert(std::is_same_v<decltype(std::ceil(1.0)), double>);
+  static_assert(std::is_same_v<decltype(std::ceil(1.0L)), long double>);
+  static_assert(std::is_same_v<decltype(std::ceil(1)), double>);
+  static_assert(std::is_same_v<decltype(std::floor(1.0F)), float>);
+  static_assert(std::is_same_v<decltype(std::floor(1.0)), double>);
+  static_assert(std::is_same_v<decltype(std::floor(1.0L)), long double>);
+  static_assert(std::is_same_v<decltype(std::floor(1)), double>);
+  static_assert(std::is_same_v<decltype(std::trunc(1.0F)), float>);
+  static_assert(std::is_same_v<decltype(std::trunc(1.0)), double>);
+  static_assert(std::is_same_v<decltype(std::trunc(1.0L)), long double>);
+  static_assert(std::is_same_v<decltype(std::trunc(1)), double>);
+  psyassert(std::round(2.5F) == 3.0F);
+  psyassert(std::round(-2.5) == -3.0);
+  psyassert(std::ceil(1.5L) == 2.0L);
+  psyassert(std::floor(1.5F) == 1.0F);
+  psyassert(std::trunc(-1.5) == -1.0);
+
+  static_assert(std::is_same_v<decltype(std::erf(1.0F)), float>);
+  static_assert(std::is_same_v<decltype(std::erf(1.0)), double>);
+  static_assert(std::is_same_v<decltype(std::erf(1.0L)), long double>);
+  static_assert(std::is_same_v<decltype(std::erf(1)), double>);
+  static_assert(std::is_same_v<decltype(std::erfc(1.0F)), float>);
+  static_assert(std::is_same_v<decltype(std::erfc(1.0)), double>);
+  static_assert(std::is_same_v<decltype(std::erfc(1.0L)), long double>);
+  static_assert(std::is_same_v<decltype(std::erfc(1)), double>);
+  psyassert(std::abs(std::erf(0.0) - 0.0) < 1e-12);
+  psyassert(std::abs(std::erf(1.0) - 0.8427007929497149) < 1e-12);
+  psyassert(std::abs(std::erfc(1.0) - 0.15729920705028513) < 1e-12);
+  psyassert(std::abs(std::erf(1.0F) - 0.8427008F) < 1e-5F);
+
+  // hypot's 3-arg overload (C++17).
+  static_assert(std::is_same_v<decltype(std::hypot(1.0F, 1.0F, 1.0F)), float>);
+  static_assert(std::is_same_v<decltype(std::hypot(1.0, 1.0, 1.0)), double>);
+  static_assert(
+      std::is_same_v<decltype(std::hypot(1.0L, 1.0L, 1.0L)), long double>);
+  static_assert(std::is_same_v<decltype(std::hypot(1, 1.0F, 1.0)), double>);
+  psyassert(std::hypot(2.0, 3.0, 6.0) == 7.0);
+  // float: don't require bit-exact equality across implementations --
+  // Implementations may use different scaling strategies and need not be
+  // bit-identical.
+  psyassert(std::abs(std::hypot(2.0F, 3.0F, 6.0F) - 7.0F) < 1e-5F);
+  const double large_hypot = std::hypot(1e308, 1e308, 1e308);
+  psyassert(std::isfinite(large_hypot));
+  psyassert(large_hypot > 1.7e308);
+  const double small_hypot = std::hypot(1e-308, 1e-308, 1e-308);
+  psyassert(small_hypot > 1.7e-308);
+
   static_assert(std::is_same_v<decltype(std::ldexp(1, 1)), double>);
   int exponent = 0;
   static_assert(std::is_same_v<decltype(std::frexp(1.0F, &exponent)), float>);

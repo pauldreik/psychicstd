@@ -1,4 +1,5 @@
 #include "psyassert.h"
+#include <algorithm>
 #include <map>
 #include <tuple>
 
@@ -31,7 +32,32 @@ struct partially_ordered {
   friend bool operator==(partially_ordered, partially_ordered) = default;
 };
 
+static void test_erase_if() {
+  std::map<int, int> map{{1, 1}, {2, 2}, {3, 3}, {4, 4}};
+  psyassert(std::erase_if(map, [](const auto& value) {
+              return value.first % 2 == 0;
+            }) == 2);
+  psyassert((map == std::map<int, int>{{1, 1}, {3, 3}}));
+  psyassert(std::erase_if(map, [](const auto&) { return false; }) == 0);
+  psyassert(std::erase_if(map, [](const auto&) { return true; }) == 2);
+  psyassert(map.empty());
+
+  std::multimap<int, int> multimap{{1, 1}, {2, 2}, {2, 3}, {3, 4}};
+  psyassert(std::erase_if(multimap, [](const auto& value) {
+              return value.first == 2;
+            }) == 2);
+  psyassert((multimap == std::multimap<int, int>{{1, 1}, {3, 4}}));
+}
+
 int main() {
+  const std::map<int, int> for_crbegin{{1, 10}, {2, 20}, {3, 30}};
+  psyassert(std::equal(for_crbegin.crbegin(), for_crbegin.crend(),
+                       for_crbegin.rbegin(), for_crbegin.rend()));
+  psyassert(for_crbegin.crbegin()->first == 3);
+  psyassert(for_crbegin.crend() == for_crbegin.rend());
+
+  test_erase_if();
+
   std::map<int, int> m;
   m[1] = 42;
   psyassert(m[1] == 42);

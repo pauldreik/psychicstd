@@ -135,7 +135,7 @@ struct __concept_helper<I, void_t<typename I::iterator_concept>> {
   using type = typename I::iterator_concept;
 };
 template <typename I> using __concept_t = typename __concept_helper<I>::type;
-} // namespace __iter_detail
+}
 
 // Weakly incrementable
 template <typename I>
@@ -254,4 +254,4 @@ concept common_range = range<R>;
 template <typename R, typename T>
 concept output_range = range<R>;
 
-} // namespace std
+}

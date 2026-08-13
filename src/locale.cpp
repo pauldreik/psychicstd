@@ -52,7 +52,7 @@ bool same_name(const char* left, const char* right) noexcept {
   return *left == *right;
 }
 
-} // namespace
+}
 
 locale::locale() noexcept = default;
 
@@ -163,5 +163,5 @@ size_t format_time(wchar_t* text, size_t size, const wchar_t* format,
   return ::wcsftime(text, size, format, time);
 }
 
-} // namespace __locale_detail
-} // namespace std
+}
+}

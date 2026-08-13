@@ -314,4 +314,4 @@ using wifstream = basic_ifstream<wchar_t>;
 using wofstream = basic_ofstream<wchar_t>;
 using wfstream = basic_fstream<wchar_t>;
 
-} // namespace std
+}

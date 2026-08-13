@@ -133,4 +133,4 @@ template <typename T> constexpr T midpoint(T a, T b) noexcept {
     return a + (b - a) / 2;
 }
 
-} // namespace std
+}

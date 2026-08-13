@@ -44,4 +44,4 @@ stdio_streambuf::int_type stdio_streambuf::overflow(int_type value) {
 
 int stdio_streambuf::sync() { return ::fflush(file_) == 0 ? 0 : -1; }
 
-} // namespace psychicstd_detail
+}

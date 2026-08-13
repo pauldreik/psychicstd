@@ -9,4 +9,4 @@ template class basic_istringstream<char, char_traits<char>, allocator<char>>;
 template class basic_stringstream<char, char_traits<char>, allocator<char>>;
 #endif
 
-} // namespace std
+}

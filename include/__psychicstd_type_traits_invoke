@@ -102,7 +102,7 @@ template <typename F, typename R, typename C>
 struct invoke_callable<F, R C::*> {
   using type = R C::*;
 };
-} // namespace detail
+}
 template <typename F, typename... Args>
 struct invoke_result
     : detail::invoke_result_impl<
@@ -124,10 +124,10 @@ struct is_invocable_impl : false_type {};
 template <typename F, typename... Args>
 struct is_invocable_impl<void_t<typename invoke_result<F, Args...>::type>, F,
                          Args...> : true_type {};
-} // namespace detail
+}
 template <typename F, typename... Args>
 struct is_invocable : detail::is_invocable_impl<void, F, Args...> {};
 template <typename F, typename... Args>
 inline constexpr bool is_invocable_v = is_invocable<F, Args...>::value;
 
-} // namespace std
+}

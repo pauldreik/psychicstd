@@ -148,4 +148,4 @@ as_writable_bytes(span<T, Extent> s) noexcept {
   return {reinterpret_cast<byte*>(s.data()), s.size_bytes()};
 }
 
-} // namespace std
+}

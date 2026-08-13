@@ -22,4 +22,4 @@ using ::wctrans_t;
 using ::wctype;
 using ::wctype_t;
 using ::wint_t;
-} // namespace std
+}

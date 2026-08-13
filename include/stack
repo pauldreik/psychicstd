@@ -42,4 +42,4 @@ void swap(stack<T, Container>& a,
   a.swap(b);
 }
 
-} // namespace std
+}

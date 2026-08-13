@@ -585,4 +585,37 @@ bool operator==(const unordered_multiset<Key, Hash, KeyEqual, Allocator>& a,
   return true;
 }
 
-} // namespace std
+template <typename Key, typename Hash, typename KeyEqual, typename Allocator,
+          typename Pred>
+typename unordered_set<Key, Hash, KeyEqual, Allocator>::size_type
+erase_if(unordered_set<Key, Hash, KeyEqual, Allocator>& c, Pred pred) {
+  typename unordered_set<Key, Hash, KeyEqual, Allocator>::size_type removed = 0;
+  for (auto it = c.begin(); it != c.end();) {
+    if (pred(*it)) {
+      it = c.erase(it);
+      ++removed;
+    } else {
+      ++it;
+    }
+  }
+  return removed;
+}
+
+template <typename Key, typename Hash, typename KeyEqual, typename Allocator,
+          typename Pred>
+typename unordered_multiset<Key, Hash, KeyEqual, Allocator>::size_type
+erase_if(unordered_multiset<Key, Hash, KeyEqual, Allocator>& c, Pred pred) {
+  typename unordered_multiset<Key, Hash, KeyEqual, Allocator>::size_type
+      removed = 0;
+  for (auto it = c.begin(); it != c.end();) {
+    if (pred(*it)) {
+      it = c.erase(it);
+      ++removed;
+    } else {
+      ++it;
+    }
+  }
+  return removed;
+}
+
+}

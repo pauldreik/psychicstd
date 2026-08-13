@@ -70,4 +70,4 @@ using streamsize = long;
 using streamoff = long long;
 using streampos = long long;
 
-} // namespace std
+}

@@ -1,8 +1,10 @@
 #include "psyassert.h"
+#include <cstdint>
 #include <memory>
 #include <sstream>
 #include <string>
 #include <thread>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -102,6 +104,26 @@ static void test_forwarding() {
   std::construct_at(range, value);
   std::construct_at(range + 1, value);
   std::destroy(range, range + 2);
+}
+
+static void test_overaligned_allocation() {
+  // std::allocator<T>::allocate must request extended alignment for T
+  // over-aligned past __STDCPP_DEFAULT_NEW_ALIGNMENT__ (typically 16) --
+  // the plain, unaligned operator new has no way to honor a stricter
+  // alignment, so silently using it is undefined behavior (the real-world
+  // trigger is any SIMD-vectorizable type, e.g. Eigen's fixed-size
+  // vectors, going through std::vector/make_shared/etc.).
+  struct alignas(64) over_aligned {
+    char payload[64];
+  };
+  std::allocator<over_aligned> aligned_alloc;
+  auto* aligned_ptr = aligned_alloc.allocate(4);
+  psyassert(reinterpret_cast<std::uintptr_t>(aligned_ptr) % 64 == 0);
+  aligned_alloc.deallocate(aligned_ptr, 4);
+
+  std::vector<over_aligned> aligned_vector(4);
+  for (auto& item : aligned_vector)
+    psyassert(reinterpret_cast<std::uintptr_t>(&item) % 64 == 0);
 }
 
 static void test_unique_ptr_equality() {
@@ -447,6 +469,40 @@ static void test_member_init_from_template_prvalue() {
   psyassert(s2.use_count() == 2);
 }
 
+static void test_shared_pointer_hash() {
+  auto shared = std::make_shared<int>(42);
+  int* raw = shared.get();
+  psyassert(std::hash<std::shared_ptr<int>>{}(shared) ==
+            std::hash<int*>{}(raw));
+
+  std::shared_ptr<int> empty;
+  psyassert(std::hash<std::shared_ptr<int>>{}(empty) ==
+            std::hash<int*>{}(empty.get()));
+
+  std::unordered_set<std::shared_ptr<int>> shared_set;
+  shared_set.insert(shared);
+  psyassert(shared_set.count(shared) == 1);
+}
+
+static void test_unique_pointer_hash() {
+  auto unique = std::make_unique<int>(7);
+  int* unique_raw = unique.get();
+  psyassert(std::hash<std::unique_ptr<int>>{}(unique) ==
+            std::hash<int*>{}(unique_raw));
+
+  std::unique_ptr<int> empty;
+  psyassert(std::hash<std::unique_ptr<int>>{}(empty) ==
+            std::hash<int*>{}(empty.get()));
+
+  auto array = std::make_unique<int[]>(2);
+  psyassert(std::hash<std::unique_ptr<int[]>>{}(array) ==
+            std::hash<int*>{}(array.get()));
+
+  std::unordered_set<std::unique_ptr<int>> unique_set;
+  unique_set.insert(std::make_unique<int>(9));
+  psyassert(unique_set.size() == 1);
+}
+
 int main() {
   std::unique_ptr<void, void (*)(void*)> void_unique(nullptr, [](void*) {});
   std::shared_ptr<void> void_shared;
@@ -475,4 +531,7 @@ int main() {
   test_inaccessible_enable_shared_from_this();
   test_inherited_enable_shared_from_this();
   test_member_init_from_template_prvalue();
+  test_overaligned_allocation();
+  test_shared_pointer_hash();
+  test_unique_pointer_hash();
 }

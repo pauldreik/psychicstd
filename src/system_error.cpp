@@ -60,7 +60,7 @@ string build_what(const error_code& code, const char* message) {
   return result;
 }
 
-} // namespace
+}
 
 const error_category& system_category() noexcept {
   // Category references must remain valid during static destruction.
@@ -99,4 +99,4 @@ system_error::system_error(int value, const error_category& category)
 
 system_error::~system_error() noexcept = default;
 
-} // namespace std
+}

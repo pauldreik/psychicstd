@@ -43,7 +43,7 @@ template <typename It>
 struct __ic<It, __psychicstd_detail::void_t<typename It::iterator_category>> {
   using iterator_category = typename It::iterator_category;
 };
-} // namespace __it_detail
+}
 
 template <typename It>
 struct iterator_traits : __it_detail::__vt<It>,
@@ -183,4 +183,4 @@ constexpr reverse_iterator<It> make_reverse_iterator(It it) {
   return reverse_iterator<It>(it);
 }
 
-} // namespace std
+}

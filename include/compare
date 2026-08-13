@@ -81,6 +81,6 @@ constexpr auto __synth_three_way(const T& t, const U& u) {
     return weak_ordering::greater;
   }
 }
-} // namespace __detail
+}
 
-} // namespace std
+}

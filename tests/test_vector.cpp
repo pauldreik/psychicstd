@@ -1,5 +1,7 @@
 #include "psyassert.h"
 #include <atomic>
+#include <list>
+#include <type_traits>
 #include <vector>
 
 struct value {
@@ -33,6 +35,18 @@ struct resize_value {
 };
 
 int main() {
+  int raw[] = {1, 2, 3};
+  std::vector deduced_from_pointers(raw, raw + 3);
+  static_assert(
+      std::is_same_v<decltype(deduced_from_pointers), std::vector<int>>);
+  psyassert((deduced_from_pointers == std::vector<int>{1, 2, 3}));
+
+  std::list<double> source{1.5, 2.5, 3.5};
+  std::vector deduced_from_iterators(source.begin(), source.end());
+  static_assert(
+      std::is_same_v<decltype(deduced_from_iterators), std::vector<double>>);
+  psyassert((deduced_from_iterators == std::vector<double>{1.5, 2.5, 3.5}));
+
   std::vector<std::atomic<int>> atomics(2);
   psyassert(atomics[0].load() == 0);
 

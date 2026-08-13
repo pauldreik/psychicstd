@@ -22,7 +22,7 @@ template <typename It> constexpr decltype(auto) __iter_move_impl(It&& i) {
   else
     return *i;
 }
-} // namespace __iter_rr_detail
+}
 template <typename It>
 using iter_rvalue_reference_t =
     decltype(__iter_rr_detail::__iter_move_impl(declval<It&>()));
@@ -479,4 +479,4 @@ template <typename It> constexpr move_iterator<It> make_move_iterator(It it) {
   return move_iterator<It>(it);
 }
 
-} // namespace std
+}

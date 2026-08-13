@@ -20,4 +20,4 @@ constexpr void destroy(ForwardIterator first, ForwardIterator last) {
     destroy_at(std::addressof(*first));
 }
 
-} // namespace std
+}

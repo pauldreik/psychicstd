@@ -10,7 +10,7 @@ constexpr bool __pointer_less(T* a, U* b) noexcept {
   return reinterpret_cast<__UINTPTR_TYPE__>(a) <
          reinterpret_cast<__UINTPTR_TYPE__>(b);
 }
-} // namespace __detail
+}
 
 template <typename T = void> struct less {
   constexpr bool operator()(const T& a, const T& b) const { return a < b; }
@@ -46,4 +46,4 @@ template <> struct greater<void> {
   using is_transparent = void;
 };
 
-} // namespace std
+}

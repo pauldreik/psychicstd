@@ -88,4 +88,4 @@ constexpr __vec_iter<T> operator+(ptrdiff_t n,
   return __vec_iter<T>{it.ptr_ + n};
 }
 
-} // namespace std
+}

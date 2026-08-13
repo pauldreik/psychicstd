@@ -37,4 +37,4 @@ template <typename T> constexpr const T* end(initializer_list<T> il) noexcept {
   return il.end();
 }
 
-} // namespace std
+}

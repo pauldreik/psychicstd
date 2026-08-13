@@ -29,6 +29,23 @@ int main() {
   in >> x;
   psyassert(x == 42);
 
+  // sentry's automatic whitespace-skip must recognize tab/newline/CR, not
+  // just plain space -- real trigger: tzdata's leapseconds file is
+  // tab-separated ("Leap\t1972\tJun\t30\t..."), parsed with
+  // exceptions(failbit|badbit) set, so a stall here throws ios_base::failure
+  // rather than silently mis-parsing.
+  std::istringstream tab_fields("1\t2\n3\r4");
+  int field1 = 0, field2 = 0, field3 = 0, field4 = 0;
+  tab_fields >> field1 >> field2 >> field3 >> field4;
+  psyassert(field1 == 1 && field2 == 2 && field3 == 3 && field4 == 4);
+  psyassert(!tab_fields.fail());
+
+  std::istringstream leading_tab("\t\n\r  99");
+  int leading_value = 0;
+  leading_tab >> leading_value;
+  psyassert(leading_value == 99);
+  psyassert(!leading_tab.fail());
+
   std::string temporary_value;
   std::istringstream temporary("temporary");
   temporary >> temporary_value;

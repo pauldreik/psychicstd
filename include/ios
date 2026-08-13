@@ -127,6 +127,11 @@ protected:
   static bool _parse_float(const char*, float&, int&);
   static bool _parse_float(const char*, double&, int&);
   static bool _parse_float(const char*, long double&, int&);
+  bool _is_space(char) const;
+  bool _is_space(wchar_t) const;
+  bool _is_space(char8_t) const;
+  bool _is_space(char16_t) const;
+  bool _is_space(char32_t) const;
 
   [[noreturn, gnu::cold, gnu::noinline]] static void _throw_failure() {
 #if defined(__cpp_exceptions)
@@ -240,4 +245,4 @@ protected:
   basic_ostream<Char, Traits>* tie_ = nullptr;
 };
 
-} // namespace std
+}

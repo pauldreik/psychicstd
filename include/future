@@ -1,22 +1,56 @@
 #pragma once
+#include <__psychicstd_exception_ptr>
+#include <__psychicstd_placement_new>
 #include <__psychicstd_refcount>
 #include <__psychicstd_type_traits_invoke>
 #include <condition_variable>
 #include <mutex>
-#include <new>
 #include <thread>
 
 namespace std {
 
 enum class launch : unsigned { async = 1 };
+enum class future_status { ready, timeout, deferred };
+
+template <typename T> class promise;
+template <typename T> class future;
+template <typename> class packaged_task;
 
 namespace __future_detail {
 
-template <typename T> struct __state {
+enum class __error { none, broken_promise };
+
+[[noreturn]] void __throw(const char* message);
+
+struct __state_base {
   unsigned references = 1;
   mutex mutex_;
   condition_variable condition_;
   bool ready = false;
+  bool future_retrieved = false;
+  __error error_ = __error::none;
+  exception_ptr exception_{nullptr};
+
+  void retain() noexcept;
+  bool release_reference() noexcept;
+  void set_exception(exception_ptr);
+  void abandon() noexcept;
+  void retrieve_future();
+  bool is_ready();
+  void wait();
+  template <typename Rep, typename Period>
+  future_status wait_for(const chrono::duration<Rep, Period>& timeout) {
+    unique_lock lock(mutex_);
+    const bool became_ready =
+        condition_.wait_for(lock, timeout, [this] { return ready; });
+    return became_ready ? future_status::ready : future_status::timeout;
+  }
+};
+
+// Shared state for future<T>/promise<T>. Holds either a T or an
+// exception_ptr once ready. Refcounted: the promise side and the future
+// side (if a future was ever obtained) each hold one reference.
+template <typename T> struct __state : __state_base {
   alignas(T) unsigned char storage_[sizeof(T)];
 
   T* value() noexcept {
@@ -24,36 +58,41 @@ template <typename T> struct __state {
   }
 
   ~__state() {
-    if (ready)
+    if (ready && error_ == __error::none && !exception_)
       value()->~T();
   }
 
-  void retain() noexcept { __refcount_detail::add(&references); }
   void release() noexcept {
-    if (__refcount_detail::release(&references))
+    if (release_reference())
       delete this;
   }
-  void set_value(T&& value) {
+  template <typename U> void set_value(U&& value) {
     {
       lock_guard lock(mutex_);
-      ::new (static_cast<void*>(storage_)) T(static_cast<T&&>(value));
+      if (ready)
+        __throw("promise already satisfied");
+      ::new (static_cast<void*>(storage_)) T(static_cast<U&&>(value));
       ready = true;
     }
     condition_.notify_all();
   }
-  void wait() {
-    unique_lock lock(mutex_);
-    condition_.wait(lock, [this] { return ready; });
-  }
 };
 
-} // namespace __future_detail
+// void has no storage to construct/destroy -- just a readiness flag plus
+// the same exception_ptr channel.
+template <> struct __state<void> : __state_base {
+  void release() noexcept;
+  void set_value();
+};
+
+}
 
 template <typename T> class future {
   using state = __future_detail::__state<T>;
   state* state_ = nullptr;
 
   explicit future(state* state) noexcept : state_(state) {}
+  friend class promise<T>;
   template <typename F, typename Arg>
   friend auto async(launch, F&&, Arg&&)
       -> future<invoke_result_t<decay_t<F>, decay_t<Arg>>>;
@@ -82,18 +121,77 @@ public:
   }
 
   bool valid() const noexcept { return state_ != nullptr; }
-  T get() {
+  void wait() const {
+    if (!state_)
+      __future_detail::__throw("future has no state");
     state_->wait();
-    T result = static_cast<T&&>(*state_->value());
-    state_->value()->~T();
-    state_->ready = false;
-    state_->release();
+  }
+  template <typename Rep, typename Period>
+  future_status wait_for(const chrono::duration<Rep, Period>& timeout) const {
+    if (!state_)
+      __future_detail::__throw("future has no state");
+    return state_->wait_for(timeout);
+  }
+  T get() {
+    wait();
+    if (state_->error_ == __future_detail::__error::broken_promise) {
+      state_->release();
+      state_ = nullptr;
+      __future_detail::__throw("broken promise");
+    }
+    if (state_->exception_) {
+      exception_ptr e = state_->exception_;
+      state_->release();
+      state_ = nullptr;
+      rethrow_exception(e);
+    }
+    state* shared = state_;
     state_ = nullptr;
-    return result;
+    _PSYCHICSTD_TRY {
+      T result = static_cast<T&&>(*shared->value());
+      shared->value()->~T();
+      shared->ready = false;
+      shared->release();
+      return result;
+    }
+    _PSYCHICSTD_CATCH(...) {
+      shared->release();
+      _PSYCHICSTD_RETHROW;
+    }
   }
 };
 
-// This narrow async model does not transport exceptions from worker threads.
+template <> class future<void> {
+  using state = __future_detail::__state<void>;
+  state* state_ = nullptr;
+
+  explicit future(state*) noexcept;
+  friend class promise<void>;
+  template <typename F, typename Arg>
+  friend auto async(launch, F&&, Arg&&)
+      -> future<invoke_result_t<decay_t<F>, decay_t<Arg>>>;
+  template <typename F>
+  friend auto async(launch, F&&) -> future<invoke_result_t<decay_t<F>>>;
+
+public:
+  future() noexcept = default;
+  future(future&&) noexcept;
+  future& operator=(future&&) noexcept;
+  future(const future&) = delete;
+  future& operator=(const future&) = delete;
+  ~future();
+
+  bool valid() const noexcept { return state_ != nullptr; }
+  void wait() const;
+  template <typename Rep, typename Period>
+  future_status wait_for(const chrono::duration<Rep, Period>& timeout) const {
+    if (!state_)
+      __future_detail::__throw("future has no state");
+    return state_->wait_for(timeout);
+  }
+  void get();
+};
+
 template <typename F, typename Arg>
 auto async(launch, F&& function, Arg&& arg)
     -> future<invoke_result_t<decay_t<F>, decay_t<Arg>>> {
@@ -104,8 +202,16 @@ auto async(launch, F&& function, Arg&& arg)
   shared->retain();
   auto callable = [shared, fn = decay_t<F>(static_cast<F&&>(function)),
                    arg = decay_t<Arg>(static_cast<Arg&&>(arg))]() mutable {
-    shared->set_value(
-        static_cast<decay_t<F>&&>(fn)(static_cast<decay_t<Arg>&&>(arg)));
+    _PSYCHICSTD_TRY {
+      if constexpr (is_void_v<result>) {
+        static_cast<decay_t<F>&&>(fn)(static_cast<decay_t<Arg>&&>(arg));
+        shared->set_value();
+      } else {
+        shared->set_value(
+            static_cast<decay_t<F>&&>(fn)(static_cast<decay_t<Arg>&&>(arg)));
+      }
+    }
+    _PSYCHICSTD_CATCH(...) { shared->set_exception(current_exception()); }
     shared->release();
   };
   thread(static_cast<decltype(callable)&&>(callable)).detach();
@@ -121,11 +227,182 @@ auto async(launch, F&& function) -> future<invoke_result_t<decay_t<F>>> {
   shared->retain();
   auto callable = [shared,
                    fn = decay_t<F>(static_cast<F&&>(function))]() mutable {
-    shared->set_value(static_cast<decay_t<F>&&>(fn)());
+    _PSYCHICSTD_TRY {
+      if constexpr (is_void_v<result>) {
+        static_cast<decay_t<F>&&>(fn)();
+        shared->set_value();
+      } else {
+        shared->set_value(static_cast<decay_t<F>&&>(fn)());
+      }
+    }
+    _PSYCHICSTD_CATCH(...) { shared->set_exception(current_exception()); }
     shared->release();
   };
   thread(static_cast<decltype(callable)&&>(callable)).detach();
   return result_future;
 }
 
-} // namespace std
+template <typename T> class promise {
+  using state = __future_detail::__state<T>;
+  state* state_ = new state;
+  template <typename> friend class packaged_task;
+
+  bool __is_ready() {
+    if (!state_)
+      __future_detail::__throw("promise has no state");
+    return state_->is_ready();
+  }
+
+public:
+  promise() = default;
+  promise(promise&& other) noexcept : state_(other.state_) {
+    other.state_ = nullptr;
+  }
+  promise& operator=(promise&& other) noexcept {
+    if (this != &other) {
+      if (state_)
+        state_->abandon();
+      if (state_)
+        state_->release();
+      state_ = other.state_;
+      other.state_ = nullptr;
+    }
+    return *this;
+  }
+  promise(const promise&) = delete;
+  promise& operator=(const promise&) = delete;
+  ~promise() {
+    if (state_) {
+      state_->abandon();
+      state_->release();
+    }
+  }
+
+  future<T> get_future() {
+    if (!state_)
+      __future_detail::__throw("promise has no state");
+    state_->retrieve_future();
+    state_->retain();
+    return future<T>(state_);
+  }
+
+  void set_value(const T& value) {
+    if (!state_)
+      __future_detail::__throw("promise has no state");
+    state_->set_value(value);
+  }
+  void set_value(T&& value) {
+    if (!state_)
+      __future_detail::__throw("promise has no state");
+    state_->set_value(static_cast<T&&>(value));
+  }
+  void set_exception(exception_ptr e) {
+    if (!state_)
+      __future_detail::__throw("promise has no state");
+    state_->set_exception(e);
+  }
+};
+
+template <> class promise<void> {
+  using state = __future_detail::__state<void>;
+  state* state_;
+  template <typename> friend class packaged_task;
+
+  bool __is_ready();
+
+public:
+  promise();
+  promise(promise&&) noexcept;
+  promise& operator=(promise&&) noexcept;
+  promise(const promise&) = delete;
+  promise& operator=(const promise&) = delete;
+  ~promise();
+
+  future<void> get_future();
+
+  void set_value();
+  void set_exception(exception_ptr);
+};
+
+// packaged_task<R(Args...)> -- a type-erased callable bundled with a
+// promise<R>; invoking it runs the callable and routes its result (or any
+// exception it throws) into the promise's shared state.
+//
+// Deliberately does NOT reuse std::function for storage: function<>'s
+// clone() requires its target to be CopyConstructible, but packaged_task's
+// callable is only required to be MoveConstructible ([futures.task] -- a
+// packaged_task is itself move-only, never copied, so its target never
+// needs cloning). A lambda that captures a move-only object (e.g. a
+// std::promise moved into the capture list) is a common, legal
+// packaged_task target and must not be rejected.
+template <typename R, typename... Args> class packaged_task<R(Args...)> {
+  struct base {
+    virtual R call(Args...) = 0;
+    virtual ~base() = default;
+  };
+  template <typename F> struct impl : base {
+    F f_;
+    impl(F f) : f_(static_cast<F&&>(f)) {}
+    R call(Args... args) override {
+      // This lightweight implementation supports callable objects, including
+      // move-only lambdas, but not member-pointer targets.
+      return f_(static_cast<Args&&>(args)...);
+    }
+  };
+
+  base* ptr_ = nullptr;
+  promise<R> promise_;
+
+public:
+  packaged_task() noexcept = default;
+  template <typename F>
+    requires(!is_same_v<decay_t<F>, packaged_task>)
+  explicit packaged_task(F&& f)
+      : ptr_(new impl<decay_t<F>>(static_cast<F&&>(f))) {}
+
+  packaged_task(packaged_task&& other) noexcept
+      : ptr_(other.ptr_), promise_(static_cast<promise<R>&&>(other.promise_)) {
+    other.ptr_ = nullptr;
+  }
+  packaged_task& operator=(packaged_task&& other) noexcept {
+    if (this != &other) {
+      delete ptr_;
+      ptr_ = other.ptr_;
+      other.ptr_ = nullptr;
+      promise_ = static_cast<promise<R>&&>(other.promise_);
+    }
+    return *this;
+  }
+  packaged_task(const packaged_task&) = delete;
+  packaged_task& operator=(const packaged_task&) = delete;
+  ~packaged_task() { delete ptr_; }
+
+  bool valid() const noexcept { return ptr_ != nullptr; }
+
+  future<R> get_future() {
+    if (!ptr_)
+      __future_detail::__throw("packaged_task has no state");
+    return promise_.get_future();
+  }
+
+  void operator()(Args... args) {
+    if (!ptr_)
+      __future_detail::__throw("packaged_task has no state");
+    if (promise_.__is_ready())
+      __future_detail::__throw("promise already satisfied");
+    if constexpr (is_void_v<R>) {
+      _PSYCHICSTD_TRY {
+        ptr_->call(static_cast<Args&&>(args)...);
+        promise_.set_value();
+      }
+      _PSYCHICSTD_CATCH(...) { promise_.set_exception(current_exception()); }
+    } else {
+      _PSYCHICSTD_TRY {
+        promise_.set_value(ptr_->call(static_cast<Args&&>(args)...));
+      }
+      _PSYCHICSTD_CATCH(...) { promise_.set_exception(current_exception()); }
+    }
+  }
+};
+
+}

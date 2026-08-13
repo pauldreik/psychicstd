@@ -119,4 +119,4 @@ protected:
   Compare comp_;
 };
 
-} // namespace std
+}

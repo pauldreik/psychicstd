@@ -212,4 +212,4 @@ int ios_base::_format_long_double(char* buf, size_t size,
 
 template class basic_ostream<char, char_traits<char>>;
 
-} // namespace std
+}

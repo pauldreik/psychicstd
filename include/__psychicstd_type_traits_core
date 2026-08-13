@@ -64,6 +64,10 @@ template <> struct is_integral<char8_t> : true_type {};
 template <> struct is_integral<char16_t> : true_type {};
 template <> struct is_integral<char32_t> : true_type {};
 template <> struct is_integral<wchar_t> : true_type {};
+#ifdef __SIZEOF_INT128__
+template <> struct is_integral<__int128> : true_type {};
+template <> struct is_integral<unsigned __int128> : true_type {};
+#endif
 template <typename T> struct is_integral<const T> : is_integral<T> {};
 template <typename T> struct is_integral<volatile T> : is_integral<T> {};
 template <typename T> struct is_integral<const volatile T> : is_integral<T> {};
@@ -75,11 +79,11 @@ template <typename T, bool = is_integral<T>::value>
 struct is_unsigned_impl : false_type {};
 template <typename T>
 struct is_unsigned_impl<T, true> : bool_constant<(T(0) < T(-1))> {};
-} // namespace detail
+}
 
 template <typename T>
 struct is_unsigned : detail::is_unsigned_impl<remove_cv_t<T>> {};
 template <typename T>
 inline constexpr bool is_unsigned_v = is_unsigned<T>::value;
 
-} // namespace std
+}

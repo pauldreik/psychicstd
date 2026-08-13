@@ -80,4 +80,4 @@ template <> struct __declval_type<const volatile void> {
 };
 template <typename T> typename __declval_type<T>::type declval() noexcept;
 
-} // namespace std::__psychicstd_detail
+}

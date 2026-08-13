@@ -19,7 +19,7 @@ public:
   ~__msg();
   const char* c_str() const noexcept;
 };
-} // namespace __stdexcept
+}
 
 class logic_error : public exception {
 public:
@@ -97,4 +97,4 @@ __throw_runtime_error(const char* message);
 [[noreturn, gnu::cold, gnu::noinline]] void
 __throw_overflow_error(const char* message);
 
-} // namespace std
+}

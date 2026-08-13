@@ -1,12 +1,14 @@
 # Compiled runtime sources, relative to the repository root.
 src/atomic.cpp
 src/cerr.cpp
+src/charconv.cpp
 src/cin.cpp
 src/clog.cpp
 src/complex.cpp
 src/condition_variable.cpp
 src/cout.cpp
 src/filesystem.cpp
+src/future.cpp
 src/ios.cpp
 src/iostream_macos.cpp
 src/istream.cpp

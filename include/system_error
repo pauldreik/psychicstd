@@ -16,4 +16,4 @@ template <> struct hash<error_code> {
   }
 };
 
-} // namespace std
+}

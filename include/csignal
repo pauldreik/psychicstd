@@ -4,4 +4,4 @@
 namespace std {
 using ::raise;
 using ::signal;
-} // namespace std
+}

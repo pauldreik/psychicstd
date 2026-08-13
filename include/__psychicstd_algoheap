@@ -115,4 +115,4 @@ template <typename It> constexpr It is_heap_until(It first, It last) {
                        [](const auto& a, const auto& b) { return a < b; });
 }
 
-} // namespace std
+}

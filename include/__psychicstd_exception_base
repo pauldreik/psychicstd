@@ -24,4 +24,4 @@ public:
   const char* what() const noexcept override { return "bad function call"; }
 };
 
-} // namespace std
+}

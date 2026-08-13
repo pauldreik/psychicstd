@@ -2522,7 +2522,7 @@ class CommandLine {
   StringVector args_;
   std::set<std::string> switches_;
 };
-}  // namespace base
+}
 """
             )
             driver.joinpath("base/no_destructor.h").write_text(
@@ -2539,7 +2539,7 @@ class NoDestructor {
  private:
   T value_;
 };
-}  // namespace base
+}
 """
             )
             driver.joinpath("base/containers/to_vector.h").write_text("#pragma once\n")
@@ -2553,7 +2553,7 @@ class NoDestructor {
 
 namespace sandbox::policy::switches {
 inline constexpr std::string_view kNoSandbox = "no-sandbox";
-}  // namespace sandbox::policy::switches
+}
 """
             )
             driver.joinpath("shell/common/options_switches.h").write_text(
@@ -2562,7 +2562,7 @@ inline constexpr std::string_view kNoSandbox = "no-sandbox";
 
 namespace electron::switches {
 inline constexpr std::string_view kEnableSandbox = "enable-sandbox";
-}  // namespace electron::switches
+}
 """
             )
             driver.joinpath("main.cc").write_text(

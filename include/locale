@@ -19,7 +19,7 @@ class ios_base;
 namespace __locale_detail {
 size_t format_time(char*, size_t, const char*, const ::tm*);
 size_t format_time(wchar_t*, size_t, const wchar_t*, const ::tm*);
-} // namespace __locale_detail
+}
 
 template <typename Char> class numpunct : public locale::facet {
 public:
@@ -251,4 +251,4 @@ template <typename Char> bool isalnum(Char c, const locale& loc) {
   return isalpha(c, loc) || (c >= Char('0') && c <= Char('9'));
 }
 
-} // namespace std
+}

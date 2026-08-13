@@ -153,4 +153,4 @@ inline error_condition make_error_condition(errc e) noexcept {
   return error_condition(static_cast<int>(e), generic_category());
 }
 
-} // namespace std
+}

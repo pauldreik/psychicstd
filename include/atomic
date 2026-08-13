@@ -63,7 +63,7 @@ void wait(const volatile T* ptr, T old, memory_order order) noexcept {
 template <typename T> void notify(const volatile T* ptr, int count) noexcept {
   notify_platform(ptr, sizeof(T), count);
 }
-} // namespace __atomic_detail
+}
 
 struct atomic_flag {
   bool val_ = false;
@@ -779,4 +779,4 @@ inline void atomic_signal_fence(memory_order order) noexcept {
 inline void atomic_thread_fence(memory_order order) noexcept {
   __atomic_thread_fence(int(order));
 }
-} // namespace std
+}

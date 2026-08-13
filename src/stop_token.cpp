@@ -105,7 +105,7 @@ bool stop_state::request_stop() noexcept {
   return true;
 }
 
-} // namespace __stop_detail
+}
 
 stop_token::stop_token(const stop_token& other) noexcept
     : state_(other.state_) {
@@ -202,4 +202,4 @@ stop_token stop_source::get_token() const noexcept {
   return stop_token(state_);
 }
 
-} // namespace std
+}

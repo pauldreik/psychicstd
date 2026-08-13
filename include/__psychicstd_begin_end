@@ -28,4 +28,4 @@ template <typename C>
   return c.end();
 }
 
-} // namespace std
+}

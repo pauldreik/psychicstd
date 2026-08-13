@@ -43,7 +43,7 @@ __msg::~__msg() { delete[] p_; }
 
 const char* __msg::c_str() const noexcept { return p_ ? p_ : ""; }
 
-} // namespace __stdexcept
+}
 
 logic_error::logic_error(const char* msg) : msg_(msg) {}
 logic_error::logic_error(const logic_error&) = default;
@@ -84,4 +84,4 @@ void __throw_bad_variant_access() { _PSYCHICSTD_THROW(bad_variant_access()); }
 void __throw_bad_any_cast() { _PSYCHICSTD_THROW(bad_any_cast()); }
 void __throw_bad_weak_ptr() { _PSYCHICSTD_THROW(bad_weak_ptr()); }
 
-} // namespace std
+}

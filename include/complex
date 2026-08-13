@@ -134,7 +134,7 @@ template <> inline constexpr bool is_integral<unsigned long> = true;
 template <> inline constexpr bool is_integral<long long> = true;
 template <> inline constexpr bool is_integral<unsigned long long> = true;
 
-} // namespace __complex_detail
+}
 
 template <typename T> class complex {
 public:
@@ -487,7 +487,7 @@ namespace __complex_detail {
 template <typename CharT, typename Traits, typename T>
 basic_ostream<CharT, Traits>& write_complex(basic_ostream<CharT, Traits>&,
                                             T real, T imag);
-} // namespace __complex_detail
+}
 
 template <typename CharT, typename Traits, typename T>
 basic_ostream<CharT, Traits>& operator<<(basic_ostream<CharT, Traits>& os,
@@ -495,4 +495,4 @@ basic_ostream<CharT, Traits>& operator<<(basic_ostream<CharT, Traits>& os,
   return __complex_detail::write_complex(os, c.real(), c.imag());
 }
 
-} // namespace std
+}

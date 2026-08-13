@@ -90,4 +90,4 @@ basic_istream<Char, Traits>::extract_chars(Char* value, size_t size) {
 
 template class basic_istream<char, char_traits<char>>;
 
-} // namespace std
+}

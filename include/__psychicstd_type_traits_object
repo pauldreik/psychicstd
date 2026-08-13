@@ -253,7 +253,7 @@ template <typename T> struct __is_destr<T&&> : true_type {};
 template <typename T> struct __is_nothrow_destr : __is_nothrow_destr_obj<T> {};
 template <typename T> struct __is_nothrow_destr<T&> : true_type {};
 template <typename T> struct __is_nothrow_destr<T&&> : true_type {};
-} // namespace __detail
+}
 #if (defined(__clang__) && __has_builtin(__is_destructible)) ||                \
     (defined(__GNUC__) && !defined(__clang__) && __GNUC__ >= 16)
 template <typename T>
@@ -336,7 +336,7 @@ struct is_member_pointer_impl<T U::*> : true_type {};
 template <typename T> struct is_member_function_pointer_impl : false_type {};
 template <typename T, typename U>
 struct is_member_function_pointer_impl<T U::*> : is_function<T> {};
-} // namespace detail
+}
 template <typename T>
 struct is_member_pointer : detail::is_member_pointer_impl<remove_cv_t<T>> {};
 template <typename T>
@@ -370,4 +370,4 @@ inline constexpr bool is_compound_v = is_compound<T>::value;
 
 // is_swappable — defined in <utility> (requires swap to be in scope)
 
-} // namespace std
+}

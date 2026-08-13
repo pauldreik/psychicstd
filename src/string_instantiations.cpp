@@ -6,4 +6,4 @@ namespace std {
 template class basic_string<char>;
 #endif
 
-} // namespace std
+}

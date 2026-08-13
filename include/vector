@@ -831,6 +831,10 @@ public:
   }
 };
 
+template <typename It, typename Alloc = allocator<iter_value_t<It>>>
+  requires(!is_integral_v<It>)
+vector(It, It, Alloc = Alloc()) -> vector<iter_value_t<It>, Alloc>;
+
 template <typename T, typename A>
 constexpr bool operator==(const vector<T, A>& a, const vector<T, A>& b) {
   if (a.size() != b.size())
@@ -918,4 +922,4 @@ constexpr typename vector<T, A>::size_type erase_if(vector<T, A>& c,
   return n;
 }
 
-} // namespace std
+}

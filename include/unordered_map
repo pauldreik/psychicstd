@@ -906,4 +906,38 @@ bool operator==(
   return true;
 }
 
-} // namespace std
+template <typename Key, typename T, typename Hash, typename KeyEqual,
+          typename Allocator, typename Pred>
+typename unordered_map<Key, T, Hash, KeyEqual, Allocator>::size_type
+erase_if(unordered_map<Key, T, Hash, KeyEqual, Allocator>& c, Pred pred) {
+  typename unordered_map<Key, T, Hash, KeyEqual, Allocator>::size_type removed =
+      0;
+  for (auto it = c.begin(); it != c.end();) {
+    if (pred(*it)) {
+      it = c.erase(it);
+      ++removed;
+    } else {
+      ++it;
+    }
+  }
+  return removed;
+}
+
+template <typename Key, typename T, typename Hash, typename KeyEqual,
+          typename Allocator, typename Pred>
+typename unordered_multimap<Key, T, Hash, KeyEqual, Allocator>::size_type
+erase_if(unordered_multimap<Key, T, Hash, KeyEqual, Allocator>& c, Pred pred) {
+  typename unordered_multimap<Key, T, Hash, KeyEqual, Allocator>::size_type
+      removed = 0;
+  for (auto it = c.begin(); it != c.end();) {
+    if (pred(*it)) {
+      it = c.erase(it);
+      ++removed;
+    } else {
+      ++it;
+    }
+  }
+  return removed;
+}
+
+}

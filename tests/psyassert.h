@@ -21,7 +21,7 @@ inline void write_stderr(const char* text) noexcept {
   __builtin_trap();
 }
 
-} // namespace psyassert_detail
+}
 
 #define psyassert_stringify_1(x) #x
 #define psyassert_stringify(x) psyassert_stringify_1(x)

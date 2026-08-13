@@ -352,4 +352,4 @@ using wostringstream =
 using wstringstream =
     basic_stringstream<wchar_t, char_traits<wchar_t>, allocator<wchar_t>>;
 
-} // namespace std
+}

@@ -26,4 +26,4 @@ private:
 // Mach-O needs the ios_base::Init guard because its ordering is TU-local.
 inline constexpr int stream_init_priority = 101;
 
-} // namespace psychicstd_detail
+}

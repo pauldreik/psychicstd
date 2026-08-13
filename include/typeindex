@@ -27,4 +27,4 @@ template <> struct hash<type_index> {
   }
 };
 
-} // namespace std
+}

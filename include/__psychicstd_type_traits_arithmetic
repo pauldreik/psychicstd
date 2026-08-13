@@ -36,7 +36,7 @@ template <typename T, bool = is_arithmetic<T>::value>
 struct is_signed_impl : false_type {};
 template <typename T>
 struct is_signed_impl<T, true> : bool_constant<(T(-1) < T(0))> {};
-} // namespace detail
+}
 
 template <typename T>
 struct is_signed : detail::is_signed_impl<remove_cv_t<T>> {};
@@ -115,4 +115,4 @@ template <> struct make_signed<char32_t> {
 };
 template <typename T> using make_signed_t = typename make_signed<T>::type;
 
-} // namespace std
+}

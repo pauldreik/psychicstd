@@ -40,6 +40,11 @@ struct ReturnsImmovable {
 };
 
 int main() {
+#ifdef __SIZEOF_INT128__
+  static_assert(std::is_integral_v<__int128>);
+  static_assert(std::is_integral_v<unsigned __int128>);
+  static_assert(std::is_integral_v<const __int128>);
+#endif
   static_assert(std::is_same_v<int, int>);
   static_assert(std::is_same_v<const int, const int>);
   static_assert(!std::is_same_v<int, const int>);

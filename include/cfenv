@@ -15,4 +15,4 @@ using ::fesetround;
 using ::fetestexcept;
 using ::feupdateenv;
 using ::fexcept_t;
-} // namespace std
+}

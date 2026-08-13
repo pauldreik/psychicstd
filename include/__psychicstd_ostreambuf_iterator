@@ -34,4 +34,4 @@ private:
   streambuf_type* sb_;
 };
 
-} // namespace std
+}

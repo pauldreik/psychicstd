@@ -375,4 +375,4 @@ constexpr optional<T> make_optional(Args&&... args) {
   return optional<T>(in_place, static_cast<Args&&>(args)...);
 }
 
-} // namespace std
+}

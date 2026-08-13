@@ -1,6 +1,7 @@
 #pragma once
 #include <__psychicstd_allocator_traits>
 #include <__psychicstd_config>
+#include <__psychicstd_hash>
 #include <__psychicstd_ordering>
 #include <__psychicstd_type_traits_common>
 #include <__psychicstd_type_traits_object>
@@ -320,7 +321,7 @@ template <typename T, typename Alloc> struct __sp_alloc_del {
   }
 };
 struct __esft_tag {};
-} // namespace __detail
+}
 
 template <typename T> class shared_ptr;
 template <typename T> class weak_ptr;
@@ -572,7 +573,7 @@ inline void __shared_ptr_atomic_acquire() noexcept {
 inline void __shared_ptr_atomic_release() noexcept {
   __atomic_clear(&__shared_ptr_atomic_lock, __ATOMIC_RELEASE);
 }
-} // namespace __detail
+}
 
 template <typename T>
 shared_ptr<T> atomic_load(const shared_ptr<T>* pointer) noexcept {
@@ -792,4 +793,21 @@ public:
   }
 };
 
-} // namespace std
+template <typename T, typename D>
+  requires requires(typename unique_ptr<T, D>::pointer pointer) {
+    hash<typename unique_ptr<T, D>::pointer>{}(pointer);
+  }
+struct hash<unique_ptr<T, D>> {
+  size_t operator()(const unique_ptr<T, D>& p) const
+      noexcept(noexcept(hash<typename unique_ptr<T, D>::pointer>{}(p.get()))) {
+    using pointer = typename unique_ptr<T, D>::pointer;
+    return hash<pointer>{}(p.get());
+  }
+};
+template <typename T> struct hash<shared_ptr<T>> {
+  size_t operator()(const shared_ptr<T>& p) const noexcept {
+    return hash<typename shared_ptr<T>::element_type*>{}(p.get());
+  }
+};
+
+}

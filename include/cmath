@@ -51,12 +51,14 @@ using ::cbrt;
 using ::ceil;
 using ::cos;
 using ::cosh;
+using ::double_t;
 using ::erf;
 using ::erfc;
 using ::exp;
 using ::exp2;
 using ::fabs;
 using ::fdim;
+using ::float_t;
 using ::floor;
 using ::fma;
 using ::fmax;
@@ -149,14 +151,20 @@ concept integral = __builtin_classify_type(*(T*)nullptr) == 1 && !__is_enum(T);
 
 template <typename T>
 concept arithmetic = integral<T> || __builtin_classify_type(*(T*)nullptr) == 8;
-} // namespace __cmath_detail
+}
 
 // float overloads
 using ::ceilf;
+using ::ceill;
 using ::cosf;
+using ::erfcf;
+using ::erfcl;
+using ::erff;
+using ::erfl;
 using ::expf;
 using ::fabsf;
 using ::floorf;
+using ::floorl;
 using ::fmaf;
 using ::fmal;
 using ::fmodf;
@@ -165,14 +173,65 @@ using ::lgammaf;
 using ::logf;
 using ::powf;
 using ::roundf;
+using ::roundl;
 using ::sinf;
 using ::sqrtf;
 using ::tanf;
 using ::tgammaf;
+using ::truncf;
+using ::truncl;
 
 inline float abs(float x) { return ::fabsf(x); }
+inline _PSYCHICSTD_CMATH_CONSTEXPR float erf(float x) { return ::erff(x); }
+inline _PSYCHICSTD_CMATH_CONSTEXPR long double erf(long double x) {
+  return ::erfl(x);
+}
+template <__cmath_detail::integral T>
+inline _PSYCHICSTD_CMATH_CONSTEXPR double erf(T x) {
+  return ::erf(static_cast<double>(x));
+}
+inline _PSYCHICSTD_CMATH_CONSTEXPR float erfc(float x) { return ::erfcf(x); }
+inline _PSYCHICSTD_CMATH_CONSTEXPR long double erfc(long double x) {
+  return ::erfcl(x);
+}
+template <__cmath_detail::integral T>
+inline _PSYCHICSTD_CMATH_CONSTEXPR double erfc(T x) {
+  return ::erfc(static_cast<double>(x));
+}
 inline double abs(double x) { return ::fabs(x); }
 inline long double abs(long double x) { return ::fabsl(x); }
+inline _PSYCHICSTD_CMATH_CONSTEXPR float ceil(float x) { return ::ceilf(x); }
+inline _PSYCHICSTD_CMATH_CONSTEXPR long double ceil(long double x) {
+  return ::ceill(x);
+}
+template <__cmath_detail::integral T>
+inline _PSYCHICSTD_CMATH_CONSTEXPR double ceil(T x) {
+  return ::ceil(static_cast<double>(x));
+}
+inline _PSYCHICSTD_CMATH_CONSTEXPR float floor(float x) { return ::floorf(x); }
+inline _PSYCHICSTD_CMATH_CONSTEXPR long double floor(long double x) {
+  return ::floorl(x);
+}
+template <__cmath_detail::integral T>
+inline _PSYCHICSTD_CMATH_CONSTEXPR double floor(T x) {
+  return ::floor(static_cast<double>(x));
+}
+inline _PSYCHICSTD_CMATH_CONSTEXPR float round(float x) { return ::roundf(x); }
+inline _PSYCHICSTD_CMATH_CONSTEXPR long double round(long double x) {
+  return ::roundl(x);
+}
+template <__cmath_detail::integral T>
+inline _PSYCHICSTD_CMATH_CONSTEXPR double round(T x) {
+  return ::round(static_cast<double>(x));
+}
+inline _PSYCHICSTD_CMATH_CONSTEXPR float trunc(float x) { return ::truncf(x); }
+inline _PSYCHICSTD_CMATH_CONSTEXPR long double trunc(long double x) {
+  return ::truncl(x);
+}
+template <__cmath_detail::integral T>
+inline _PSYCHICSTD_CMATH_CONSTEXPR double trunc(T x) {
+  return ::trunc(static_cast<double>(x));
+}
 inline _PSYCHICSTD_CMATH_CONSTEXPR float sqrt(float x) { return ::sqrtf(x); }
 inline _PSYCHICSTD_CMATH_CONSTEXPR long double sqrt(long double x) {
   return ::sqrtl(x);
@@ -317,6 +376,50 @@ inline _PSYCHICSTD_CMATH_CONSTEXPR auto hypot(T x, U y) {
     return ::hypot(static_cast<double>(x), static_cast<double>(y));
 }
 
+template <typename T>
+inline _PSYCHICSTD_CMATH_CONSTEXPR T __hypot3(T x, T y, T z) {
+  x = std::abs(x);
+  y = std::abs(y);
+  z = std::abs(z);
+  T scale = x > y ? x : y;
+  scale = scale > z ? scale : z;
+  if (std::isinf(scale))
+    return scale;
+  if (scale == T(0))
+    return T(0);
+  x /= scale;
+  y /= scale;
+  z /= scale;
+  return scale * std::sqrt(x * x + y * y + z * z);
+}
+
+inline _PSYCHICSTD_CMATH_CONSTEXPR float hypot(float x, float y, float z) {
+  return __hypot3(x, y, z);
+}
+inline _PSYCHICSTD_CMATH_CONSTEXPR double hypot(double x, double y, double z) {
+  return __hypot3(x, y, z);
+}
+inline _PSYCHICSTD_CMATH_CONSTEXPR long double
+hypot(long double x, long double y, long double z) {
+  return __hypot3(x, y, z);
+}
+
+template <typename T, typename U, typename V>
+  requires(__cmath_detail::arithmetic<T> && __cmath_detail::arithmetic<U> &&
+           __cmath_detail::arithmetic<V>)
+inline _PSYCHICSTD_CMATH_CONSTEXPR auto hypot(T x, U y, V z) {
+  if constexpr (__is_same(T, long double) || __is_same(U, long double) ||
+                __is_same(V, long double))
+    return hypot(static_cast<long double>(x), static_cast<long double>(y),
+                 static_cast<long double>(z));
+  else if constexpr (__is_same(T, float) && __is_same(U, float) &&
+                     __is_same(V, float))
+    return hypot(x, y, z);
+  else
+    return hypot(static_cast<double>(x), static_cast<double>(y),
+                 static_cast<double>(z));
+}
+
 template <typename T, typename U>
   requires(__cmath_detail::arithmetic<T> && __cmath_detail::arithmetic<U>)
 inline _PSYCHICSTD_CMATH_CONSTEXPR auto pow(T base, U exponent) {
@@ -363,6 +466,6 @@ inline float log1p(float x) { return ::log1pf(x); }
 inline long double expm1(long double x) { return ::expm1l(x); }
 inline double expm1(double x) { return ::expm1(x); }
 inline float expm1(float x) { return ::expm1f(x); }
-} // namespace std
+}
 
 #undef _PSYCHICSTD_CMATH_CONSTEXPR

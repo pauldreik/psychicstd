@@ -42,6 +42,6 @@ protected:
   }
 };
 
-} // namespace std
+}
 
 #endif
