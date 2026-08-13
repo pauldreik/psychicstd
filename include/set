@@ -658,4 +658,36 @@ bool operator==(const multiset<Key, Compare, Alloc>& a,
   return true;
 }
 
+// Erasing an associative-container element does not invalidate other
+// iterators, so erase_if can remove matching nodes in a single pass.
+template <typename Key, typename Compare, typename Alloc, typename Pred>
+typename set<Key, Compare, Alloc>::size_type
+erase_if(set<Key, Compare, Alloc>& c, Pred pred) {
+  typename set<Key, Compare, Alloc>::size_type removed = 0;
+  for (auto it = c.begin(); it != c.end();) {
+    if (pred(*it)) {
+      it = c.erase(it);
+      ++removed;
+    } else {
+      ++it;
+    }
+  }
+  return removed;
+}
+
+template <typename Key, typename Compare, typename Alloc, typename Pred>
+typename multiset<Key, Compare, Alloc>::size_type
+erase_if(multiset<Key, Compare, Alloc>& c, Pred pred) {
+  typename multiset<Key, Compare, Alloc>::size_type removed = 0;
+  for (auto it = c.begin(); it != c.end();) {
+    if (pred(*it)) {
+      it = c.erase(it);
+      ++removed;
+    } else {
+      ++it;
+    }
+  }
+  return removed;
+}
+
 } // namespace std

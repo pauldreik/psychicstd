@@ -32,6 +32,19 @@ struct unique_pointer_less {
   }
 };
 
+static void test_erase_if() {
+  std::set<int> set{1, 2, 3, 4, 5};
+  psyassert(std::erase_if(set, [](int value) { return value % 2 == 0; }) == 2);
+  psyassert((set == std::set<int>{1, 3, 5}));
+  psyassert(std::erase_if(set, [](int) { return false; }) == 0);
+  psyassert(std::erase_if(set, [](int) { return true; }) == 3);
+  psyassert(set.empty());
+
+  std::multiset<int> multiset{1, 2, 2, 3, 2};
+  psyassert(std::erase_if(multiset, [](int value) { return value == 2; }) == 3);
+  psyassert((multiset == std::multiset<int>{1, 3}));
+}
+
 int main() {
   const std::set<int> for_crbegin{1, 2, 3};
   psyassert(std::equal(for_crbegin.crbegin(), for_crbegin.crend(),
@@ -44,6 +57,8 @@ int main() {
       std::equal(multiset_for_crbegin.crbegin(), multiset_for_crbegin.crend(),
                  multiset_for_crbegin.rbegin(), multiset_for_crbegin.rend()));
   psyassert(*multiset_for_crbegin.crbegin() == 3);
+
+  test_erase_if();
 
   static_assert(std::is_nothrow_move_constructible_v<std::set<int>>);
   static_assert(

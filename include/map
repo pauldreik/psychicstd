@@ -196,4 +196,36 @@ bool operator==(const multimap<Key, T, Compare, Alloc>& a,
   return true;
 }
 
+template <typename Key, typename T, typename Compare, typename Alloc,
+          typename Pred>
+typename map<Key, T, Compare, Alloc>::size_type
+erase_if(map<Key, T, Compare, Alloc>& c, Pred pred) {
+  typename map<Key, T, Compare, Alloc>::size_type removed = 0;
+  for (auto it = c.begin(); it != c.end();) {
+    if (pred(*it)) {
+      it = c.erase(it);
+      ++removed;
+    } else {
+      ++it;
+    }
+  }
+  return removed;
+}
+
+template <typename Key, typename T, typename Compare, typename Alloc,
+          typename Pred>
+typename multimap<Key, T, Compare, Alloc>::size_type
+erase_if(multimap<Key, T, Compare, Alloc>& c, Pred pred) {
+  typename multimap<Key, T, Compare, Alloc>::size_type removed = 0;
+  for (auto it = c.begin(); it != c.end();) {
+    if (pred(*it)) {
+      it = c.erase(it);
+      ++removed;
+    } else {
+      ++it;
+    }
+  }
+  return removed;
+}
+
 } // namespace std

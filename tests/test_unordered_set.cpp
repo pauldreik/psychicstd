@@ -12,7 +12,24 @@ struct stateful_equal {
   bool operator()(int a, int b) const { return a + state == b + state; }
 };
 
+static void test_erase_if() {
+  std::unordered_set<int> set{1, 2, 3, 4, 5};
+  psyassert(std::erase_if(set, [](int value) { return value % 2 == 0; }) == 2);
+  psyassert(set.size() == 3);
+  psyassert(set.contains(1) && set.contains(3) && set.contains(5));
+  psyassert(std::erase_if(set, [](int) { return false; }) == 0);
+  psyassert(std::erase_if(set, [](int) { return true; }) == 3);
+  psyassert(set.empty());
+
+  std::unordered_multiset<int> multiset{1, 2, 2, 3, 2};
+  psyassert(std::erase_if(multiset, [](int value) { return value == 2; }) == 3);
+  psyassert(multiset.size() == 2);
+  psyassert(multiset.count(1) == 1 && multiset.count(3) == 1);
+}
+
 int main() {
+  test_erase_if();
+
   std::unordered_set<int> s;
   s.reserve(100);
   psyassert(s.bucket_count() >= 100);

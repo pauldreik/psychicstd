@@ -19,7 +19,28 @@ struct immovable {
   int value;
 };
 
+static void test_erase_if() {
+  std::unordered_map<int, int> map{{1, 1}, {2, 2}, {3, 3}, {4, 4}};
+  psyassert(std::erase_if(map, [](const auto& value) {
+              return value.first % 2 == 0;
+            }) == 2);
+  psyassert(map.size() == 2);
+  psyassert(map.count(1) == 1 && map.count(3) == 1);
+  psyassert(std::erase_if(map, [](const auto&) { return false; }) == 0);
+  psyassert(std::erase_if(map, [](const auto&) { return true; }) == 2);
+  psyassert(map.empty());
+
+  std::unordered_multimap<int, int> multimap{{1, 1}, {2, 2}, {2, 3}, {3, 4}};
+  psyassert(std::erase_if(multimap, [](const auto& value) {
+              return value.first == 2;
+            }) == 2);
+  psyassert(multimap.size() == 2);
+  psyassert(multimap.count(1) == 1 && multimap.count(3) == 1);
+}
+
 int main() {
+  test_erase_if();
+
   using map_type = std::unordered_map<int, int>;
   map_type::iterator empty_iterator;
   map_type::const_iterator empty_const_iterator;
