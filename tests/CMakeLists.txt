@@ -5,6 +5,7 @@
 
 set(TESTS
     test_algorithm
+    test_algorithm_swap_surface
     test_any
     test_array
     test_array_include_surface
