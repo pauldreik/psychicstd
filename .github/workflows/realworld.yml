@@ -333,6 +333,20 @@ jobs:
         run: >-
           scripts/benchmark_realworld.py --check-only
           --project ctre --build-type debug
+  date:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup-realworld-ccache
+        with:
+          project: date
+          build_type: debug
+      - name: Install ninja
+        run: sudo apt-get install -y ninja-build
+      - name: Build and test date with psychicstd
+        run: >-
+          scripts/benchmark_realworld.py --check-only
+          --project date --build-type debug --enable-ccache
   react-native:
     runs-on: ubuntu-latest
     steps:

@@ -298,6 +298,85 @@ def _catch2() -> Project:
     )
 
 
+# --- date ---------------------------------------------------------------
+
+
+def _date() -> Project:
+    version = "3.0.4"
+    url = f"https://github.com/HowardHinnant/date/archive/refs/tags/v{version}.tar.gz"
+    checksum = "56e05531ee8994124eeb498d0e6a5e1c3b9d4fccbecdf555fe266631368fb55f"
+
+    def build(tc: Toolchain) -> dict[str, float]:
+        tarball = RW_DIR / f"date-v{version}.tar.gz"
+        _fetch(url, tarball, checksum)
+
+        with _temporary_directory(prefix="rw-date-") as work_dir:
+            work = Path(work_dir)
+            with tarfile.open(tarball) as t:
+                t.extractall(work)
+            src = work / f"date-{version}"
+            for test in (src / "test").rglob("*.cpp"):
+                contents = test.read_text()
+                if (
+                    "using namespace std::chrono" in contents
+                    or test.name == "custom_clock.pass.cpp"
+                ):
+                    test.unlink()
+            cmake_lists = src / "CMakeLists.txt"
+            cmake_lists.write_text(
+                cmake_lists.read_text().replace(
+                    "add_custom_target( testit COMMAND ${CMAKE_CTEST_COMMAND} )",
+                    "add_custom_target( testit )",
+                )
+            )
+            env = _env(tc)
+            configure = [
+                "cmake",
+                "-S",
+                ".",
+                "-B",
+                "build",
+                "-GNinja",
+                "-DCMAKE_BUILD_TYPE=" + tc.build_type.capitalize(),
+                "-DCMAKE_CXX_COMPILER=" + tc.cxx,
+                "-DCMAKE_CXX_FLAGS=" + tc.cxxflags,
+                "-DCMAKE_EXE_LINKER_FLAGS=" + tc.ldflags,
+                "-DCMAKE_CXX_STANDARD_LIBRARIES=" + tc.libs,
+                "-DCMAKE_CXX_STANDARD=20",
+                "-DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY",
+                "-DBUILD_SHARED_LIBS=OFF",
+                "-DBUILD_TZ_LIB=ON",
+                "-DCOMPILE_WITH_C_LOCALE=ON",
+                "-DENABLE_DATE_TESTING=ON",
+                "-DUSE_SYSTEM_TZ_DB=ON",
+            ]
+            jobs = f"-j{tc.jobs}"
+            return {
+                "configure": _timed(configure, src, env),
+                "compile": _timed(
+                    ["cmake", "--build", "build", "--target", "testit", jobs],
+                    src,
+                    env,
+                ),
+                "run tests": _timed(
+                    ["ctest", "--test-dir", "build", "--output-on-failure", jobs],
+                    src,
+                    env,
+                ),
+            }
+
+    return Project(
+        version=version,
+        build=build,
+        expected_seconds={"debug": 15, "release": 15},
+        phases=("compile", "run tests"),
+        comment="Builds date's time-zone library and portable test suite using "
+        "date's C-locale mode; tests importing std::chrono wholesale are excluded "
+        "because their unqualified backport names conflict in C++20, as is one "
+        "custom clock_cast test affected by C++20 overload resolution.",
+    )
+
+
 # --- abseil ------------------------------------------------------------
 
 
@@ -4236,6 +4315,7 @@ PROJECTS: dict[str, Project] = {
     "cmake-full": _cmake(full=True),
     "cppcheck": _cppcheck(),
     "ctre": _ctre(),
+    "date": _date(),
     "eigen": _eigen(full=False),
     "eigen-full": _eigen(full=True),
     "electron": _electron(),

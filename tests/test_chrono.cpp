@@ -69,7 +69,25 @@ static void test_duration_scalar_remainder_promotes_rep() {
   static_assert((int_seconds{5} % 2LL).count() == 1);
 }
 
+static void test_common_type() {
+  using unusual = duration<long, std::ratio<1209600, 1000000>>;
+  using common_duration = std::common_type_t<unusual, seconds>;
+  using common_rep = std::common_type_t<unusual::rep, seconds::rep>;
+  static_assert(std::is_same_v<common_duration,
+                               duration<common_rep, std::ratio<1, 625>>>);
+
+  using first = time_point<system_clock, unusual>;
+  using second = time_point<system_clock, seconds>;
+  static_assert(std::is_same_v<std::common_type_t<first, second>,
+                               time_point<system_clock, common_duration>>);
+}
+
 static void test_time_point_arithmetic() {
+  static_assert(
+      !std::is_constructible_v<time_point<system_clock, seconds>,
+                               time_point<system_clock, milliseconds>>);
+  static_assert(std::is_constructible_v<time_point<system_clock, milliseconds>,
+                                        time_point<system_clock, seconds>>);
   time_point<system_clock, milliseconds> epoch(milliseconds(0));
   psyassert((epoch + milliseconds(5)).time_since_epoch().count() == 5);
   psyassert((epoch - milliseconds(2)).time_since_epoch().count() == -2);
@@ -83,6 +101,8 @@ static void test_time_point_arithmetic() {
 }
 
 static void test_duration_bounds() {
+  static_assert(sizeof(minutes::rep) >= 8);
+  static_assert(sizeof(hours::rep) >= 8);
   static_assert(seconds::min().count() ==
                 std::numeric_limits<long long>::min());
   static_assert(seconds::max().count() ==
@@ -159,6 +179,12 @@ static void test_duration_converting_constructor() {
   // into an integral-rep duration (matching real libstdc++/libc++).
   static_assert(!std::is_constructible_v<milliseconds, double>);
   static_assert(std::is_constructible_v<duration<double>, int>);
+
+  using long_milliseconds = duration<long, std::milli>;
+  static_assert(long_milliseconds(milliseconds::min()).count() ==
+                std::numeric_limits<long>::min());
+  static_assert(long_milliseconds(milliseconds::max()).count() ==
+                std::numeric_limits<long>::max());
 }
 
 static void test_integral_is_finite() {
@@ -168,6 +194,7 @@ static void test_integral_is_finite() {
 }
 
 int main() {
+  test_common_type();
   test_duration_scalar_remainder_promotes_rep();
   const std::chrono::sys_seconds epoch{std::chrono::seconds{0}};
   const auto epoch_days = std::chrono::floor<std::chrono::days>(epoch);
