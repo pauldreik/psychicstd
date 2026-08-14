@@ -12,15 +12,15 @@ Builds the Tesseract OCR library and command-line program, then runs its version
 
 | step | system (s) | psychicstd (s) | speedup | comment |
 | --- | ---: | ---: | ---: | --- |
-| compile | 16.87 | 7.91 | 🟢 2.13x [2.09x, 2.16x] | |
-| run tests | 0.00 | 0.00 | 🟡 0.94x [0.86x, 1.08x] | |
+| compile | 17.11 | 8.19 | 🟢 2.09x [2.06x, 2.13x] | |
+| run tests | 0.00 | 0.00 | 🔴 0.94x [0.87x, 1.00x] | |
 
 ### Release
 
 | step | system (s) | psychicstd (s) | speedup | comment |
 | --- | ---: | ---: | ---: | --- |
-| compile | 18.02 | 11.54 | 🟢 1.56x [1.54x, 1.57x] | |
-| run tests | 0.00 | 0.00 | 🔴 0.92x [0.89x, 0.99x] | |
+| compile | 18.08 | 11.74 | 🟢 1.54x [1.52x, 1.55x] | |
+| run tests | 0.00 | 0.00 | 🔴 0.92x [0.86x, 0.97x] | |
 
 ______________________________________________________________________
 

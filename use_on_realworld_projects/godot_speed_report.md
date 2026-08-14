@@ -12,13 +12,13 @@ Builds Godot's core static library with SCons; rendering, window-system, audio, 
 
 | step | system (s) | psychicstd (s) | speedup | comment |
 | --- | ---: | ---: | ---: | --- |
-| compile | 54.55 | 50.32 | 🟢 1.08x [1.08x, 1.10x] | |
+| compile | 56.07 | 51.59 | 🟢 1.09x [1.08x, 1.10x] | |
 
 ### Release
 
 | step | system (s) | psychicstd (s) | speedup | comment |
 | --- | ---: | ---: | ---: | --- |
-| compile | 51.02 | 46.90 | 🟢 1.09x [1.08x, 1.09x] | |
+| compile | 51.79 | 47.62 | 🟢 1.09x [1.07x, 1.09x] | |
 
 ______________________________________________________________________
 

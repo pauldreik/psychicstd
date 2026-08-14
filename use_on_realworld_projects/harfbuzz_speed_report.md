@@ -12,15 +12,15 @@ Builds HarfBuzz's static libraries and runs its dependency-free upstream tests; 
 
 | step | system (s) | psychicstd (s) | speedup | comment |
 | --- | ---: | ---: | ---: | --- |
-| compile | 34.18 | 26.24 | 🟢 1.30x [1.30x, 1.31x] | |
-| run tests | 4.44 | 4.54 | 🔴 0.98x [0.95x, 0.99x] | |
+| compile | 34.42 | 25.97 | 🟢 1.33x [1.31x, 1.34x] | |
+| run tests | 4.43 | 4.41 | 🟡 1.00x [0.99x, 1.02x] | |
 
 ### Release
 
 | step | system (s) | psychicstd (s) | speedup | comment |
 | --- | ---: | ---: | ---: | --- |
-| compile | 38.51 | 31.71 | 🟢 1.21x [1.21x, 1.22x] | |
-| run tests | 0.95 | 0.94 | 🟡 1.01x [0.99x, 1.06x] | |
+| compile | 38.81 | 31.86 | 🟢 1.22x [1.21x, 1.22x] | |
+| run tests | 0.96 | 0.96 | 🟡 1.00x [0.96x, 1.01x] | |
 
 ______________________________________________________________________
 

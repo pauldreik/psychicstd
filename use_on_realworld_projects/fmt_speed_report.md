@@ -12,15 +12,15 @@ fmt is built with locale support; its own unit tests are run.
 
 | step | system (s) | psychicstd (s) | speedup | comment |
 | --- | ---: | ---: | ---: | --- |
-| compile | 12.62 | 7.95 | 🟢 1.59x [1.58x, 1.60x] | |
-| run tests | 0.23 | 0.13 | 🟢 1.78x [1.77x, 1.79x] | |
+| compile | 12.69 | 8.03 | 🟢 1.58x [1.55x, 1.60x] | |
+| run tests | 0.23 | 0.13 | 🟢 1.79x [1.77x, 1.81x] | |
 
 ### Release
 
 | step | system (s) | psychicstd (s) | speedup | comment |
 | --- | ---: | ---: | ---: | --- |
-| compile | 23.74 | 24.44 | 🔴 0.97x [0.97x, 0.98x] | |
-| run tests | 0.07 | 0.07 | 🔴 0.94x [0.92x, 0.97x] | |
+| compile | 24.09 | 25.14 | 🔴 0.96x [0.95x, 0.96x] | |
+| run tests | 0.07 | 0.07 | 🔴 0.95x [0.94x, 0.99x] | |
 
 ______________________________________________________________________
 

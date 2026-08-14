@@ -12,17 +12,17 @@ Builds GoogleTest's upstream unit tests with GMock and samples disabled, then ru
 
 | step | system (s) | psychicstd (s) | speedup | comment |
 | --- | ---: | ---: | ---: | --- |
-| configure | 0.55 | 0.54 | 🟢 1.02x [1.00x, 1.03x] | |
-| compile | 17.21 | 11.05 | 🟢 1.56x [1.55x, 1.57x] | |
-| run tests | 2.06 | 2.06 | 🟡 1.00x [1.00x, 1.00x] | |
+| configure | 0.58 | 0.57 | 🟢 1.01x [1.00x, 1.03x] | |
+| compile | 17.49 | 11.49 | 🟢 1.52x [1.52x, 1.54x] | |
+| run tests | 2.05 | 2.05 | 🟡 1.00x [1.00x, 1.00x] | |
 
 ### Release
 
 | step | system (s) | psychicstd (s) | speedup | comment |
 | --- | ---: | ---: | ---: | --- |
-| configure | 0.55 | 0.55 | 🟢 1.01x [1.00x, 1.02x] | |
-| compile | 38.81 | 41.67 | 🔴 0.93x [0.93x, 0.93x] | |
-| run tests | 2.06 | 2.06 | 🟡 1.00x [1.00x, 1.00x] | |
+| configure | 0.58 | 0.57 | 🟢 1.01x [1.01x, 1.03x] | |
+| compile | 40.02 | 42.95 | 🔴 0.93x [0.93x, 0.94x] | |
+| run tests | 2.05 | 2.05 | 🟡 1.00x [1.00x, 1.00x] | |
 
 ______________________________________________________________________
 

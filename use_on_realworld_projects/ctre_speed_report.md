@@ -12,13 +12,13 @@ Builds every upstream CTRE compile-time test.
 
 | step | system (s) | psychicstd (s) | speedup | comment |
 | --- | ---: | ---: | ---: | --- |
-| compile | 3.70 | 3.29 | 🟢 1.12x [1.10x, 1.14x] | |
+| compile | 3.72 | 3.32 | 🟢 1.12x [1.10x, 1.13x] | |
 
 ### Release
 
 | step | system (s) | psychicstd (s) | speedup | comment |
 | --- | ---: | ---: | ---: | --- |
-| compile | 3.50 | 3.18 | 🟢 1.10x [1.09x, 1.12x] | |
+| compile | 3.53 | 3.17 | 🟢 1.11x [1.08x, 1.14x] | |
 
 ______________________________________________________________________
 

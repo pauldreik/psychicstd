@@ -12,17 +12,17 @@ rdfind is an autoconf based project. It uses psychic strict mode.
 
 | step | system (s) | psychicstd (s) | speedup | comment |
 | --- | ---: | ---: | ---: | --- |
-| configure | 1.07 | 0.93 | 🟢 1.14x [1.12x, 1.18x] | |
-| compile | 0.91 | 0.22 | 🟢 4.10x [3.96x, 4.17x] | |
-| run tests | 2.31 | 1.33 | 🟢 1.74x [1.60x, 1.84x] | |
+| configure | 1.09 | 0.96 | 🟢 1.14x [1.10x, 1.16x] | |
+| compile | 0.92 | 0.23 | 🟢 4.01x [3.91x, 4.13x] | |
+| run tests | 2.55 | 1.38 | 🟢 1.85x [1.81x, 1.88x] | |
 
 ### Release
 
 | step | system (s) | psychicstd (s) | speedup | comment |
 | --- | ---: | ---: | ---: | --- |
-| configure | 1.12 | 0.98 | 🟢 1.15x [1.08x, 1.19x] | |
-| compile | 1.20 | 0.41 | 🟢 2.91x [2.77x, 3.00x] | |
-| run tests | 1.56 | 1.35 | 🟢 1.16x [1.07x, 1.71x] | |
+| configure | 1.10 | 0.98 | 🟢 1.13x [1.10x, 1.16x] | |
+| compile | 1.15 | 0.41 | 🟢 2.82x [2.76x, 2.90x] | |
+| run tests | 2.53 | 1.36 | 🟢 1.85x [1.81x, 1.88x] | |
 
 ______________________________________________________________________
 

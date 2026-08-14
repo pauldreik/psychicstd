@@ -12,15 +12,15 @@ Builds OpenCV's core and imgproc modules, including their test executables, with
 
 | step | system (s) | psychicstd (s) | speedup | comment |
 | --- | ---: | ---: | ---: | --- |
-| configure | 16.95 | 16.99 | 🟡 1.00x [0.99x, 1.01x] | |
-| compile | 67.08 | 37.19 | 🟢 1.80x [1.80x, 1.81x] | |
+| configure | 18.48 | 18.31 | 🟢 1.01x [1.00x, 1.02x] | |
+| compile | 67.50 | 37.52 | 🟢 1.80x [1.79x, 1.81x] | |
 
 ### Release
 
 | step | system (s) | psychicstd (s) | speedup | comment |
 | --- | ---: | ---: | ---: | --- |
-| configure | 17.30 | 17.42 | 🟡 0.99x [0.99x, 1.00x] | |
-| compile | 114.14 | 92.33 | 🟢 1.24x [1.23x, 1.24x] | |
+| configure | 18.76 | 18.90 | 🟡 0.99x [0.98x, 1.01x] | |
+| compile | 114.92 | 93.35 | 🟢 1.23x [1.23x, 1.24x] | |
 
 ______________________________________________________________________
 

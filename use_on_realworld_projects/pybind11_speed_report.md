@@ -12,17 +12,17 @@ Builds pybind11's upstream CMake extension test, then imports the module in Pyth
 
 | step | system (s) | psychicstd (s) | speedup | comment |
 | --- | ---: | ---: | ---: | --- |
-| configure | 0.37 | 0.37 | 🟡 1.01x [0.99x, 1.02x] | |
-| compile | 2.63 | 1.13 | 🟢 2.34x [2.34x, 2.35x] | |
-| run tests | 0.01 | 0.01 | 🟢 1.09x [1.07x, 1.13x] | |
+| configure | 0.38 | 0.38 | 🟡 1.00x [0.99x, 1.01x] | |
+| compile | 2.75 | 1.17 | 🟢 2.36x [2.34x, 2.37x] | |
+| run tests | 0.01 | 0.01 | 🟢 1.07x [1.05x, 1.12x] | |
 
 ### Release
 
 | step | system (s) | psychicstd (s) | speedup | comment |
 | --- | ---: | ---: | ---: | --- |
-| configure | 0.37 | 0.37 | 🟡 1.00x [0.99x, 1.01x] | |
-| compile | 3.04 | 1.86 | 🟢 1.63x [1.63x, 1.64x] | |
-| run tests | 0.01 | 0.01 | 🟢 1.08x [1.05x, 1.10x] | |
+| configure | 0.38 | 0.38 | 🟡 1.00x [0.98x, 1.00x] | |
+| compile | 3.14 | 1.93 | 🟢 1.63x [1.62x, 1.64x] | |
+| run tests | 0.01 | 0.01 | 🟢 1.06x [1.05x, 1.08x] | |
 
 ______________________________________________________________________
 
