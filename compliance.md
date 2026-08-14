@@ -1,6 +1,6 @@
 # Compliance
 
-Last updated: 2026-08-13 21:40
+Last updated: 2026-08-14 08:26
 
 libc++ test revision: `4395e6ad2c876e2098adcc724f36e937b8f007fd`
 
@@ -74,7 +74,7 @@ The pass percentage uses all tests except those explicitly marked libc++-specifi
 | 🔴 | `random` | **64/486 (13%)** | 486/486 | 486 | 0 | 486 | 525 |
 | 🔴 | `ranges` | **1/584 (0%)** | 584/584 | 584 | 0 | 584 | 322 |
 | 🟢 | `ratio` | **13/13 (100%)** | 13/13 | 13 | 0 | 13 | 91 |
-| 🔴 | `regex` | **24/171 (14%)** | 171/171 | 171 | 0 | 171 | 242 |
+| 🔴 | `regex` | **25/171 (15%)** | 171/171 | 171 | 0 | 171 | 242 |
 | 🔴 | `scoped_allocator` | **5/32 (16%)** | 32/32 | 32 | 0 | 32 | 85 |
 | 🟡 | `set` | **25/69 (36%)** | 69/69 | 69 | 0 | 69 | 693 |
 | 🟡 | `shared_mutex` | **19/29 (66%)** | 29/29 | 29 | 0 | 29 | 115 |
@@ -169,7 +169,7 @@ Each tested case appears in exactly one of the first four result columns. Untest
 | `random` | 64 | 384 | 0 | 38 | 0 |
 | `ranges` | 1 | 397 | 0 | 186 | 0 |
 | `ratio` | 13 | 0 | 0 | 0 | 0 |
-| `regex` | 22 | 124 | 2 | 23 | 0 |
+| `regex` | 23 | 123 | 2 | 23 | 0 |
 | `scoped_allocator` | 5 | 24 | 0 | 3 | 0 |
 | `set` | 4 | 19 | 21 | 25 | 0 |
 | `shared_mutex` | 19 | 8 | 0 | 2 | 0 |

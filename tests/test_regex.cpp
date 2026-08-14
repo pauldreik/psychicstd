@@ -110,6 +110,22 @@ void test_errors() {
   psyassert(threw_regex_error);
 }
 
+#if !defined(__APPLE__) || defined(PSYCHICSTD_TEST_PSYCHICSTD)
+void test_invalid_character_class_ranges() {
+  const char* patterns[] = {"([\\w-a])", "([a-\\w])", "([w-a])"};
+  for (const char* pattern : patterns) {
+    bool threw = false;
+    try {
+      (void)std::regex(pattern);
+    } catch (const std::regex_error& error) {
+      threw = true;
+      psyassert(error.code() == std::regex_constants::error_range);
+    }
+    psyassert(threw);
+  }
+}
+#endif
+
 void test_match_results() {
   const std::string haystack = "before-MATCH-after";
   std::smatch parts;
@@ -215,6 +231,9 @@ void test_escaped_character_classes() {
 int main() {
   test_basic_matching_and_replacement();
   test_errors();
+#if !defined(__APPLE__) || defined(PSYCHICSTD_TEST_PSYCHICSTD)
+  test_invalid_character_class_ranges();
+#endif
   test_match_results();
   test_copy_and_move();
   test_noncapturing_groups();
