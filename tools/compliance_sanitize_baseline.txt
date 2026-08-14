@@ -10,10 +10,6 @@ std/containers/container.adaptors/queue/queue.defn/emplace.pass.cpp
 # fails on deque not using the allocator - a design question
 std/containers/sequences/deque/deque.modifiers/push_front_exception_safety.pass.cpp
 
-# libc++'s tests expect vector's optional ASan contiguous-container annotations.
-std/containers/sequences/vector/vector.modifiers/emplace_back.pass.cpp
-std/containers/sequences/vector/vector.modifiers/push_back_exception_safety.pass.cpp
-
 std/input.output/iostream.format/input.streams/istream/istream_sentry/ctor.pass.cpp
 std/input.output/iostream.format/output.streams/ostream.formatted/ostream.inserters.arithmetic/pointer.volatile.pass.cpp
 std/input.output/iostream.format/std.manip/setfill_wchar_max.pass.cpp
