@@ -68,6 +68,11 @@ void append_escape(string& out, char escaped, bool in_class) {
   }
 }
 
+bool is_character_class_escape(char escaped) {
+  return escaped == 'd' || escaped == 'D' || escaped == 's' || escaped == 'S' ||
+         escaped == 'w' || escaped == 'W';
+}
+
 string translate_ecmascript(const char* pattern, vector<size_t>& submatches) {
   // Apple's regcomp rejects an empty pattern even though ECMAScript accepts it.
   if (!*pattern)
@@ -116,6 +121,7 @@ string translate_ecmascript(const char* pattern, vector<size_t>& submatches) {
       const char* q = p + 1;
       if (*q == '^')
         ++q;
+      const char* class_begin = q;
 
       for (; *q && *q != ']'; ++q) {
         if (*q != '\\' || !q[1]) {
@@ -125,6 +131,10 @@ string translate_ecmascript(const char* pattern, vector<size_t>& submatches) {
         } else if (*q == '-') {
           includes_literal_hyphen = true;
         } else {
+          if (is_character_class_escape(*q) &&
+              ((q[-2] == '-' && q - 2 > class_begin) ||
+               (q[1] == '-' && q[2] && q[2] != ']')))
+            _PSYCHICSTD_THROW(regex_error(regex_constants::error_range));
           append_escape(contents, *q, true);
         }
       }
