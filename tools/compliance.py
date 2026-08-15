@@ -43,6 +43,7 @@ SUPPORT_DIR = LIBCXX_TEST / "support"
 N_SAMPLE = 15  # new tests to add per header per run (default)
 N_WORKERS = os.cpu_count() or 1
 SEED = 42
+LANGUAGE_STANDARD = 20
 
 CXX = os.environ.get("CXX", "c++")
 CXX_CMD = shlex.split(CXX)
@@ -189,8 +190,11 @@ def classify_test(path: Path) -> str:
         return "irrelevant"
     text = path.read_text(errors="replace")
     for m in _RE_UNSUPPORTED.finditer(text):
-        if "c++23" in _tokens(m.group(1)):
-            return "irrelevant"
+        # The report targets the supported C++20 baseline. Keep tests requiring
+        # a newer language mode in the same ignored bucket as libc++-specific
+        # tests rather than counting their expected failures against either STL.
+        if "c++20" in _tokens(m.group(1)):
+            return "libcpp-specific"
     for m in _RE_REQUIRES.finditer(text):
         if any(t.startswith("libcpp-") for t in _tokens(m.group(1))):
             return "libcpp-specific"
@@ -232,7 +236,7 @@ def build_runtime_archive(flags: list[str]) -> Path:
     build_dir = Path(_RUNTIME_DIRECTORY.name)
     objects = []
     compile_flags = [
-        "-std=c++23",
+        f"-std=c++{LANGUAGE_STANDARD}",
         "-nostdinc++",
         "-fvisibility=hidden",
         f"-I{PSYCHICSTD}",
@@ -272,7 +276,7 @@ def try_compile_run(
     try:
         compile_cmd = [
             *CXX_CMD,
-            "-std=c++23",
+            f"-std=c++{LANGUAGE_STANDARD}",
             *flags,
             *xflags,
             f"-I{SUPPORT_DIR}",
@@ -344,7 +348,7 @@ def compliance_emoji(n_pass: int, tested: int, relevant: int) -> str:
 
 CACHE_FILE = REPO_ROOT / ".compliance_cache.json"
 # Required keys in each cache entry (per-test format).
-_CACHE_KEYS = frozenset({"tests", "lines", "eligible"})
+_CACHE_KEYS = frozenset({"tests", "lines", "eligible", "standard"})
 
 
 def load_cache() -> dict:
@@ -362,6 +366,7 @@ def load_cache() -> dict:
                 "lines": value["lines"],
                 "eligible": value["eligible"],
                 "ignored": value.get("ignored", 0),
+                "standard": value["standard"],
             }
             for header, value in data.items()
             if _CACHE_KEYS.issubset(value)
@@ -462,6 +467,7 @@ def _empty_header_cache() -> dict:
         "lines": 0,
         "eligible": 0,
         "ignored": 0,
+        "standard": LANGUAGE_STANDARD,
     }
 
 
@@ -562,6 +568,7 @@ def check_header(
         "lines": lines,
         "eligible": len(eligible),
         "ignored": ignored,
+        "standard": LANGUAGE_STANDARD,
     }
     summary = _summary_from_cache(header, updated)
     return updated, summary
@@ -588,7 +595,8 @@ def _print_failing(headers: list[str], cache: dict) -> None:
         example = failing[0][0]
         print("\n  Quick test (psychicstd):")
         print(
-            f"  {CXX} -std=c++23 -nostdinc++ -I{PSYCHICSTD} -I{SUPPORT_DIR} "
+            f"  {CXX} -std=c++{LANGUAGE_STANDARD} -nostdinc++ "
+            f"-I{PSYCHICSTD} -I{SUPPORT_DIR} "
             f"{example} /path/to/libpsychicstd.a -o /tmp/t && /tmp/t"
         )
     if not any_printed:
@@ -755,7 +763,7 @@ def main() -> None:
 
         f.write(
             "| | header | psychicstd passes | tested | relevant tests | "
-            "ignored libc++-specific | upstream total | lines |\n"
+            "ignored libc++-specific/C++23+ | upstream total | lines |\n"
         )
         f.write(
             "|--|--------|------------------:|-------:|---------------:|"

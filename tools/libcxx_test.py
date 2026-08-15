@@ -99,10 +99,10 @@ def should_skip(path: Path) -> tuple[bool, str]:
 
     text = path.read_text(errors="replace")
 
-    # UNSUPPORTED: skip if c++23 is explicitly unsupported
+    # C++20 is psychicstd's supported baseline; skip tests requiring C++23+.
     for m in _RE_UNSUPPORTED.finditer(text):
-        if "c++23" in _tokens(m.group(1)):
-            return True, "UNSUPPORTED: c++23"
+        if "c++20" in _tokens(m.group(1)):
+            return True, "requires C++23 or later"
 
     # REQUIRES: skip libcpp-specific requirements
     for m in _RE_REQUIRES.finditer(text):
@@ -156,7 +156,7 @@ def try_compile_run(
         ok, out = run_cmd(
             [
                 CXX,
-                "-std=c++23",
+                "-std=c++20",
                 *flags,
                 *xflags,
                 f"-I{SUPPORT_DIR}",
