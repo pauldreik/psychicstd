@@ -108,6 +108,14 @@ static void test_tuple_cat_tuple_like() {
 int main() {
   constexpr std::tuple compile_time_tuple(1, 2, 3);
   static_assert(std::get<1>(compile_time_tuple) == 2);
+  constexpr const std::tuple<int> const_rvalue_tuple(1);
+  static_assert(std::is_same_v<decltype(std::get<0>(
+                                   static_cast<decltype(const_rvalue_tuple)&&>(
+                                       const_rvalue_tuple))),
+                               const int&&>);
+  static_assert(std::apply(
+      [](auto&& value) { return std::is_same_v<decltype(value), const int&&>; },
+      static_cast<decltype(const_rvalue_tuple)&&>(const_rvalue_tuple)));
 
   test_tuple_cat_values();
   test_tuple_cat_forwarding();
