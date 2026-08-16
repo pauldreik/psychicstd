@@ -1,0 +1,12 @@
+#pragma once
+
+namespace std {
+
+template <bool Value, typename T = void> struct enable_if {};
+template <typename T> struct enable_if<true, T> {
+  using type = T;
+};
+template <bool Value, typename T = void>
+using enable_if_t = typename enable_if<Value, T>::type;
+
+}

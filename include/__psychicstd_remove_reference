@@ -1,0 +1,21 @@
+#pragma once
+
+namespace std::__psychicstd_detail {
+
+#if __has_builtin(__remove_reference)
+template <typename T> struct __remove_reference_impl {
+  using type = __remove_reference(T);
+};
+#else
+template <typename T> struct __remove_reference_impl {
+  using type = T;
+};
+template <typename T> struct __remove_reference_impl<T&> {
+  using type = T;
+};
+template <typename T> struct __remove_reference_impl<T&&> {
+  using type = T;
+};
+#endif
+
+}

@@ -1,8 +1,15 @@
 #pragma once
+#include <__psychicstd_config>
 #include <__psychicstd_iterator_core>
-#include <__psychicstd_type_traits_arithmetic>
+#include <__psychicstd_type_traits_conditional>
+#if _PSYCHICSTD_COMPATIBILITY_LEVEL >= _PSYCHICSTD_COMPAT_DROPIN
 #include <__psychicstd_type_traits_meta>
 #include <concepts>
+#else
+#include <__psychicstd_type_traits_cvref>
+#include <__psychicstd_type_traits_decay>
+#include <__psychicstd_type_traits_declval>
+#endif
 
 namespace std {
 template <typename T> class initializer_list;
@@ -119,9 +126,20 @@ concept common_range = range<T>;
 template <typename T>
 concept output_range = range<T>;
 
+namespace __detail {
+template <typename T> inline constexpr bool __lvalue_reference = false;
+template <typename T> inline constexpr bool __lvalue_reference<T&> = true;
+
+template <typename T>
+concept __movable = is_same_v<T, remove_reference_t<T>> && requires(T value) {
+  T(static_cast<T&&>(value));
+  requires is_same_v<decltype(value = static_cast<T&&>(value)), T&>;
+};
+}
+
 // view: a range that is semiregular
 template <typename T>
-concept view = range<T> && std::movable<T>;
+concept view = range<T> && __detail::__movable<T>;
 
 namespace __detail {
 template <typename T> inline constexpr bool __is_initializer_list = false;
@@ -131,8 +149,8 @@ inline constexpr bool __is_initializer_list<std::initializer_list<T>> = true;
 
 template <typename R>
 concept viewable_range =
-    range<R> && (std::is_lvalue_reference_v<R> ||
-                 (std::movable<std::remove_reference_t<R>> &&
+    range<R> && (__detail::__lvalue_reference<R> ||
+                 (__detail::__movable<std::remove_reference_t<R>> &&
                   !__detail::__is_initializer_list<std::remove_cvref_t<R>>));
 
 // range_value_t etc.
@@ -168,7 +186,7 @@ public:
   // Without borrowed_range support, only accept ranges that outlive this view.
   template <typename Range>
     requires(!std::is_same_v<std::remove_cvref_t<Range>, subrange> &&
-             std::is_lvalue_reference_v<Range>)
+             __detail::__lvalue_reference<Range>)
   constexpr subrange(Range&& range)
       : first_(std::ranges::begin(range)), last_(std::ranges::end(range)) {}
 
@@ -183,7 +201,7 @@ private:
 template <typename Iterator, typename Sentinel>
 subrange(Iterator, Sentinel) -> subrange<Iterator, Sentinel>;
 template <typename Range>
-  requires std::is_lvalue_reference_v<Range>
+  requires __detail::__lvalue_reference<Range>
 subrange(Range&&) -> subrange<iterator_t<Range>, sentinel_t<Range>>;
 
 template <typename Range, typename Function> class transform_view {
@@ -243,8 +261,8 @@ private:
 namespace std::views {
 
 template <typename R>
-using all_t = std::conditional_t<std::is_lvalue_reference_v<R>, R,
-                                 std::remove_cvref_t<R>>;
+using all_t = std::conditional_t<std::ranges::__detail::__lvalue_reference<R>,
+                                 R, std::remove_cvref_t<R>>;
 
 struct __all_fn {
   template <typename R>

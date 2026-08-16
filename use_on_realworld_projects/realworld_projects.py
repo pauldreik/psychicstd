@@ -957,6 +957,12 @@ def _cmake(full: bool) -> Project:
             allocator_header.write_text(
                 text.replace(marker, marker + "#include <utility>\n")
             )
+            # The bundled jsoncpp uses std::istreambuf_iterator without its
+            # defining header.
+            json_reader = (
+                src / "Utilities" / "cmjsoncpp" / "src" / "lib_json" / "json_reader.cpp"
+            )
+            json_reader.write_text("#include <iterator>\n" + json_reader.read_text())
             wrapper = _compiler_wrapper(
                 work / "cxx", tc, ("-D_PSYCHICSTD_COMPATIBILITY_LEVEL=0",)
             )
@@ -2326,6 +2332,12 @@ def _tesseract() -> Project:
             with tarfile.open(tarball) as t:
                 t.extractall(work)
             src = work / f"tesseract-{version}"
+            # Several sources use std::istreambuf_iterator without its
+            # defining header.
+            for source in src.rglob("*.cpp"):
+                text = source.read_text()
+                if "std::istreambuf_iterator" in text and "<iterator>" not in text:
+                    source.write_text("#include <iterator>\n" + text)
 
             env = _env(tc)
             cxxflags = tc.cxxflags + " -D_PSYCHICSTD_COMPATIBILITY_LEVEL=0"
@@ -2550,6 +2562,11 @@ def _electron() -> Project:
                 t.extractall(work)
             src = work / f"electron-{version}"
             driver = work / "driver"
+            command_line_args = src / "shell/app/command_line_args.cc"
+            # Electron uses std::size without including its defining header.
+            command_line_args.write_text(
+                "#include <iterator>\n" + command_line_args.read_text()
+            )
             for directory in (
                 "base",
                 "base/containers",
@@ -2695,7 +2712,7 @@ int main() {
                 str(driver),
                 "-I",
                 str(src),
-                str(src / "shell/app/command_line_args.cc"),
+                str(command_line_args),
                 str(src / "shell/common/electron_command_line.cc"),
                 str(driver / "main.cc"),
                 *shlex.split(tc.ldflags),

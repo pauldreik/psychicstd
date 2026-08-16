@@ -3,9 +3,15 @@
 #include <__psychicstd_placement_new>
 #include <__psychicstd_refcount>
 #include <__psychicstd_thread_launch>
+#include <__psychicstd_type_traits_convert_core>
 #include <__psychicstd_type_traits_invoke>
-#include <condition_variable>
 #include <mutex>
+
+#if _PSYCHICSTD_COMPATIBILITY_LEVEL >= _PSYCHICSTD_COMPAT_DROPIN
+#include <condition_variable>
+#else
+#include <__psychicstd_condition_variable_core>
+#endif
 
 namespace std {
 

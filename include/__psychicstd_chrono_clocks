@@ -1,0 +1,43 @@
+#pragma once
+#include <__psychicstd_chrono_core>
+#include <ctime>
+#include <time.h>
+
+namespace std::chrono {
+
+struct system_clock {
+  using duration = nanoseconds;
+  using rep = duration::rep;
+  using period = duration::period;
+  using time_point = chrono::time_point<system_clock>;
+  static constexpr bool is_steady = false;
+  static time_point now() noexcept {
+    struct timespec ts;
+    clock_gettime(CLOCK_REALTIME, &ts);
+    return time_point(duration(ts.tv_sec * 1000000000LL + ts.tv_nsec));
+  }
+  static time_t to_time_t(const time_point& tp) noexcept {
+    return static_cast<time_t>(
+        duration_cast<seconds>(tp.time_since_epoch()).count());
+  }
+  static time_point from_time_t(time_t t) noexcept {
+    return time_point(duration(static_cast<long long>(t) * 1000000000LL));
+  }
+};
+
+struct steady_clock {
+  using duration = nanoseconds;
+  using rep = duration::rep;
+  using period = duration::period;
+  using time_point = chrono::time_point<steady_clock>;
+  static constexpr bool is_steady = true;
+  static time_point now() noexcept {
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return time_point(duration(ts.tv_sec * 1000000000LL + ts.tv_nsec));
+  }
+};
+
+using high_resolution_clock = steady_clock;
+
+}

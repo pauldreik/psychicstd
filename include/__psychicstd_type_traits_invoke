@@ -1,5 +1,11 @@
 #pragma once
+#include <__psychicstd_config>
+#if _PSYCHICSTD_COMPATIBILITY_LEVEL >= _PSYCHICSTD_COMPAT_DROPIN
 #include <__psychicstd_type_traits_classification>
+#endif
+#include <__psychicstd_type_traits_cvref>
+#include <__psychicstd_type_traits_declval>
+#include <__psychicstd_type_traits_reference>
 
 namespace std {
 // invoke_result / result_of (deprecated in C++17, removed in C++20 but Catch2

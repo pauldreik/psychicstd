@@ -1,0 +1,11 @@
+#pragma once
+#include <__psychicstd_conditional>
+
+namespace std {
+
+template <bool Value, typename T, typename F>
+using conditional = __psychicstd_detail::__conditional_impl<Value, T, F>;
+template <bool Value, typename T, typename F>
+using conditional_t = typename conditional<Value, T, F>::type;
+
+}

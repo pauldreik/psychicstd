@@ -4,6 +4,8 @@
 #include <__psychicstd_functional_extra>
 #include <__psychicstd_functors>
 #include <__psychicstd_invoke>
+#include <__psychicstd_type_traits_member_pointer>
+#include <__psychicstd_type_traits_pointer_category>
 #if _PSYCHICSTD_COMPATIBILITY_LEVEL >= _PSYCHICSTD_COMPAT_DROPIN
 #include <array>
 #endif

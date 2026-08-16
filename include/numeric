@@ -1,6 +1,10 @@
 #pragma once
+#include <__psychicstd_config>
 #include <__psychicstd_iterator_core>
+#include <__psychicstd_type_classification>
+#if _PSYCHICSTD_COMPATIBILITY_LEVEL >= _PSYCHICSTD_COMPAT_DROPIN
 #include <__psychicstd_type_traits_arithmetic>
+#endif
 
 namespace std {
 
@@ -127,7 +131,11 @@ template <typename M, typename N> constexpr auto lcm(M m, N n) noexcept {
 
 // midpoint (C++20)
 template <typename T> constexpr T midpoint(T a, T b) noexcept {
+#if _PSYCHICSTD_COMPATIBILITY_LEVEL >= _PSYCHICSTD_COMPAT_DROPIN
   if constexpr (is_floating_point_v<T>)
+#else
+  if constexpr (_PSYCHICSTD_FLOATING_TYPE(T))
+#endif
     return a / 2 + b / 2;
   else
     return a + (b - a) / 2;

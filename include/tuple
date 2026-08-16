@@ -1,5 +1,8 @@
 #pragma once
-#include <__psychicstd_type_traits_object>
+#include <__psychicstd_type_traits_construction>
+#include <__psychicstd_type_traits_convert>
+#include <__psychicstd_type_traits_cvref>
+#include <__psychicstd_type_traits_unwrap>
 #include <__psychicstd_utility_pair>
 #include <compare>
 
@@ -194,17 +197,20 @@ template <size_t Index, typename T> struct tuple_element<Index, const T> {
 
 // get<Index>(tuple)
 template <size_t Index, typename... Ts>
-constexpr tuple_element_t<Index, tuple<Ts...>>& get(tuple<Ts...>& t) noexcept {
+[[gnu::always_inline]] constexpr tuple_element_t<Index, tuple<Ts...>>&
+get(tuple<Ts...>& t) noexcept {
   using Leaf = detail::tuple_leaf<Index, tuple_element_t<Index, tuple<Ts...>>>;
   return static_cast<Leaf&>(t).value;
 }
 template <size_t Index, typename... Ts>
+[[gnu::always_inline]]
 constexpr const tuple_element_t<Index, tuple<Ts...>>&
 get(const tuple<Ts...>& t) noexcept {
   using Leaf = detail::tuple_leaf<Index, tuple_element_t<Index, tuple<Ts...>>>;
   return static_cast<const Leaf&>(t).value;
 }
 template <size_t Index, typename... Ts>
+[[gnu::always_inline]]
 constexpr tuple_element_t<Index, tuple<Ts...>>&&
 get(tuple<Ts...>&& t) noexcept {
   using Leaf = detail::tuple_leaf<Index, tuple_element_t<Index, tuple<Ts...>>>;
@@ -212,6 +218,7 @@ get(tuple<Ts...>&& t) noexcept {
       static_cast<Leaf&>(t).value);
 }
 template <size_t Index, typename... Ts>
+[[gnu::always_inline]]
 constexpr const tuple_element_t<Index, tuple<Ts...>>&&
 get(const tuple<Ts...>&& t) noexcept {
   using Leaf = detail::tuple_leaf<Index, tuple_element_t<Index, tuple<Ts...>>>;
@@ -243,11 +250,11 @@ template <typename T, typename... Ts> constexpr size_t tuple_index_of() {
 }
 
 template <typename T, typename... Ts>
-constexpr T& get(tuple<Ts...>& t) noexcept {
+[[gnu::always_inline]] constexpr T& get(tuple<Ts...>& t) noexcept {
   return get<detail::tuple_index_of<T, Ts...>()>(t);
 }
 template <typename T, typename... Ts>
-constexpr const T& get(const tuple<Ts...>& t) noexcept {
+[[gnu::always_inline]] constexpr const T& get(const tuple<Ts...>& t) noexcept {
   return get<detail::tuple_index_of<T, Ts...>()>(t);
 }
 

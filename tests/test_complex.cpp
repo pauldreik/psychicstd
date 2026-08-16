@@ -41,6 +41,7 @@ int main() {
   psyassert(std::arg(std::complex<double>(1.0, 0.0)) == 0.0);
   static_assert(std::is_same_v<decltype(std::arg(1.0F)), float>);
   static_assert(std::is_same_v<decltype(std::arg(1)), double>);
+  static_assert(std::is_same_v<decltype(std::arg(true)), double>);
   psyassert(std::arg(1.0F) == 0.0F);
   psyassert(std::arg(-1) > 3.0);
 

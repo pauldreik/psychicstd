@@ -1,0 +1,9 @@
+#pragma once
+
+namespace std::__psychicstd_detail {
+
+template <typename T> struct __type_identity_impl {
+  using type = T;
+};
+
+}

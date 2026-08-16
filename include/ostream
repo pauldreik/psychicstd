@@ -1,5 +1,7 @@
 #pragma once
-#include <__psychicstd_type_traits_object>
+#include <__psychicstd_type_traits_classification>
+#include <__psychicstd_type_traits_reference>
+#include <__psychicstd_type_traits_reference_category>
 #include <ios>
 #include <streambuf>
 

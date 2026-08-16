@@ -1,0 +1,28 @@
+#pragma once
+#include <__psychicstd_type_traits_reference>
+
+namespace std {
+
+template <typename T> struct remove_pointer {
+  using type = T;
+};
+template <typename T> struct remove_pointer<T*> {
+  using type = T;
+};
+template <typename T> struct remove_pointer<T* const> {
+  using type = T;
+};
+template <typename T> struct remove_pointer<T* volatile> {
+  using type = T;
+};
+template <typename T> struct remove_pointer<T* const volatile> {
+  using type = T;
+};
+template <typename T> using remove_pointer_t = typename remove_pointer<T>::type;
+
+template <typename T> struct add_pointer {
+  using type = remove_reference_t<T>*;
+};
+template <typename T> using add_pointer_t = typename add_pointer<T>::type;
+
+}

@@ -1,12 +1,18 @@
 #pragma once
 #include <__psychicstd_algo>
 #include <__psychicstd_allocator>
+#include <__psychicstd_config>
+#if _PSYCHICSTD_COMPATIBILITY_LEVEL >= _PSYCHICSTD_COMPAT_DROPIN
+#include <iterator>
+#else
+#include <__psychicstd_iterator_core>
+#endif
 #include <__psychicstd_ordering>
 #include <__psychicstd_ptr_index>
+#include <__psychicstd_type_traits_pointer_category>
 #include <__psychicstd_unique_owner>
 #include <__psychicstd_utility_pair>
 #include <initializer_list>
-#include <iterator>
 
 namespace std {
 

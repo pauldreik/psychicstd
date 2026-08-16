@@ -5,10 +5,15 @@
 #include <__psychicstd_iterator_next>
 #include <__psychicstd_ostreambuf_iterator>
 #if _PSYCHICSTD_COMPATIBILITY_LEVEL >= _PSYCHICSTD_COMPAT_DROPIN
-#include <concepts>
-#endif
-#include <__psychicstd_type_traits_classification>
 #include <__psychicstd_type_traits_common>
+#include <concepts>
+#else
+#include <__psychicstd_type_traits_common_type>
+#include <__psychicstd_type_traits_cvref>
+#endif
+#include <__psychicstd_type_traits_arithmetic>
+#include <__psychicstd_type_traits_classification>
+#include <__psychicstd_type_traits_reference_category>
 #include <cstddef>
 #include <initializer_list>
 #include <iosfwd>
@@ -38,27 +43,7 @@ concept indirectly_writable = requires(It&& i, T&& t) {
   *static_cast<It&&>(i) = static_cast<T&&>(t);
 };
 
-// advance / next / prev
-template <typename InputIt, typename Distance>
-constexpr void advance(InputIt& it, Distance n) {
-  using category = typename iterator_traits<InputIt>::iterator_category;
-  if constexpr (is_base_of_v<random_access_iterator_tag, category>) {
-    it += n;
-  } else if constexpr (is_base_of_v<bidirectional_iterator_tag, category>) {
-    while (n > 0) {
-      ++it;
-      --n;
-    }
-    while (n < 0) {
-      --it;
-      ++n;
-    }
-  } else {
-    while (n-- > 0)
-      ++it;
-  }
-}
-
+// prev
 template <typename BidirIt>
 constexpr BidirIt
 prev(BidirIt it, typename iterator_traits<BidirIt>::difference_type n = 1) {

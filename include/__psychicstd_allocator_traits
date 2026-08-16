@@ -1,7 +1,13 @@
 #pragma once
 #include <__psychicstd_allocator>
+#include <__psychicstd_config>
 #include <__psychicstd_lifetime>
+#if _PSYCHICSTD_COMPATIBILITY_LEVEL >= _PSYCHICSTD_COMPAT_DROPIN
 #include <__psychicstd_type_traits_classification>
+#else
+#include <__psychicstd_type_traits_empty>
+#endif
+#include <__psychicstd_type_traits_declval>
 #include <cstddef>
 
 namespace std {

@@ -1,9 +1,13 @@
 #pragma once
 #include <__psychicstd_compare_core>
 #include <__psychicstd_iterator_core>
+#include <__psychicstd_type_traits_classification>
 #include <__psychicstd_type_traits_common>
+#include <__psychicstd_type_traits_construction>
+#include <__psychicstd_type_traits_convert>
+#include <__psychicstd_type_traits_destruction>
 #include <__psychicstd_type_traits_invoke>
-#include <__psychicstd_type_traits_object>
+#include <__psychicstd_type_traits_reference_category>
 
 // Minimal <concepts> stub
 

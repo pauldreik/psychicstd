@@ -5,7 +5,8 @@
 #include <__psychicstd_contiguous_iterator>
 #include <__psychicstd_except>
 #include <__psychicstd_iterator_core>
-#include <__psychicstd_type_traits_object>
+#include <__psychicstd_type_traits_classification>
+#include <__psychicstd_type_traits_construction>
 #include <cstddef>
 #include <initializer_list>
 

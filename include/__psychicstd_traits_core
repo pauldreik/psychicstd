@@ -1,4 +1,8 @@
 #pragma once
+#include <__psychicstd_conditional>
+#include <__psychicstd_remove_cv>
+#include <__psychicstd_remove_reference>
+#include <__psychicstd_type_identity>
 
 namespace std::__psychicstd_detail {
 
@@ -14,52 +18,28 @@ using false_type = bool_constant<false>;
 
 template <typename...> using void_t = void;
 
-template <typename T> struct remove_reference {
-  using type = T;
-};
-template <typename T> struct remove_reference<T&> {
-  using type = T;
-};
-template <typename T> struct remove_reference<T&&> {
-  using type = T;
-};
+template <typename T> using remove_reference = __remove_reference_impl<T>;
 template <typename T>
 using remove_reference_t = typename remove_reference<T>::type;
 
-template <typename T> struct remove_const {
-  using type = T;
-};
-template <typename T> struct remove_const<const T> {
-  using type = T;
-};
+template <typename T> using remove_const = __remove_const_impl<T>;
 template <typename T> using remove_const_t = typename remove_const<T>::type;
-
-template <typename T> struct remove_volatile {
-  using type = T;
-};
-template <typename T> struct remove_volatile<volatile T> {
-  using type = T;
-};
+template <typename T> using remove_volatile = __remove_volatile_impl<T>;
 template <typename T>
 using remove_volatile_t = typename remove_volatile<T>::type;
-template <typename T> using remove_cv_t = remove_volatile_t<remove_const_t<T>>;
+template <typename T> using remove_cv = __remove_cv_impl<T>;
+template <typename T> using remove_cv_t = typename remove_cv<T>::type;
 
 template <typename T, typename U>
 struct is_same : bool_constant<__is_same(T, U)> {};
 template <typename T, typename U>
 inline constexpr bool is_same_v = is_same<T, U>::value;
 
-template <typename T> struct type_identity {
-  using type = T;
-};
+template <typename T> using type_identity = __type_identity_impl<T>;
 template <typename T> using type_identity_t = typename type_identity<T>::type;
 
-template <bool B, typename T, typename F> struct conditional {
-  using type = T;
-};
-template <typename T, typename F> struct conditional<false, T, F> {
-  using type = F;
-};
+template <bool B, typename T, typename F>
+using conditional = __conditional_impl<B, T, F>;
 template <bool B, typename T, typename F>
 using conditional_t = typename conditional<B, T, F>::type;
 

@@ -1,6 +1,8 @@
 #pragma once
+#include <__psychicstd_type_traits_arithmetic>
 #include <__psychicstd_type_traits_common>
 #include <__psychicstd_type_traits_invoke_extended>
+#include <__psychicstd_type_traits_meta>
 #include <__psychicstd_type_traits_object>
 #include <version>
 

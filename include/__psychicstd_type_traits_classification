@@ -1,64 +1,29 @@
 #pragma once
+#include <__psychicstd_config>
+#include <__psychicstd_type_traits_convert_core>
+#include <__psychicstd_type_traits_empty>
+#include <__psychicstd_type_traits_pointer_category>
+#if _PSYCHICSTD_COMPATIBILITY_LEVEL >= _PSYCHICSTD_COMPAT_DROPIN
 #include <__psychicstd_type_traits_arithmetic>
 #include <__psychicstd_type_traits_meta>
+#else
+#include <__psychicstd_type_traits_arithmetic_core>
+#include <cstddef>
+#endif
 
 namespace std {
-// is_const / is_volatile / is_reference
-template <typename T> struct is_const : false_type {};
-template <typename T> struct is_const<const T> : true_type {};
-template <typename T> inline constexpr bool is_const_v = is_const<T>::value;
-
 template <typename T> struct is_volatile : false_type {};
 template <typename T> struct is_volatile<volatile T> : true_type {};
 template <typename T>
 inline constexpr bool is_volatile_v = is_volatile<T>::value;
-
-template <typename T> struct is_reference : false_type {};
-template <typename T> struct is_reference<T&> : true_type {};
-template <typename T> struct is_reference<T&&> : true_type {};
-template <typename T>
-inline constexpr bool is_reference_v = is_reference<T>::value;
 
 template <typename B, typename D>
 struct is_base_of : bool_constant<__is_base_of(B, D)> {};
 template <typename B, typename D>
 inline constexpr bool is_base_of_v = is_base_of<B, D>::value;
 
-template <typename T> struct is_empty : bool_constant<__is_empty(T)> {};
-template <typename T> inline constexpr bool is_empty_v = is_empty<T>::value;
-
-// is_void / is_null_pointer / is_integral / is_floating_point / is_pointer
-template <typename T> struct is_void : is_same<remove_cv_t<T>, void> {};
-template <typename T> inline constexpr bool is_void_v = is_void<T>::value;
+// is_null_pointer / is_integral / is_floating_point / is_pointer
 template <typename T>
 struct is_null_pointer : is_same<remove_cv_t<T>, nullptr_t> {};
-
-template <typename T> struct is_pointer : false_type {};
-template <typename T> struct is_pointer<T*> : true_type {};
-template <typename T> struct is_pointer<T* const> : true_type {};
-template <typename T> struct is_pointer<T* volatile> : true_type {};
-template <typename T> inline constexpr bool is_pointer_v = is_pointer<T>::value;
-
-template <typename T> struct is_array : false_type {};
-template <typename T> struct is_array<T[]> : true_type {};
-template <typename T, size_t N> struct is_array<T[N]> : true_type {};
-template <typename T> inline constexpr bool is_array_v = is_array<T>::value;
-
-// Forward declaration used by is_convertible below.
-template <typename T> struct is_function;
-
-// Adding const has no effect on a function type. References need the second
-// check because const is ignored for those as well.
-template <typename T>
-struct is_function
-    : bool_constant<!is_const<const T>::value && !is_reference<T>::value> {};
-template <typename T>
-inline constexpr bool is_function_v = is_function<T>::value;
-
-template <typename T>
-struct is_object
-    : bool_constant<!is_function<T>::value && !is_reference<T>::value &&
-                    !is_void<T>::value> {};
-template <typename T> inline constexpr bool is_object_v = is_object<T>::value;
 
 }

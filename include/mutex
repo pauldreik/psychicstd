@@ -1,5 +1,6 @@
 #pragma once
 #include <__psychicstd_invoke>
+#include <__psychicstd_lock_tags>
 #include <pthread.h>
 
 namespace std {
@@ -101,13 +102,6 @@ template <typename Mutex> struct scoped_lock {
 private:
   Mutex& mutex_;
 };
-
-struct defer_lock_t {};
-struct try_to_lock_t {};
-struct adopt_lock_t {};
-inline constexpr defer_lock_t defer_lock{};
-inline constexpr try_to_lock_t try_to_lock{};
-inline constexpr adopt_lock_t adopt_lock{};
 
 template <typename Mutex> struct unique_lock {
   using mutex_type = Mutex;

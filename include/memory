@@ -3,12 +3,27 @@
 #include <__psychicstd_config>
 #include <__psychicstd_hash>
 #include <__psychicstd_ordering>
+#if _PSYCHICSTD_COMPATIBILITY_LEVEL >= _PSYCHICSTD_COMPAT_DROPIN
 #include <__psychicstd_type_traits_common>
-#include <__psychicstd_type_traits_object>
+#else
+#include <__psychicstd_type_traits_common_type>
+#endif
+#include <__psychicstd_type_traits_construction>
+#include <__psychicstd_type_traits_convert>
 #include <iosfwd>
 #include <typeinfo>
 
 namespace std {
+
+namespace __memory_detail {
+template <typename T> struct __extent_element;
+template <typename T> struct __extent_element<T[]> {
+  using type = T;
+};
+template <typename T, size_t N> struct __extent_element<T[N]> {
+  using type = T;
+};
+}
 
 template <typename T, typename Alloc, typename = void>
 struct uses_allocator : false_type {};
@@ -251,7 +266,7 @@ template <typename T>
 unique_ptr<T> make_unique(size_t n)
   requires(is_array_v<T>)
 {
-  using Elem = remove_extent_t<T>;
+  using Elem = typename __memory_detail::__extent_element<T>::type;
   return unique_ptr<T>(new Elem[n]());
 }
 

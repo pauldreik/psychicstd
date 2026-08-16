@@ -1,7 +1,8 @@
 #pragma once
 #include <__psychicstd_config>
 #include <__psychicstd_exception_base>
-#include <__psychicstd_type_traits_object>
+#include <__psychicstd_type_traits_cvref>
+#include <__psychicstd_type_traits_decay>
 #include <cstddef>
 #include <new>
 #include <typeinfo>
@@ -24,7 +25,7 @@ class any {
   template <typename T>
   static constexpr bool is_small =
       sizeof(T) <= SMALL && alignof(T) <= alignof(void*) &&
-      is_nothrow_move_constructible_v<T>;
+      __is_nothrow_constructible(T, T&&);
 
   template <typename T, bool Small = is_small<T>> struct Ops;
 
@@ -98,7 +99,8 @@ public:
     if (o.vt_)
       o.vt_->move(o, *this);
   }
-  template <typename T, typename = enable_if_t<!is_same_v<decay_t<T>, any>>>
+  template <typename T>
+    requires(!is_same_v<decay_t<T>, any>)
   any(T&& v) {
     using U = decay_t<T>;
     static constexpr VTable vt = Ops<U>::make();
@@ -130,7 +132,8 @@ public:
     }
     return *this;
   }
-  template <typename T, typename = enable_if_t<!is_same_v<decay_t<T>, any>>>
+  template <typename T>
+    requires(!is_same_v<decay_t<T>, any>)
   any& operator=(T&& v) {
     // forward
     *this = any(static_cast<T&&>(v));

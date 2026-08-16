@@ -1,0 +1,11 @@
+#pragma once
+#include <__psychicstd_remove_reference>
+
+namespace std {
+
+template <typename T>
+using remove_reference = __psychicstd_detail::__remove_reference_impl<T>;
+template <typename T>
+using remove_reference_t = typename remove_reference<T>::type;
+
+}
