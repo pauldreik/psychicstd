@@ -13,7 +13,8 @@ template <size_t N> class bitset {
 public:
   class reference {
   public:
-    reference(unsigned long long* word, size_t bit) : word_(word), bit_(bit) {}
+    [[gnu::always_inline]] reference(unsigned long long* word, size_t bit)
+        : word_(word), bit_(bit) {}
     reference& operator=(bool value) noexcept {
       if (value)
         *word_ |= 1ULL << bit_;
@@ -21,7 +22,9 @@ public:
         *word_ &= ~(1ULL << bit_);
       return *this;
     }
-    operator bool() const noexcept { return (*word_ & (1ULL << bit_)) != 0; }
+    [[gnu::always_inline]] operator bool() const noexcept {
+      return (*word_ & (1ULL << bit_)) != 0;
+    }
     reference& flip() noexcept {
       *word_ ^= 1ULL << bit_;
       return *this;
@@ -44,10 +47,10 @@ public:
         words_[i / word_bits] |= 1ULL << (i % word_bits);
   }
 
-  constexpr bool operator[](size_t pos) const noexcept {
+  [[gnu::always_inline]] constexpr bool operator[](size_t pos) const noexcept {
     return (words_[pos / word_bits] & (1ULL << (pos % word_bits))) != 0;
   }
-  reference operator[](size_t pos) noexcept {
+  [[gnu::always_inline]] reference operator[](size_t pos) noexcept {
     return reference(&words_[pos / word_bits], pos % word_bits);
   }
   constexpr bool test(size_t pos) const {
@@ -96,7 +99,7 @@ public:
         return true;
     return false;
   }
-  constexpr bool none() const noexcept { return !any(); }
+  [[gnu::always_inline]] constexpr bool none() const noexcept { return !any(); }
   constexpr bool all() const noexcept {
     if constexpr (N == 0)
       return true;

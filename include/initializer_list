@@ -20,8 +20,12 @@ public:
   [[gnu::always_inline]] constexpr size_t size() const noexcept {
     return size_;
   }
-  constexpr const T* begin() const noexcept { return begin_; }
-  constexpr const T* end() const noexcept { return begin_ + size_; }
+  [[gnu::always_inline]] constexpr const T* begin() const noexcept {
+    return begin_;
+  }
+  [[gnu::always_inline]] constexpr const T* end() const noexcept {
+    return begin_ + size_;
+  }
 
 private:
   // GCC layout: pointer first, then size. Do not reorder.
@@ -30,10 +34,12 @@ private:
 };
 
 template <typename T>
+[[gnu::always_inline]]
 constexpr const T* begin(initializer_list<T> il) noexcept {
   return il.begin();
 }
-template <typename T> constexpr const T* end(initializer_list<T> il) noexcept {
+template <typename T>
+[[gnu::always_inline]] constexpr const T* end(initializer_list<T> il) noexcept {
   return il.end();
 }
 

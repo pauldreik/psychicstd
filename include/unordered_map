@@ -120,18 +120,23 @@ public:
     size_t b = 0;
     Node* n = nullptr;
     iterator() = default;
-    iterator(unordered_map* m, size_t b, Node* n) : m(m), b(b), n(n) {}
-    value_type& operator*() const { return n->kv; }
-    value_type* operator->() const { return &n->kv; }
-    bool operator==(const iterator& o) const { return n == o.n; }
-    bool operator!=(const iterator& o) const { return n != o.n; }
-    iterator& operator++() {
+    [[gnu::always_inline]] iterator(unordered_map* m, size_t b, Node* n)
+        : m(m), b(b), n(n) {}
+    [[gnu::always_inline]] value_type& operator*() const { return n->kv; }
+    [[gnu::always_inline]] value_type* operator->() const { return &n->kv; }
+    [[gnu::always_inline]] bool operator==(const iterator& o) const {
+      return n == o.n;
+    }
+    [[gnu::always_inline]] bool operator!=(const iterator& o) const {
+      return n != o.n;
+    }
+    [[gnu::always_inline]] iterator& operator++() {
       n = n->next;
       while (!n && ++b < m->nbuckets_)
         n = m->buckets_[b];
       return *this;
     }
-    iterator operator++(int) {
+    [[gnu::always_inline]] iterator operator++(int) {
       auto t = *this;
       ++*this;
       return t;
@@ -147,26 +152,36 @@ public:
     size_t b = 0;
     const Node* n = nullptr;
     const_iterator() = default;
-    const_iterator(const unordered_map* m, size_t b, const Node* n)
+    [[gnu::always_inline]] const_iterator(const unordered_map* m, size_t b,
+                                          const Node* n)
         : m(m), b(b), n(n) {}
-    const_iterator(iterator it) : m(it.m), b(it.b), n(it.n) {}
-    const value_type& operator*() const { return n->kv; }
-    const value_type* operator->() const { return &n->kv; }
-    bool operator==(const const_iterator& o) const { return n == o.n; }
-    bool operator!=(const const_iterator& o) const { return n != o.n; }
-    friend bool operator==(const iterator& a, const const_iterator& b) {
+    [[gnu::always_inline]] const_iterator(iterator it)
+        : m(it.m), b(it.b), n(it.n) {}
+    [[gnu::always_inline]] const value_type& operator*() const { return n->kv; }
+    [[gnu::always_inline]] const value_type* operator->() const {
+      return &n->kv;
+    }
+    [[gnu::always_inline]] bool operator==(const const_iterator& o) const {
+      return n == o.n;
+    }
+    [[gnu::always_inline]] bool operator!=(const const_iterator& o) const {
+      return n != o.n;
+    }
+    [[gnu::always_inline]] friend bool operator==(const iterator& a,
+                                                  const const_iterator& b) {
       return a.n == b.n;
     }
-    friend bool operator!=(const iterator& a, const const_iterator& b) {
+    [[gnu::always_inline]] friend bool operator!=(const iterator& a,
+                                                  const const_iterator& b) {
       return a.n != b.n;
     }
-    const_iterator& operator++() {
+    [[gnu::always_inline]] const_iterator& operator++() {
       n = n->next;
       while (!n && ++b < m->nbuckets_)
         n = m->buckets_[b];
       return *this;
     }
-    const_iterator operator++(int) {
+    [[gnu::always_inline]] const_iterator operator++(int) {
       auto t = *this;
       ++*this;
       return t;
@@ -268,11 +283,17 @@ public:
 
   [[gnu::always_inline]] size_type size() const noexcept { return size_; }
   [[gnu::always_inline]] bool empty() const noexcept { return size_ == 0; }
-  size_type bucket_count() const noexcept { return nbuckets_; }
-  size_type max_size() const noexcept { return size_type(-1); }
-  hasher hash_function() const { return hasher_; }
-  key_equal key_eq() const { return eq_; }
-  allocator_type get_allocator() const { return allocator_; }
+  [[gnu::always_inline]] size_type bucket_count() const noexcept {
+    return nbuckets_;
+  }
+  [[gnu::always_inline]] size_type max_size() const noexcept {
+    return size_type(-1);
+  }
+  [[gnu::always_inline]] hasher hash_function() const { return hasher_; }
+  [[gnu::always_inline]] key_equal key_eq() const { return eq_; }
+  [[gnu::always_inline]] allocator_type get_allocator() const {
+    return allocator_;
+  }
   float load_factor() const noexcept {
     return static_cast<float>(size_) / static_cast<float>(nbuckets_);
   }
@@ -282,22 +303,24 @@ public:
   }
   void reserve(size_type count) { rehash(count); }
 
-  iterator begin() {
+  [[gnu::always_inline]] iterator begin() {
     for (size_t b = 0; b < nbuckets_; ++b)
       if (buckets_[b])
         return {this, b, buckets_[b]};
     return end();
   }
-  iterator end() { return {this, nbuckets_, nullptr}; }
-  const_iterator begin() const {
+  [[gnu::always_inline]] iterator end() { return {this, nbuckets_, nullptr}; }
+  [[gnu::always_inline]] const_iterator begin() const {
     for (size_t b = 0; b < nbuckets_; ++b)
       if (buckets_[b])
         return {this, b, buckets_[b]};
     return end();
   }
-  const_iterator end() const { return {this, nbuckets_, nullptr}; }
-  const_iterator cbegin() const { return begin(); }
-  const_iterator cend() const { return end(); }
+  [[gnu::always_inline]] const_iterator end() const {
+    return {this, nbuckets_, nullptr};
+  }
+  [[gnu::always_inline]] const_iterator cbegin() const { return begin(); }
+  [[gnu::always_inline]] const_iterator cend() const { return end(); }
 
   iterator find(const Key& k) {
     size_t b = bucket(k);
@@ -443,10 +466,10 @@ public:
     return {{this, b, n}, true};
   }
   // Hint versions (hint ignored)
-  iterator insert(const_iterator, const value_type& kv) {
+  [[gnu::always_inline]] iterator insert(const_iterator, const value_type& kv) {
     return insert(kv).first;
   }
-  iterator insert(const_iterator, value_type&& kv) {
+  [[gnu::always_inline]] iterator insert(const_iterator, value_type&& kv) {
     return insert(static_cast<value_type&&>(kv)).first;
   }
   template <typename It> void insert(It first, It last) {
@@ -457,6 +480,7 @@ public:
     return insert(value_type(static_cast<Args&&>(args)...));
   }
   template <typename... Args>
+  [[gnu::always_inline]]
   iterator emplace_hint(const_iterator, Args&&... args) {
     return emplace(static_cast<Args&&>(args)...).first;
   }
@@ -492,11 +516,13 @@ public:
     return {{this, b, node}, true};
   }
   template <typename... Args>
-  iterator try_emplace(const_iterator, const Key& key, Args&&... args) {
+  [[gnu::always_inline]] iterator try_emplace(const_iterator, const Key& key,
+                                              Args&&... args) {
     return try_emplace(key, static_cast<Args&&>(args)...).first;
   }
   template <typename... Args>
-  iterator try_emplace(const_iterator, Key&& key, Args&&... args) {
+  [[gnu::always_inline]] iterator try_emplace(const_iterator, Key&& key,
+                                              Args&&... args) {
     return try_emplace(static_cast<Key&&>(key), static_cast<Args&&>(args)...)
         .first;
   }
@@ -521,11 +547,13 @@ public:
             true};
   }
   template <typename M>
-  iterator insert_or_assign(const_iterator, const Key& key, M&& obj) {
+  [[gnu::always_inline]] iterator insert_or_assign(const_iterator,
+                                                   const Key& key, M&& obj) {
     return insert_or_assign(key, static_cast<M&&>(obj)).first;
   }
   template <typename M>
-  iterator insert_or_assign(const_iterator, Key&& key, M&& obj) {
+  [[gnu::always_inline]] iterator insert_or_assign(const_iterator, Key&& key,
+                                                   M&& obj) {
     return insert_or_assign(static_cast<Key&&>(key), static_cast<M&&>(obj))
         .first;
   }
@@ -681,66 +709,79 @@ public:
     size_t b = 0;
     Node* n = nullptr;
     iterator() = default;
-    iterator(unordered_multimap* map, size_t bucket, Node* node)
+    [[gnu::always_inline]] iterator(unordered_multimap* map, size_t bucket,
+                                    Node* node)
         : m(map), b(bucket), n(node) {}
-    value_type& operator*() const { return n->kv; }
-    value_type* operator->() const { return &n->kv; }
-    iterator& operator++() {
+    [[gnu::always_inline]] value_type& operator*() const { return n->kv; }
+    [[gnu::always_inline]] value_type* operator->() const { return &n->kv; }
+    [[gnu::always_inline]] iterator& operator++() {
       n = n->next;
       while (!n && ++b < m->nbuckets_)
         n = m->buckets_[b];
       return *this;
     }
-    iterator operator++(int) {
+    [[gnu::always_inline]] iterator operator++(int) {
       auto t = *this;
       ++*this;
       return t;
     }
-    bool operator==(const iterator& o) const { return n == o.n; }
-    bool operator!=(const iterator& o) const { return n != o.n; }
-    operator const_iterator() const { return {m, b, n}; }
+    [[gnu::always_inline]] bool operator==(const iterator& o) const {
+      return n == o.n;
+    }
+    [[gnu::always_inline]] bool operator!=(const iterator& o) const {
+      return n != o.n;
+    }
+    [[gnu::always_inline]] operator const_iterator() const { return {m, b, n}; }
   };
   struct const_iterator {
     const unordered_multimap* m = nullptr;
     size_t b = 0;
     const Node* n = nullptr;
     const_iterator() = default;
-    const_iterator(const unordered_multimap* map, size_t bucket,
-                   const Node* node)
+    [[gnu::always_inline]] const_iterator(const unordered_multimap* map,
+                                          size_t bucket, const Node* node)
         : m(map), b(bucket), n(node) {}
-    const value_type& operator*() const { return n->kv; }
-    const value_type* operator->() const { return &n->kv; }
-    const_iterator& operator++() {
+    [[gnu::always_inline]] const value_type& operator*() const { return n->kv; }
+    [[gnu::always_inline]] const value_type* operator->() const {
+      return &n->kv;
+    }
+    [[gnu::always_inline]] const_iterator& operator++() {
       n = n->next;
       while (!n && ++b < m->nbuckets_)
         n = m->buckets_[b];
       return *this;
     }
-    const_iterator operator++(int) {
+    [[gnu::always_inline]] const_iterator operator++(int) {
       auto t = *this;
       ++*this;
       return t;
     }
-    bool operator==(const const_iterator& o) const { return n == o.n; }
-    bool operator!=(const const_iterator& o) const { return n != o.n; }
+    [[gnu::always_inline]] bool operator==(const const_iterator& o) const {
+      return n == o.n;
+    }
+    [[gnu::always_inline]] bool operator!=(const const_iterator& o) const {
+      return n != o.n;
+    }
   };
 
-  iterator begin() {
+  [[gnu::always_inline]] iterator begin() {
     for (size_t b = 0; b < nbuckets_; ++b)
       if (buckets_[b])
         return {this, b, buckets_[b]};
     return end();
   }
-  iterator end() { return {this, nbuckets_, nullptr}; }
-  const_iterator begin() const {
+  [[gnu::always_inline]] iterator end() { return {this, nbuckets_, nullptr}; }
+  [[gnu::always_inline]] const_iterator begin() const {
     for (size_t b = 0; b < nbuckets_; ++b)
       if (buckets_[b])
         return {this, b, buckets_[b]};
     return end();
   }
-  const_iterator end() const { return {this, nbuckets_, nullptr}; }
-  const_iterator cbegin() const { return begin(); }
-  const_iterator cend() const { return end(); }
+  [[gnu::always_inline]] const_iterator end() const {
+    return {this, nbuckets_, nullptr};
+  }
+  [[gnu::always_inline]] const_iterator cbegin() const { return begin(); }
+  [[gnu::always_inline]] const_iterator cend() const { return end(); }
 
   unordered_multimap() = default;
   unordered_multimap(initializer_list<value_type> il) {
@@ -774,7 +815,9 @@ public:
 
   [[gnu::always_inline]] size_type size() const noexcept { return size_; }
   [[gnu::always_inline]] bool empty() const noexcept { return size_ == 0; }
-  size_type bucket_count() const noexcept { return nbuckets_; }
+  [[gnu::always_inline]] size_type bucket_count() const noexcept {
+    return nbuckets_;
+  }
   float load_factor() const noexcept {
     return static_cast<float>(size_) / static_cast<float>(nbuckets_);
   }

@@ -31,15 +31,17 @@ constexpr T accumulate(It first, It last, T init, BinOp op) {
 
 // reduce (C++17)
 template <typename It>
-typename iterator_traits<It>::value_type reduce(It first, It last) {
+[[gnu::always_inline]] inline typename iterator_traits<It>::value_type
+reduce(It first, It last) {
   using T = typename iterator_traits<It>::value_type;
   return accumulate(first, last, T{});
 }
-template <typename It, typename T> T reduce(It first, It last, T init) {
+template <typename It, typename T>
+[[gnu::always_inline]] inline T reduce(It first, It last, T init) {
   return accumulate(first, last, init);
 }
 template <typename It, typename T, typename BinOp>
-T reduce(It first, It last, T init, BinOp op) {
+[[gnu::always_inline]] inline T reduce(It first, It last, T init, BinOp op) {
   return accumulate(first, last, init, op);
 }
 
@@ -125,7 +127,8 @@ template <typename M, typename N> constexpr auto gcd(M m, N n) noexcept {
   }
   return a;
 }
-template <typename M, typename N> constexpr auto lcm(M m, N n) noexcept {
+template <typename M, typename N>
+[[gnu::always_inline]] constexpr auto lcm(M m, N n) noexcept {
   return (m / gcd(m, n)) * n;
 }
 

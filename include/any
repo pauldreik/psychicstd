@@ -30,8 +30,10 @@ class any {
   template <typename T, bool Small = is_small<T>> struct Ops;
 
   template <typename T> struct Ops<T, true> {
-    static T* ptr(any& a) noexcept { return reinterpret_cast<T*>(&a.buf_); }
-    static const T* ptr(const any& a) noexcept {
+    [[gnu::always_inline]] static T* ptr(any& a) noexcept {
+      return reinterpret_cast<T*>(&a.buf_);
+    }
+    [[gnu::always_inline]] static const T* ptr(const any& a) noexcept {
       return reinterpret_cast<const T*>(&a.buf_);
     }
     static void destroy(any& a) noexcept { ptr(a)->~T(); }
@@ -101,7 +103,7 @@ public:
   }
   template <typename T>
     requires(!is_same_v<decay_t<T>, any>)
-  any(T&& v) {
+  [[gnu::always_inline]] any(T&& v) {
     using U = decay_t<T>;
     static constexpr VTable vt = Ops<U>::make();
     if constexpr (is_small<U>) {
@@ -140,7 +142,9 @@ public:
     return *this;
   }
 
-  bool has_value() const noexcept { return vt_ != nullptr; }
+  [[gnu::always_inline]] bool has_value() const noexcept {
+    return vt_ != nullptr;
+  }
   void reset() noexcept {
     if (vt_) {
       vt_->destroy(*this);
@@ -166,7 +170,8 @@ inline void swap(any& a, any& b) noexcept {
   b = static_cast<any&&>(tmp);
 }
 
-template <typename T> T* any_cast(any* a) noexcept {
+template <typename T>
+[[gnu::always_inline]] inline T* any_cast(any* a) noexcept {
 #if _PSYCHICSTD_HAS_RTTI
   if (!a || !a->vt_ || a->vt_->ti != &typeid(T))
     return nullptr;
@@ -179,22 +184,23 @@ template <typename T> T* any_cast(any* a) noexcept {
   else
     return static_cast<T*>(a->heap_);
 }
-template <typename T> const T* any_cast(const any* a) noexcept {
+template <typename T>
+[[gnu::always_inline]] inline const T* any_cast(const any* a) noexcept {
   return any_cast<T>(const_cast<any*>(a));
 }
-template <typename T> T any_cast(const any& a) {
+template <typename T> [[gnu::always_inline]] inline T any_cast(const any& a) {
   auto* p = any_cast<remove_cvref_t<T>>(&a);
   if (!p)
     _PSYCHICSTD_THROW_HELPER(__throw_bad_any_cast);
   return *p;
 }
-template <typename T> T any_cast(any& a) {
+template <typename T> [[gnu::always_inline]] inline T any_cast(any& a) {
   auto* p = any_cast<remove_cvref_t<T>>(&a);
   if (!p)
     _PSYCHICSTD_THROW_HELPER(__throw_bad_any_cast);
   return *p;
 }
-template <typename T> T any_cast(any&& a) {
+template <typename T> [[gnu::always_inline]] inline T any_cast(any&& a) {
   auto* p = any_cast<remove_cvref_t<T>>(&a);
   if (!p)
     _PSYCHICSTD_THROW_HELPER(__throw_bad_any_cast);
@@ -202,7 +208,8 @@ template <typename T> T any_cast(any&& a) {
   return static_cast<T>(static_cast<remove_cvref_t<T>&&>(*p));
 }
 
-template <typename T, typename... Args> any make_any(Args&&... args) {
+template <typename T, typename... Args>
+[[gnu::always_inline]] inline any make_any(Args&&... args) {
   // forward
   return any(T(static_cast<Args&&>(args)...));
 }

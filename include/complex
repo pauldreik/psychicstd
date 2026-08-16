@@ -136,8 +136,8 @@ public:
     im_ = static_cast<T>(other.imag());
     return *this;
   }
-  constexpr T real() const noexcept { return re_; }
-  constexpr T imag() const noexcept { return im_; }
+  [[gnu::always_inline]] constexpr T real() const noexcept { return re_; }
+  [[gnu::always_inline]] constexpr T imag() const noexcept { return im_; }
   constexpr void real(T r) noexcept { re_ = r; }
   constexpr void imag(T i) noexcept { im_ = i; }
 
@@ -184,8 +184,14 @@ private:
   T re_, im_;
 };
 
-template <typename T> constexpr T real(const complex<T>& c) { return c.real(); }
-template <typename T> constexpr T imag(const complex<T>& c) { return c.imag(); }
+template <typename T>
+[[gnu::always_inline]] constexpr T real(const complex<T>& c) {
+  return c.real();
+}
+template <typename T>
+[[gnu::always_inline]] constexpr T imag(const complex<T>& c) {
+  return c.imag();
+}
 template <typename T> constexpr complex<T> conj(const complex<T>& c) {
   return complex<T>(c.real(), -c.imag());
 }
@@ -294,13 +300,16 @@ template <typename T> constexpr bool operator==(T a, const complex<T>& b) {
   return a == b.real() && T() == b.imag();
 }
 template <typename T>
+[[gnu::always_inline]]
 constexpr bool operator!=(const complex<T>& a, const complex<T>& b) {
   return !(a == b);
 }
-template <typename T> constexpr bool operator!=(const complex<T>& a, T b) {
+template <typename T>
+[[gnu::always_inline]] constexpr bool operator!=(const complex<T>& a, T b) {
   return !(a == b);
 }
-template <typename T> constexpr bool operator!=(T a, const complex<T>& b) {
+template <typename T>
+[[gnu::always_inline]] constexpr bool operator!=(T a, const complex<T>& b) {
   return !(a == b);
 }
 

@@ -88,7 +88,7 @@ public:
       : rep_(static_cast<Rep>(d.count()) * ratio_divide<Period2, Period>::num /
              ratio_divide<Period2, Period>::den) {}
 
-  constexpr Rep count() const noexcept { return rep_; }
+  [[gnu::always_inline]] constexpr Rep count() const noexcept { return rep_; }
   constexpr duration operator+() const { return *this; }
   constexpr duration operator-() const { return duration(-rep_); }
   constexpr duration& operator+=(const duration& d) {
@@ -150,20 +150,24 @@ constexpr bool operator<(const duration<R1, P1>& a, const duration<R2, P2>& b) {
   return CD(a).count() < CD(b).count();
 }
 template <typename R1, typename P1, typename R2, typename P2>
+[[gnu::always_inline]]
 constexpr bool operator!=(const duration<R1, P1>& a,
                           const duration<R2, P2>& b) {
   return !(a == b);
 }
 template <typename R1, typename P1, typename R2, typename P2>
+[[gnu::always_inline]]
 constexpr bool operator<=(const duration<R1, P1>& a,
                           const duration<R2, P2>& b) {
   return !(b < a);
 }
 template <typename R1, typename P1, typename R2, typename P2>
+[[gnu::always_inline]]
 constexpr bool operator>(const duration<R1, P1>& a, const duration<R2, P2>& b) {
   return b < a;
 }
 template <typename R1, typename P1, typename R2, typename P2>
+[[gnu::always_inline]]
 constexpr bool operator>=(const duration<R1, P1>& a,
                           const duration<R2, P2>& b) {
   return !(a < b);
@@ -275,7 +279,9 @@ public:
   constexpr time_point(const time_point<Clock, Duration2>& t)
       : d_(t.time_since_epoch()) {}
 
-  constexpr Duration time_since_epoch() const { return d_; }
+  [[gnu::always_inline]] constexpr Duration time_since_epoch() const {
+    return d_;
+  }
 
   constexpr time_point& operator+=(const Duration& d) {
     d_ += d;
@@ -326,21 +332,25 @@ constexpr bool operator<(const time_point<C, D1>& a,
   return a.time_since_epoch() < b.time_since_epoch();
 }
 template <typename C, typename D1, typename D2>
+[[gnu::always_inline]]
 constexpr bool operator!=(const time_point<C, D1>& a,
                           const time_point<C, D2>& b) {
   return !(a == b);
 }
 template <typename C, typename D1, typename D2>
+[[gnu::always_inline]]
 constexpr bool operator>(const time_point<C, D1>& a,
                          const time_point<C, D2>& b) {
   return b < a;
 }
 template <typename C, typename D1, typename D2>
+[[gnu::always_inline]]
 constexpr bool operator<=(const time_point<C, D1>& a,
                           const time_point<C, D2>& b) {
   return !(b < a);
 }
 template <typename C, typename D1, typename D2>
+[[gnu::always_inline]]
 constexpr bool operator>=(const time_point<C, D1>& a,
                           const time_point<C, D2>& b) {
   return !(a < b);

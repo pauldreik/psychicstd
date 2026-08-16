@@ -516,11 +516,19 @@ public:
     return *this;
   }
 
-  constexpr allocator_type get_allocator() const noexcept { return alloc_; }
+  [[gnu::always_inline]] constexpr allocator_type
+  get_allocator() const noexcept {
+    return alloc_;
+  }
 
   // Element access
-  constexpr T& operator[](size_type i) noexcept { return data_[i]; }
-  constexpr const T& operator[](size_type i) const noexcept { return data_[i]; }
+  [[gnu::always_inline]] constexpr T& operator[](size_type i) noexcept {
+    return data_[i];
+  }
+  [[gnu::always_inline]] constexpr const T&
+  operator[](size_type i) const noexcept {
+    return data_[i];
+  }
   constexpr T& at(size_type i) {
     if (i >= size_)
       _PSYCHICSTD_THROW_HELPER(__throw_out_of_range, "vector::at");
@@ -531,10 +539,16 @@ public:
       _PSYCHICSTD_THROW_HELPER(__throw_out_of_range, "vector::at");
     return data_[i];
   }
-  constexpr T& front() noexcept { return data_[0]; }
-  constexpr const T& front() const noexcept { return data_[0]; }
-  constexpr T& back() noexcept { return data_[size_ - 1]; }
-  constexpr const T& back() const noexcept { return data_[size_ - 1]; }
+  [[gnu::always_inline]] constexpr T& front() noexcept { return data_[0]; }
+  [[gnu::always_inline]] constexpr const T& front() const noexcept {
+    return data_[0];
+  }
+  [[gnu::always_inline]] constexpr T& back() noexcept {
+    return data_[size_ - 1];
+  }
+  [[gnu::always_inline]] constexpr const T& back() const noexcept {
+    return data_[size_ - 1];
+  }
   [[gnu::always_inline]] constexpr T* data() noexcept { return data_; }
   [[gnu::always_inline]] constexpr const T* data() const noexcept {
     return data_;
@@ -559,22 +573,26 @@ public:
   [[gnu::always_inline]] constexpr const_iterator cend() const noexcept {
     return const_iterator{data_ + size_};
   }
-  constexpr reverse_iterator rbegin() noexcept {
+  [[gnu::always_inline]] constexpr reverse_iterator rbegin() noexcept {
     return reverse_iterator(end());
   }
-  constexpr reverse_iterator rend() noexcept {
+  [[gnu::always_inline]] constexpr reverse_iterator rend() noexcept {
     return reverse_iterator(begin());
   }
-  constexpr const_reverse_iterator rbegin() const noexcept {
+  [[gnu::always_inline]] constexpr const_reverse_iterator
+  rbegin() const noexcept {
     return const_reverse_iterator(end());
   }
-  constexpr const_reverse_iterator rend() const noexcept {
+  [[gnu::always_inline]] constexpr const_reverse_iterator
+  rend() const noexcept {
     return const_reverse_iterator(begin());
   }
-  constexpr const_reverse_iterator crbegin() const noexcept {
+  [[gnu::always_inline]] constexpr const_reverse_iterator
+  crbegin() const noexcept {
     return const_reverse_iterator(cend());
   }
-  constexpr const_reverse_iterator crend() const noexcept {
+  [[gnu::always_inline]] constexpr const_reverse_iterator
+  crend() const noexcept {
     return const_reverse_iterator(cbegin());
   }
 
@@ -588,7 +606,7 @@ public:
   [[gnu::always_inline]] constexpr bool empty() const noexcept {
     return size_ == 0;
   }
-  constexpr size_type max_size() const noexcept {
+  [[gnu::always_inline]] constexpr size_type max_size() const noexcept {
     const size_type ma = allocator_traits<Alloc>::max_size(alloc_);
     const size_type md = size_type(__PTRDIFF_MAX__) / sizeof(T);
     return ma < md ? ma : md;
@@ -610,18 +628,18 @@ public:
   constexpr void shrink_to_fit() {}
 
   // Modifiers
-  constexpr void clear() noexcept {
+  [[gnu::always_inline]] constexpr void clear() noexcept {
     _destroy_all();
     size_ = 0;
   }
 
-  constexpr void push_back(const T& v) {
+  [[gnu::always_inline]] constexpr void push_back(const T& v) {
     T tmp(v);
     _grow();
     _construct(data_ + size_, _xfer(tmp));
     ++size_;
   }
-  constexpr void push_back(T&& v) {
+  [[gnu::always_inline]] constexpr void push_back(T&& v) {
     // move
     T tmp(static_cast<T&&>(v));
     _grow();
@@ -630,7 +648,8 @@ public:
     ++size_;
   }
 
-  template <typename... Args> constexpr T& emplace_back(Args&&... args) {
+  template <typename... Args>
+  [[gnu::always_inline]] constexpr T& emplace_back(Args&&... args) {
     if (size_ < cap_) {
       // forward
       _construct(data_ + size_, static_cast<Args&&>(args)...);
@@ -652,7 +671,7 @@ public:
     return data_[size_++];
   }
 
-  constexpr void pop_back() noexcept {
+  [[gnu::always_inline]] constexpr void pop_back() noexcept {
     --size_;
     _destroy(data_ + size_);
   }
@@ -778,7 +797,7 @@ public:
     size_ = n;
   }
 
-  constexpr void swap(vector& o) noexcept {
+  [[gnu::always_inline]] constexpr void swap(vector& o) noexcept {
     T* td = data_;
     size_type ts = size_, tc = cap_;
     data_ = o.data_;
@@ -828,7 +847,7 @@ public:
     for (auto it = first; it != last; ++it)
       emplace_back(*it);
   }
-  constexpr void assign(std::initializer_list<T> il) {
+  [[gnu::always_inline]] constexpr void assign(std::initializer_list<T> il) {
     _assign_copy(il.begin(), il.size());
   }
 };
@@ -847,6 +866,7 @@ constexpr bool operator==(const vector<T, A>& a, const vector<T, A>& b) {
   return true;
 }
 template <typename T, typename A>
+[[gnu::always_inline]]
 constexpr bool operator!=(const vector<T, A>& a, const vector<T, A>& b) {
   return !(a == b);
 }
@@ -861,14 +881,17 @@ constexpr bool operator<(const vector<T, A>& a, const vector<T, A>& b) {
   return a.size() < b.size();
 }
 template <typename T, typename A>
+[[gnu::always_inline]]
 constexpr bool operator<=(const vector<T, A>& a, const vector<T, A>& b) {
   return !(b < a);
 }
 template <typename T, typename A>
+[[gnu::always_inline]]
 constexpr bool operator>(const vector<T, A>& a, const vector<T, A>& b) {
   return b < a;
 }
 template <typename T, typename A>
+[[gnu::always_inline]]
 constexpr bool operator>=(const vector<T, A>& a, const vector<T, A>& b) {
   return !(a < b);
 }
@@ -888,7 +911,8 @@ constexpr auto operator<=>(const vector<T, A>& a, const vector<T, A>& b)
 }
 
 template <typename T, typename A>
-constexpr void swap(vector<T, A>& a, vector<T, A>& b) noexcept {
+[[gnu::always_inline]] constexpr void swap(vector<T, A>& a,
+                                           vector<T, A>& b) noexcept {
   a.swap(b);
 }
 

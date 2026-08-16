@@ -139,7 +139,9 @@ public:
 
   ~basic_string() { dealloc(data_); }
 
-  allocator_type get_allocator() const noexcept { return alloc_; }
+  [[gnu::always_inline]] allocator_type get_allocator() const noexcept {
+    return alloc_;
+  }
 
   basic_string& operator=(const basic_string& o) {
     if (this != &o)
@@ -217,10 +219,12 @@ public:
       _PSYCHICSTD_THROW_HELPER(__throw_out_of_range, "basic_string::at");
     return data_[i];
   }
-  Char& front() noexcept { return data_[0]; }
-  const Char& front() const noexcept { return data_[0]; }
-  Char& back() noexcept { return data_[size_ - 1]; }
-  const Char& back() const noexcept { return data_[size_ - 1]; }
+  [[gnu::always_inline]] Char& front() noexcept { return data_[0]; }
+  [[gnu::always_inline]] const Char& front() const noexcept { return data_[0]; }
+  [[gnu::always_inline]] Char& back() noexcept { return data_[size_ - 1]; }
+  [[gnu::always_inline]] const Char& back() const noexcept {
+    return data_[size_ - 1];
+  }
   [[gnu::always_inline]] Char* data() noexcept {
     return data_ ? data_ : empty_str();
   }
@@ -308,20 +312,26 @@ public:
   iterator end() noexcept { return data() + size_; }
   const_iterator begin() const noexcept { return data(); }
   const_iterator end() const noexcept { return data() + size_; }
-  const_iterator cbegin() const noexcept { return begin(); }
-  const_iterator cend() const noexcept { return end(); }
-  reverse_iterator rbegin() noexcept { return reverse_iterator(end()); }
-  reverse_iterator rend() noexcept { return reverse_iterator(begin()); }
-  const_reverse_iterator rbegin() const noexcept {
+  [[gnu::always_inline]] const_iterator cbegin() const noexcept {
+    return begin();
+  }
+  [[gnu::always_inline]] const_iterator cend() const noexcept { return end(); }
+  [[gnu::always_inline]] reverse_iterator rbegin() noexcept {
+    return reverse_iterator(end());
+  }
+  [[gnu::always_inline]] reverse_iterator rend() noexcept {
+    return reverse_iterator(begin());
+  }
+  [[gnu::always_inline]] const_reverse_iterator rbegin() const noexcept {
     return const_reverse_iterator(end());
   }
-  const_reverse_iterator rend() const noexcept {
+  [[gnu::always_inline]] const_reverse_iterator rend() const noexcept {
     return const_reverse_iterator(begin());
   }
-  const_reverse_iterator crbegin() const noexcept {
+  [[gnu::always_inline]] const_reverse_iterator crbegin() const noexcept {
     return const_reverse_iterator(end());
   }
-  const_reverse_iterator crend() const noexcept {
+  [[gnu::always_inline]] const_reverse_iterator crend() const noexcept {
     return const_reverse_iterator(begin());
   }
 
@@ -642,27 +652,30 @@ public:
     return find_last_not_of(o.data(), pos, o.size());
   }
 
-  bool starts_with(basic_string_view<Char> sv) const noexcept {
+  [[gnu::always_inline]] bool
+  starts_with(basic_string_view<Char> sv) const noexcept {
     return size_ >= sv.size() &&
            Traits::compare(data_, sv.data(), sv.size()) == 0;
   }
-  bool starts_with(Char character) const noexcept {
+  [[gnu::always_inline]] bool starts_with(Char character) const noexcept {
     return !empty() && Traits::eq(front(), character);
   }
-  bool starts_with(const Char* value) const noexcept {
+  [[gnu::always_inline]] bool starts_with(const Char* value) const noexcept {
     return starts_with(basic_string_view<Char>(value));
   }
-  bool ends_with(basic_string_view<Char> sv) const noexcept {
+  [[gnu::always_inline]] bool
+  ends_with(basic_string_view<Char> sv) const noexcept {
     return size_ >= sv.size() && Traits::compare(data_ + size_ - sv.size(),
                                                  sv.data(), sv.size()) == 0;
   }
-  bool ends_with(Char character) const noexcept {
+  [[gnu::always_inline]] bool ends_with(Char character) const noexcept {
     return !empty() && Traits::eq(back(), character);
   }
-  bool ends_with(const Char* value) const noexcept {
+  [[gnu::always_inline]] bool ends_with(const Char* value) const noexcept {
     return ends_with(basic_string_view<Char>(value));
   }
-  bool contains(basic_string_view<Char> sv) const noexcept {
+  [[gnu::always_inline]] bool
+  contains(basic_string_view<Char> sv) const noexcept {
     return find(sv.data(), 0, sv.size()) != npos;
   }
 
@@ -887,16 +900,19 @@ bool operator<(basic_string_view<C> a,
 }
 
 template <typename C, typename T, typename A>
-bool operator!=(const basic_string<C, T, A>& a,
-                const basic_string<C, T, A>& b) noexcept {
+[[gnu::always_inline]] inline bool
+operator!=(const basic_string<C, T, A>& a,
+           const basic_string<C, T, A>& b) noexcept {
   return !(a == b);
 }
 template <typename C, typename T, typename A>
-bool operator!=(const basic_string<C, T, A>& a, const C* b) noexcept {
+[[gnu::always_inline]] inline bool operator!=(const basic_string<C, T, A>& a,
+                                              const C* b) noexcept {
   return !(a == b);
 }
 template <typename C, typename T, typename A>
-bool operator!=(const C* a, const basic_string<C, T, A>& b) noexcept {
+[[gnu::always_inline]] inline bool
+operator!=(const C* a, const basic_string<C, T, A>& b) noexcept {
   return !(a == b);
 }
 
@@ -914,42 +930,51 @@ bool operator<(const C* a, const basic_string<C, T, A>& b) noexcept {
   return b.compare(a) > 0;
 }
 template <typename C, typename T, typename A>
-bool operator<=(const basic_string<C, T, A>& a,
-                const basic_string<C, T, A>& b) noexcept {
+[[gnu::always_inline]] inline bool
+operator<=(const basic_string<C, T, A>& a,
+           const basic_string<C, T, A>& b) noexcept {
   return a.compare(b) <= 0;
 }
 template <typename C, typename T, typename A>
-bool operator<=(const basic_string<C, T, A>& a, const C* b) noexcept {
+[[gnu::always_inline]] inline bool operator<=(const basic_string<C, T, A>& a,
+                                              const C* b) noexcept {
   return a.compare(b) <= 0;
 }
 template <typename C, typename T, typename A>
-bool operator<=(const C* a, const basic_string<C, T, A>& b) noexcept {
+[[gnu::always_inline]] inline bool
+operator<=(const C* a, const basic_string<C, T, A>& b) noexcept {
   return b.compare(a) >= 0;
 }
 template <typename C, typename T, typename A>
-bool operator>(const basic_string<C, T, A>& a,
-               const basic_string<C, T, A>& b) noexcept {
+[[gnu::always_inline]] inline bool
+operator>(const basic_string<C, T, A>& a,
+          const basic_string<C, T, A>& b) noexcept {
   return a.compare(b) > 0;
 }
 template <typename C, typename T, typename A>
-bool operator>(const basic_string<C, T, A>& a, const C* b) noexcept {
+[[gnu::always_inline]] inline bool operator>(const basic_string<C, T, A>& a,
+                                             const C* b) noexcept {
   return a.compare(b) > 0;
 }
 template <typename C, typename T, typename A>
-bool operator>(const C* a, const basic_string<C, T, A>& b) noexcept {
+[[gnu::always_inline]] inline bool
+operator>(const C* a, const basic_string<C, T, A>& b) noexcept {
   return b.compare(a) < 0;
 }
 template <typename C, typename T, typename A>
-bool operator>=(const basic_string<C, T, A>& a,
-                const basic_string<C, T, A>& b) noexcept {
+[[gnu::always_inline]] inline bool
+operator>=(const basic_string<C, T, A>& a,
+           const basic_string<C, T, A>& b) noexcept {
   return a.compare(b) >= 0;
 }
 template <typename C, typename T, typename A>
-bool operator>=(const basic_string<C, T, A>& a, const C* b) noexcept {
+[[gnu::always_inline]] inline bool operator>=(const basic_string<C, T, A>& a,
+                                              const C* b) noexcept {
   return a.compare(b) >= 0;
 }
 template <typename C, typename T, typename A>
-bool operator>=(const C* a, const basic_string<C, T, A>& b) noexcept {
+[[gnu::always_inline]] inline bool
+operator>=(const C* a, const basic_string<C, T, A>& b) noexcept {
   return b.compare(a) <= 0;
 }
 

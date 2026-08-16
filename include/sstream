@@ -240,7 +240,7 @@ public:
   void str(const string_type& s) { buf_.str(s); }
   void str(string_type&& s) { buf_.str(static_cast<string_type&&>(s)); }
 
-  basic_stringbuf<Char, Traits, Alloc>* rdbuf() const {
+  [[gnu::always_inline]] basic_stringbuf<Char, Traits, Alloc>* rdbuf() const {
     return const_cast<basic_stringbuf<Char, Traits, Alloc>*>(&buf_);
   }
 
@@ -267,7 +267,7 @@ public:
 
   void imbue(const locale&) {} // stub
 
-  basic_stringbuf<Char, Traits, Alloc>* rdbuf() const {
+  [[gnu::always_inline]] basic_stringbuf<Char, Traits, Alloc>* rdbuf() const {
     return const_cast<basic_stringbuf<Char, Traits, Alloc>*>(&buf_);
   }
 
@@ -317,7 +317,7 @@ public:
   void str(string_type&& s) { buf_.str(static_cast<string_type&&>(s)); }
 
   // Return our specific stringbuf (hides base class rdbuf())
-  basic_stringbuf<Char, Traits, Alloc>* rdbuf() const {
+  [[gnu::always_inline]] basic_stringbuf<Char, Traits, Alloc>* rdbuf() const {
     return const_cast<basic_stringbuf<Char, Traits, Alloc>*>(&buf_);
   }
 

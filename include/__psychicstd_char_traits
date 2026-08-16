@@ -10,10 +10,14 @@ template <typename Char> struct char_traits {
   using off_type = long long;
   using pos_type = long long;
 
-  static constexpr void assign(char_type& r, const char_type& c) noexcept {
+  [[gnu::always_inline]] static constexpr void
+  assign(char_type& r, const char_type& c) noexcept {
     r = c;
   }
-  static constexpr bool eq(char_type a, char_type b) noexcept { return a == b; }
+  [[gnu::always_inline]] static constexpr bool eq(char_type a,
+                                                  char_type b) noexcept {
+    return a == b;
+  }
   static constexpr bool lt(char_type a, char_type b) noexcept { return a < b; }
   static constexpr size_t length(const char_type* s) noexcept {
     size_t n = 0;

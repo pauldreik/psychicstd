@@ -32,20 +32,24 @@ struct basic_string_view {
 
   static constexpr size_type npos = size_type(-1);
 
-  constexpr basic_string_view() noexcept : data_(nullptr), size_(0) {}
-  constexpr basic_string_view(const Char* s, size_type n) noexcept
+  [[gnu::always_inline]] constexpr basic_string_view() noexcept
+      : data_(nullptr), size_(0) {}
+  [[gnu::always_inline]] constexpr basic_string_view(const Char* s,
+                                                     size_type n) noexcept
       : data_(s), size_(n) {}
   template <typename End>
     requires(__psychicstd_detail::is_same_v<End, Char*> ||
              __psychicstd_detail::is_same_v<End, const Char*>)
-  constexpr basic_string_view(const Char* first, End last) noexcept
+  [[gnu::always_inline]] constexpr basic_string_view(const Char* first,
+                                                     End last) noexcept
       : data_(first), size_(last - first) {}
-  constexpr basic_string_view(const Char* s) noexcept
+  [[gnu::always_inline]] constexpr basic_string_view(const Char* s) noexcept
       : data_(s), size_(_length(s)) {}
   constexpr basic_string_view(nullptr_t) = delete;
 
 private:
-  static constexpr size_type _length(const Char* s) noexcept {
+  [[gnu::always_inline]] static constexpr size_type
+  _length(const Char* s) noexcept {
     if (!s)
       return 0;
     if constexpr (__psychicstd_detail::is_same_v<Char, char>) {
@@ -78,16 +82,21 @@ public:
   [[gnu::always_inline]] constexpr bool empty() const noexcept {
     return size_ == 0;
   }
-  constexpr const Char& operator[](size_type i) const noexcept {
+  [[gnu::always_inline]] constexpr const Char&
+  operator[](size_type i) const noexcept {
     return data_[i];
   }
-  constexpr const Char& at(size_type i) const {
+  [[gnu::always_inline]] constexpr const Char& at(size_type i) const {
     if (i >= size_)
       _PSYCHICSTD_THROW_HELPER(__throw_out_of_range, "basic_string_view::at");
     return data_[i];
   }
-  constexpr const Char& front() const noexcept { return data_[0]; }
-  constexpr const Char& back() const noexcept { return data_[size_ - 1]; }
+  [[gnu::always_inline]] constexpr const Char& front() const noexcept {
+    return data_[0];
+  }
+  [[gnu::always_inline]] constexpr const Char& back() const noexcept {
+    return data_[size_ - 1];
+  }
 
   [[gnu::always_inline]] constexpr iterator begin() const noexcept {
     return data_;
@@ -95,16 +104,26 @@ public:
   [[gnu::always_inline]] constexpr iterator end() const noexcept {
     return data_ + size_;
   }
-  constexpr const_iterator cbegin() const noexcept { return begin(); }
-  constexpr const_iterator cend() const noexcept { return end(); }
-  constexpr reverse_iterator rbegin() const noexcept {
+  [[gnu::always_inline]] constexpr const_iterator cbegin() const noexcept {
+    return begin();
+  }
+  [[gnu::always_inline]] constexpr const_iterator cend() const noexcept {
+    return end();
+  }
+  [[gnu::always_inline]] constexpr reverse_iterator rbegin() const noexcept {
     return reverse_iterator(end());
   }
-  constexpr reverse_iterator rend() const noexcept {
+  [[gnu::always_inline]] constexpr reverse_iterator rend() const noexcept {
     return reverse_iterator(begin());
   }
-  constexpr const_reverse_iterator crbegin() const noexcept { return rbegin(); }
-  constexpr const_reverse_iterator crend() const noexcept { return rend(); }
+  [[gnu::always_inline]] constexpr const_reverse_iterator
+  crbegin() const noexcept {
+    return rbegin();
+  }
+  [[gnu::always_inline]] constexpr const_reverse_iterator
+  crend() const noexcept {
+    return rend();
+  }
 
   constexpr basic_string_view substr(size_type pos, size_type n = npos) const {
     if (pos > size_)
@@ -115,8 +134,8 @@ public:
     return {data_ + pos, n};
   }
 
-  constexpr size_type copy(Char* destination, size_type count,
-                           size_type pos = 0) const {
+  [[gnu::always_inline]] constexpr size_type
+  copy(Char* destination, size_type count, size_type pos = 0) const {
     if (pos > size_)
       _PSYCHICSTD_THROW_HELPER(__throw_out_of_range, "basic_string_view::copy");
     if (count > size_ - pos)
@@ -126,7 +145,8 @@ public:
     return count;
   }
 
-  constexpr size_type find(Char c, size_type pos = 0) const noexcept {
+  [[gnu::always_inline]] constexpr size_type
+  find(Char c, size_type pos = 0) const noexcept {
     if constexpr (sizeof(Char) == 1) {
       if (!__builtin_is_constant_evaluated() && pos < size_) {
         const void* found = __builtin_memchr(
@@ -140,8 +160,8 @@ public:
     return npos;
   }
 
-  constexpr size_type find(basic_string_view sv,
-                           size_type pos = 0) const noexcept {
+  [[gnu::always_inline]] constexpr size_type
+  find(basic_string_view sv, size_type pos = 0) const noexcept {
     if (sv.size_ == 0)
       return pos <= size_ ? pos : npos;
     if (sv.size_ > size_)
@@ -151,12 +171,13 @@ public:
         return i;
     return npos;
   }
-  constexpr size_type find(const Char* s, size_type pos,
-                           size_type count) const noexcept {
+  [[gnu::always_inline]] constexpr size_type
+  find(const Char* s, size_type pos, size_type count) const noexcept {
     return find(basic_string_view(s, count), pos);
   }
 
-  constexpr size_type rfind(Char c, size_type pos = npos) const noexcept {
+  [[gnu::always_inline]] constexpr size_type
+  rfind(Char c, size_type pos = npos) const noexcept {
     if (size_ == 0)
       return npos;
     size_type start = pos < size_ ? pos : size_ - 1;
@@ -166,8 +187,8 @@ public:
     return npos;
   }
 
-  constexpr size_type rfind(basic_string_view sv,
-                            size_type pos = npos) const noexcept {
+  [[gnu::always_inline]] constexpr size_type
+  rfind(basic_string_view sv, size_type pos = npos) const noexcept {
     if (sv.size_ > size_)
       return npos;
     size_type start = pos < size_ - sv.size_ ? pos : size_ - sv.size_;
@@ -176,32 +197,33 @@ public:
         return i;
     return npos;
   }
-  constexpr size_type rfind(const Char* s, size_type pos,
-                            size_type count) const noexcept {
+  [[gnu::always_inline]] constexpr size_type
+  rfind(const Char* s, size_type pos, size_type count) const noexcept {
     return rfind(basic_string_view(s, count), pos);
   }
 
-  constexpr size_type find_first_of(Char c, size_type pos = 0) const noexcept {
+  [[gnu::always_inline]] constexpr size_type
+  find_first_of(Char c, size_type pos = 0) const noexcept {
     return find(c, pos);
   }
-  constexpr size_type find_first_of(basic_string_view sv,
-                                    size_type pos = 0) const noexcept {
+  [[gnu::always_inline]] constexpr size_type
+  find_first_of(basic_string_view sv, size_type pos = 0) const noexcept {
     for (size_type i = pos; i < size_; ++i)
       if (sv.find(data_[i]) != npos)
         return i;
     return npos;
   }
-  constexpr size_type find_first_of(const Char* s, size_type pos,
-                                    size_type count) const noexcept {
+  [[gnu::always_inline]] constexpr size_type
+  find_first_of(const Char* s, size_type pos, size_type count) const noexcept {
     return find_first_of(basic_string_view(s, count), pos);
   }
 
-  constexpr size_type find_last_of(Char c,
-                                   size_type pos = npos) const noexcept {
+  [[gnu::always_inline]] constexpr size_type
+  find_last_of(Char c, size_type pos = npos) const noexcept {
     return rfind(c, pos);
   }
-  constexpr size_type find_last_of(basic_string_view sv,
-                                   size_type pos = npos) const noexcept {
+  [[gnu::always_inline]] constexpr size_type
+  find_last_of(basic_string_view sv, size_type pos = npos) const noexcept {
     if (size_ == 0)
       return npos;
     size_type start = pos < size_ ? pos : size_ - 1;
@@ -210,32 +232,33 @@ public:
         return i;
     return npos;
   }
-  constexpr size_type find_last_of(const Char* s, size_type pos,
-                                   size_type count) const noexcept {
+  [[gnu::always_inline]] constexpr size_type
+  find_last_of(const Char* s, size_type pos, size_type count) const noexcept {
     return find_last_of(basic_string_view(s, count), pos);
   }
 
-  constexpr size_type find_first_not_of(Char c,
-                                        size_type pos = 0) const noexcept {
+  [[gnu::always_inline]] constexpr size_type
+  find_first_not_of(Char c, size_type pos = 0) const noexcept {
     for (size_type i = pos; i < size_; ++i)
       if (data_[i] != c)
         return i;
     return npos;
   }
-  constexpr size_type find_first_not_of(basic_string_view sv,
-                                        size_type pos = 0) const noexcept {
+  [[gnu::always_inline]] constexpr size_type
+  find_first_not_of(basic_string_view sv, size_type pos = 0) const noexcept {
     for (size_type i = pos; i < size_; ++i)
       if (sv.find(data_[i]) == npos)
         return i;
     return npos;
   }
-  constexpr size_type find_first_not_of(const Char* s, size_type pos,
-                                        size_type count) const noexcept {
+  [[gnu::always_inline]] constexpr size_type
+  find_first_not_of(const Char* s, size_type pos,
+                    size_type count) const noexcept {
     return find_first_not_of(basic_string_view(s, count), pos);
   }
 
-  constexpr size_type find_last_not_of(Char c,
-                                       size_type pos = npos) const noexcept {
+  [[gnu::always_inline]] constexpr size_type
+  find_last_not_of(Char c, size_type pos = npos) const noexcept {
     if (size_ == 0)
       return npos;
     size_type start = pos < size_ ? pos : size_ - 1;
@@ -244,8 +267,8 @@ public:
         return i;
     return npos;
   }
-  constexpr size_type find_last_not_of(basic_string_view sv,
-                                       size_type pos = npos) const noexcept {
+  [[gnu::always_inline]] constexpr size_type
+  find_last_not_of(basic_string_view sv, size_type pos = npos) const noexcept {
     if (size_ == 0)
       return npos;
     size_type start = pos < size_ ? pos : size_ - 1;
@@ -254,12 +277,14 @@ public:
         return i;
     return npos;
   }
-  constexpr size_type find_last_not_of(const Char* s, size_type pos,
-                                       size_type count) const noexcept {
+  [[gnu::always_inline]] constexpr size_type
+  find_last_not_of(const Char* s, size_type pos,
+                   size_type count) const noexcept {
     return find_last_not_of(basic_string_view(s, count), pos);
   }
 
-  constexpr int compare(basic_string_view o) const noexcept {
+  [[gnu::always_inline]] constexpr int
+  compare(basic_string_view o) const noexcept {
     size_type n = size_ < o.size_ ? size_ : o.size_;
     int r = n ? Traits::compare(data_, o.data_, n) : 0;
     if (r != 0)
@@ -270,37 +295,45 @@ public:
       return 1;
     return 0;
   }
-  constexpr int compare(size_type pos, size_type count,
-                        basic_string_view o) const {
+  [[gnu::always_inline]] constexpr int compare(size_type pos, size_type count,
+                                               basic_string_view o) const {
     return substr(pos, count).compare(o);
   }
-  constexpr int compare(size_type pos1, size_type count1, basic_string_view o,
-                        size_type pos2, size_type count2 = npos) const {
+  [[gnu::always_inline]] constexpr int compare(size_type pos1, size_type count1,
+                                               basic_string_view o,
+                                               size_type pos2,
+                                               size_type count2 = npos) const {
     return substr(pos1, count1).compare(o.substr(pos2, count2));
   }
-  constexpr int compare(size_type pos, size_type count, const Char* s,
-                        size_type count2) const {
+  [[gnu::always_inline]] constexpr int compare(size_type pos, size_type count,
+                                               const Char* s,
+                                               size_type count2) const {
     return substr(pos, count).compare(basic_string_view(s, count2));
   }
 
-  constexpr bool starts_with(basic_string_view sv) const noexcept {
+  [[gnu::always_inline]] constexpr bool
+  starts_with(basic_string_view sv) const noexcept {
     return size_ >= sv.size_ &&
            (sv.size_ == 0 || Traits::compare(data_, sv.data_, sv.size_) == 0);
   }
-  constexpr bool ends_with(basic_string_view sv) const noexcept {
+  [[gnu::always_inline]] constexpr bool
+  ends_with(basic_string_view sv) const noexcept {
     return size_ >= sv.size_ &&
            (sv.size_ == 0 ||
             Traits::compare(data_ + size_ - sv.size_, sv.data_, sv.size_) == 0);
   }
-  constexpr bool contains(basic_string_view sv) const noexcept {
+  [[gnu::always_inline]] constexpr bool
+  contains(basic_string_view sv) const noexcept {
     return find(sv) != npos;
   }
 
-  constexpr void remove_prefix(size_type n) noexcept {
+  [[gnu::always_inline]] constexpr void remove_prefix(size_type n) noexcept {
     data_ += n;
     size_ -= n;
   }
-  constexpr void remove_suffix(size_type n) noexcept { size_ -= n; }
+  [[gnu::always_inline]] constexpr void remove_suffix(size_type n) noexcept {
+    size_ -= n;
+  }
 
 private:
   const Char* data_;
@@ -308,13 +341,13 @@ private:
 };
 
 template <typename C, typename T>
-constexpr bool operator==(
+[[gnu::always_inline]] constexpr bool operator==(
     basic_string_view<C, T> a,
     __psychicstd_detail::type_identity_t<basic_string_view<C, T>> b) noexcept {
   return a.size() == b.size() && a.compare(b) == 0;
 }
 template <typename C, typename T>
-constexpr auto operator<=>(
+[[gnu::always_inline]] constexpr auto operator<=>(
     basic_string_view<C, T> a,
     __psychicstd_detail::type_identity_t<basic_string_view<C, T>> b) noexcept {
   return a.compare(b) <=> 0;
@@ -334,19 +367,24 @@ inline namespace string_view_literals {
 #pragma clang diagnostic ignored "-Wuser-defined-literals"
 #endif
 #pragma GCC diagnostic ignored "-Wliteral-suffix"
-constexpr string_view operator""sv(const char* s, size_t n) noexcept {
+[[gnu::always_inline]] constexpr string_view operator""sv(const char* s,
+                                                          size_t n) noexcept {
   return {s, n};
 }
-constexpr wstring_view operator""sv(const wchar_t* s, size_t n) noexcept {
+[[gnu::always_inline]] constexpr wstring_view operator""sv(const wchar_t* s,
+                                                           size_t n) noexcept {
   return {s, n};
 }
-constexpr u8string_view operator""sv(const char8_t* s, size_t n) noexcept {
+[[gnu::always_inline]] constexpr u8string_view operator""sv(const char8_t* s,
+                                                            size_t n) noexcept {
   return {s, n};
 }
-constexpr u16string_view operator""sv(const char16_t* s, size_t n) noexcept {
+[[gnu::always_inline]] constexpr u16string_view
+operator""sv(const char16_t* s, size_t n) noexcept {
   return {s, n};
 }
-constexpr u32string_view operator""sv(const char32_t* s, size_t n) noexcept {
+[[gnu::always_inline]] constexpr u32string_view
+operator""sv(const char32_t* s, size_t n) noexcept {
   return {s, n};
 }
 #pragma GCC diagnostic pop
@@ -354,7 +392,7 @@ constexpr u32string_view operator""sv(const char32_t* s, size_t n) noexcept {
 }
 
 template <typename Char, typename StreamTraits, typename StringTraits>
-basic_ostream<Char, StreamTraits>&
+[[gnu::always_inline]] inline basic_ostream<Char, StreamTraits>&
 operator<<(basic_ostream<Char, StreamTraits>& os,
            basic_string_view<Char, StringTraits> sv) {
   return os.__put(sv.data(), (streamsize)sv.size());

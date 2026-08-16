@@ -45,7 +45,10 @@ public:
     }
   }
   void merge(map&& source) { merge(source); }
-  friend void swap(map& a, map& b) noexcept(noexcept(a.swap(b))) { a.swap(b); }
+  [[gnu::always_inline]] friend void
+  swap(map& a, map& b) noexcept(noexcept(a.swap(b))) {
+    a.swap(b);
+  }
 };
 
 template <typename Key, typename T, typename Compare, typename Alloc>

@@ -25,17 +25,18 @@ public:
 
   [[gnu::always_inline]] bool empty() const { return c.empty(); }
   [[gnu::always_inline]] size_type size() const { return c.size(); }
-  reference front() { return c.front(); }
-  const_reference front() const { return c.front(); }
-  reference back() { return c.back(); }
-  const_reference back() const { return c.back(); }
-  void push(const T& v) { c.push_back(v); }
-  void push(T&& v) { c.push_back(static_cast<T&&>(v)); }
-  template <typename... Args> decltype(auto) emplace(Args&&... args) {
+  [[gnu::always_inline]] reference front() { return c.front(); }
+  [[gnu::always_inline]] const_reference front() const { return c.front(); }
+  [[gnu::always_inline]] reference back() { return c.back(); }
+  [[gnu::always_inline]] const_reference back() const { return c.back(); }
+  [[gnu::always_inline]] void push(const T& v) { c.push_back(v); }
+  [[gnu::always_inline]] void push(T&& v) { c.push_back(static_cast<T&&>(v)); }
+  template <typename... Args>
+  [[gnu::always_inline]] decltype(auto) emplace(Args&&... args) {
     return c.emplace_back(static_cast<Args&&>(args)...);
   }
-  void pop() { c.pop_front(); }
-  void swap(queue& q) noexcept {
+  [[gnu::always_inline]] void pop() { c.pop_front(); }
+  [[gnu::always_inline]] void swap(queue& q) noexcept {
     using std::swap;
     swap(c, q.c);
   }
@@ -49,7 +50,9 @@ bool operator==(const queue<T, Container>& a, const queue<T, Container>& b) {
   return a.c == b.c;
 }
 template <typename T, typename Container>
-bool operator!=(const queue<T, Container>& a, const queue<T, Container>& b) {
+[[gnu::always_inline]]
+inline bool operator!=(const queue<T, Container>& a,
+                       const queue<T, Container>& b) {
   return !(a == b);
 }
 template <typename T, typename Container>
@@ -57,15 +60,21 @@ bool operator<(const queue<T, Container>& a, const queue<T, Container>& b) {
   return a.c < b.c;
 }
 template <typename T, typename Container>
-bool operator>(const queue<T, Container>& a, const queue<T, Container>& b) {
+[[gnu::always_inline]]
+inline bool operator>(const queue<T, Container>& a,
+                      const queue<T, Container>& b) {
   return b < a;
 }
 template <typename T, typename Container>
-bool operator<=(const queue<T, Container>& a, const queue<T, Container>& b) {
+[[gnu::always_inline]]
+inline bool operator<=(const queue<T, Container>& a,
+                       const queue<T, Container>& b) {
   return !(b < a);
 }
 template <typename T, typename Container>
-bool operator>=(const queue<T, Container>& a, const queue<T, Container>& b) {
+[[gnu::always_inline]]
+inline bool operator>=(const queue<T, Container>& a,
+                       const queue<T, Container>& b) {
   return !(a < b);
 }
 
@@ -91,7 +100,7 @@ public:
 
   [[gnu::always_inline]] bool empty() const { return c.empty(); }
   [[gnu::always_inline]] size_type size() const { return c.size(); }
-  const_reference top() const { return c.front(); }
+  [[gnu::always_inline]] const_reference top() const { return c.front(); }
   void push(const T& v) {
     c.push_back(v);
     push_heap(c.begin(), c.end(), comp_);

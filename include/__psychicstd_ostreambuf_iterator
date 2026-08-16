@@ -17,18 +17,20 @@ public:
   using pointer = void;
   using reference = void;
 
-  ostreambuf_iterator(ostream_type& os) noexcept : sb_(os.rdbuf()) {}
-  ostreambuf_iterator(streambuf_type* sb) noexcept : sb_(sb) {}
+  [[gnu::always_inline]] ostreambuf_iterator(ostream_type& os) noexcept
+      : sb_(os.rdbuf()) {}
+  [[gnu::always_inline]] ostreambuf_iterator(streambuf_type* sb) noexcept
+      : sb_(sb) {}
 
-  ostreambuf_iterator& operator=(Char c) {
+  [[gnu::always_inline]] ostreambuf_iterator& operator=(Char c) {
     if (sb_ && Traits::eq_int_type(sb_->sputc(c), Traits::eof()))
       sb_ = nullptr;
     return *this;
   }
-  ostreambuf_iterator& operator*() { return *this; }
-  ostreambuf_iterator& operator++() { return *this; }
-  ostreambuf_iterator& operator++(int) { return *this; }
-  bool failed() const noexcept { return sb_ == nullptr; }
+  [[gnu::always_inline]] ostreambuf_iterator& operator*() { return *this; }
+  [[gnu::always_inline]] ostreambuf_iterator& operator++() { return *this; }
+  [[gnu::always_inline]] ostreambuf_iterator& operator++(int) { return *this; }
+  [[gnu::always_inline]] bool failed() const noexcept { return sb_ == nullptr; }
 
 private:
   streambuf_type* sb_;

@@ -72,24 +72,28 @@ public:
     using pointer = T*;
     using reference = T&;
     NodeBase* n;
-    explicit iterator(NodeBase* n = nullptr) : n(n) {}
-    T& operator*() const { return node(n)->value; }
-    T* operator->() const { return &node(n)->value; }
-    iterator& operator++() {
+    [[gnu::always_inline]] explicit iterator(NodeBase* n = nullptr) : n(n) {}
+    [[gnu::always_inline]] T& operator*() const { return node(n)->value; }
+    [[gnu::always_inline]] T* operator->() const { return &node(n)->value; }
+    [[gnu::always_inline]] iterator& operator++() {
       n = n->next;
       return *this;
     }
-    iterator operator++(int) {
+    [[gnu::always_inline]] iterator operator++(int) {
       auto t = *this;
       ++*this;
       return t;
     }
-    iterator& operator--() {
+    [[gnu::always_inline]] iterator& operator--() {
       n = n->prev;
       return *this;
     }
-    bool operator==(const iterator& o) const { return n == o.n; }
-    bool operator!=(const iterator& o) const { return n != o.n; }
+    [[gnu::always_inline]] bool operator==(const iterator& o) const {
+      return n == o.n;
+    }
+    [[gnu::always_inline]] bool operator!=(const iterator& o) const {
+      return n != o.n;
+    }
   };
   struct const_iterator {
     using iterator_category = bidirectional_iterator_tag;
@@ -98,34 +102,53 @@ public:
     using pointer = const T*;
     using reference = const T&;
     const NodeBase* n;
-    explicit const_iterator(const NodeBase* n = nullptr) : n(n) {}
-    const_iterator(iterator it) : n(it.n) {}
-    const T& operator*() const { return node(n)->value; }
-    const T* operator->() const { return &node(n)->value; }
-    const_iterator& operator++() {
+    [[gnu::always_inline]] explicit const_iterator(const NodeBase* n = nullptr)
+        : n(n) {}
+    [[gnu::always_inline]] const_iterator(iterator it) : n(it.n) {}
+    [[gnu::always_inline]] const T& operator*() const { return node(n)->value; }
+    [[gnu::always_inline]] const T* operator->() const {
+      return &node(n)->value;
+    }
+    [[gnu::always_inline]] const_iterator& operator++() {
       n = n->next;
       return *this;
     }
-    const_iterator operator++(int) {
+    [[gnu::always_inline]] const_iterator operator++(int) {
       auto t = *this;
       ++*this;
       return t;
     }
-    const_iterator& operator--() {
+    [[gnu::always_inline]] const_iterator& operator--() {
       n = n->prev;
       return *this;
     }
-    const_iterator operator--(int) {
+    [[gnu::always_inline]] const_iterator operator--(int) {
       auto t = *this;
       --*this;
       return t;
     }
-    bool operator==(const const_iterator& o) const { return n == o.n; }
-    bool operator!=(const const_iterator& o) const { return n != o.n; }
-    friend bool operator==(iterator a, const_iterator b) { return a.n == b.n; }
-    friend bool operator==(const_iterator a, iterator b) { return a.n == b.n; }
-    friend bool operator!=(iterator a, const_iterator b) { return !(a == b); }
-    friend bool operator!=(const_iterator a, iterator b) { return !(a == b); }
+    [[gnu::always_inline]] bool operator==(const const_iterator& o) const {
+      return n == o.n;
+    }
+    [[gnu::always_inline]] bool operator!=(const const_iterator& o) const {
+      return n != o.n;
+    }
+    [[gnu::always_inline]] friend bool operator==(iterator a,
+                                                  const_iterator b) {
+      return a.n == b.n;
+    }
+    [[gnu::always_inline]] friend bool operator==(const_iterator a,
+                                                  iterator b) {
+      return a.n == b.n;
+    }
+    [[gnu::always_inline]] friend bool operator!=(iterator a,
+                                                  const_iterator b) {
+      return !(a == b);
+    }
+    [[gnu::always_inline]] friend bool operator!=(const_iterator a,
+                                                  iterator b) {
+      return !(a == b);
+    }
   };
 
   using reverse_iterator = std::reverse_iterator<iterator>;
@@ -149,7 +172,9 @@ public:
     for (const auto& v : o)
       push_back(v);
   }
-  list(list&& o) noexcept : alloc_(o.alloc_) { take_nodes(o); }
+  [[gnu::always_inline]] list(list&& o) noexcept : alloc_(o.alloc_) {
+    take_nodes(o);
+  }
   ~list() { clear(); }
   list& operator=(const list& o) {
     if (this != &o) {
@@ -169,32 +194,48 @@ public:
     return *this;
   }
 
-  iterator begin() { return iterator(sentinel_.next); }
-  iterator end() { return iterator(&sentinel_); }
-  const_iterator begin() const { return const_iterator(sentinel_.next); }
-  const_iterator end() const { return const_iterator(&sentinel_); }
-  const_iterator cbegin() const { return begin(); }
-  const_iterator cend() const { return end(); }
+  [[gnu::always_inline]] iterator begin() { return iterator(sentinel_.next); }
+  [[gnu::always_inline]] iterator end() { return iterator(&sentinel_); }
+  [[gnu::always_inline]] const_iterator begin() const {
+    return const_iterator(sentinel_.next);
+  }
+  [[gnu::always_inline]] const_iterator end() const {
+    return const_iterator(&sentinel_);
+  }
+  [[gnu::always_inline]] const_iterator cbegin() const { return begin(); }
+  [[gnu::always_inline]] const_iterator cend() const { return end(); }
 
-  reverse_iterator rbegin() { return reverse_iterator(end()); }
-  reverse_iterator rend() { return reverse_iterator(begin()); }
-  const_reverse_iterator rbegin() const {
+  [[gnu::always_inline]] reverse_iterator rbegin() {
+    return reverse_iterator(end());
+  }
+  [[gnu::always_inline]] reverse_iterator rend() {
+    return reverse_iterator(begin());
+  }
+  [[gnu::always_inline]] const_reverse_iterator rbegin() const {
     return const_reverse_iterator(end());
   }
-  const_reverse_iterator rend() const {
+  [[gnu::always_inline]] const_reverse_iterator rend() const {
     return const_reverse_iterator(begin());
   }
-  const_reverse_iterator crbegin() const { return rbegin(); }
-  const_reverse_iterator crend() const { return rend(); }
+  [[gnu::always_inline]] const_reverse_iterator crbegin() const {
+    return rbegin();
+  }
+  [[gnu::always_inline]] const_reverse_iterator crend() const { return rend(); }
 
   [[gnu::always_inline]] size_type size() const noexcept { return size_; }
   [[gnu::always_inline]] bool empty() const noexcept { return size_ == 0; }
-  allocator_type get_allocator() const noexcept { return alloc_; }
+  [[gnu::always_inline]] allocator_type get_allocator() const noexcept {
+    return alloc_;
+  }
 
-  T& front() { return node(sentinel_.next)->value; }
-  const T& front() const { return node(sentinel_.next)->value; }
-  T& back() { return node(sentinel_.prev)->value; }
-  const T& back() const { return node(sentinel_.prev)->value; }
+  [[gnu::always_inline]] T& front() { return node(sentinel_.next)->value; }
+  [[gnu::always_inline]] const T& front() const {
+    return node(sentinel_.next)->value;
+  }
+  [[gnu::always_inline]] T& back() { return node(sentinel_.prev)->value; }
+  [[gnu::always_inline]] const T& back() const {
+    return node(sentinel_.prev)->value;
+  }
 
   void push_back(const T& v) { link_back(new Node(v)); }
   void push_back(T&& v) { link_back(new Node(static_cast<T&&>(v))); }
@@ -268,7 +309,7 @@ public:
       first = erase(first);
     return iterator(const_cast<NodeBase*>(last.n));
   }
-  iterator insert(const_iterator pos, const T& v) {
+  [[gnu::always_inline]] iterator insert(const_iterator pos, const T& v) {
     return insert(iterator(const_cast<NodeBase*>(pos.n)), v);
   }
   iterator insert(iterator pos, const T& v) {

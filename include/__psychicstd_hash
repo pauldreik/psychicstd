@@ -56,12 +56,14 @@ template <> struct hash<double> {
   }
 };
 template <typename T> struct hash<T*> {
-  size_t operator()(T* p) const noexcept { return (size_t)p; }
+  [[gnu::always_inline]] size_t operator()(T* p) const noexcept {
+    return (size_t)p;
+  }
 };
 template <typename T>
   requires(__is_enum(T))
 struct hash<T> {
-  size_t operator()(T value) const noexcept {
+  [[gnu::always_inline]] size_t operator()(T value) const noexcept {
     using underlying_type = __underlying_type(T);
     return hash<underlying_type>{}(static_cast<underlying_type>(value));
   }

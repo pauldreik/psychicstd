@@ -17,15 +17,17 @@ namespace detail {
 template <size_t Index, typename T> struct tuple_leaf {
   T value;
   constexpr tuple_leaf() = default;
-  constexpr explicit tuple_leaf(const T& v) : value(v) {}
-  constexpr explicit tuple_leaf(T&& v) : value(static_cast<T&&>(v)) {}
+  [[gnu::always_inline]] constexpr explicit tuple_leaf(const T& v) : value(v) {}
+  [[gnu::always_inline]] constexpr explicit tuple_leaf(T&& v)
+      : value(static_cast<T&&>(v)) {}
   template <typename U>
-  constexpr explicit tuple_leaf(U&& v) : value(static_cast<U&&>(v)) {}
+  [[gnu::always_inline]] constexpr explicit tuple_leaf(U&& v)
+      : value(static_cast<U&&>(v)) {}
 };
 // Reference-type specialisation: value is a reference, so assign through it.
 template <size_t Index, typename T> struct tuple_leaf<Index, T&> {
   T& value;
-  explicit tuple_leaf(T& v) : value(v) {}
+  [[gnu::always_inline]] explicit tuple_leaf(T& v) : value(v) {}
   tuple_leaf(const tuple_leaf&) = default;
   tuple_leaf(tuple_leaf&&) = default;
   tuple_leaf& operator=(const tuple_leaf& o) {
@@ -44,7 +46,7 @@ template <size_t... Is, typename... Ts>
 struct tuple_impl<index_sequence<Is...>, Ts...> : tuple_leaf<Is, Ts>... {
   constexpr tuple_impl() = default;
   template <typename... Us>
-  constexpr explicit tuple_impl(Us&&... args)
+  [[gnu::always_inline]] constexpr explicit tuple_impl(Us&&... args)
       : tuple_leaf<Is, Ts>(static_cast<Us&&>(args))... {}
 };
 }
@@ -83,7 +85,7 @@ public:
   // argument needing a conversion (e.g. string literal -> const char*) ties
   // with the forwarding template below and the call becomes ambiguous.
   // Never explicit: Ts is nearly always convertible to itself.
-  constexpr tuple(const Ts&... args)
+  [[gnu::always_inline]] constexpr tuple(const Ts&... args)
     requires(sizeof...(Ts) != 0 && (is_copy_constructible_v<Ts> && ...))
       : base(args...) {}
 
@@ -94,18 +96,21 @@ public:
              !(sizeof...(Us) == 1 &&
                (is_same_v<remove_cvref_t<Us>, tuple> || ...)) &&
              (is_constructible_v<Ts, Us &&> && ...))
-  constexpr explicit(!(is_convertible_v<Us, Ts> && ...)) tuple(Us&&... args)
+  [[gnu::always_inline]] constexpr explicit(!(is_convertible_v<Us, Ts> && ...))
+      tuple(Us&&... args)
       : base(static_cast<Us&&>(args)...) {}
 
   template <typename... Us>
     requires(sizeof...(Us) == sizeof...(Ts) &&
              (is_constructible_v<Ts, const Us&> && ...))
+  [[gnu::always_inline]]
   tuple(const tuple<Us...>& other)
       : tuple(other, make_index_sequence<sizeof...(Ts)>{}) {}
 
   template <typename... Us>
     requires(sizeof...(Us) == sizeof...(Ts) &&
              (is_constructible_v<Ts, Us &&> && ...))
+  [[gnu::always_inline]]
   tuple(tuple<Us...>&& other)
       : tuple(static_cast<tuple<Us...>&&>(other),
               make_index_sequence<sizeof...(Ts)>{}) {}
@@ -282,6 +287,7 @@ constexpr bool operator==(const tuple<Ts...>& a, const tuple<Us...>& b) {
 }
 template <typename... Ts, typename... Us>
   requires(sizeof...(Ts) == sizeof...(Us))
+[[gnu::always_inline]]
 constexpr bool operator!=(const tuple<Ts...>& a, const tuple<Us...>& b) {
   return !(a == b);
 }
@@ -306,32 +312,38 @@ constexpr bool operator<(const tuple<Ts...>& a, const tuple<Ts...>& b) {
   return detail::tuple_lt<0>(a, b);
 }
 template <typename... Ts>
+[[gnu::always_inline]]
 constexpr bool operator<=(const tuple<Ts...>& a, const tuple<Ts...>& b) {
   return !(b < a);
 }
 template <typename... Ts>
+[[gnu::always_inline]]
 constexpr bool operator>(const tuple<Ts...>& a, const tuple<Ts...>& b) {
   return b < a;
 }
 template <typename... Ts>
+[[gnu::always_inline]]
 constexpr bool operator>=(const tuple<Ts...>& a, const tuple<Ts...>& b) {
   return !(a < b);
 }
 
 // make_tuple
 template <typename... Ts>
-constexpr tuple<unwrap_ref_decay_t<Ts>...> make_tuple(Ts&&... args) {
+[[gnu::always_inline]] constexpr tuple<unwrap_ref_decay_t<Ts>...>
+make_tuple(Ts&&... args) {
   return tuple<unwrap_ref_decay_t<Ts>...>(static_cast<Ts&&>(args)...);
 }
 
 // forward_as_tuple
 template <typename... Ts>
-constexpr tuple<Ts&&...> forward_as_tuple(Ts&&... args) noexcept {
+[[gnu::always_inline]] constexpr tuple<Ts&&...>
+forward_as_tuple(Ts&&... args) noexcept {
   return tuple<Ts&&...>(static_cast<Ts&&>(args)...);
 }
 
 // tie
-template <typename... Ts> constexpr tuple<Ts&...> tie(Ts&... args) noexcept {
+template <typename... Ts>
+[[gnu::always_inline]] constexpr tuple<Ts&...> tie(Ts&... args) noexcept {
   return tuple<Ts&...>(args...);
 }
 
@@ -345,7 +357,8 @@ inline constexpr _ignore_t ignore{};
 
 namespace detail {
 template <typename Tuple, size_t... Indices>
-constexpr auto tuple_cat_one(Tuple&& value, index_sequence<Indices...>) {
+[[gnu::always_inline]] constexpr auto
+tuple_cat_one(Tuple&& value, index_sequence<Indices...>) {
   using source = remove_cvref_t<Tuple>;
   return tuple<tuple_element_t<Indices, source>...>(
       get<Indices>(static_cast<Tuple&&>(value))...);
@@ -353,9 +366,9 @@ constexpr auto tuple_cat_one(Tuple&& value, index_sequence<Indices...>) {
 
 template <typename First, typename Second, size_t... FirstIndices,
           size_t... SecondIndices>
-constexpr auto tuple_cat_two(First&& first, Second&& second,
-                             index_sequence<FirstIndices...>,
-                             index_sequence<SecondIndices...>) {
+[[gnu::always_inline]] constexpr auto
+tuple_cat_two(First&& first, Second&& second, index_sequence<FirstIndices...>,
+              index_sequence<SecondIndices...>) {
   using first_type = remove_cvref_t<First>;
   using second_type = remove_cvref_t<Second>;
   return tuple<tuple_element_t<FirstIndices, first_type>...,
@@ -391,9 +404,9 @@ struct tuple_cat_indices<Tuples, index_sequence<ElementIndices...>,
 
 template <typename Result, typename Tuples, size_t... ElementIndices,
           size_t... TupleIndices>
-constexpr Result tuple_cat_many(index_sequence<ElementIndices...>,
-                                index_sequence<TupleIndices...>,
-                                Tuples&& tuples) {
+[[gnu::always_inline]] constexpr Result
+tuple_cat_many(index_sequence<ElementIndices...>,
+               index_sequence<TupleIndices...>, Tuples&& tuples) {
   return Result(
       get<ElementIndices>(get<TupleIndices>(static_cast<Tuples&&>(tuples)))...);
 }
@@ -401,14 +414,16 @@ constexpr Result tuple_cat_many(index_sequence<ElementIndices...>,
 
 constexpr tuple<> tuple_cat() { return {}; }
 
-template <typename Tuple> constexpr auto tuple_cat(Tuple&& value) {
+template <typename Tuple>
+[[gnu::always_inline]] constexpr auto tuple_cat(Tuple&& value) {
   return detail::tuple_cat_one(
       static_cast<Tuple&&>(value),
       make_index_sequence<tuple_size_v<remove_cvref_t<Tuple>>>{});
 }
 
 template <typename First, typename Second>
-constexpr auto tuple_cat(First&& first, Second&& second) {
+[[gnu::always_inline]] constexpr auto tuple_cat(First&& first,
+                                                Second&& second) {
   return detail::tuple_cat_two(
       static_cast<First&&>(first), static_cast<Second&&>(second),
       make_index_sequence<tuple_size_v<remove_cvref_t<First>>>{},
@@ -417,7 +432,8 @@ constexpr auto tuple_cat(First&& first, Second&& second) {
 
 template <typename First, typename Second, typename... Rest>
   requires(sizeof...(Rest) > 0)
-constexpr auto tuple_cat(First&& first, Second&& second, Rest&&... rest) {
+[[gnu::always_inline]] constexpr auto tuple_cat(First&& first, Second&& second,
+                                                Rest&&... rest) {
   using inputs = tuple<First&&, Second&&, Rest&&...>;
   using indices = detail::tuple_cat_indices<
       inputs, index_sequence<>, index_sequence<>, 0,

@@ -217,8 +217,12 @@ template <typename T> struct atomic {
   void store(T v, memory_order order = memory_order_seq_cst) volatile noexcept {
     __atomic_store(&val_, &v, int(order));
   }
-  bool is_lock_free() const noexcept { return is_always_lock_free; }
-  bool is_lock_free() const volatile noexcept { return is_always_lock_free; }
+  [[gnu::always_inline]] bool is_lock_free() const noexcept {
+    return is_always_lock_free;
+  }
+  [[gnu::always_inline]] bool is_lock_free() const volatile noexcept {
+    return is_always_lock_free;
+  }
 
   T fetch_add(difference_type arg,
               memory_order order = memory_order_seq_cst) noexcept
@@ -339,44 +343,44 @@ template <typename T> struct atomic {
                                      int(success), int(failure));
   }
 
-  operator T() const noexcept { return load(); }
-  operator T() const volatile noexcept { return load(); }
-  T operator=(T v) noexcept {
+  [[gnu::always_inline]] operator T() const noexcept { return load(); }
+  [[gnu::always_inline]] operator T() const volatile noexcept { return load(); }
+  [[gnu::always_inline]] T operator=(T v) noexcept {
     store(v);
     return v;
   }
-  T operator=(T v) volatile noexcept {
+  [[gnu::always_inline]] T operator=(T v) volatile noexcept {
     store(v);
     return v;
   }
 
-  T operator++() noexcept
+  [[gnu::always_inline]] T operator++() noexcept
     requires((is_integral_v<T> && !is_same_v<T, bool>) || is_pointer_v<T>)
   {
     return fetch_add(difference_type(1)) + difference_type(1);
   }
-  T operator++(int) noexcept
+  [[gnu::always_inline]] T operator++(int) noexcept
     requires((is_integral_v<T> && !is_same_v<T, bool>) || is_pointer_v<T>)
   {
     return fetch_add(difference_type(1));
   }
-  T operator--() noexcept
+  [[gnu::always_inline]] T operator--() noexcept
     requires((is_integral_v<T> && !is_same_v<T, bool>) || is_pointer_v<T>)
   {
     return fetch_sub(difference_type(1)) - difference_type(1);
   }
-  T operator--(int) noexcept
+  [[gnu::always_inline]] T operator--(int) noexcept
     requires((is_integral_v<T> && !is_same_v<T, bool>) || is_pointer_v<T>)
   {
     return fetch_sub(difference_type(1));
   }
-  T operator+=(difference_type v) noexcept
+  [[gnu::always_inline]] T operator+=(difference_type v) noexcept
     requires((is_integral_v<T> && !is_same_v<T, bool>) || is_pointer_v<T> ||
              is_floating_point_v<T>)
   {
     return fetch_add(v) + v;
   }
-  T operator-=(difference_type v) noexcept
+  [[gnu::always_inline]] T operator-=(difference_type v) noexcept
     requires((is_integral_v<T> && !is_same_v<T, bool>) || is_pointer_v<T> ||
              is_floating_point_v<T>)
   {
@@ -431,7 +435,9 @@ public:
   atomic_ref(const atomic_ref&) noexcept = default;
   atomic_ref& operator=(const atomic_ref&) = delete;
 
-  bool is_lock_free() const noexcept { return is_always_lock_free; }
+  [[gnu::always_inline]] bool is_lock_free() const noexcept {
+    return is_always_lock_free;
+  }
   T load(memory_order order = memory_order_seq_cst) const noexcept {
     T result;
     __atomic_load(ptr_, &result, int(order));
@@ -499,38 +505,38 @@ public:
   {
     return __atomic_fetch_xor(ptr_, value, int(order));
   }
-  operator T() const noexcept { return load(); }
-  T operator=(T value) const noexcept {
+  [[gnu::always_inline]] operator T() const noexcept { return load(); }
+  [[gnu::always_inline]] T operator=(T value) const noexcept {
     store(value);
     return value;
   }
-  T operator++() const noexcept
+  [[gnu::always_inline]] T operator++() const noexcept
     requires((is_integral_v<T> && !is_same_v<T, bool>) || is_pointer_v<T>)
   {
     return fetch_add(difference_type(1)) + difference_type(1);
   }
-  T operator++(int) const noexcept
+  [[gnu::always_inline]] T operator++(int) const noexcept
     requires((is_integral_v<T> && !is_same_v<T, bool>) || is_pointer_v<T>)
   {
     return fetch_add(difference_type(1));
   }
-  T operator--() const noexcept
+  [[gnu::always_inline]] T operator--() const noexcept
     requires((is_integral_v<T> && !is_same_v<T, bool>) || is_pointer_v<T>)
   {
     return fetch_sub(difference_type(1)) - difference_type(1);
   }
-  T operator--(int) const noexcept
+  [[gnu::always_inline]] T operator--(int) const noexcept
     requires((is_integral_v<T> && !is_same_v<T, bool>) || is_pointer_v<T>)
   {
     return fetch_sub(difference_type(1));
   }
-  T operator+=(difference_type value) const noexcept
+  [[gnu::always_inline]] T operator+=(difference_type value) const noexcept
     requires((is_integral_v<T> && !is_same_v<T, bool>) || is_pointer_v<T> ||
              is_floating_point_v<T>)
   {
     return fetch_add(value) + value;
   }
-  T operator-=(difference_type value) const noexcept
+  [[gnu::always_inline]] T operator-=(difference_type value) const noexcept
     requires((is_integral_v<T> && !is_same_v<T, bool>) || is_pointer_v<T> ||
              is_floating_point_v<T>)
   {
@@ -560,166 +566,199 @@ public:
   }
 };
 
-template <typename T> void atomic_init(atomic<T>* obj, T value) noexcept {
+template <typename T>
+[[gnu::always_inline]] inline void atomic_init(atomic<T>* obj,
+                                               T value) noexcept {
   obj->store(value, memory_order_relaxed);
 }
 template <typename T>
-void atomic_init(volatile atomic<T>* obj, T value) noexcept {
+[[gnu::always_inline]] inline void atomic_init(volatile atomic<T>* obj,
+                                               T value) noexcept {
   obj->store(value, memory_order_relaxed);
 }
-template <typename T> T atomic_load(const atomic<T>* obj) noexcept {
-  return obj->load();
-}
-template <typename T> T atomic_load(const volatile atomic<T>* obj) noexcept {
+template <typename T>
+[[gnu::always_inline]] inline T atomic_load(const atomic<T>* obj) noexcept {
   return obj->load();
 }
 template <typename T>
-T atomic_load_explicit(const atomic<T>* obj, memory_order order) noexcept {
+[[gnu::always_inline]] inline T
+atomic_load(const volatile atomic<T>* obj) noexcept {
+  return obj->load();
+}
+template <typename T>
+[[gnu::always_inline]] inline T
+atomic_load_explicit(const atomic<T>* obj, memory_order order) noexcept {
   return obj->load(order);
 }
 template <typename T>
-T atomic_load_explicit(const volatile atomic<T>* obj,
-                       memory_order order) noexcept {
+[[gnu::always_inline]] inline T
+atomic_load_explicit(const volatile atomic<T>* obj,
+                     memory_order order) noexcept {
   return obj->load(order);
 }
-template <typename T> void atomic_store(atomic<T>* obj, T value) noexcept {
+template <typename T>
+[[gnu::always_inline]] inline void atomic_store(atomic<T>* obj,
+                                                T value) noexcept {
   obj->store(value);
 }
 template <typename T>
-void atomic_store(volatile atomic<T>* obj, T value) noexcept {
+[[gnu::always_inline]] inline void atomic_store(volatile atomic<T>* obj,
+                                                T value) noexcept {
   obj->store(value);
 }
 template <typename T>
-void atomic_store_explicit(atomic<T>* obj, T value,
-                           memory_order order) noexcept {
+[[gnu::always_inline]] inline void
+atomic_store_explicit(atomic<T>* obj, T value, memory_order order) noexcept {
   obj->store(value, order);
 }
 template <typename T>
-void atomic_store_explicit(volatile atomic<T>* obj, T value,
-                           memory_order order) noexcept {
+[[gnu::always_inline]] inline void
+atomic_store_explicit(volatile atomic<T>* obj, T value,
+                      memory_order order) noexcept {
   obj->store(value, order);
 }
-template <typename T> T atomic_exchange(atomic<T>* obj, T value) noexcept {
+template <typename T>
+[[gnu::always_inline]] inline T atomic_exchange(atomic<T>* obj,
+                                                T value) noexcept {
   return obj->exchange(value);
 }
 template <typename T>
-T atomic_exchange(volatile atomic<T>* obj, T value) noexcept {
+[[gnu::always_inline]] inline T atomic_exchange(volatile atomic<T>* obj,
+                                                T value) noexcept {
   return obj->exchange(value);
 }
 template <typename T>
-T atomic_exchange_explicit(atomic<T>* obj, T value,
-                           memory_order order) noexcept {
+[[gnu::always_inline]] inline T
+atomic_exchange_explicit(atomic<T>* obj, T value, memory_order order) noexcept {
   return obj->exchange(value, order);
 }
 template <typename T>
-T atomic_exchange_explicit(volatile atomic<T>* obj, T value,
-                           memory_order order) noexcept {
+[[gnu::always_inline]] inline T
+atomic_exchange_explicit(volatile atomic<T>* obj, T value,
+                         memory_order order) noexcept {
   return obj->exchange(value, order);
 }
 template <typename T>
-bool atomic_compare_exchange_weak(atomic<T>* obj, T* expected,
-                                  T desired) noexcept {
+[[gnu::always_inline]] inline bool
+atomic_compare_exchange_weak(atomic<T>* obj, T* expected, T desired) noexcept {
   return obj->compare_exchange_weak(*expected, desired);
 }
 template <typename T>
-bool atomic_compare_exchange_weak(volatile atomic<T>* obj, T* expected,
-                                  T desired) noexcept {
+[[gnu::always_inline]] inline bool
+atomic_compare_exchange_weak(volatile atomic<T>* obj, T* expected,
+                             T desired) noexcept {
   return obj->compare_exchange_weak(*expected, desired);
 }
 template <typename T>
-bool atomic_compare_exchange_weak_explicit(atomic<T>* obj, T* expected,
-                                           T desired, memory_order success,
-                                           memory_order failure) noexcept {
+[[gnu::always_inline]] inline bool
+atomic_compare_exchange_weak_explicit(atomic<T>* obj, T* expected, T desired,
+                                      memory_order success,
+                                      memory_order failure) noexcept {
   return obj->compare_exchange_weak(*expected, desired, success, failure);
 }
 template <typename T>
-bool atomic_compare_exchange_weak_explicit(volatile atomic<T>* obj, T* expected,
-                                           T desired, memory_order success,
-                                           memory_order failure) noexcept {
+[[gnu::always_inline]] inline bool
+atomic_compare_exchange_weak_explicit(volatile atomic<T>* obj, T* expected,
+                                      T desired, memory_order success,
+                                      memory_order failure) noexcept {
   return obj->compare_exchange_weak(*expected, desired, success, failure);
 }
 template <typename T>
-bool atomic_compare_exchange_strong(atomic<T>* obj, T* expected,
-                                    T desired) noexcept {
+[[gnu::always_inline]] inline bool
+atomic_compare_exchange_strong(atomic<T>* obj, T* expected,
+                               T desired) noexcept {
   return obj->compare_exchange_strong(*expected, desired);
 }
 template <typename T>
-bool atomic_compare_exchange_strong(volatile atomic<T>* obj, T* expected,
-                                    T desired) noexcept {
+[[gnu::always_inline]] inline bool
+atomic_compare_exchange_strong(volatile atomic<T>* obj, T* expected,
+                               T desired) noexcept {
   return obj->compare_exchange_strong(*expected, desired);
 }
 template <typename T>
-bool atomic_compare_exchange_strong_explicit(atomic<T>* obj, T* expected,
-                                             T desired, memory_order success,
-                                             memory_order failure) noexcept {
+[[gnu::always_inline]] inline bool
+atomic_compare_exchange_strong_explicit(atomic<T>* obj, T* expected, T desired,
+                                        memory_order success,
+                                        memory_order failure) noexcept {
   return obj->compare_exchange_strong(*expected, desired, success, failure);
 }
 template <typename T>
-bool atomic_compare_exchange_strong_explicit(volatile atomic<T>* obj,
-                                             T* expected, T desired,
-                                             memory_order success,
-                                             memory_order failure) noexcept {
+[[gnu::always_inline]] inline bool
+atomic_compare_exchange_strong_explicit(volatile atomic<T>* obj, T* expected,
+                                        T desired, memory_order success,
+                                        memory_order failure) noexcept {
   return obj->compare_exchange_strong(*expected, desired, success, failure);
 }
 
-#define _PSYCHICSTD_ATOMIC_FETCH(name)                                         \
+#define _PSYCHICSTD_ATOMIC_FETCH(name, decoration)                             \
   template <typename T>                                                        \
-  T atomic_fetch_##name(atomic<T>* obj,                                        \
-                        typename atomic<T>::difference_type value) noexcept {  \
+  decoration T atomic_fetch_##name(                                            \
+      atomic<T>* obj, typename atomic<T>::difference_type value) noexcept {    \
     return obj->fetch_##name(value);                                           \
   }                                                                            \
   template <typename T>                                                        \
-  T atomic_fetch_##name(volatile atomic<T>* obj,                               \
-                        typename atomic<T>::difference_type value) noexcept {  \
+  decoration T atomic_fetch_##name(                                            \
+      volatile atomic<T>* obj,                                                 \
+      typename atomic<T>::difference_type value) noexcept {                    \
     return obj->fetch_##name(value);                                           \
   }                                                                            \
   template <typename T>                                                        \
-  T atomic_fetch_##name##_explicit(atomic<T>* obj,                             \
-                                   typename atomic<T>::difference_type value,  \
-                                   memory_order order) noexcept {              \
+  decoration T atomic_fetch_##name##_explicit(                                 \
+      atomic<T>* obj, typename atomic<T>::difference_type value,               \
+      memory_order order) noexcept {                                           \
     return obj->fetch_##name(value, order);                                    \
   }                                                                            \
   template <typename T>                                                        \
-  T atomic_fetch_##name##_explicit(volatile atomic<T>* obj,                    \
-                                   typename atomic<T>::difference_type value,  \
-                                   memory_order order) noexcept {              \
+  decoration T atomic_fetch_##name##_explicit(                                 \
+      volatile atomic<T>* obj, typename atomic<T>::difference_type value,      \
+      memory_order order) noexcept {                                           \
     return obj->fetch_##name(value, order);                                    \
   }
 
-_PSYCHICSTD_ATOMIC_FETCH(add)
-_PSYCHICSTD_ATOMIC_FETCH(sub)
-_PSYCHICSTD_ATOMIC_FETCH(and)
-_PSYCHICSTD_ATOMIC_FETCH(or)
-_PSYCHICSTD_ATOMIC_FETCH(xor)
+_PSYCHICSTD_ATOMIC_FETCH(add, [[gnu::always_inline]] inline)
+_PSYCHICSTD_ATOMIC_FETCH(sub, [[gnu::always_inline]] inline)
+_PSYCHICSTD_ATOMIC_FETCH(and, )
+_PSYCHICSTD_ATOMIC_FETCH(or, )
+_PSYCHICSTD_ATOMIC_FETCH(xor, )
 #undef _PSYCHICSTD_ATOMIC_FETCH
 
-template <typename T> void atomic_wait(const atomic<T>* obj, T old) noexcept {
+template <typename T>
+[[gnu::always_inline]] inline void atomic_wait(const atomic<T>* obj,
+                                               T old) noexcept {
   obj->wait(old);
 }
 template <typename T>
-void atomic_wait(const volatile atomic<T>* obj, T old) noexcept {
+[[gnu::always_inline]] inline void atomic_wait(const volatile atomic<T>* obj,
+                                               T old) noexcept {
   obj->wait(old);
 }
 template <typename T>
-void atomic_wait_explicit(const atomic<T>* obj, T old,
-                          memory_order order) noexcept {
+[[gnu::always_inline]] inline void
+atomic_wait_explicit(const atomic<T>* obj, T old, memory_order order) noexcept {
   obj->wait(old, order);
 }
 template <typename T>
-void atomic_wait_explicit(const volatile atomic<T>* obj, T old,
-                          memory_order order) noexcept {
+[[gnu::always_inline]] inline void
+atomic_wait_explicit(const volatile atomic<T>* obj, T old,
+                     memory_order order) noexcept {
   obj->wait(old, order);
 }
-template <typename T> void atomic_notify_one(atomic<T>* obj) noexcept {
+template <typename T>
+[[gnu::always_inline]] inline void atomic_notify_one(atomic<T>* obj) noexcept {
   obj->notify_one();
 }
-template <typename T> void atomic_notify_one(volatile atomic<T>* obj) noexcept {
+template <typename T>
+[[gnu::always_inline]] inline void
+atomic_notify_one(volatile atomic<T>* obj) noexcept {
   obj->notify_one();
 }
-template <typename T> void atomic_notify_all(atomic<T>* obj) noexcept {
+template <typename T>
+[[gnu::always_inline]] inline void atomic_notify_all(atomic<T>* obj) noexcept {
   obj->notify_all();
 }
-template <typename T> void atomic_notify_all(volatile atomic<T>* obj) noexcept {
+template <typename T>
+[[gnu::always_inline]] inline void
+atomic_notify_all(volatile atomic<T>* obj) noexcept {
   obj->notify_all();
 }
 
@@ -771,11 +810,13 @@ using atomic_intmax_t = atomic<intmax_t>;
 using atomic_uintmax_t = atomic<uintmax_t>;
 
 template <typename T>
-bool atomic_is_lock_free(const atomic<T>* value) noexcept {
+[[gnu::always_inline]] inline bool
+atomic_is_lock_free(const atomic<T>* value) noexcept {
   return value->is_lock_free();
 }
 template <typename T>
-bool atomic_is_lock_free(const volatile atomic<T>* value) noexcept {
+[[gnu::always_inline]] inline bool
+atomic_is_lock_free(const volatile atomic<T>* value) noexcept {
   return value->is_lock_free();
 }
 

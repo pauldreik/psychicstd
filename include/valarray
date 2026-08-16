@@ -80,13 +80,15 @@ public:
     size_ = n;
   }
 
-  T& operator[](size_t i) { return data_[i]; }
-  const T& operator[](size_t i) const { return data_[i]; }
+  [[gnu::always_inline]] T& operator[](size_t i) { return data_[i]; }
+  [[gnu::always_inline]] const T& operator[](size_t i) const {
+    return data_[i];
+  }
 
-  T* begin() noexcept { return data_; }
-  T* end() noexcept { return data_ + size_; }
-  const T* begin() const noexcept { return data_; }
-  const T* end() const noexcept { return data_ + size_; }
+  [[gnu::always_inline]] T* begin() noexcept { return data_; }
+  [[gnu::always_inline]] T* end() noexcept { return data_ + size_; }
+  [[gnu::always_inline]] const T* begin() const noexcept { return data_; }
+  [[gnu::always_inline]] const T* end() const noexcept { return data_ + size_; }
 };
 
 }

@@ -151,10 +151,12 @@ template <typename Mutex> struct unique_lock {
     m_->unlock();
     owns_ = false;
   }
-  bool owns_lock() const noexcept { return owns_; }
-  explicit operator bool() const noexcept { return owns_; }
-  Mutex* mutex() const noexcept { return m_; }
-  Mutex* release() noexcept {
+  [[gnu::always_inline]] bool owns_lock() const noexcept { return owns_; }
+  [[gnu::always_inline]] explicit operator bool() const noexcept {
+    return owns_;
+  }
+  [[gnu::always_inline]] Mutex* mutex() const noexcept { return m_; }
+  [[gnu::always_inline]] Mutex* release() noexcept {
     Mutex* result = m_;
     m_ = nullptr;
     owns_ = false;

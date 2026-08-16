@@ -10,10 +10,14 @@ template <typename T>
 template <typename T> const T* addressof(const T&&) = delete;
 
 template <typename T, typename... Args>
+[[gnu::always_inline]]
 constexpr T* construct_at(T* location, Args&&... args) {
   return ::new (static_cast<void*>(location)) T(static_cast<Args&&>(args)...);
 }
-template <typename T> constexpr void destroy_at(T* location) { location->~T(); }
+template <typename T>
+[[gnu::always_inline]] constexpr void destroy_at(T* location) {
+  location->~T();
+}
 template <typename ForwardIterator>
 constexpr void destroy(ForwardIterator first, ForwardIterator last) {
   for (; first != last; ++first)
