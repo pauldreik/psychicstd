@@ -211,6 +211,13 @@ get(tuple<Ts...>&& t) noexcept {
   return static_cast<tuple_element_t<Index, tuple<Ts...>>&&>(
       static_cast<Leaf&>(t).value);
 }
+template <size_t Index, typename... Ts>
+constexpr const tuple_element_t<Index, tuple<Ts...>>&&
+get(const tuple<Ts...>&& t) noexcept {
+  using Leaf = detail::tuple_leaf<Index, tuple_element_t<Index, tuple<Ts...>>>;
+  return static_cast<const tuple_element_t<Index, tuple<Ts...>>&&>(
+      static_cast<const Leaf&>(t).value);
+}
 
 template <typename T1, typename T2>
 template <typename... Args1, typename... Args2>
