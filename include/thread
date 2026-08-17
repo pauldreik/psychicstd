@@ -1,8 +1,9 @@
 #pragma once
+#include <__psychicstd_chrono_core>
 #include <__psychicstd_hash>
 #include <__psychicstd_invoke>
+#include <__psychicstd_thread_launch>
 #include <__psychicstd_type_traits_invoke>
-#include <chrono>
 #include <compare>
 #include <iosfwd>
 #include <stop_token>
@@ -17,8 +18,6 @@ namespace std {
 [[noreturn]] void terminate() noexcept;
 
 namespace __thread_detail {
-bool __create(unsigned long& handle, void* (*start)(void*),
-              void* state) noexcept;
 void __sleep_for(long long) noexcept;
 template <typename F, typename Tuple, size_t... Is>
 constexpr decltype(auto) __invoke_from_tuple(F&& f, Tuple& args,
@@ -54,11 +53,8 @@ class thread {
   unsigned long handle_{};
   bool joinable_ = false;
 
-  struct __state {
-    virtual ~__state() = default;
-    virtual void run() = 0;
-  };
-  template <typename F, typename... Args> struct __state_impl final : __state {
+  template <typename F, typename... Args>
+  struct __state_impl final : __thread_detail::__state {
     F function;
     tuple<Args...> arguments;
     template <typename Fn, typename... Ts>
@@ -70,8 +66,6 @@ class thread {
                                            arguments);
     }
   };
-  static void __destroy_state(void*) noexcept;
-  static void* __start(void*);
 
 public:
 #ifdef __APPLE__
@@ -100,7 +94,7 @@ public:
     static_assert(is_invocable_v<Fn, decay_t<Args>...>,
                   "psychicstd::thread callable is not invocable with args");
     auto* state = new State(static_cast<F&&>(f), static_cast<Args&&>(args)...);
-    if (!__thread_detail::__create(handle_, __start, state)) {
+    if (!__thread_detail::__create(handle_, __thread_detail::__start, state)) {
       delete state;
       __builtin_trap();
     }
@@ -129,7 +123,8 @@ class jthread {
   thread thread_{};
   stop_source source_{nostopstate};
 
-  template <typename F, typename... Args> struct __state : thread::__state {
+  template <typename F, typename... Args>
+  struct __state : __thread_detail::__state {
     F function;
     stop_token token;
     tuple<Args...> arguments;
@@ -157,7 +152,8 @@ class jthread {
                   "psychicstd::jthread callable is not invocable");
     auto* state = new State(static_cast<F&&>(f), source_.get_token(),
                             static_cast<Args&&>(args)...);
-    if (!__thread_detail::__create(thread_.handle_, thread::__start, state)) {
+    if (!__thread_detail::__create(thread_.handle_, __thread_detail::__start,
+                                   state)) {
       delete state;
       __builtin_trap();
     }

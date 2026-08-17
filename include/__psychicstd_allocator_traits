@@ -1,7 +1,13 @@
 #pragma once
 #include <__psychicstd_allocator>
+#include <__psychicstd_config>
 #include <__psychicstd_lifetime>
+#if _PSYCHICSTD_COMPATIBILITY_LEVEL >= _PSYCHICSTD_COMPAT_DROPIN
 #include <__psychicstd_type_traits_classification>
+#else
+#include <__psychicstd_type_traits_empty>
+#endif
+#include <__psychicstd_type_traits_declval>
 #include <cstddef>
 
 namespace std {
@@ -35,14 +41,17 @@ template <typename Ptr> struct pointer_traits {
   using difference_type = ptrdiff_t;
   template <typename U>
   using rebind = typename __detail::__pointer_rebind<Ptr, U>::type;
-  static pointer pointer_to(element_type& r) { return Ptr::pointer_to(r); }
+  [[gnu::always_inline]] static pointer pointer_to(element_type& r) {
+    return Ptr::pointer_to(r);
+  }
 };
 template <typename T> struct pointer_traits<T*> {
   using pointer = T*;
   using element_type = T;
   using difference_type = ptrdiff_t;
   template <typename U> using rebind = U*;
-  static constexpr pointer pointer_to(element_type& r) noexcept {
+  [[gnu::always_inline]] static constexpr pointer
+  pointer_to(element_type& r) noexcept {
     return addressof(r);
   }
 };
@@ -239,21 +248,24 @@ template <typename Alloc> struct allocator_traits {
   using rebind_alloc = typename __detail::__alloc_rebind<Alloc, T>::type;
   template <typename T> using rebind_traits = allocator_traits<rebind_alloc<T>>;
 
-  [[nodiscard]] static constexpr pointer allocate(Alloc& a, size_type n) {
+  [[nodiscard, gnu::always_inline]] static constexpr pointer
+  allocate(Alloc& a, size_type n) {
     return a.allocate(n);
   }
-  [[nodiscard]] static constexpr pointer allocate(Alloc& a, size_type n,
-                                                  const_void_pointer hint) {
+  [[nodiscard, gnu::always_inline]] static constexpr pointer
+  allocate(Alloc& a, size_type n, const_void_pointer hint) {
     if constexpr (requires { a.allocate(n, hint); })
       return a.allocate(n, hint);
     else
       return a.allocate(n);
   }
-  static constexpr void deallocate(Alloc& a, pointer p, size_type n) noexcept {
+  [[gnu::always_inline]] static constexpr void
+  deallocate(Alloc& a, pointer p, size_type n) noexcept {
     a.deallocate(p, n);
   }
   template <typename T, typename... Args>
-  static constexpr void construct(Alloc& a, T* p, Args&&... args) {
+  [[gnu::always_inline]] static constexpr void construct(Alloc& a, T* p,
+                                                         Args&&... args) {
     if constexpr (__detail::__has_construct<Alloc, T, Args...>) {
       // forward
       a.construct(p, static_cast<Args&&>(args)...);
@@ -262,16 +274,19 @@ template <typename Alloc> struct allocator_traits {
       construct_at(p, static_cast<Args&&>(args)...);
     }
   }
-  template <typename T> static constexpr void destroy(Alloc& a, T* p) {
+  template <typename T>
+  [[gnu::always_inline]] static constexpr void destroy(Alloc& a, T* p) {
     if constexpr (__detail::__has_destroy<Alloc, T>)
       a.destroy(p);
     else
       destroy_at(p);
   }
-  static constexpr size_type max_size(const Alloc& a) noexcept {
+  [[gnu::always_inline]] static constexpr size_type
+  max_size(const Alloc& a) noexcept {
     return __detail::__alloc_max_size<Alloc>::call(a);
   }
-  static constexpr Alloc select_on_container_copy_construction(const Alloc& a) {
+  [[gnu::always_inline]] static constexpr Alloc
+  select_on_container_copy_construction(const Alloc& a) {
     return __detail::__alloc_soccc<Alloc>::call(a);
   }
 };

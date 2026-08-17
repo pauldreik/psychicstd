@@ -1,11 +1,17 @@
 #pragma once
 #include <__psychicstd_config>
+#if _PSYCHICSTD_COMPATIBILITY_LEVEL >= _PSYCHICSTD_COMPAT_DROPIN
+#include <iterator>
+#else
+#include <__psychicstd_begin_end>
+#include <__psychicstd_iterator_core>
+#include <__psychicstd_iterator_next>
+#endif
 #include <__psychicstd_minmax>
 #include <__psychicstd_string_algobase>
 #include <__psychicstd_traits_core>
 #include <__psychicstd_utility_pair>
 #include <initializer_list>
-#include <iterator>
 
 namespace std {
 
@@ -44,7 +50,8 @@ constexpr const T& clamp(const T& v, const T& lo, const T& hi, Compare cmp) {
 }
 
 // iter_swap
-template <typename It1, typename It2> constexpr void iter_swap(It1 a, It2 b) {
+template <typename It1, typename It2>
+[[gnu::always_inline]] constexpr void iter_swap(It1 a, It2 b) {
   swap(*a, *b);
 }
 

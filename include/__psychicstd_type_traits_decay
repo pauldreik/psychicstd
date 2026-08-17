@@ -1,0 +1,37 @@
+#pragma once
+#include <__psychicstd_type_traits_core>
+#include <__psychicstd_type_traits_reference>
+#include <cstddef>
+
+namespace std {
+
+template <typename T> struct decay {
+  using type = remove_cv_t<remove_reference_t<T>>;
+};
+template <typename T> struct decay<T&> {
+  using type = typename decay<T>::type;
+};
+template <typename T> struct decay<T&&> {
+  using type = typename decay<T>::type;
+};
+template <typename T, size_t N> struct decay<T[N]> {
+  using type = T*;
+};
+template <typename T> struct decay<T[]> {
+  using type = T*;
+};
+template <typename T, typename... Args> struct decay<T(Args...)> {
+  using type = T (*)(Args...);
+};
+template <typename T, typename... Args> struct decay<T(Args..., ...)> {
+  using type = T (*)(Args..., ...);
+};
+template <typename T, typename... Args> struct decay<T(Args...) noexcept> {
+  using type = T (*)(Args...) noexcept;
+};
+template <typename T, typename... Args> struct decay<T(Args..., ...) noexcept> {
+  using type = T (*)(Args..., ...) noexcept;
+};
+template <typename T> using decay_t = typename decay<T>::type;
+
+}

@@ -4,6 +4,8 @@
 #include <__psychicstd_functional_extra>
 #include <__psychicstd_functors>
 #include <__psychicstd_invoke>
+#include <__psychicstd_type_traits_member_pointer>
+#include <__psychicstd_type_traits_pointer_category>
 #if _PSYCHICSTD_COMPATIBILITY_LEVEL >= _PSYCHICSTD_COMPAT_DROPIN
 #include <array>
 #endif
@@ -17,7 +19,8 @@ namespace std {
 struct identity {
   using is_transparent = void;
 
-  template <typename T> constexpr T&& operator()(T&& value) const noexcept {
+  template <typename T>
+  [[gnu::always_inline]] constexpr T&& operator()(T&& value) const noexcept {
     return static_cast<T&&>(value);
   }
 };
@@ -106,7 +109,9 @@ public:
     return *this;
   }
 
-  explicit operator bool() const noexcept { return ptr_ != nullptr; }
+  [[gnu::always_inline]] explicit operator bool() const noexcept {
+    return ptr_ != nullptr;
+  }
 
   void swap(function& other) noexcept {
     base* value = ptr_;
@@ -126,10 +131,12 @@ public:
                 : nullptr;
   }
 
-  friend bool operator==(const function& f, nullptr_t) noexcept {
+  [[gnu::always_inline]] friend bool operator==(const function& f,
+                                                nullptr_t) noexcept {
     return f.ptr_ == nullptr;
   }
-  friend bool operator==(nullptr_t, const function& f) noexcept {
+  [[gnu::always_inline]] friend bool operator==(nullptr_t,
+                                                const function& f) noexcept {
     return f.ptr_ == nullptr;
   }
 };
@@ -232,6 +239,7 @@ template <typename F, typename... Bound> struct __bind_wrapper {
   template <typename... Args>
     requires(is_invocable_v<F&, decltype(detail::__bind_arg(
                                     declval<Bound&>(), declval<Args>()...))...>)
+  [[gnu::always_inline]]
   constexpr decltype(auto) operator()(Args&&... args) {
     return __call(index_sequence_for<Bound...>{}, static_cast<Args&&>(args)...);
   }
@@ -239,6 +247,7 @@ template <typename F, typename... Bound> struct __bind_wrapper {
     requires(is_invocable_v<
              const F&, decltype(detail::__bind_arg(declval<const Bound&>(),
                                                    declval<Args>()...))...>)
+  [[gnu::always_inline]]
   constexpr decltype(auto) operator()(Args&&... args) const {
     return __call(index_sequence_for<Bound...>{}, static_cast<Args&&>(args)...);
   }
@@ -293,17 +302,20 @@ template <typename R, typename F, typename... Bound> struct __bind_r_wrapper {
 }
 
 template <typename F, typename... Args>
+[[gnu::always_inline]]
 constexpr decltype(auto) invoke(F&& f, Args&&... args) {
   return detail::__invoke(static_cast<F&&>(f), static_cast<Args&&>(args)...);
 }
 
 template <typename F, typename... Args>
+[[gnu::always_inline]]
 constexpr auto bind(F&& f, Args&&... args) {
   return detail::__bind_wrapper<decay_t<F>, decay_t<Args>...>(
       static_cast<F&&>(f), static_cast<Args&&>(args)...);
 }
 
 template <typename R, typename F, typename... Args>
+[[gnu::always_inline]]
 constexpr auto bind(F&& f, Args&&... args) {
   return detail::__bind_r_wrapper<R, decay_t<F>, decay_t<Args>...>(
       static_cast<F&&>(f), static_cast<Args&&>(args)...);

@@ -27,24 +27,35 @@ template <typename T, size_t N> struct array {
   T data_[N];
 
   // Element access
-  constexpr reference operator[](size_type i) noexcept { return data_[i]; }
-  constexpr const_reference operator[](size_type i) const noexcept {
+  [[gnu::always_inline]] constexpr reference operator[](size_type i) noexcept {
     return data_[i];
   }
-  constexpr reference at(size_type i) {
+  [[gnu::always_inline]] constexpr const_reference
+  operator[](size_type i) const noexcept {
+    return data_[i];
+  }
+  [[gnu::always_inline]] constexpr reference at(size_type i) {
     if (i >= N)
       _PSYCHICSTD_THROW_HELPER(__throw_out_of_range, "array::at");
     return data_[i];
   }
-  constexpr const_reference at(size_type i) const {
+  [[gnu::always_inline]] constexpr const_reference at(size_type i) const {
     if (i >= N)
       _PSYCHICSTD_THROW_HELPER(__throw_out_of_range, "array::at");
     return data_[i];
   }
-  constexpr reference front() noexcept { return data_[0]; }
-  constexpr const_reference front() const noexcept { return data_[0]; }
-  constexpr reference back() noexcept { return data_[N - 1]; }
-  constexpr const_reference back() const noexcept { return data_[N - 1]; }
+  [[gnu::always_inline]] constexpr reference front() noexcept {
+    return data_[0];
+  }
+  [[gnu::always_inline]] constexpr const_reference front() const noexcept {
+    return data_[0];
+  }
+  [[gnu::always_inline]] constexpr reference back() noexcept {
+    return data_[N - 1];
+  }
+  [[gnu::always_inline]] constexpr const_reference back() const noexcept {
+    return data_[N - 1];
+  }
   [[gnu::always_inline]] constexpr T* data() noexcept { return data_; }
   [[gnu::always_inline]] constexpr const T* data() const noexcept {
     return data_;
@@ -65,22 +76,26 @@ template <typename T, size_t N> struct array {
   [[gnu::always_inline]] constexpr const_iterator cend() const noexcept {
     return data_ + N;
   }
-  constexpr reverse_iterator rbegin() noexcept {
+  [[gnu::always_inline]] constexpr reverse_iterator rbegin() noexcept {
     return reverse_iterator(end());
   }
-  constexpr reverse_iterator rend() noexcept {
+  [[gnu::always_inline]] constexpr reverse_iterator rend() noexcept {
     return reverse_iterator(begin());
   }
-  constexpr const_reverse_iterator rbegin() const noexcept {
+  [[gnu::always_inline]] constexpr const_reverse_iterator
+  rbegin() const noexcept {
     return const_reverse_iterator(end());
   }
-  constexpr const_reverse_iterator rend() const noexcept {
+  [[gnu::always_inline]] constexpr const_reverse_iterator
+  rend() const noexcept {
     return const_reverse_iterator(begin());
   }
-  constexpr const_reverse_iterator crbegin() const noexcept {
+  [[gnu::always_inline]] constexpr const_reverse_iterator
+  crbegin() const noexcept {
     return const_reverse_iterator(cend());
   }
-  constexpr const_reverse_iterator crend() const noexcept {
+  [[gnu::always_inline]] constexpr const_reverse_iterator
+  crend() const noexcept {
     return const_reverse_iterator(cbegin());
   }
 
@@ -93,11 +108,11 @@ template <typename T, size_t N> struct array {
     return N;
   }
 
-  constexpr void fill(const T& v) {
+  [[gnu::always_inline]] constexpr void fill(const T& v) {
     for (auto& x : *this)
       x = v;
   }
-  constexpr void swap(array& o) noexcept {
+  [[gnu::always_inline]] constexpr void swap(array& o) noexcept {
     for (size_type i = 0; i < N; ++i)
       std::swap(data_[i], o.data_[i]);
   }
@@ -125,47 +140,70 @@ template <typename T> struct array<T, 0> {
   struct _Storage {
   } _storage; // empty, always default-constructible; allows `= {{}}` init
 
-  constexpr reference operator[](size_type) noexcept {
+  [[gnu::always_inline]] constexpr reference operator[](size_type) noexcept {
     __builtin_unreachable();
   }
-  constexpr const_reference operator[](size_type) const noexcept {
+  [[gnu::always_inline]] constexpr const_reference
+  operator[](size_type) const noexcept {
     __builtin_unreachable();
   }
-  constexpr reference at(size_type) {
+  [[gnu::always_inline]] constexpr reference at(size_type) {
     _PSYCHICSTD_THROW_HELPER(__throw_out_of_range, "array::at");
   }
-  constexpr const_reference at(size_type) const {
+  [[gnu::always_inline]] constexpr const_reference at(size_type) const {
     _PSYCHICSTD_THROW_HELPER(__throw_out_of_range, "array::at");
   }
-  constexpr reference front() noexcept { __builtin_unreachable(); }
-  constexpr const_reference front() const noexcept { __builtin_unreachable(); }
-  constexpr reference back() noexcept { __builtin_unreachable(); }
-  constexpr const_reference back() const noexcept { __builtin_unreachable(); }
-  constexpr T* data() noexcept { return nullptr; }
-  constexpr const T* data() const noexcept { return nullptr; }
+  [[gnu::always_inline]] constexpr reference front() noexcept {
+    __builtin_unreachable();
+  }
+  [[gnu::always_inline]] constexpr const_reference front() const noexcept {
+    __builtin_unreachable();
+  }
+  [[gnu::always_inline]] constexpr reference back() noexcept {
+    __builtin_unreachable();
+  }
+  [[gnu::always_inline]] constexpr const_reference back() const noexcept {
+    __builtin_unreachable();
+  }
+  [[gnu::always_inline]] constexpr T* data() noexcept { return nullptr; }
+  [[gnu::always_inline]] constexpr const T* data() const noexcept {
+    return nullptr;
+  }
 
-  constexpr iterator begin() noexcept { return nullptr; }
-  constexpr iterator end() noexcept { return nullptr; }
-  constexpr const_iterator begin() const noexcept { return nullptr; }
-  constexpr const_iterator end() const noexcept { return nullptr; }
-  constexpr const_iterator cbegin() const noexcept { return nullptr; }
-  constexpr const_iterator cend() const noexcept { return nullptr; }
-  constexpr reverse_iterator rbegin() noexcept {
+  [[gnu::always_inline]] constexpr iterator begin() noexcept { return nullptr; }
+  [[gnu::always_inline]] constexpr iterator end() noexcept { return nullptr; }
+  [[gnu::always_inline]] constexpr const_iterator begin() const noexcept {
+    return nullptr;
+  }
+  [[gnu::always_inline]] constexpr const_iterator end() const noexcept {
+    return nullptr;
+  }
+  [[gnu::always_inline]] constexpr const_iterator cbegin() const noexcept {
+    return nullptr;
+  }
+  [[gnu::always_inline]] constexpr const_iterator cend() const noexcept {
+    return nullptr;
+  }
+  [[gnu::always_inline]] constexpr reverse_iterator rbegin() noexcept {
     return reverse_iterator(nullptr);
   }
-  constexpr reverse_iterator rend() noexcept {
+  [[gnu::always_inline]] constexpr reverse_iterator rend() noexcept {
     return reverse_iterator(nullptr);
   }
-  constexpr const_reverse_iterator rbegin() const noexcept {
+  [[gnu::always_inline]] constexpr const_reverse_iterator
+  rbegin() const noexcept {
     return const_reverse_iterator(nullptr);
   }
-  constexpr const_reverse_iterator rend() const noexcept {
+  [[gnu::always_inline]] constexpr const_reverse_iterator
+  rend() const noexcept {
     return const_reverse_iterator(nullptr);
   }
-  constexpr const_reverse_iterator crbegin() const noexcept {
+  [[gnu::always_inline]] constexpr const_reverse_iterator
+  crbegin() const noexcept {
     return const_reverse_iterator(nullptr);
   }
-  constexpr const_reverse_iterator crend() const noexcept {
+  [[gnu::always_inline]] constexpr const_reverse_iterator
+  crend() const noexcept {
     return const_reverse_iterator(nullptr);
   }
 
@@ -175,24 +213,27 @@ template <typename T> struct array<T, 0> {
     return 0;
   }
 
-  constexpr void fill(const T&) noexcept {}
-  constexpr void swap(array&) noexcept {}
+  [[gnu::always_inline]] constexpr void fill(const T&) noexcept {}
+  [[gnu::always_inline]] constexpr void swap(array&) noexcept {}
 };
 
 // Comparison operators
 template <typename T, size_t N>
-constexpr bool operator==(const array<T, N>& a, const array<T, N>& b) {
+[[gnu::always_inline]] constexpr bool operator==(const array<T, N>& a,
+                                                 const array<T, N>& b) {
   for (size_t i = 0; i < N; ++i)
     if (!(a[i] == b[i]))
       return false;
   return true;
 }
 template <typename T, size_t N>
-constexpr bool operator!=(const array<T, N>& a, const array<T, N>& b) {
+[[gnu::always_inline]] constexpr bool operator!=(const array<T, N>& a,
+                                                 const array<T, N>& b) {
   return !(a == b);
 }
 template <typename T, size_t N>
-constexpr bool operator<(const array<T, N>& a, const array<T, N>& b) {
+[[gnu::always_inline]] constexpr bool operator<(const array<T, N>& a,
+                                                const array<T, N>& b) {
   for (size_t i = 0; i < N; ++i) {
     if (a[i] < b[i])
       return true;
@@ -202,33 +243,36 @@ constexpr bool operator<(const array<T, N>& a, const array<T, N>& b) {
   return false;
 }
 template <typename T, size_t N>
-constexpr bool operator<=(const array<T, N>& a, const array<T, N>& b) {
+[[gnu::always_inline]] constexpr bool operator<=(const array<T, N>& a,
+                                                 const array<T, N>& b) {
   return !(b < a);
 }
 template <typename T, size_t N>
-constexpr bool operator>(const array<T, N>& a, const array<T, N>& b) {
+[[gnu::always_inline]] constexpr bool operator>(const array<T, N>& a,
+                                                const array<T, N>& b) {
   return b < a;
 }
 template <typename T, size_t N>
-constexpr bool operator>=(const array<T, N>& a, const array<T, N>& b) {
+[[gnu::always_inline]] constexpr bool operator>=(const array<T, N>& a,
+                                                 const array<T, N>& b) {
   return !(a < b);
 }
 
 // get<I>
 template <size_t I, typename T, size_t N>
-constexpr T& get(array<T, N>& a) noexcept {
+[[gnu::always_inline]] constexpr T& get(array<T, N>& a) noexcept {
   return a.data_[I];
 }
 template <size_t I, typename T, size_t N>
-constexpr const T& get(const array<T, N>& a) noexcept {
+[[gnu::always_inline]] constexpr const T& get(const array<T, N>& a) noexcept {
   return a.data_[I];
 }
 template <size_t I, typename T, size_t N>
-constexpr T&& get(array<T, N>&& a) noexcept {
+[[gnu::always_inline]] constexpr T&& get(array<T, N>&& a) noexcept {
   return static_cast<T&&>(a.data_[I]);
 }
 template <size_t I, typename T, size_t N>
-constexpr const T&& get(const array<T, N>&& a) noexcept {
+[[gnu::always_inline]] constexpr const T&& get(const array<T, N>&& a) noexcept {
   return static_cast<const T&&>(a.data_[I]);
 }
 
@@ -264,23 +308,23 @@ array(T, U...) -> array<T, 1 + sizeof...(U)>;
 // to_array — converts a C array to std::array
 namespace detail {
 template <typename T, size_t N, size_t... I>
-constexpr array<remove_cv_t<T>, N> to_array_impl(T (&a)[N],
-                                                 index_sequence<I...>) {
+[[gnu::always_inline]] constexpr array<remove_cv_t<T>, N>
+to_array_impl(T (&a)[N], index_sequence<I...>) {
   return {{a[I]...}};
 }
 template <typename T, size_t N, size_t... I>
-constexpr array<remove_cv_t<T>, N> to_array_move_impl(T (&&a)[N],
-                                                      index_sequence<I...>) {
+[[gnu::always_inline]] constexpr array<remove_cv_t<T>, N>
+to_array_move_impl(T (&&a)[N], index_sequence<I...>) {
   return {{static_cast<T&&>(a[I])...}};
 }
 }
 
 template <typename T, size_t N>
-constexpr array<remove_cv_t<T>, N> to_array(T (&a)[N]) {
+[[gnu::always_inline]] constexpr array<remove_cv_t<T>, N> to_array(T (&a)[N]) {
   return detail::to_array_impl(a, make_index_sequence<N>{});
 }
 template <typename T, size_t N>
-constexpr array<remove_cv_t<T>, N> to_array(T (&&a)[N]) {
+[[gnu::always_inline]] constexpr array<remove_cv_t<T>, N> to_array(T (&&a)[N]) {
   return detail::to_array_move_impl(static_cast<T(&&)[N]>(a),
                                     make_index_sequence<N>{});
 }

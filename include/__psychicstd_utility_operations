@@ -1,5 +1,13 @@
 #pragma once
-#include <__psychicstd_type_traits_object>
+#include <__psychicstd_config>
+#if _PSYCHICSTD_COMPATIBILITY_LEVEL >= _PSYCHICSTD_COMPAT_DROPIN
+#include <__psychicstd_type_traits_classification>
+#else
+#include <__psychicstd_type_traits_conditional>
+#endif
+#include <__psychicstd_type_traits_construction>
+#include <__psychicstd_type_traits_reference>
+#include <__psychicstd_type_traits_reference_category>
 #include <cstddef>
 
 namespace std {
@@ -47,6 +55,7 @@ to_underlying(E e) noexcept {
 
 template <typename T>
   requires(is_move_constructible_v<T> && is_move_assignable_v<T>)
+[[gnu::always_inline]]
 constexpr void swap(T& a, T& b) noexcept(is_nothrow_move_constructible_v<T> &&
                                          is_nothrow_move_assignable_v<T>) {
   T tmp = static_cast<remove_reference_t<T>&&>(a);
@@ -60,6 +69,7 @@ constexpr void swap(T (&a)[N], T (&b)[N]) noexcept(noexcept(swap(*a, *b))) {
 }
 
 template <typename T, typename U = T>
+[[gnu::always_inline]]
 constexpr T exchange(T& obj, U&& new_val) {
   T old = static_cast<remove_reference_t<T>&&>(obj);
   obj = static_cast<U&&>(new_val);

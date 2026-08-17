@@ -3,12 +3,27 @@
 #include <__psychicstd_config>
 #include <__psychicstd_hash>
 #include <__psychicstd_ordering>
+#if _PSYCHICSTD_COMPATIBILITY_LEVEL >= _PSYCHICSTD_COMPAT_DROPIN
 #include <__psychicstd_type_traits_common>
-#include <__psychicstd_type_traits_object>
+#else
+#include <__psychicstd_type_traits_common_type>
+#endif
+#include <__psychicstd_type_traits_construction>
+#include <__psychicstd_type_traits_convert>
 #include <iosfwd>
 #include <typeinfo>
 
 namespace std {
+
+namespace __memory_detail {
+template <typename T> struct __extent_element;
+template <typename T> struct __extent_element<T[]> {
+  using type = T;
+};
+template <typename T, size_t N> struct __extent_element<T[N]> {
+  using type = T;
+};
+}
 
 template <typename T, typename Alloc, typename = void>
 struct uses_allocator : false_type {};
@@ -19,6 +34,7 @@ template <typename T, typename Alloc>
 inline constexpr bool uses_allocator_v = uses_allocator<T, Alloc>::value;
 
 template <size_t Alignment, typename T>
+[[gnu::always_inline]]
 constexpr T* assume_aligned(T* pointer) noexcept {
   static_assert((Alignment & (Alignment - 1)) == 0,
                 "alignment must be a power of two");
@@ -87,16 +103,18 @@ public:
 
   template <typename U = T>
     requires(!is_void<U>::value)
-  U& operator*() const noexcept {
+  [[gnu::always_inline]] U& operator*() const noexcept {
     return *ptr_;
   }
-  T* operator->() const noexcept { return ptr_; }
-  T* get() const noexcept { return ptr_; }
-  D& get_deleter() noexcept { return del_; }
-  const D& get_deleter() const noexcept { return del_; }
-  explicit operator bool() const noexcept { return ptr_ != nullptr; }
+  [[gnu::always_inline]] T* operator->() const noexcept { return ptr_; }
+  [[gnu::always_inline]] T* get() const noexcept { return ptr_; }
+  [[gnu::always_inline]] D& get_deleter() noexcept { return del_; }
+  [[gnu::always_inline]] const D& get_deleter() const noexcept { return del_; }
+  [[gnu::always_inline]] explicit operator bool() const noexcept {
+    return ptr_ != nullptr;
+  }
 
-  T* release() noexcept {
+  [[gnu::always_inline]] T* release() noexcept {
     T* p = ptr_;
     ptr_ = nullptr;
     return p;
@@ -107,22 +125,26 @@ public:
     if (old)
       del_(old);
   }
-  void swap(unique_ptr& o) noexcept {
+  [[gnu::always_inline]] void swap(unique_ptr& o) noexcept {
     T* tmp = ptr_;
     ptr_ = o.ptr_;
     o.ptr_ = tmp;
   }
 
-  friend bool operator==(const unique_ptr& a, nullptr_t) noexcept {
+  [[gnu::always_inline]] friend bool operator==(const unique_ptr& a,
+                                                nullptr_t) noexcept {
     return a.ptr_ == nullptr;
   }
-  friend bool operator==(nullptr_t, const unique_ptr& a) noexcept {
+  [[gnu::always_inline]] friend bool operator==(nullptr_t,
+                                                const unique_ptr& a) noexcept {
     return a.ptr_ == nullptr;
   }
-  friend bool operator!=(const unique_ptr& a, nullptr_t) noexcept {
+  [[gnu::always_inline]] friend bool operator!=(const unique_ptr& a,
+                                                nullptr_t) noexcept {
     return a.ptr_ != nullptr;
   }
-  friend bool operator!=(nullptr_t, const unique_ptr& a) noexcept {
+  [[gnu::always_inline]] friend bool operator!=(nullptr_t,
+                                                const unique_ptr& a) noexcept {
     return a.ptr_ != nullptr;
   }
 
@@ -163,12 +185,16 @@ public:
   unique_ptr(const unique_ptr&) = delete;
   unique_ptr& operator=(const unique_ptr&) = delete;
 
-  T& operator[](size_t i) const noexcept { return ptr_[i]; }
-  T* get() const noexcept { return ptr_; }
-  D& get_deleter() noexcept { return del_; }
-  const D& get_deleter() const noexcept { return del_; }
-  explicit operator bool() const noexcept { return ptr_ != nullptr; }
-  T* release() noexcept {
+  [[gnu::always_inline]] T& operator[](size_t i) const noexcept {
+    return ptr_[i];
+  }
+  [[gnu::always_inline]] T* get() const noexcept { return ptr_; }
+  [[gnu::always_inline]] D& get_deleter() noexcept { return del_; }
+  [[gnu::always_inline]] const D& get_deleter() const noexcept { return del_; }
+  [[gnu::always_inline]] explicit operator bool() const noexcept {
+    return ptr_ != nullptr;
+  }
+  [[gnu::always_inline]] T* release() noexcept {
     T* p = ptr_;
     ptr_ = nullptr;
     return p;
@@ -179,22 +205,26 @@ public:
     if (old)
       del_(old);
   }
-  void swap(unique_ptr& o) noexcept {
+  [[gnu::always_inline]] void swap(unique_ptr& o) noexcept {
     T* tmp = ptr_;
     ptr_ = o.ptr_;
     o.ptr_ = tmp;
   }
 
-  friend bool operator==(const unique_ptr& a, nullptr_t) noexcept {
+  [[gnu::always_inline]] friend bool operator==(const unique_ptr& a,
+                                                nullptr_t) noexcept {
     return a.ptr_ == nullptr;
   }
-  friend bool operator==(nullptr_t, const unique_ptr& a) noexcept {
+  [[gnu::always_inline]] friend bool operator==(nullptr_t,
+                                                const unique_ptr& a) noexcept {
     return a.ptr_ == nullptr;
   }
-  friend bool operator!=(const unique_ptr& a, nullptr_t) noexcept {
+  [[gnu::always_inline]] friend bool operator!=(const unique_ptr& a,
+                                                nullptr_t) noexcept {
     return a.ptr_ != nullptr;
   }
-  friend bool operator!=(nullptr_t, const unique_ptr& a) noexcept {
+  [[gnu::always_inline]] friend bool operator!=(nullptr_t,
+                                                const unique_ptr& a) noexcept {
     return a.ptr_ != nullptr;
   }
 
@@ -204,30 +234,30 @@ private:
 };
 
 template <typename T1, typename D1, typename T2, typename D2>
-bool operator==(const unique_ptr<T1, D1>& a,
-                const unique_ptr<T2, D2>& b) noexcept {
+[[gnu::always_inline]] inline bool
+operator==(const unique_ptr<T1, D1>& a, const unique_ptr<T2, D2>& b) noexcept {
   return a.get() == b.get();
 }
 template <typename T1, typename D1, typename T2, typename D2>
-bool operator<(const unique_ptr<T1, D1>& a,
-               const unique_ptr<T2, D2>& b) noexcept {
+[[gnu::always_inline]] inline bool
+operator<(const unique_ptr<T1, D1>& a, const unique_ptr<T2, D2>& b) noexcept {
   using pointer = common_type_t<typename unique_ptr<T1, D1>::pointer,
                                 typename unique_ptr<T2, D2>::pointer>;
   return less<pointer>{}(a.get(), b.get());
 }
 template <typename T1, typename D1, typename T2, typename D2>
-bool operator>(const unique_ptr<T1, D1>& a,
-               const unique_ptr<T2, D2>& b) noexcept {
+[[gnu::always_inline]] inline bool
+operator>(const unique_ptr<T1, D1>& a, const unique_ptr<T2, D2>& b) noexcept {
   return b < a;
 }
 template <typename T1, typename D1, typename T2, typename D2>
-bool operator<=(const unique_ptr<T1, D1>& a,
-                const unique_ptr<T2, D2>& b) noexcept {
+[[gnu::always_inline]] inline bool
+operator<=(const unique_ptr<T1, D1>& a, const unique_ptr<T2, D2>& b) noexcept {
   return !(b < a);
 }
 template <typename T1, typename D1, typename T2, typename D2>
-bool operator>=(const unique_ptr<T1, D1>& a,
-                const unique_ptr<T2, D2>& b) noexcept {
+[[gnu::always_inline]] inline bool
+operator>=(const unique_ptr<T1, D1>& a, const unique_ptr<T2, D2>& b) noexcept {
   return !(a < b);
 }
 
@@ -251,7 +281,7 @@ template <typename T>
 unique_ptr<T> make_unique(size_t n)
   requires(is_array_v<T>)
 {
-  using Elem = remove_extent_t<T>;
+  using Elem = typename __memory_detail::__extent_element<T>::type;
   return unique_ptr<T>(new Elem[n]());
 }
 
@@ -513,16 +543,20 @@ public:
 
   template <typename U = T>
     requires(!is_void<U>::value)
-  U& operator*() const noexcept {
+  [[gnu::always_inline]] U& operator*() const noexcept {
     return *ptr_;
   }
-  T* operator->() const noexcept { return ptr_; }
-  T* get() const noexcept { return ptr_; }
-  explicit operator bool() const noexcept { return ptr_ != nullptr; }
-  long use_count() const noexcept {
+  [[gnu::always_inline]] T* operator->() const noexcept { return ptr_; }
+  [[gnu::always_inline]] T* get() const noexcept { return ptr_; }
+  [[gnu::always_inline]] explicit operator bool() const noexcept {
+    return ptr_ != nullptr;
+  }
+  [[gnu::always_inline]] long use_count() const noexcept {
     return ctrl_ ? __atomic_load_n(&ctrl_->count, __ATOMIC_RELAXED) : 0;
   }
-  bool unique() const noexcept { return use_count() == 1; }
+  [[gnu::always_inline]] bool unique() const noexcept {
+    return use_count() == 1;
+  }
 
   void reset() noexcept {
     dec();
@@ -534,7 +568,7 @@ public:
     shared_ptr(p, d).swap(*this);
   }
 
-  void swap(shared_ptr& o) noexcept {
+  [[gnu::always_inline]] void swap(shared_ptr& o) noexcept {
     T* tp = ptr_;
     __detail::__sp_ctrl* tc = ctrl_;
     ptr_ = o.ptr_;
@@ -544,10 +578,13 @@ public:
   }
 
   template <typename U>
-  bool owner_before(const shared_ptr<U>& o) const noexcept {
+  [[gnu::always_inline]] bool
+  owner_before(const shared_ptr<U>& o) const noexcept {
     return less<__detail::__sp_ctrl*>{}(ctrl_, o.ctrl_);
   }
-  template <typename U> bool owner_before(const weak_ptr<U>& o) const noexcept {
+  template <typename U>
+  [[gnu::always_inline]] bool
+  owner_before(const weak_ptr<U>& o) const noexcept {
     return less<__detail::__sp_ctrl*>{}(ctrl_, o.ctrl_);
   }
 };
@@ -591,7 +628,8 @@ void atomic_store(shared_ptr<T>* pointer, shared_ptr<T> desired) noexcept {
 }
 
 template <typename D, typename T>
-D* get_deleter(const shared_ptr<T>& value) noexcept {
+[[gnu::always_inline]] inline D*
+get_deleter(const shared_ptr<T>& value) noexcept {
 #if _PSYCHICSTD_HAS_RTTI
   if (!value.ctrl_)
     return nullptr;
@@ -603,36 +641,44 @@ D* get_deleter(const shared_ptr<T>& value) noexcept {
 }
 
 template <typename T, typename U>
-bool operator==(const shared_ptr<T>& a, const shared_ptr<U>& b) noexcept {
+[[gnu::always_inline]] inline bool operator==(const shared_ptr<T>& a,
+                                              const shared_ptr<U>& b) noexcept {
   return a.get() == b.get();
 }
 template <typename T>
-bool operator==(const shared_ptr<T>& a, nullptr_t) noexcept {
+[[gnu::always_inline]] inline bool operator==(const shared_ptr<T>& a,
+                                              nullptr_t) noexcept {
   return !a;
 }
 template <typename T>
-bool operator==(nullptr_t, const shared_ptr<T>& a) noexcept {
+[[gnu::always_inline]] inline bool operator==(nullptr_t,
+                                              const shared_ptr<T>& a) noexcept {
   return !a;
 }
 template <typename T, typename U>
-bool operator!=(const shared_ptr<T>& a, const shared_ptr<U>& b) noexcept {
+[[gnu::always_inline]] inline bool operator!=(const shared_ptr<T>& a,
+                                              const shared_ptr<U>& b) noexcept {
   return !(a == b);
 }
 template <typename T, typename U>
-bool operator<(const shared_ptr<T>& a, const shared_ptr<U>& b) noexcept {
+[[gnu::always_inline]] inline bool operator<(const shared_ptr<T>& a,
+                                             const shared_ptr<U>& b) noexcept {
   using pointer = common_type_t<T*, U*>;
   return less<pointer>{}(a.get(), b.get());
 }
 template <typename T, typename U>
-bool operator>(const shared_ptr<T>& a, const shared_ptr<U>& b) noexcept {
+[[gnu::always_inline]] inline bool operator>(const shared_ptr<T>& a,
+                                             const shared_ptr<U>& b) noexcept {
   return b < a;
 }
 template <typename T, typename U>
-bool operator<=(const shared_ptr<T>& a, const shared_ptr<U>& b) noexcept {
+[[gnu::always_inline]] inline bool operator<=(const shared_ptr<T>& a,
+                                              const shared_ptr<U>& b) noexcept {
   return !(b < a);
 }
 template <typename T, typename U>
-bool operator>=(const shared_ptr<T>& a, const shared_ptr<U>& b) noexcept {
+[[gnu::always_inline]] inline bool operator>=(const shared_ptr<T>& a,
+                                              const shared_ptr<U>& b) noexcept {
   return !(a < b);
 }
 template <typename Char, typename Traits, typename T>
@@ -642,7 +688,7 @@ basic_ostream<Char, Traits>& operator<<(basic_ostream<Char, Traits>& out,
 }
 
 template <typename T, typename... Args>
-shared_ptr<T> make_shared(Args&&... args) {
+[[gnu::always_inline]] inline shared_ptr<T> make_shared(Args&&... args) {
   // forward
   return shared_ptr<T>(new T(static_cast<Args&&>(args)...));
 }
@@ -670,40 +716,48 @@ shared_ptr<T> allocate_shared(const Alloc& alloc, Args&&... args) {
 }
 
 template <typename T, typename U>
-shared_ptr<T> static_pointer_cast(const shared_ptr<U>& p) noexcept {
+[[gnu::always_inline]] inline shared_ptr<T>
+static_pointer_cast(const shared_ptr<U>& p) noexcept {
   return shared_ptr<T>(p, static_cast<T*>(p.get()));
 }
 template <typename T, typename U>
-shared_ptr<T> static_pointer_cast(shared_ptr<U>&& p) noexcept {
+[[gnu::always_inline]] inline shared_ptr<T>
+static_pointer_cast(shared_ptr<U>&& p) noexcept {
   T* result = static_cast<T*>(p.get());
   return shared_ptr<T>(static_cast<shared_ptr<U>&&>(p), result);
 }
 template <typename T, typename U>
-shared_ptr<T> const_pointer_cast(const shared_ptr<U>& p) noexcept {
+[[gnu::always_inline]] inline shared_ptr<T>
+const_pointer_cast(const shared_ptr<U>& p) noexcept {
   return shared_ptr<T>(p, const_cast<T*>(p.get()));
 }
 template <typename T, typename U>
-shared_ptr<T> const_pointer_cast(shared_ptr<U>&& p) noexcept {
+[[gnu::always_inline]] inline shared_ptr<T>
+const_pointer_cast(shared_ptr<U>&& p) noexcept {
   T* result = const_cast<T*>(p.get());
   return shared_ptr<T>(static_cast<shared_ptr<U>&&>(p), result);
 }
 template <typename T, typename U>
-shared_ptr<T> dynamic_pointer_cast(const shared_ptr<U>& p) noexcept {
+[[gnu::always_inline]] inline shared_ptr<T>
+dynamic_pointer_cast(const shared_ptr<U>& p) noexcept {
   T* q = dynamic_cast<T*>(p.get());
   return q ? shared_ptr<T>(p, q) : shared_ptr<T>();
 }
 template <typename T, typename U>
-shared_ptr<T> dynamic_pointer_cast(shared_ptr<U>&& p) noexcept {
+[[gnu::always_inline]] inline shared_ptr<T>
+dynamic_pointer_cast(shared_ptr<U>&& p) noexcept {
   T* result = dynamic_cast<T*>(p.get());
   return result ? shared_ptr<T>(static_cast<shared_ptr<U>&&>(p), result)
                 : shared_ptr<T>();
 }
 template <typename T, typename U>
-shared_ptr<T> reinterpret_pointer_cast(const shared_ptr<U>& p) noexcept {
+[[gnu::always_inline]] inline shared_ptr<T>
+reinterpret_pointer_cast(const shared_ptr<U>& p) noexcept {
   return shared_ptr<T>(p, reinterpret_cast<T*>(p.get()));
 }
 template <typename T, typename U>
-shared_ptr<T> reinterpret_pointer_cast(shared_ptr<U>&& p) noexcept {
+[[gnu::always_inline]] inline shared_ptr<T>
+reinterpret_pointer_cast(shared_ptr<U>&& p) noexcept {
   T* result = reinterpret_cast<T*>(p.get());
   return shared_ptr<T>(static_cast<shared_ptr<U>&&>(p), result);
 }
@@ -762,8 +816,8 @@ public:
     return *this;
   }
 
-  void reset() noexcept { weak_ptr().swap(*this); }
-  void swap(weak_ptr& other) noexcept {
+  [[gnu::always_inline]] void reset() noexcept { weak_ptr().swap(*this); }
+  [[gnu::always_inline]] void swap(weak_ptr& other) noexcept {
     T* ptr = ptr_;
     __detail::__sp_ctrl* ctrl = ctrl_;
     ptr_ = other.ptr_;
@@ -771,10 +825,12 @@ public:
     other.ptr_ = ptr;
     other.ctrl_ = ctrl;
   }
-  long use_count() const noexcept {
+  [[gnu::always_inline]] long use_count() const noexcept {
     return ctrl_ ? __atomic_load_n(&ctrl_->count, __ATOMIC_RELAXED) : 0;
   }
-  bool expired() const noexcept { return use_count() == 0; }
+  [[gnu::always_inline]] bool expired() const noexcept {
+    return use_count() == 0;
+  }
   shared_ptr<T> lock() const noexcept {
     shared_ptr<T> result;
     if (ctrl_ && __detail::__sp_strong_add_if_live(ctrl_)) {
@@ -784,11 +840,13 @@ public:
     return result;
   }
   template <typename U>
-  bool owner_before(const shared_ptr<U>& other) const noexcept {
+  [[gnu::always_inline]] bool
+  owner_before(const shared_ptr<U>& other) const noexcept {
     return less<__detail::__sp_ctrl*>{}(ctrl_, other.ctrl_);
   }
   template <typename U>
-  bool owner_before(const weak_ptr<U>& other) const noexcept {
+  [[gnu::always_inline]] bool
+  owner_before(const weak_ptr<U>& other) const noexcept {
     return less<__detail::__sp_ctrl*>{}(ctrl_, other.ctrl_);
   }
 };
@@ -798,14 +856,15 @@ template <typename T, typename D>
     hash<typename unique_ptr<T, D>::pointer>{}(pointer);
   }
 struct hash<unique_ptr<T, D>> {
-  size_t operator()(const unique_ptr<T, D>& p) const
+  [[gnu::always_inline]] size_t operator()(const unique_ptr<T, D>& p) const
       noexcept(noexcept(hash<typename unique_ptr<T, D>::pointer>{}(p.get()))) {
     using pointer = typename unique_ptr<T, D>::pointer;
     return hash<pointer>{}(p.get());
   }
 };
 template <typename T> struct hash<shared_ptr<T>> {
-  size_t operator()(const shared_ptr<T>& p) const noexcept {
+  [[gnu::always_inline]] size_t
+  operator()(const shared_ptr<T>& p) const noexcept {
     return hash<typename shared_ptr<T>::element_type*>{}(p.get());
   }
 };

@@ -1,6 +1,11 @@
 #pragma once
+#include <__psychicstd_config>
 #include <__psychicstd_errc>
+#if _PSYCHICSTD_COMPATIBILITY_LEVEL >= _PSYCHICSTD_COMPAT_DROPIN
 #include <__psychicstd_type_traits_arithmetic>
+#else
+#include <__psychicstd_type_traits_arithmetic_core>
+#endif
 #include <limits>
 
 namespace std {

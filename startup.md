@@ -6,14 +6,14 @@ psychicstd is linked as a static archive: required archive members are copied in
 
 The interval is a paired bootstrap 95% confidence interval. Each bootstrap sample resamples the paired runs within each batch.
 
-Last updated: 2026-08-14 03:56
+Last updated: 2026-08-17 08:26
 
 | | median exec-to-exit | shared libraries |
 |--|---:|---|
-| system | 0.938 ms | libc.so.6, libgcc_s.so.1, libm.so.6, libstdc++.so.6 |
-| psychicstd | 0.550 ms | libc.so.6, libgcc_s.so.1 |
+| system | 0.970 ms | libc.so.6, libgcc_s.so.1, libm.so.6, libstdc++.so.6 |
+| psychicstd | 0.570 ms | libc.so.6, libgcc_s.so.1 |
 
-Speedup: **1.70x** (95% CI: **[1.66x, 1.73x]**)
+Speedup: **1.70x** (95% CI: **[1.67x, 1.73x]**)
 
 ______________________________________________________________________
 

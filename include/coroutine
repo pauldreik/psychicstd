@@ -1,5 +1,4 @@
 #pragma once
-#include <__psychicstd_type_traits_meta>
 #include <compare>
 #include <cstddef>
 
@@ -13,10 +12,13 @@
 
 namespace std {
 
+template <typename...> using __coroutine_void_t = void;
+
 template <typename Result, typename = void> struct __coroutine_traits_impl {};
 
 template <typename Result>
-struct __coroutine_traits_impl<Result, void_t<typename Result::promise_type>> {
+struct __coroutine_traits_impl<
+    Result, __coroutine_void_t<typename Result::promise_type>> {
   using promise_type = typename Result::promise_type;
 };
 

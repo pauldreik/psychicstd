@@ -1,4 +1,5 @@
 #pragma once
+#include <__psychicstd_type_traits_decay>
 #include <__psychicstd_utility_core>
 #include <__psychicstd_utility_operations>
 
@@ -9,16 +10,18 @@ template <typename T1, typename T2> struct pair {
   using second_type = T2;
   T1 first;
   T2 second;
-  constexpr pair() : first(), second() {}
-  constexpr pair(const T1& a, const T2& b) : first(a), second(b) {}
+  [[gnu::always_inline]] constexpr pair() : first(), second() {}
+  [[gnu::always_inline]] constexpr pair(const T1& a, const T2& b)
+      : first(a), second(b) {}
   template <typename U1, typename U2>
     requires(is_constructible_v<T1, U1> && is_constructible_v<T2, U2>)
-  constexpr pair(U1&& a, U2&& b)
+  [[gnu::always_inline]] constexpr pair(U1&& a, U2&& b)
       : first(static_cast<U1&&>(a)), second(static_cast<U2&&>(b)) {}
   template <typename U1, typename U2>
-  constexpr pair(const pair<U1, U2>& p) : first(p.first), second(p.second) {}
+  [[gnu::always_inline]] constexpr pair(const pair<U1, U2>& p)
+      : first(p.first), second(p.second) {}
   template <typename U1, typename U2>
-  constexpr pair(pair<U1, U2>&& p)
+  [[gnu::always_inline]] constexpr pair(pair<U1, U2>&& p)
       : first(static_cast<U1&&>(p.first)), second(static_cast<U2&&>(p.second)) {
   }
   template <typename... Args1, typename... Args2>
@@ -28,7 +31,7 @@ template <typename T1, typename T2> struct pair {
   constexpr pair(pair&&) = default;
   pair& operator=(const pair&) = default;
   pair& operator=(pair&&) = default;
-  constexpr void swap(pair& o) noexcept {
+  [[gnu::always_inline]] constexpr void swap(pair& o) noexcept {
     using std::swap;
     swap(first, o.first);
     swap(second, o.second);
@@ -36,7 +39,8 @@ template <typename T1, typename T2> struct pair {
 };
 
 template <typename T1, typename T2>
-constexpr pair<decay_t<T1>, decay_t<T2>> make_pair(T1&& a, T2&& b) {
+[[gnu::always_inline]] constexpr pair<decay_t<T1>, decay_t<T2>>
+make_pair(T1&& a, T2&& b) {
   return {static_cast<T1&&>(a), static_cast<T2&&>(b)};
 }
 
@@ -49,21 +53,22 @@ template <typename T1, typename T2> struct tuple_element<1, pair<T1, T2>> {
   using type = T2;
 };
 template <size_t Index, typename T1, typename T2>
-constexpr decltype(auto) get(pair<T1, T2>& p) noexcept {
+[[gnu::always_inline]] constexpr decltype(auto) get(pair<T1, T2>& p) noexcept {
   if constexpr (Index == 0)
     return (p.first);
   else
     return (p.second);
 }
 template <size_t Index, typename T1, typename T2>
-constexpr decltype(auto) get(const pair<T1, T2>& p) noexcept {
+[[gnu::always_inline]] constexpr decltype(auto)
+get(const pair<T1, T2>& p) noexcept {
   if constexpr (Index == 0)
     return (p.first);
   else
     return (p.second);
 }
 template <size_t Index, typename T1, typename T2>
-constexpr decltype(auto) get(pair<T1, T2>&& p) noexcept {
+[[gnu::always_inline]] constexpr decltype(auto) get(pair<T1, T2>&& p) noexcept {
   if constexpr (Index == 0)
     return static_cast<T1&&>(p.first);
   else
@@ -75,6 +80,7 @@ constexpr bool operator==(const pair<T1, T2>& a, const pair<U1, U2>& b) {
   return a.first == b.first && a.second == b.second;
 }
 template <typename T1, typename T2, typename U1, typename U2>
+[[gnu::always_inline]]
 constexpr bool operator!=(const pair<T1, T2>& a, const pair<U1, U2>& b) {
   return !(a == b);
 }
@@ -83,14 +89,17 @@ constexpr bool operator<(const pair<T1, T2>& a, const pair<U1, U2>& b) {
   return a.first < b.first || (!(b.first < a.first) && a.second < b.second);
 }
 template <typename T1, typename T2, typename U1, typename U2>
+[[gnu::always_inline]]
 constexpr bool operator<=(const pair<T1, T2>& a, const pair<U1, U2>& b) {
   return !(b < a);
 }
 template <typename T1, typename T2, typename U1, typename U2>
+[[gnu::always_inline]]
 constexpr bool operator>(const pair<T1, T2>& a, const pair<U1, U2>& b) {
   return b < a;
 }
 template <typename T1, typename T2, typename U1, typename U2>
+[[gnu::always_inline]]
 constexpr bool operator>=(const pair<T1, T2>& a, const pair<U1, U2>& b) {
   return !(a < b);
 }

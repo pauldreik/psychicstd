@@ -1,7 +1,10 @@
 #pragma once
+#include <__psychicstd_config>
+#include <__psychicstd_type_classification>
+#if _PSYCHICSTD_COMPATIBILITY_LEVEL >= _PSYCHICSTD_COMPAT_DROPIN
 #include <__psychicstd_type_traits_arithmetic>
-#include <__psychicstd_type_traits_common>
-#include <__psychicstd_type_traits_convert>
+#endif
+#include <__psychicstd_type_traits_common_type>
 #include <cstdint>
 #include <ratio>
 
@@ -11,17 +14,25 @@
 
 namespace std::chrono {
 
-// Keep <filesystem> light; psychicstd duration bounds support builtin reps.
-template <typename Rep> struct __duration_unsigned {
-  using type = make_unsigned_t<Rep>;
-};
-template <> struct __duration_unsigned<__int128> {
-  using type = unsigned __int128;
-};
-template <> struct __duration_unsigned<unsigned __int128> {
-  using type = unsigned __int128;
-};
+namespace __detail {
+template <typename T> void __accept(T);
+template <typename From, typename To>
+concept __convertible_to =
+    requires(From&& value) { __accept<To>(static_cast<From&&>(value)); };
 
+template <typename T>
+concept __integral = _PSYCHICSTD_INTEGRAL_TYPE(T);
+template <typename T>
+concept __floating = _PSYCHICSTD_FLOATING_TYPE(T);
+template <typename T>
+concept __arithmetic = __integral<T> || __floating<T>;
+template <typename T>
+concept __signed_arithmetic = __arithmetic<T> && T(-1) < T(0);
+template <typename T>
+inline constexpr bool __unsigned = __integral<T> && T(0) < T(-1);
+}
+
+// Keep <filesystem> light; psychicstd duration bounds support builtin reps.
 template <typename Rep> constexpr Rep __duration_min() {
   if constexpr (is_same_v<Rep, float>)
     return -__FLT_MAX__;
@@ -29,11 +40,11 @@ template <typename Rep> constexpr Rep __duration_min() {
     return -__DBL_MAX__;
   else if constexpr (is_same_v<Rep, long double>)
     return -__LDBL_MAX__;
-  else if constexpr (is_same_v<Rep, bool> || is_unsigned_v<Rep> ||
+  else if constexpr (is_same_v<Rep, bool> || __detail::__unsigned<Rep> ||
                      is_same_v<Rep, unsigned __int128>)
     return Rep(0);
-  else if constexpr (is_integral_v<Rep> || is_same_v<Rep, __int128>) {
-    using U = typename __duration_unsigned<Rep>::type;
+  else if constexpr (__detail::__integral<Rep>) {
+    using U = unsigned __int128;
     constexpr U max = (U(1) << (sizeof(Rep) * __CHAR_BIT__ - 1)) - 1;
     return static_cast<Rep>(-static_cast<Rep>(max) - 1);
   } else
@@ -49,10 +60,9 @@ template <typename Rep> constexpr Rep __duration_max() {
     return __LDBL_MAX__;
   else if constexpr (is_same_v<Rep, bool>)
     return true;
-  else if constexpr (is_integral_v<Rep> || is_same_v<Rep, __int128> ||
-                     is_same_v<Rep, unsigned __int128>) {
-    using U = typename __duration_unsigned<Rep>::type;
-    if constexpr (is_unsigned_v<Rep> || is_same_v<Rep, unsigned __int128>)
+  else if constexpr (__detail::__integral<Rep>) {
+    using U = unsigned __int128;
+    if constexpr (__detail::__unsigned<Rep>)
       return static_cast<Rep>(~U(0));
     else
       return static_cast<Rep>((U(1) << (sizeof(Rep) * __CHAR_BIT__ - 1)) - 1);
@@ -67,18 +77,18 @@ public:
 
   constexpr duration() = default;
   template <typename Rep2>
-    requires(is_convertible_v<const Rep2&, Rep> &&
-             (is_floating_point_v<Rep> || !is_floating_point_v<Rep2>))
+    requires(__detail::__convertible_to<const Rep2&, Rep> &&
+             (__detail::__floating<Rep> || !__detail::__floating<Rep2>))
   constexpr explicit duration(const Rep2& v) : rep_(static_cast<Rep>(v)) {}
   template <typename Rep2, typename Period2>
-    requires((is_floating_point_v<Rep> ||
+    requires((__detail::__floating<Rep> ||
               ratio_divide<Period2, Period>::den == 1) &&
-             (is_floating_point_v<Rep> || !is_floating_point_v<Rep2>))
+             (__detail::__floating<Rep> || !__detail::__floating<Rep2>))
   constexpr duration(const duration<Rep2, Period2>& d)
       : rep_(static_cast<Rep>(d.count()) * ratio_divide<Period2, Period>::num /
              ratio_divide<Period2, Period>::den) {}
 
-  constexpr Rep count() const noexcept { return rep_; }
+  [[gnu::always_inline]] constexpr Rep count() const noexcept { return rep_; }
   constexpr duration operator+() const { return *this; }
   constexpr duration operator-() const { return duration(-rep_); }
   constexpr duration& operator+=(const duration& d) {
@@ -140,20 +150,24 @@ constexpr bool operator<(const duration<R1, P1>& a, const duration<R2, P2>& b) {
   return CD(a).count() < CD(b).count();
 }
 template <typename R1, typename P1, typename R2, typename P2>
+[[gnu::always_inline]]
 constexpr bool operator!=(const duration<R1, P1>& a,
                           const duration<R2, P2>& b) {
   return !(a == b);
 }
 template <typename R1, typename P1, typename R2, typename P2>
+[[gnu::always_inline]]
 constexpr bool operator<=(const duration<R1, P1>& a,
                           const duration<R2, P2>& b) {
   return !(b < a);
 }
 template <typename R1, typename P1, typename R2, typename P2>
+[[gnu::always_inline]]
 constexpr bool operator>(const duration<R1, P1>& a, const duration<R2, P2>& b) {
   return b < a;
 }
 template <typename R1, typename P1, typename R2, typename P2>
+[[gnu::always_inline]]
 constexpr bool operator>=(const duration<R1, P1>& a,
                           const duration<R2, P2>& b) {
   return !(a < b);
@@ -172,19 +186,19 @@ constexpr auto operator-(const duration<R1, P1>& a, const duration<R2, P2>& b) {
   return CD(CD(a).count() - CD(b).count());
 }
 template <typename Rep, typename Period, typename Scalar>
-  requires is_arithmetic_v<Scalar>
+  requires __detail::__arithmetic<Scalar>
 constexpr duration<Rep, Period> operator*(const duration<Rep, Period>& d,
                                           Scalar s) {
   return duration<Rep, Period>(static_cast<Rep>(d.count() * s));
 }
 template <typename Scalar, typename Rep, typename Period>
-  requires is_arithmetic_v<Scalar>
+  requires __detail::__arithmetic<Scalar>
 constexpr duration<Rep, Period> operator*(Scalar s,
                                           const duration<Rep, Period>& d) {
   return d * s;
 }
 template <typename Rep, typename Period, typename Scalar>
-  requires is_arithmetic_v<Scalar>
+  requires __detail::__arithmetic<Scalar>
 constexpr duration<Rep, Period> operator/(const duration<Rep, Period>& d,
                                           Scalar s) {
   return duration<Rep, Period>(static_cast<Rep>(d.count() / s));
@@ -196,7 +210,7 @@ constexpr auto operator/(const duration<R1, P1>& a, const duration<R2, P2>& b) {
   return CD(a).count() / CD(b).count();
 }
 template <typename Rep, typename Period, typename Scalar>
-  requires is_integral_v<Rep> && is_integral_v<Scalar>
+  requires __detail::__integral<Rep> && __detail::__integral<Scalar>
 constexpr auto operator%(const duration<Rep, Period>& d, Scalar s) {
   using CommonRep = common_type_t<Rep, Scalar>;
   return duration<CommonRep, Period>(static_cast<CommonRep>(d.count()) %
@@ -261,11 +275,13 @@ public:
   constexpr time_point() = default;
   constexpr explicit time_point(const Duration& d) : d_(d) {}
   template <typename Duration2>
-    requires is_convertible_v<Duration2, Duration>
+    requires __detail::__convertible_to<Duration2, Duration>
   constexpr time_point(const time_point<Clock, Duration2>& t)
       : d_(t.time_since_epoch()) {}
 
-  constexpr Duration time_since_epoch() const { return d_; }
+  [[gnu::always_inline]] constexpr Duration time_since_epoch() const {
+    return d_;
+  }
 
   constexpr time_point& operator+=(const Duration& d) {
     d_ += d;
@@ -316,21 +332,25 @@ constexpr bool operator<(const time_point<C, D1>& a,
   return a.time_since_epoch() < b.time_since_epoch();
 }
 template <typename C, typename D1, typename D2>
+[[gnu::always_inline]]
 constexpr bool operator!=(const time_point<C, D1>& a,
                           const time_point<C, D2>& b) {
   return !(a == b);
 }
 template <typename C, typename D1, typename D2>
+[[gnu::always_inline]]
 constexpr bool operator>(const time_point<C, D1>& a,
                          const time_point<C, D2>& b) {
   return b < a;
 }
 template <typename C, typename D1, typename D2>
+[[gnu::always_inline]]
 constexpr bool operator<=(const time_point<C, D1>& a,
                           const time_point<C, D2>& b) {
   return !(b < a);
 }
 template <typename C, typename D1, typename D2>
+[[gnu::always_inline]]
 constexpr bool operator>=(const time_point<C, D1>& a,
                           const time_point<C, D2>& b) {
   return !(a < b);

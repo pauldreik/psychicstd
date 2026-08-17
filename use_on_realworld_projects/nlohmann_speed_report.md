@@ -2,7 +2,7 @@
 
 Compiler: `c++ (Debian 14.2.0-19) 14.2.0`. Each project is built 9 time(s) per side (system libstdc++, psychicstd); `system (s)`/`psychicstd (s)` are the *median* build time of those repetitions, in seconds -- the median is used instead of the mean so one repetition disturbed by another process on the machine doesn't skew the result. `speedup` = system median / psychicstd median (>1x means psychicstd is faster); its bracketed range is a 95% confidence interval on that *same ratio* (obtained by resampling the raw per-repetition timings, not just the two medians, 2000 times) -- so it reflects how much the repetitions varied, not a different unit. 🟢 the whole CI is above 1x (reliably faster) · 🔴 the whole CI is below 1x (reliably slower) · 🟡 the CI straddles 1x (not distinguishable from run-to-run noise).
 
-Parallelism: **8 jobs** (16 logical CPUs available; the memory estimate permits 16 jobs at 1.5 GiB/job). ccache was disabled.
+Parallelism: **8 jobs** (16 logical CPUs available; the memory estimate permits 15 jobs at 1.5 GiB/job). ccache was disabled.
 
 ## nlohmann (3.12.0)
 
@@ -12,15 +12,15 @@ Compiles nlohmann JSON's complete upstream test suite without running it.
 
 | step | system (s) | psychicstd (s) | speedup | comment |
 | --- | ---: | ---: | ---: | --- |
-| configure | 0.66 | 0.66 | 🟡 1.01x [0.99x, 1.03x] | |
-| compile | 28.41 | 14.20 | 🟢 2.00x [1.96x, 2.01x] | |
+| configure | 0.66 | 0.66 | 🟡 1.00x [0.99x, 1.03x] | |
+| compile | 27.75 | 13.96 | 🟢 1.99x [1.98x, 2.00x] | |
 
 ### Release
 
 | step | system (s) | psychicstd (s) | speedup | comment |
 | --- | ---: | ---: | ---: | --- |
-| configure | 0.67 | 0.66 | 🟡 1.01x [1.00x, 1.03x] | |
-| compile | 54.90 | 47.09 | 🟢 1.17x [1.16x, 1.17x] | |
+| configure | 0.67 | 0.67 | 🟢 1.01x [1.00x, 1.03x] | |
+| compile | 53.31 | 46.21 | 🟢 1.15x [1.14x, 1.16x] | |
 
 ______________________________________________________________________
 

@@ -1,5 +1,11 @@
 #pragma once
+#include <__psychicstd_config>
+#if _PSYCHICSTD_COMPATIBILITY_LEVEL >= _PSYCHICSTD_COMPAT_DROPIN
 #include <__psychicstd_type_traits_classification>
+#else
+#include <__psychicstd_type_traits_convert_core>
+#endif
+#include <__psychicstd_type_traits_declval>
 
 namespace std {
 namespace detail {

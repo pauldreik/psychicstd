@@ -53,15 +53,21 @@ template <typename T> struct numeric_limits {
   static constexpr int max_exponent10 = 0;
   static constexpr float_denorm_style has_denorm = denorm_absent;
   static constexpr float_round_style round_style = round_toward_zero;
-  static constexpr T min() noexcept { return T(); }
-  static constexpr T max() noexcept { return T(); }
-  static constexpr T lowest() noexcept { return T(); }
-  static constexpr T epsilon() noexcept { return T(); }
-  static constexpr T round_error() noexcept { return T(); }
-  static constexpr T infinity() noexcept { return T(); }
-  static constexpr T quiet_NaN() noexcept { return T(); }
-  static constexpr T signaling_NaN() noexcept { return T(); }
-  static constexpr T denorm_min() noexcept { return T(); }
+  [[gnu::always_inline]] static constexpr T min() noexcept { return T(); }
+  [[gnu::always_inline]] static constexpr T max() noexcept { return T(); }
+  [[gnu::always_inline]] static constexpr T lowest() noexcept { return T(); }
+  [[gnu::always_inline]] static constexpr T epsilon() noexcept { return T(); }
+  [[gnu::always_inline]] static constexpr T round_error() noexcept {
+    return T();
+  }
+  [[gnu::always_inline]] static constexpr T infinity() noexcept { return T(); }
+  [[gnu::always_inline]] static constexpr T quiet_NaN() noexcept { return T(); }
+  [[gnu::always_inline]] static constexpr T signaling_NaN() noexcept {
+    return T();
+  }
+  [[gnu::always_inline]] static constexpr T denorm_min() noexcept {
+    return T();
+  }
 };
 
 // Members identical across all integer specializations. Parsed once here;

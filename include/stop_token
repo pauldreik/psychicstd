@@ -1,6 +1,5 @@
 #pragma once
 #include <__psychicstd_refcount>
-#include <__psychicstd_type_traits_invoke>
 
 namespace std {
 
@@ -103,8 +102,9 @@ public:
   template <typename C>
   explicit stop_callback(const stop_token& token, C&& callback)
       : callback_(static_cast<C&&>(callback)) {
-    static_assert(is_invocable_v<Callback&>,
-                  "psychicstd::stop_callback requires a nullary callable");
+    static_assert(
+        requires(Callback& value) { value(); },
+        "psychicstd::stop_callback requires a nullary callable");
 
     auto* state = token.state_;
     if (!state)
@@ -159,6 +159,6 @@ public:
 };
 
 template <typename Callback>
-stop_callback(stop_token, Callback) -> stop_callback<decay_t<Callback>>;
+stop_callback(stop_token, Callback) -> stop_callback<Callback>;
 
 }

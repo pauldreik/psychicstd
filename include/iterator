@@ -5,10 +5,15 @@
 #include <__psychicstd_iterator_next>
 #include <__psychicstd_ostreambuf_iterator>
 #if _PSYCHICSTD_COMPATIBILITY_LEVEL >= _PSYCHICSTD_COMPAT_DROPIN
-#include <concepts>
-#endif
-#include <__psychicstd_type_traits_classification>
 #include <__psychicstd_type_traits_common>
+#include <concepts>
+#else
+#include <__psychicstd_type_traits_common_type>
+#include <__psychicstd_type_traits_cvref>
+#endif
+#include <__psychicstd_type_traits_arithmetic>
+#include <__psychicstd_type_traits_classification>
+#include <__psychicstd_type_traits_reference_category>
 #include <cstddef>
 #include <initializer_list>
 #include <iosfwd>
@@ -38,28 +43,9 @@ concept indirectly_writable = requires(It&& i, T&& t) {
   *static_cast<It&&>(i) = static_cast<T&&>(t);
 };
 
-// advance / next / prev
-template <typename InputIt, typename Distance>
-constexpr void advance(InputIt& it, Distance n) {
-  using category = typename iterator_traits<InputIt>::iterator_category;
-  if constexpr (is_base_of_v<random_access_iterator_tag, category>) {
-    it += n;
-  } else if constexpr (is_base_of_v<bidirectional_iterator_tag, category>) {
-    while (n > 0) {
-      ++it;
-      --n;
-    }
-    while (n < 0) {
-      --it;
-      ++n;
-    }
-  } else {
-    while (n-- > 0)
-      ++it;
-  }
-}
-
+// prev
 template <typename BidirIt>
+[[gnu::always_inline]]
 constexpr BidirIt
 prev(BidirIt it, typename iterator_traits<BidirIt>::difference_type n = 1) {
   advance(it, -n);
@@ -171,25 +157,29 @@ public:
   using reference = void;
   using container_type = Container;
 
-  explicit back_insert_iterator(Container& c) : container(&c) {}
-  back_insert_iterator& operator=(const typename Container::value_type& v) {
+  [[gnu::always_inline]] explicit back_insert_iterator(Container& c)
+      : container(&c) {}
+  [[gnu::always_inline]] back_insert_iterator&
+  operator=(const typename Container::value_type& v) {
     container->push_back(v);
     return *this;
   }
-  back_insert_iterator& operator=(typename Container::value_type&& v) {
+  [[gnu::always_inline]] back_insert_iterator&
+  operator=(typename Container::value_type&& v) {
     container->push_back(static_cast<typename Container::value_type&&>(v));
     return *this;
   }
-  back_insert_iterator& operator*() { return *this; }
-  back_insert_iterator& operator++() { return *this; }
-  back_insert_iterator operator++(int) { return *this; }
+  [[gnu::always_inline]] back_insert_iterator& operator*() { return *this; }
+  [[gnu::always_inline]] back_insert_iterator& operator++() { return *this; }
+  [[gnu::always_inline]] back_insert_iterator operator++(int) { return *this; }
 
 protected:
   Container* container;
 };
 
 template <typename Container>
-back_insert_iterator<Container> back_inserter(Container& c) {
+[[gnu::always_inline]] inline back_insert_iterator<Container>
+back_inserter(Container& c) {
   return back_insert_iterator<Container>(c);
 }
 
@@ -203,21 +193,24 @@ public:
   using reference = void;
   using container_type = Container;
 
-  insert_iterator(Container& c, typename Container::iterator it)
+  [[gnu::always_inline]] insert_iterator(Container& c,
+                                         typename Container::iterator it)
       : c_(&c), it_(it) {}
-  insert_iterator& operator=(const typename Container::value_type& v) {
+  [[gnu::always_inline]] insert_iterator&
+  operator=(const typename Container::value_type& v) {
     it_ = c_->insert(it_, v);
     ++it_;
     return *this;
   }
-  insert_iterator& operator=(typename Container::value_type&& v) {
+  [[gnu::always_inline]] insert_iterator&
+  operator=(typename Container::value_type&& v) {
     it_ = c_->insert(it_, static_cast<typename Container::value_type&&>(v));
     ++it_;
     return *this;
   }
-  insert_iterator& operator*() { return *this; }
-  insert_iterator& operator++() { return *this; }
-  insert_iterator& operator++(int) { return *this; }
+  [[gnu::always_inline]] insert_iterator& operator*() { return *this; }
+  [[gnu::always_inline]] insert_iterator& operator++() { return *this; }
+  [[gnu::always_inline]] insert_iterator& operator++(int) { return *this; }
 
 private:
   Container* c_;
@@ -225,8 +218,8 @@ private:
 };
 
 template <typename Container>
-insert_iterator<Container> inserter(Container& c,
-                                    typename Container::iterator it) {
+[[gnu::always_inline]] inline insert_iterator<Container>
+inserter(Container& c, typename Container::iterator it) {
   return insert_iterator<Container>(c, it);
 }
 
@@ -240,25 +233,29 @@ public:
   using reference = void;
   using container_type = Container;
 
-  explicit front_insert_iterator(Container& c) : c_(&c) {}
-  front_insert_iterator& operator=(const typename Container::value_type& v) {
+  [[gnu::always_inline]] explicit front_insert_iterator(Container& c)
+      : c_(&c) {}
+  [[gnu::always_inline]] front_insert_iterator&
+  operator=(const typename Container::value_type& v) {
     c_->push_front(v);
     return *this;
   }
-  front_insert_iterator& operator=(typename Container::value_type&& v) {
+  [[gnu::always_inline]] front_insert_iterator&
+  operator=(typename Container::value_type&& v) {
     c_->push_front(static_cast<typename Container::value_type&&>(v));
     return *this;
   }
-  front_insert_iterator& operator*() { return *this; }
-  front_insert_iterator& operator++() { return *this; }
-  front_insert_iterator operator++(int) { return *this; }
+  [[gnu::always_inline]] front_insert_iterator& operator*() { return *this; }
+  [[gnu::always_inline]] front_insert_iterator& operator++() { return *this; }
+  [[gnu::always_inline]] front_insert_iterator operator++(int) { return *this; }
 
 private:
   Container* c_;
 };
 
 template <typename Container>
-front_insert_iterator<Container> front_inserter(Container& c) {
+[[gnu::always_inline]] inline front_insert_iterator<Container>
+front_inserter(Container& c) {
   return front_insert_iterator<Container>(c);
 }
 
@@ -276,28 +273,31 @@ public:
   using traits_type = Traits;
   using istream_type = basic_istream<Char, Traits>;
 
-  istream_iterator() noexcept : is_(nullptr) {}
-  explicit istream_iterator(istream_type& is) : is_(&is) { advance(); }
+  [[gnu::always_inline]] istream_iterator() noexcept : is_(nullptr) {}
+  [[gnu::always_inline]] explicit istream_iterator(istream_type& is)
+      : is_(&is) {
+    advance();
+  }
 
-  const T& operator*() const noexcept { return val_; }
-  const T* operator->() const noexcept { return &val_; }
+  [[gnu::always_inline]] const T& operator*() const noexcept { return val_; }
+  [[gnu::always_inline]] const T* operator->() const noexcept { return &val_; }
 
-  istream_iterator& operator++() {
+  [[gnu::always_inline]] istream_iterator& operator++() {
     advance();
     return *this;
   }
-  istream_iterator operator++(int) {
+  [[gnu::always_inline]] istream_iterator operator++(int) {
     auto tmp = *this;
     advance();
     return tmp;
   }
 
-  friend bool operator==(const istream_iterator& a,
-                         const istream_iterator& b) noexcept {
+  [[gnu::always_inline]] friend bool
+  operator==(const istream_iterator& a, const istream_iterator& b) noexcept {
     return a.is_ == b.is_;
   }
-  friend bool operator!=(const istream_iterator& a,
-                         const istream_iterator& b) noexcept {
+  [[gnu::always_inline]] friend bool
+  operator!=(const istream_iterator& a, const istream_iterator& b) noexcept {
     return !(a == b);
   }
 
@@ -305,7 +305,7 @@ private:
   istream_type* is_;
   T val_{};
 
-  void advance() {
+  [[gnu::always_inline]] void advance() {
     if (is_ && !(*is_ >> val_))
       is_ = nullptr;
   }
@@ -324,18 +324,19 @@ public:
   using traits_type = Traits;
   using ostream_type = basic_ostream<Char, Traits>;
 
-  ostream_iterator(ostream_type& os, const Char* delim = nullptr)
+  [[gnu::always_inline]] ostream_iterator(ostream_type& os,
+                                          const Char* delim = nullptr)
       : os_(&os), delim_(delim) {}
 
-  ostream_iterator& operator=(const T& v) {
+  [[gnu::always_inline]] ostream_iterator& operator=(const T& v) {
     *os_ << v;
     if (delim_)
       *os_ << delim_;
     return *this;
   }
-  ostream_iterator& operator*() { return *this; }
-  ostream_iterator& operator++() { return *this; }
-  ostream_iterator operator++(int) { return *this; }
+  [[gnu::always_inline]] ostream_iterator& operator*() { return *this; }
+  [[gnu::always_inline]] ostream_iterator& operator++() { return *this; }
+  [[gnu::always_inline]] ostream_iterator operator++(int) { return *this; }
 
 private:
   ostream_type* os_;
@@ -357,34 +358,38 @@ public:
   using streambuf_type = basic_streambuf<Char, Traits>;
   using istream_type = basic_istream<Char, Traits>;
 
-  istreambuf_iterator() noexcept : sb_(nullptr), eof_(true) {}
-  explicit istreambuf_iterator(streambuf_type* sb) : sb_(sb), eof_(false) {
+  [[gnu::always_inline]] istreambuf_iterator() noexcept
+      : sb_(nullptr), eof_(true) {}
+  [[gnu::always_inline]] explicit istreambuf_iterator(streambuf_type* sb)
+      : sb_(sb), eof_(false) {
     fetch();
   }
-  explicit istreambuf_iterator(istream_type& is)
+  [[gnu::always_inline]] explicit istreambuf_iterator(istream_type& is)
       : sb_(is.rdbuf()), eof_(false) {
     fetch();
   }
 
-  Char operator*() const { return val_; }
-  istreambuf_iterator& operator++() {
+  [[gnu::always_inline]] Char operator*() const { return val_; }
+  [[gnu::always_inline]] istreambuf_iterator& operator++() {
     fetch();
     return *this;
   }
-  istreambuf_iterator operator++(int) {
+  [[gnu::always_inline]] istreambuf_iterator operator++(int) {
     auto tmp = *this;
     fetch();
     return tmp;
   }
 
-  bool equal(const istreambuf_iterator& o) const { return eof_ == o.eof_; }
+  [[gnu::always_inline]] bool equal(const istreambuf_iterator& o) const {
+    return eof_ == o.eof_;
+  }
 
-  friend bool operator==(const istreambuf_iterator& a,
-                         const istreambuf_iterator& b) {
+  [[gnu::always_inline]] friend bool operator==(const istreambuf_iterator& a,
+                                                const istreambuf_iterator& b) {
     return a.equal(b);
   }
-  friend bool operator!=(const istreambuf_iterator& a,
-                         const istreambuf_iterator& b) {
+  [[gnu::always_inline]] friend bool operator!=(const istreambuf_iterator& a,
+                                                const istreambuf_iterator& b) {
     return !a.equal(b);
   }
 
@@ -393,7 +398,7 @@ private:
   Char val_{};
   bool eof_;
 
-  void fetch() {
+  [[gnu::always_inline]] void fetch() {
     auto c = sb_ ? sb_->sbumpc() : Traits::eof();
     if (Traits::eq_int_type(c, Traits::eof())) {
       eof_ = true;
@@ -416,66 +421,74 @@ public:
   using pointer = It;
   using reference = value_type&&;
   constexpr move_iterator() = default;
-  constexpr explicit move_iterator(It it) : it_(it) {}
-  constexpr It base() const { return it_; }
-  constexpr reference operator*() const { return static_cast<reference>(*it_); }
-  constexpr move_iterator& operator++() {
+  [[gnu::always_inline]] constexpr explicit move_iterator(It it) : it_(it) {}
+  [[gnu::always_inline]] constexpr It base() const { return it_; }
+  [[gnu::always_inline]] constexpr reference operator*() const {
+    return static_cast<reference>(*it_);
+  }
+  [[gnu::always_inline]] constexpr move_iterator& operator++() {
     ++it_;
     return *this;
   }
-  constexpr move_iterator operator++(int) {
+  [[gnu::always_inline]] constexpr move_iterator operator++(int) {
     auto t = *this;
     ++it_;
     return t;
   }
-  constexpr move_iterator& operator--() {
+  [[gnu::always_inline]] constexpr move_iterator& operator--() {
     --it_;
     return *this;
   }
-  constexpr move_iterator operator--(int) {
+  [[gnu::always_inline]] constexpr move_iterator operator--(int) {
     auto t = *this;
     --it_;
     return t;
   }
-  constexpr move_iterator operator+(difference_type n) const {
+  [[gnu::always_inline]] constexpr move_iterator
+  operator+(difference_type n) const {
     return move_iterator(it_ + n);
   }
-  constexpr move_iterator operator-(difference_type n) const {
+  [[gnu::always_inline]] constexpr move_iterator
+  operator-(difference_type n) const {
     return move_iterator(it_ - n);
   }
-  constexpr move_iterator& operator+=(difference_type n) {
+  [[gnu::always_inline]] constexpr move_iterator&
+  operator+=(difference_type n) {
     it_ += n;
     return *this;
   }
-  constexpr move_iterator& operator-=(difference_type n) {
+  [[gnu::always_inline]] constexpr move_iterator&
+  operator-=(difference_type n) {
     it_ -= n;
     return *this;
   }
-  constexpr reference operator[](difference_type n) const {
+  [[gnu::always_inline]] constexpr reference
+  operator[](difference_type n) const {
     return static_cast<reference>(it_[n]);
   }
-  friend constexpr bool operator==(const move_iterator& a,
-                                   const move_iterator& b) {
+  [[gnu::always_inline]] friend constexpr bool
+  operator==(const move_iterator& a, const move_iterator& b) {
     return a.it_ == b.it_;
   }
-  friend constexpr bool operator!=(const move_iterator& a,
-                                   const move_iterator& b) {
+  [[gnu::always_inline]] friend constexpr bool
+  operator!=(const move_iterator& a, const move_iterator& b) {
     return a.it_ != b.it_;
   }
-  friend constexpr difference_type operator-(const move_iterator& a,
-                                             const move_iterator& b) {
+  [[gnu::always_inline]] friend constexpr difference_type
+  operator-(const move_iterator& a, const move_iterator& b) {
     return a.it_ - b.it_;
   }
 };
 
 template <typename It>
-constexpr move_iterator<It>
+[[gnu::always_inline]] constexpr move_iterator<It>
 operator+(typename move_iterator<It>::difference_type n,
           const move_iterator<It>& it) {
   return it + n;
 }
 
-template <typename It> constexpr move_iterator<It> make_move_iterator(It it) {
+template <typename It>
+[[gnu::always_inline]] constexpr move_iterator<It> make_move_iterator(It it) {
   return move_iterator<It>(it);
 }
 

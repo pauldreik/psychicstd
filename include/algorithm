@@ -4,10 +4,7 @@
 #include <__psychicstd_config>
 #if _PSYCHICSTD_COMPATIBILITY_LEVEL >= _PSYCHICSTD_COMPAT_DROPIN
 #include <__psychicstd_equal_to> // Preserve transitive std::equal_to.
-#endif
 #include <iterator>
-
-#if _PSYCHICSTD_COMPATIBILITY_LEVEL >= _PSYCHICSTD_COMPAT_DROPIN
 #include <tuple>
 #endif
 

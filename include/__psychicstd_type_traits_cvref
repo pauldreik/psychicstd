@@ -1,0 +1,10 @@
+#pragma once
+#include <__psychicstd_remove_cvref>
+
+namespace std {
+
+template <typename T>
+using remove_cvref = __psychicstd_detail::__remove_cvref_impl<T>;
+template <typename T> using remove_cvref_t = typename remove_cvref<T>::type;
+
+}

@@ -1,0 +1,19 @@
+#pragma once
+#include <__psychicstd_type_traits_decay>
+
+namespace std {
+
+template <typename T> class reference_wrapper;
+template <typename T> struct unwrap_reference {
+  using type = T;
+};
+template <typename T> struct unwrap_reference<reference_wrapper<T>> {
+  using type = T&;
+};
+template <typename T>
+using unwrap_reference_t = typename unwrap_reference<T>::type;
+template <typename T> struct unwrap_ref_decay : unwrap_reference<decay_t<T>> {};
+template <typename T>
+using unwrap_ref_decay_t = typename unwrap_ref_decay<T>::type;
+
+}

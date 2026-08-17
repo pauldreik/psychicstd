@@ -173,10 +173,22 @@ EXCLUDED_PUBLIC_HEADERS = {"cxxabi.h", "uchar.h"}
 _RE_UNSUPPORTED = re.compile(r"^//\s*UNSUPPORTED:\s*(.+)$", re.MULTILINE)
 _RE_REQUIRES = re.compile(r"^//\s*REQUIRES:\s*(.+)$", re.MULTILINE)
 _RE_ADD_FLAGS = re.compile(r"^//\s*ADDITIONAL_COMPILE_FLAGS:\s*(.+)$", re.MULTILINE)
+_RE_EXACT_STANDARD = re.compile(r"(?<![\w-])c\+\+(03|11|14|17|20|23|26)(?![\w-])")
+_RE_MINIMUM_STANDARD = re.compile(r"std-at-least-c\+\+(03|11|14|17|20|23|26)")
 
 
 def _tokens(line: str) -> list[str]:
     return [t.strip() for t in re.split(r"[,\s]+", line) if t.strip()]
+
+
+def _requires_other_standard(expression: str) -> bool:
+    exact_standards = {int(value) for value in _RE_EXACT_STANDARD.findall(expression)}
+    if exact_standards and LANGUAGE_STANDARD not in exact_standards:
+        return True
+    return any(
+        int(value) > LANGUAGE_STANDARD
+        for value in _RE_MINIMUM_STANDARD.findall(expression)
+    )
 
 
 def classify_test(path: Path) -> str:
@@ -196,6 +208,8 @@ def classify_test(path: Path) -> str:
         if "c++20" in _tokens(m.group(1)):
             return "libcpp-specific"
     for m in _RE_REQUIRES.finditer(text):
+        if _requires_other_standard(m.group(1)):
+            return "libcpp-specific"
         if any(t.startswith("libcpp-") for t in _tokens(m.group(1))):
             return "libcpp-specific"
     return "eligible"
@@ -752,7 +766,8 @@ def main() -> None:
         f.write("## Summary\n\n")
         f.write(
             "The pass percentage uses all tests except those explicitly marked "
-            "libc++-specific. Untested cases are not counted as passes.\n\n"
+            "inapplicable to the C++20 configuration. Untested cases are not "
+            "counted as passes.\n\n"
         )
         f.write(
             "\U0001f7e2 at least 80% pass  "
@@ -763,7 +778,7 @@ def main() -> None:
 
         f.write(
             "| | header | psychicstd passes | tested | relevant tests | "
-            "ignored libc++-specific/C++23+ | upstream total | lines |\n"
+            "ignored inapplicable tests | upstream total | lines |\n"
         )
         f.write(
             "|--|--------|------------------:|-------:|---------------:|"
@@ -789,7 +804,7 @@ def main() -> None:
         f.write(
             "Each tested case appears in exactly one of the first four result "
             "columns. Untested means relevant tests that have not yet been "
-            "selected by incremental sampling. It does not include libc++-specific "
+            "selected by incremental sampling. It does not include inapplicable "
             "tests; those are excluded from the relevant corpus and counted "
             "separately in the summary table.\n\n"
         )

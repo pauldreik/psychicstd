@@ -1,8 +1,15 @@
 #pragma once
+#include <__psychicstd_config>
 #include <__psychicstd_iterator_core>
-#include <__psychicstd_type_traits_arithmetic>
+#include <__psychicstd_type_traits_conditional>
+#if _PSYCHICSTD_COMPATIBILITY_LEVEL >= _PSYCHICSTD_COMPAT_DROPIN
 #include <__psychicstd_type_traits_meta>
 #include <concepts>
+#else
+#include <__psychicstd_type_traits_cvref>
+#include <__psychicstd_type_traits_decay>
+#include <__psychicstd_type_traits_declval>
+#endif
 
 namespace std {
 template <typename T> class initializer_list;
@@ -13,25 +20,28 @@ namespace std::ranges {
 // -- CPOs: begin / end -------------------------------------------------------
 namespace __detail {
 struct __begin_fn {
-  template <typename R> constexpr auto operator()(R&& r) const {
+  template <typename R>
+  [[gnu::always_inline]] constexpr auto operator()(R&& r) const {
     return r.begin();
   }
   template <typename T, size_t N>
-  constexpr T* operator()(T (&a)[N]) const noexcept {
+  [[gnu::always_inline]] constexpr T* operator()(T (&a)[N]) const noexcept {
     return a;
   }
 };
 struct __end_fn {
-  template <typename R> constexpr auto operator()(R&& r) const {
+  template <typename R>
+  [[gnu::always_inline]] constexpr auto operator()(R&& r) const {
     return r.end();
   }
   template <typename T, size_t N>
-  constexpr T* operator()(T (&a)[N]) const noexcept {
+  [[gnu::always_inline]] constexpr T* operator()(T (&a)[N]) const noexcept {
     return a + N;
   }
 };
 struct __size_fn {
-  template <typename R> constexpr auto operator()(R&& r) const {
+  template <typename R>
+  [[gnu::always_inline]] constexpr auto operator()(R&& r) const {
     return r.size();
   }
 };
@@ -51,7 +61,8 @@ concept __has_adl_iter_swap = requires(I&& a, I&& b) {
 };
 
 struct __iter_move_fn {
-  template <typename I> constexpr auto operator()(I&& i) const {
+  template <typename I>
+  [[gnu::always_inline]] constexpr auto operator()(I&& i) const {
     if constexpr (__has_adl_iter_move<I&&>) {
       // forward
       return iter_move(static_cast<I&&>(i));
@@ -63,7 +74,7 @@ struct __iter_move_fn {
 };
 struct __iter_swap_fn {
   template <typename I1, typename I2>
-  constexpr void operator()(I1&& a, I2&& b) const {
+  [[gnu::always_inline]] constexpr void operator()(I1&& a, I2&& b) const {
     if constexpr (__has_adl_iter_swap<I1&&>) {
       // forward
       iter_swap(static_cast<I1&&>(a), static_cast<I2&&>(b));
@@ -119,9 +130,20 @@ concept common_range = range<T>;
 template <typename T>
 concept output_range = range<T>;
 
+namespace __detail {
+template <typename T> inline constexpr bool __lvalue_reference = false;
+template <typename T> inline constexpr bool __lvalue_reference<T&> = true;
+
+template <typename T>
+concept __movable = is_same_v<T, remove_reference_t<T>> && requires(T value) {
+  T(static_cast<T&&>(value));
+  requires is_same_v<decltype(value = static_cast<T&&>(value)), T&>;
+};
+}
+
 // view: a range that is semiregular
 template <typename T>
-concept view = range<T> && std::movable<T>;
+concept view = range<T> && __detail::__movable<T>;
 
 namespace __detail {
 template <typename T> inline constexpr bool __is_initializer_list = false;
@@ -131,8 +153,8 @@ inline constexpr bool __is_initializer_list<std::initializer_list<T>> = true;
 
 template <typename R>
 concept viewable_range =
-    range<R> && (std::is_lvalue_reference_v<R> ||
-                 (std::movable<std::remove_reference_t<R>> &&
+    range<R> && (__detail::__lvalue_reference<R> ||
+                 (__detail::__movable<std::remove_reference_t<R>> &&
                   !__detail::__is_initializer_list<std::remove_cvref_t<R>>));
 
 // range_value_t etc.
@@ -161,19 +183,19 @@ struct view_base {};
 template <typename Iterator, typename Sentinel = Iterator> class subrange {
 public:
   constexpr subrange() = default;
-  constexpr subrange(Iterator first, Sentinel last)
+  [[gnu::always_inline]] constexpr subrange(Iterator first, Sentinel last)
       : first_(static_cast<Iterator&&>(first)),
         last_(static_cast<Sentinel&&>(last)) {}
 
   // Without borrowed_range support, only accept ranges that outlive this view.
   template <typename Range>
     requires(!std::is_same_v<std::remove_cvref_t<Range>, subrange> &&
-             std::is_lvalue_reference_v<Range>)
-  constexpr subrange(Range&& range)
+             __detail::__lvalue_reference<Range>)
+  [[gnu::always_inline]] constexpr subrange(Range&& range)
       : first_(std::ranges::begin(range)), last_(std::ranges::end(range)) {}
 
-  constexpr Iterator begin() const { return first_; }
-  constexpr Sentinel end() const { return last_; }
+  [[gnu::always_inline]] constexpr Iterator begin() const { return first_; }
+  [[gnu::always_inline]] constexpr Sentinel end() const { return last_; }
 
 private:
   Iterator first_{};
@@ -183,7 +205,7 @@ private:
 template <typename Iterator, typename Sentinel>
 subrange(Iterator, Sentinel) -> subrange<Iterator, Sentinel>;
 template <typename Range>
-  requires std::is_lvalue_reference_v<Range>
+  requires __detail::__lvalue_reference<Range>
 subrange(Range&&) -> subrange<iterator_t<Range>, sentinel_t<Range>>;
 
 template <typename Range, typename Function> class transform_view {
@@ -197,38 +219,41 @@ template <typename Range, typename Function> class transform_view {
     Iterator current_{};
     Function* function_ = nullptr;
 
-    constexpr decltype(auto) operator*() const {
+    [[gnu::always_inline]] constexpr decltype(auto) operator*() const {
       return (*function_)(*current_);
     }
-    constexpr __iterator& operator++() {
+    [[gnu::always_inline]] constexpr __iterator& operator++() {
       ++current_;
       return *this;
     }
-    constexpr __iterator operator++(int) {
+    [[gnu::always_inline]] constexpr __iterator operator++(int) {
       auto old = *this;
       ++current_;
       return old;
     }
     template <typename Other>
-    constexpr bool operator==(const __iterator<Other>& other) const {
+    [[gnu::always_inline]] constexpr bool
+    operator==(const __iterator<Other>& other) const {
       return current_ == other.current_;
     }
     template <typename Other>
-    constexpr bool operator!=(const __iterator<Other>& other) const {
+    [[gnu::always_inline]] constexpr bool
+    operator!=(const __iterator<Other>& other) const {
       return !(*this == other);
     }
   };
 
 public:
-  constexpr transform_view(Range range, Function function)
+  [[gnu::always_inline]] constexpr transform_view(Range range,
+                                                  Function function)
       : range_(static_cast<Range&&>(range)),
         function_(static_cast<Function&&>(function)) {}
 
-  constexpr auto begin() {
+  [[gnu::always_inline]] constexpr auto begin() {
     return __iterator<decltype(std::ranges::begin(range_))>{
         std::ranges::begin(range_), &function_};
   }
-  constexpr auto end() {
+  [[gnu::always_inline]] constexpr auto end() {
     return __iterator<decltype(std::ranges::end(range_))>{
         std::ranges::end(range_), &function_};
   }
@@ -243,13 +268,14 @@ private:
 namespace std::views {
 
 template <typename R>
-using all_t = std::conditional_t<std::is_lvalue_reference_v<R>, R,
-                                 std::remove_cvref_t<R>>;
+using all_t = std::conditional_t<std::ranges::__detail::__lvalue_reference<R>,
+                                 R, std::remove_cvref_t<R>>;
 
 struct __all_fn {
   template <typename R>
     requires std::ranges::viewable_range<R>
-  constexpr auto operator()(R&& r) const noexcept -> R&& {
+  [[gnu::always_inline]] constexpr auto operator()(R&& r) const noexcept
+      -> R&& {
     // forward
     return static_cast<R&&>(r);
   }
@@ -258,13 +284,14 @@ inline constexpr __all_fn all{};
 
 template <typename Function> class __transform_closure {
 public:
-  constexpr explicit __transform_closure(Function function)
+  [[gnu::always_inline]] constexpr explicit __transform_closure(
+      Function function)
       : function_(static_cast<Function&&>(function)) {}
 
   template <typename Range>
     requires std::ranges::viewable_range<Range>
-  friend constexpr auto operator|(Range&& range,
-                                  const __transform_closure& closure) {
+  [[gnu::always_inline]] friend constexpr auto
+  operator|(Range&& range, const __transform_closure& closure) {
     using View = all_t<Range>;
     return std::ranges::transform_view<View, Function>(
         all(static_cast<Range&&>(range)), closure.function_);
@@ -276,13 +303,14 @@ private:
 
 struct __transform_fn {
   template <typename Function>
-  constexpr auto operator()(Function&& function) const {
+  [[gnu::always_inline]] constexpr auto operator()(Function&& function) const {
     using F = std::decay_t<Function>;
     return __transform_closure<F>(static_cast<Function&&>(function));
   }
   template <typename Range, typename Function>
     requires std::ranges::viewable_range<Range>
-  constexpr auto operator()(Range&& range, Function&& function) const {
+  [[gnu::always_inline]] constexpr auto operator()(Range&& range,
+                                                   Function&& function) const {
     using View = all_t<Range>;
     using F = std::decay_t<Function>;
     return std::ranges::transform_view<View, F>(
@@ -294,7 +322,7 @@ inline constexpr __transform_fn transform{};
 struct __keys_fn {
   template <typename R>
     requires std::ranges::viewable_range<R>
-  constexpr auto operator()(R&& range) const {
+  [[gnu::always_inline]] constexpr auto operator()(R&& range) const {
     return transform(static_cast<R&&>(range),
                      [](auto&& entry) -> decltype(auto) {
                        return get<0>(static_cast<decltype(entry)&&>(entry));
@@ -306,7 +334,7 @@ inline constexpr __keys_fn keys{};
 struct __values_fn {
   template <typename R>
     requires std::ranges::viewable_range<R>
-  constexpr auto operator()(R&& range) const {
+  [[gnu::always_inline]] constexpr auto operator()(R&& range) const {
     return transform(static_cast<R&&>(range),
                      [](auto&& entry) -> decltype(auto) {
                        return get<1>(static_cast<decltype(entry)&&>(entry));

@@ -33,20 +33,24 @@ public:
     using pointer = T*;
     using reference = T&;
     Node* n;
-    iterator(Node* n = nullptr) : n(n) {}
-    T& operator*() const { return n->value; }
-    T* operator->() const { return &n->value; }
-    iterator& operator++() {
+    [[gnu::always_inline]] iterator(Node* n = nullptr) : n(n) {}
+    [[gnu::always_inline]] T& operator*() const { return n->value; }
+    [[gnu::always_inline]] T* operator->() const { return &n->value; }
+    [[gnu::always_inline]] iterator& operator++() {
       n = n->next;
       return *this;
     }
-    iterator operator++(int) {
+    [[gnu::always_inline]] iterator operator++(int) {
       auto t = *this;
       ++*this;
       return t;
     }
-    bool operator==(const iterator& o) const { return n == o.n; }
-    bool operator!=(const iterator& o) const { return n != o.n; }
+    [[gnu::always_inline]] bool operator==(const iterator& o) const {
+      return n == o.n;
+    }
+    [[gnu::always_inline]] bool operator!=(const iterator& o) const {
+      return n != o.n;
+    }
   };
   struct const_iterator {
     using iterator_category = forward_iterator_tag;
@@ -55,21 +59,25 @@ public:
     using pointer = const T*;
     using reference = const T&;
     const Node* n;
-    const_iterator(const Node* n = nullptr) : n(n) {}
-    const_iterator(iterator it) : n(it.n) {}
-    const T& operator*() const { return n->value; }
-    const T* operator->() const { return &n->value; }
-    const_iterator& operator++() {
+    [[gnu::always_inline]] const_iterator(const Node* n = nullptr) : n(n) {}
+    [[gnu::always_inline]] const_iterator(iterator it) : n(it.n) {}
+    [[gnu::always_inline]] const T& operator*() const { return n->value; }
+    [[gnu::always_inline]] const T* operator->() const { return &n->value; }
+    [[gnu::always_inline]] const_iterator& operator++() {
       n = n->next;
       return *this;
     }
-    const_iterator operator++(int) {
+    [[gnu::always_inline]] const_iterator operator++(int) {
       auto t = *this;
       ++*this;
       return t;
     }
-    bool operator==(const const_iterator& o) const { return n == o.n; }
-    bool operator!=(const const_iterator& o) const { return n != o.n; }
+    [[gnu::always_inline]] bool operator==(const const_iterator& o) const {
+      return n == o.n;
+    }
+    [[gnu::always_inline]] bool operator!=(const const_iterator& o) const {
+      return n != o.n;
+    }
   };
 
   forward_list() = default;
@@ -95,7 +103,8 @@ public:
       cur = &(*cur)->next;
     }
   }
-  forward_list(forward_list&& o) noexcept : head_(o.head_) {
+  [[gnu::always_inline]] forward_list(forward_list&& o) noexcept
+      : head_(o.head_) {
     o.head_ = nullptr;
   }
   ~forward_list() { clear(); }
@@ -118,19 +127,25 @@ public:
     return *this;
   }
 
-  iterator begin() noexcept { return {head_}; }
-  iterator end() noexcept { return {nullptr}; }
-  const_iterator begin() const noexcept { return {head_}; }
-  const_iterator end() const noexcept { return {nullptr}; }
-  const_iterator cbegin() const noexcept { return begin(); }
-  const_iterator cend() const noexcept { return end(); }
+  [[gnu::always_inline]] iterator begin() noexcept { return {head_}; }
+  [[gnu::always_inline]] iterator end() noexcept { return {nullptr}; }
+  [[gnu::always_inline]] const_iterator begin() const noexcept {
+    return {head_};
+  }
+  [[gnu::always_inline]] const_iterator end() const noexcept {
+    return {nullptr};
+  }
+  [[gnu::always_inline]] const_iterator cbegin() const noexcept {
+    return begin();
+  }
+  [[gnu::always_inline]] const_iterator cend() const noexcept { return end(); }
 
   [[gnu::always_inline]] bool empty() const noexcept {
     return head_ == nullptr;
   }
 
-  T& front() { return head_->value; }
-  const T& front() const { return head_->value; }
+  [[gnu::always_inline]] T& front() { return head_->value; }
+  [[gnu::always_inline]] const T& front() const { return head_->value; }
 
   void push_front(const T& v) {
     Node* n = new Node(v);

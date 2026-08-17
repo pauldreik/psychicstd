@@ -1,0 +1,15 @@
+#pragma once
+
+namespace std::__thread_detail {
+
+struct __state {
+  virtual ~__state() = default;
+  virtual void run() = 0;
+};
+
+bool __create(unsigned long& handle, void* (*start)(void*),
+              void* state) noexcept;
+void* __start(void* state);
+void __launch_detached(__state* state);
+
+}

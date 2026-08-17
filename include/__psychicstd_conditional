@@ -1,0 +1,12 @@
+#pragma once
+
+namespace std::__psychicstd_detail {
+
+template <bool Value, typename T, typename F> struct __conditional_impl {
+  using type = T;
+};
+template <typename T, typename F> struct __conditional_impl<false, T, F> {
+  using type = F;
+};
+
+}

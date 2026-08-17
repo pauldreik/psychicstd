@@ -2,6 +2,9 @@
 #include <__psychicstd_config>
 #include <__psychicstd_iterator_core>
 #include <__psychicstd_type_traits_convert>
+#include <__psychicstd_type_traits_cvref>
+#include <__psychicstd_type_traits_enable_if>
+#include <__psychicstd_type_traits_pointer>
 #include <array>
 #include <cstddef>
 
@@ -23,26 +26,28 @@ public:
   using reverse_iterator = std::reverse_iterator<iterator>;
   static constexpr size_t extent = Extent;
 
-  constexpr span() noexcept : data_(nullptr), size_(0) {
+  [[gnu::always_inline]] constexpr span() noexcept : data_(nullptr), size_(0) {
     static_assert(Extent == dynamic_extent || Extent == 0,
                   "a fixed-extent span of nonzero extent cannot be empty");
   }
 
-  constexpr span(T* first, size_t count) noexcept
+  [[gnu::always_inline]] constexpr span(T* first, size_t count) noexcept
       : data_(first), size_(count) {}
-  constexpr span(T* first, T* last) noexcept
+  [[gnu::always_inline]] constexpr span(T* first, T* last) noexcept
       : data_(first), size_(static_cast<size_t>(last - first)) {}
 
   template <size_t N>
-  constexpr span(T (&arr)[N]) noexcept : data_(arr), size_(N) {}
+  [[gnu::always_inline]] constexpr span(T (&arr)[N]) noexcept
+      : data_(arr), size_(N) {}
 
   template <typename U, size_t N,
             typename = enable_if_t<is_convertible_v<U (*)[N], T (*)[N]>>>
-  constexpr span(array<U, N>& arr) noexcept : data_(arr.data()), size_(N) {}
+  [[gnu::always_inline]] constexpr span(array<U, N>& arr) noexcept
+      : data_(arr.data()), size_(N) {}
 
   template <typename U, size_t N,
             typename = enable_if_t<is_convertible_v<const U (*)[N], T (*)[N]>>>
-  constexpr span(const array<U, N>& arr) noexcept
+  [[gnu::always_inline]] constexpr span(const array<U, N>& arr) noexcept
       : data_(arr.data()), size_(N) {}
 
   template <
@@ -51,7 +56,8 @@ public:
           !is_same_v<remove_cvref_t<R>, span> &&
           is_convertible_v<
               remove_pointer_t<decltype(declval<R&>().data())> (*)[], T (*)[]>>>
-  constexpr span(R&& r) noexcept : data_(r.data()), size_(r.size()) {}
+  [[gnu::always_inline]] constexpr span(R&& r) noexcept
+      : data_(r.data()), size_(r.size()) {}
 
   constexpr span(const span&) noexcept = default;
   constexpr span& operator=(const span&) noexcept = default;
@@ -67,9 +73,15 @@ public:
     return size_ == 0;
   }
 
-  constexpr T& operator[](size_t i) const noexcept { return data_[i]; }
-  constexpr T& front() const noexcept { return data_[0]; }
-  constexpr T& back() const noexcept { return data_[size_ - 1]; }
+  [[gnu::always_inline]] constexpr T& operator[](size_t i) const noexcept {
+    return data_[i];
+  }
+  [[gnu::always_inline]] constexpr T& front() const noexcept {
+    return data_[0];
+  }
+  [[gnu::always_inline]] constexpr T& back() const noexcept {
+    return data_[size_ - 1];
+  }
 
   [[gnu::always_inline]] constexpr iterator begin() const noexcept {
     return data_;
@@ -77,34 +89,38 @@ public:
   [[gnu::always_inline]] constexpr iterator end() const noexcept {
     return data_ + size_;
   }
-  constexpr reverse_iterator rbegin() const noexcept {
+  [[gnu::always_inline]] constexpr reverse_iterator rbegin() const noexcept {
     return reverse_iterator(end());
   }
-  constexpr reverse_iterator rend() const noexcept {
+  [[gnu::always_inline]] constexpr reverse_iterator rend() const noexcept {
     return reverse_iterator(begin());
   }
 
-  constexpr span<T, dynamic_extent> first(size_t count) const noexcept {
+  [[gnu::always_inline]] constexpr span<T, dynamic_extent>
+  first(size_t count) const noexcept {
     return span<T, dynamic_extent>(data_, count);
   }
-  template <size_t Count> constexpr span<T, Count> first() const noexcept {
+  template <size_t Count>
+  [[gnu::always_inline]] constexpr span<T, Count> first() const noexcept {
     static_assert(Count <= Extent || Extent == dynamic_extent);
     return span<T, Count>(data_, Count);
   }
-  constexpr span<T, dynamic_extent> last(size_t count) const noexcept {
+  [[gnu::always_inline]] constexpr span<T, dynamic_extent>
+  last(size_t count) const noexcept {
     return span<T, dynamic_extent>(data_ + (size_ - count), count);
   }
-  template <size_t Count> constexpr span<T, Count> last() const noexcept {
+  template <size_t Count>
+  [[gnu::always_inline]] constexpr span<T, Count> last() const noexcept {
     static_assert(Count <= Extent || Extent == dynamic_extent);
     return span<T, Count>(data_ + size_ - Count, Count);
   }
-  constexpr span<T, dynamic_extent>
+  [[gnu::always_inline]] constexpr span<T, dynamic_extent>
   subspan(size_t offset, size_t count = dynamic_extent) const noexcept {
     return span<T, dynamic_extent>(
         data_ + offset, count == dynamic_extent ? size_ - offset : count);
   }
   template <size_t Offset, size_t Count = dynamic_extent>
-  constexpr auto subspan() const noexcept {
+  [[gnu::always_inline]] constexpr auto subspan() const noexcept {
     static_assert(Offset <= Extent || Extent == dynamic_extent);
     static_assert(Count == dynamic_extent || Extent == dynamic_extent ||
                   Offset + Count <= Extent);
@@ -135,13 +151,15 @@ span(R&) -> span<
     remove_reference_t<remove_pointer_t<decltype(declval<R&>().data())>>>;
 
 template <typename T, size_t Extent>
-span<const byte, Extent == dynamic_extent ? dynamic_extent : Extent * sizeof(T)>
+[[gnu::always_inline]] inline span<
+    const byte, Extent == dynamic_extent ? dynamic_extent : Extent * sizeof(T)>
 as_bytes(span<T, Extent> s) noexcept {
   return {reinterpret_cast<const byte*>(s.data()), s.size_bytes()};
 }
 
 template <typename T, size_t Extent>
-span<byte, Extent == dynamic_extent ? dynamic_extent : Extent * sizeof(T)>
+[[gnu::always_inline]] inline span<
+    byte, Extent == dynamic_extent ? dynamic_extent : Extent * sizeof(T)>
 as_writable_bytes(span<T, Extent> s) noexcept {
   static_assert(!is_const_v<T>,
                 "as_writable_bytes requires a non-const element type");

@@ -1,0 +1,12 @@
+#pragma once
+
+#define _PSYCHICSTD_INTEGER_CLASS(T)                                           \
+  (__builtin_classify_type(*(T*)nullptr) == 1)
+#define _PSYCHICSTD_INTEGRAL_TYPE(T)                                           \
+  ((_PSYCHICSTD_INTEGER_CLASS(T) ||                                            \
+    __builtin_classify_type(*(T*)nullptr) == 4) &&                             \
+   !__is_enum(T))
+#define _PSYCHICSTD_FLOATING_TYPE(T)                                           \
+  (__builtin_classify_type(*(T*)nullptr) == 8)
+#define _PSYCHICSTD_ARITHMETIC_CLASS(T)                                        \
+  (_PSYCHICSTD_INTEGER_CLASS(T) || _PSYCHICSTD_FLOATING_TYPE(T))

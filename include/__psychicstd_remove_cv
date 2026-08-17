@@ -1,0 +1,42 @@
+#pragma once
+
+namespace std::__psychicstd_detail {
+
+#if __has_builtin(__remove_const)
+template <typename T> struct __remove_const_impl {
+  using type = __remove_const(T);
+};
+#else
+template <typename T> struct __remove_const_impl {
+  using type = T;
+};
+template <typename T> struct __remove_const_impl<const T> {
+  using type = T;
+};
+#endif
+
+#if __has_builtin(__remove_volatile)
+template <typename T> struct __remove_volatile_impl {
+  using type = __remove_volatile(T);
+};
+#else
+template <typename T> struct __remove_volatile_impl {
+  using type = T;
+};
+template <typename T> struct __remove_volatile_impl<volatile T> {
+  using type = T;
+};
+#endif
+
+#if __has_builtin(__remove_cv)
+template <typename T> struct __remove_cv_impl {
+  using type = __remove_cv(T);
+};
+#else
+template <typename T> struct __remove_cv_impl {
+  using type = typename __remove_volatile_impl<
+      typename __remove_const_impl<T>::type>::type;
+};
+#endif
+
+}

@@ -84,51 +84,58 @@ public:
   using reference = typename iterator_traits<It>::reference;
   using iterator_category = typename iterator_traits<It>::iterator_category;
 
-  constexpr reverse_iterator() = default;
-  constexpr explicit reverse_iterator(It it) : current(it) {}
+  [[gnu::always_inline]] constexpr reverse_iterator() = default;
+  [[gnu::always_inline]] constexpr explicit reverse_iterator(It it)
+      : current(it) {}
   template <typename U>
-  constexpr reverse_iterator(const reverse_iterator<U>& other)
+  [[gnu::always_inline]] constexpr reverse_iterator(
+      const reverse_iterator<U>& other)
       : current(other.base()) {}
-  constexpr It base() const { return current; }
-  constexpr reference operator*() const {
+  [[gnu::always_inline]] constexpr It base() const { return current; }
+  [[gnu::always_inline]] constexpr reference operator*() const {
     It tmp = current;
     return *--tmp;
   }
-  constexpr pointer operator->() const {
+  [[gnu::always_inline]] constexpr pointer operator->() const {
     return __builtin_addressof(operator*());
   }
-  constexpr reference operator[](difference_type n) const {
+  [[gnu::always_inline]] constexpr reference
+  operator[](difference_type n) const {
     return *(*this + n);
   }
-  constexpr reverse_iterator& operator++() {
+  [[gnu::always_inline]] constexpr reverse_iterator& operator++() {
     --current;
     return *this;
   }
-  constexpr reverse_iterator operator++(int) {
+  [[gnu::always_inline]] constexpr reverse_iterator operator++(int) {
     auto copy = *this;
     --current;
     return copy;
   }
-  constexpr reverse_iterator& operator--() {
+  [[gnu::always_inline]] constexpr reverse_iterator& operator--() {
     ++current;
     return *this;
   }
-  constexpr reverse_iterator operator--(int) {
+  [[gnu::always_inline]] constexpr reverse_iterator operator--(int) {
     auto copy = *this;
     ++current;
     return copy;
   }
-  constexpr reverse_iterator operator+(difference_type n) const {
+  [[gnu::always_inline]] constexpr reverse_iterator
+  operator+(difference_type n) const {
     return reverse_iterator(current - n);
   }
-  constexpr reverse_iterator operator-(difference_type n) const {
+  [[gnu::always_inline]] constexpr reverse_iterator
+  operator-(difference_type n) const {
     return reverse_iterator(current + n);
   }
-  constexpr reverse_iterator& operator+=(difference_type n) {
+  [[gnu::always_inline]] constexpr reverse_iterator&
+  operator+=(difference_type n) {
     current -= n;
     return *this;
   }
-  constexpr reverse_iterator& operator-=(difference_type n) {
+  [[gnu::always_inline]] constexpr reverse_iterator&
+  operator-=(difference_type n) {
     current += n;
     return *this;
   }
@@ -138,48 +145,49 @@ protected:
 };
 
 template <typename It>
-constexpr reverse_iterator<It>
+[[gnu::always_inline]] constexpr reverse_iterator<It>
 operator+(typename reverse_iterator<It>::difference_type n,
           const reverse_iterator<It>& it) {
   return it + n;
 }
 template <typename It1, typename It2>
-constexpr bool operator==(const reverse_iterator<It1>& a,
-                          const reverse_iterator<It2>& b) {
+[[gnu::always_inline]] constexpr bool
+operator==(const reverse_iterator<It1>& a, const reverse_iterator<It2>& b) {
   return a.base() == b.base();
 }
 template <typename It1, typename It2>
-constexpr bool operator!=(const reverse_iterator<It1>& a,
-                          const reverse_iterator<It2>& b) {
+[[gnu::always_inline]] constexpr bool
+operator!=(const reverse_iterator<It1>& a, const reverse_iterator<It2>& b) {
   return a.base() != b.base();
 }
 template <typename It1, typename It2>
-constexpr bool operator<(const reverse_iterator<It1>& a,
-                         const reverse_iterator<It2>& b) {
+[[gnu::always_inline]] constexpr bool
+operator<(const reverse_iterator<It1>& a, const reverse_iterator<It2>& b) {
   return b.base() < a.base();
 }
 template <typename It1, typename It2>
-constexpr bool operator<=(const reverse_iterator<It1>& a,
-                          const reverse_iterator<It2>& b) {
+[[gnu::always_inline]] constexpr bool
+operator<=(const reverse_iterator<It1>& a, const reverse_iterator<It2>& b) {
   return !(b < a);
 }
 template <typename It1, typename It2>
-constexpr bool operator>(const reverse_iterator<It1>& a,
-                         const reverse_iterator<It2>& b) {
+[[gnu::always_inline]] constexpr bool
+operator>(const reverse_iterator<It1>& a, const reverse_iterator<It2>& b) {
   return b < a;
 }
 template <typename It1, typename It2>
-constexpr bool operator>=(const reverse_iterator<It1>& a,
-                          const reverse_iterator<It2>& b) {
+[[gnu::always_inline]] constexpr bool
+operator>=(const reverse_iterator<It1>& a, const reverse_iterator<It2>& b) {
   return !(a < b);
 }
 template <typename It1, typename It2>
-constexpr auto operator-(const reverse_iterator<It1>& a,
-                         const reverse_iterator<It2>& b) {
+[[gnu::always_inline]] constexpr auto
+operator-(const reverse_iterator<It1>& a, const reverse_iterator<It2>& b) {
   return b.base() - a.base();
 }
 template <typename It>
-constexpr reverse_iterator<It> make_reverse_iterator(It it) {
+[[gnu::always_inline]] constexpr reverse_iterator<It>
+make_reverse_iterator(It it) {
   return reverse_iterator<It>(it);
 }
 

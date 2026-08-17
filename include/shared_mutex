@@ -1,8 +1,15 @@
 #pragma once
+#include <__psychicstd_config>
+#if _PSYCHICSTD_COMPATIBILITY_LEVEL >= _PSYCHICSTD_COMPAT_DROPIN
 #include <mutex>
+#else
+#include <__psychicstd_lock_tags>
+#endif
 #include <pthread.h>
 
 namespace std {
+
+[[noreturn, gnu::cold, gnu::noinline]] void __throw_lock_error(bool deadlock);
 
 class shared_mutex {
 public:

@@ -13,7 +13,10 @@ constexpr bool __pointer_less(T* a, U* b) noexcept {
 }
 
 template <typename T = void> struct less {
-  constexpr bool operator()(const T& a, const T& b) const { return a < b; }
+  [[gnu::always_inline]] constexpr bool operator()(const T& a,
+                                                   const T& b) const {
+    return a < b;
+  }
 };
 template <typename T> struct less<T*> {
   constexpr bool operator()(T* a, T* b) const noexcept {
@@ -30,7 +33,10 @@ template <> struct less<void> {
 };
 
 template <typename T = void> struct greater {
-  constexpr bool operator()(const T& a, const T& b) const { return a > b; }
+  [[gnu::always_inline]] constexpr bool operator()(const T& a,
+                                                   const T& b) const {
+    return a > b;
+  }
 };
 template <typename T> struct greater<T*> {
   constexpr bool operator()(T* a, T* b) const noexcept {

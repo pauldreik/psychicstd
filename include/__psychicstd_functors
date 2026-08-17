@@ -10,7 +10,10 @@ namespace std {
 
 // Comparison functors
 template <typename T = void> struct less_equal {
-  constexpr bool operator()(const T& a, const T& b) const { return a <= b; }
+  [[gnu::always_inline]] constexpr bool operator()(const T& a,
+                                                   const T& b) const {
+    return a <= b;
+  }
 };
 template <> struct less_equal<void> {
   template <typename T, typename U>
@@ -21,7 +24,10 @@ template <> struct less_equal<void> {
   using is_transparent = void;
 };
 template <typename T = void> struct greater_equal {
-  constexpr bool operator()(const T& a, const T& b) const { return a >= b; }
+  [[gnu::always_inline]] constexpr bool operator()(const T& a,
+                                                   const T& b) const {
+    return a >= b;
+  }
 };
 template <> struct greater_equal<void> {
   template <typename T, typename U>
@@ -32,7 +38,10 @@ template <> struct greater_equal<void> {
   using is_transparent = void;
 };
 template <typename T = void> struct not_equal_to {
-  constexpr bool operator()(const T& a, const T& b) const { return a != b; }
+  [[gnu::always_inline]] constexpr bool operator()(const T& a,
+                                                   const T& b) const {
+    return a != b;
+  }
 };
 template <> struct not_equal_to<void> {
   template <typename T, typename U>
@@ -44,56 +53,71 @@ template <> struct not_equal_to<void> {
 
 // Arithmetic functors
 template <typename T = void> struct plus {
-  constexpr T operator()(const T& a, const T& b) const { return a + b; }
+  [[gnu::always_inline]] constexpr T operator()(const T& a, const T& b) const {
+    return a + b;
+  }
 };
 template <> struct plus<void> {
   template <typename T, typename U>
+  [[gnu::always_inline]]
   constexpr auto operator()(T&& a, U&& b) const {
     return static_cast<T&&>(a) + static_cast<U&&>(b);
   }
   using is_transparent = void;
 };
 template <typename T = void> struct minus {
-  constexpr T operator()(const T& a, const T& b) const { return a - b; }
+  [[gnu::always_inline]] constexpr T operator()(const T& a, const T& b) const {
+    return a - b;
+  }
 };
 template <> struct minus<void> {
   template <typename T, typename U>
+  [[gnu::always_inline]]
   constexpr auto operator()(T&& a, U&& b) const {
     return static_cast<T&&>(a) - static_cast<U&&>(b);
   }
 };
 template <typename T = void> struct multiplies {
-  constexpr T operator()(const T& a, const T& b) const { return a * b; }
+  [[gnu::always_inline]] constexpr T operator()(const T& a, const T& b) const {
+    return a * b;
+  }
 };
 template <> struct multiplies<void> {
   template <typename T, typename U>
+  [[gnu::always_inline]]
   constexpr auto operator()(T&& a, U&& b) const {
     return static_cast<T&&>(a) * static_cast<U&&>(b);
   }
   using is_transparent = void;
 };
 template <typename T = void> struct divides {
-  constexpr T operator()(const T& a, const T& b) const { return a / b; }
+  [[gnu::always_inline]] constexpr T operator()(const T& a, const T& b) const {
+    return a / b;
+  }
 };
 template <> struct divides<void> {
   template <typename T, typename U>
+  [[gnu::always_inline]]
   constexpr auto operator()(T&& a, U&& b) const {
     return static_cast<T&&>(a) / static_cast<U&&>(b);
   }
   using is_transparent = void;
 };
 template <typename T = void> struct modulus {
-  constexpr T operator()(const T& a, const T& b) const { return a % b; }
+  [[gnu::always_inline]] constexpr T operator()(const T& a, const T& b) const {
+    return a % b;
+  }
 };
 template <> struct modulus<void> {
   template <typename T, typename U>
+  [[gnu::always_inline]]
   constexpr auto operator()(T&& a, U&& b) const {
     return static_cast<T&&>(a) % static_cast<U&&>(b);
   }
   using is_transparent = void;
 };
 template <typename T = void> struct negate {
-  constexpr T operator()(const T& a) const { return -a; }
+  [[gnu::always_inline]] constexpr T operator()(const T& a) const { return -a; }
 };
 template <> struct negate<void> {
   template <typename T>
@@ -107,7 +131,9 @@ template <> struct negate<void> {
 
 // Bitwise functors
 template <typename T = void> struct bit_and {
-  constexpr T operator()(const T& a, const T& b) const { return a & b; }
+  [[gnu::always_inline]] constexpr T operator()(const T& a, const T& b) const {
+    return a & b;
+  }
 };
 template <> struct bit_and<void> {
   template <typename T, typename U>
@@ -117,7 +143,9 @@ template <> struct bit_and<void> {
   using is_transparent = void;
 };
 template <typename T = void> struct bit_or {
-  constexpr T operator()(const T& a, const T& b) const { return a | b; }
+  [[gnu::always_inline]] constexpr T operator()(const T& a, const T& b) const {
+    return a | b;
+  }
 };
 template <> struct bit_or<void> {
   template <typename T, typename U>
@@ -127,7 +155,9 @@ template <> struct bit_or<void> {
   using is_transparent = void;
 };
 template <typename T = void> struct bit_xor {
-  constexpr T operator()(const T& a, const T& b) const { return a ^ b; }
+  [[gnu::always_inline]] constexpr T operator()(const T& a, const T& b) const {
+    return a ^ b;
+  }
 };
 template <> struct bit_xor<void> {
   template <typename T, typename U>
@@ -137,7 +167,7 @@ template <> struct bit_xor<void> {
   using is_transparent = void;
 };
 template <typename T = void> struct bit_not {
-  constexpr T operator()(const T& a) const { return ~a; }
+  [[gnu::always_inline]] constexpr T operator()(const T& a) const { return ~a; }
 };
 template <> struct bit_not<void> {
   template <typename T> constexpr auto operator()(T&& a) const {
@@ -148,7 +178,10 @@ template <> struct bit_not<void> {
 
 // Logical functors
 template <typename T = void> struct logical_and {
-  constexpr bool operator()(const T& a, const T& b) const { return a && b; }
+  [[gnu::always_inline]] constexpr bool operator()(const T& a,
+                                                   const T& b) const {
+    return a && b;
+  }
 };
 template <> struct logical_and<void> {
   template <typename T, typename U>
@@ -158,7 +191,10 @@ template <> struct logical_and<void> {
   using is_transparent = void;
 };
 template <typename T = void> struct logical_or {
-  constexpr bool operator()(const T& a, const T& b) const { return a || b; }
+  [[gnu::always_inline]] constexpr bool operator()(const T& a,
+                                                   const T& b) const {
+    return a || b;
+  }
 };
 template <> struct logical_or<void> {
   template <typename T, typename U>
@@ -168,7 +204,9 @@ template <> struct logical_or<void> {
   using is_transparent = void;
 };
 template <typename T = void> struct logical_not {
-  constexpr bool operator()(const T& a) const { return !a; }
+  [[gnu::always_inline]] constexpr bool operator()(const T& a) const {
+    return !a;
+  }
 };
 template <> struct logical_not<void> {
   template <typename T> constexpr auto operator()(T&& a) const {

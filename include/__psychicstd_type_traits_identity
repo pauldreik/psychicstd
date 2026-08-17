@@ -1,0 +1,10 @@
+#pragma once
+#include <__psychicstd_type_identity>
+
+namespace std {
+
+template <typename T>
+using type_identity = __psychicstd_detail::__type_identity_impl<T>;
+template <typename T> using type_identity_t = typename type_identity<T>::type;
+
+}

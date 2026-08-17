@@ -39,7 +39,8 @@ template <> struct allocator<void> {
 };
 
 template <typename T, typename U>
-constexpr bool operator==(const allocator<T>&, const allocator<U>&) noexcept {
+[[gnu::always_inline]] constexpr bool operator==(const allocator<T>&,
+                                                 const allocator<U>&) noexcept {
   return true;
 }
 

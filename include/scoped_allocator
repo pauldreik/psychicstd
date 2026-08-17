@@ -71,10 +71,18 @@ public:
     outer_allocator().deallocate(p, n);
   }
 
-  outer_allocator_type& outer_allocator() noexcept { return *this; }
-  const outer_allocator_type& outer_allocator() const noexcept { return *this; }
-  inner_allocator_type& inner_allocator() noexcept { return inner_; }
-  const inner_allocator_type& inner_allocator() const noexcept {
+  [[gnu::always_inline]] outer_allocator_type& outer_allocator() noexcept {
+    return *this;
+  }
+  [[gnu::always_inline]] const outer_allocator_type&
+  outer_allocator() const noexcept {
+    return *this;
+  }
+  [[gnu::always_inline]] inner_allocator_type& inner_allocator() noexcept {
+    return inner_;
+  }
+  [[gnu::always_inline]] const inner_allocator_type&
+  inner_allocator() const noexcept {
     return inner_;
   }
 

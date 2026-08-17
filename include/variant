@@ -7,7 +7,10 @@
 #include <__psychicstd_config>
 #include <__psychicstd_exception_base>
 #include <__psychicstd_lifetime>
-#include <__psychicstd_type_traits_object>
+#include <__psychicstd_type_traits_construction>
+#include <__psychicstd_type_traits_cvref>
+#include <__psychicstd_type_traits_destruction>
+#include <__psychicstd_type_traits_enable_if>
 #include <__psychicstd_utility_core>
 #include <__psychicstd_utility_operations>
 #include <cstddef>
@@ -120,8 +123,9 @@ template <typename First, typename... Rest> union __storage {
   alignas(__max_align<First,
                       Rest...>) unsigned char raw[__max_size<First, Rest...>];
 
-  constexpr __storage() : first() {}
-  constexpr explicit __storage(__uninitialized_t) : raw{} {}
+  [[gnu::always_inline]] constexpr __storage() : first() {}
+  [[gnu::always_inline]] constexpr explicit __storage(__uninitialized_t)
+      : raw{} {}
   constexpr ~__storage() {}
 };
 
@@ -137,7 +141,7 @@ template <typename... Ts> class variant {
   template <size_t Index> using __alt = variant_alternative_t<Index, variant>;
 
   template <size_t Index, typename... Args>
-  __alt<Index>& __emplace(Args&&... args) {
+  [[gnu::always_inline]] __alt<Index>& __emplace(Args&&... args) {
     __destroy();
     __alt<Index>* p = reinterpret_cast<__alt<Index>*>(storage_.raw);
     construct_at(p, static_cast<Args&&>(args)...);
@@ -174,7 +178,8 @@ template <typename... Ts> class variant {
   }
 
 public:
-  constexpr variant() noexcept(is_nothrow_default_constructible_v<__alt<0>>) {
+  [[gnu::always_inline]] constexpr variant() noexcept(
+      is_nothrow_default_constructible_v<__alt<0>>) {
     index_ = 0;
   }
 
@@ -189,18 +194,20 @@ public:
   template <typename U, size_t Index = __variant::__accepted<U, Ts...>(0),
             typename = enable_if_t<Index != variant_npos &&
                                    !is_same_v<remove_cvref_t<U>, variant>>>
-  variant(U&& u) : storage_(__variant::__uninitialized_t{}) {
+  [[gnu::always_inline]] variant(U&& u)
+      : storage_(__variant::__uninitialized_t{}) {
     __emplace<Index>(static_cast<U&&>(u));
   }
 
   template <typename T, typename... Args>
-  explicit variant(in_place_type_t<T>, Args&&... args)
+  [[gnu::always_inline]] explicit variant(in_place_type_t<T>, Args&&... args)
       : storage_(__variant::__uninitialized_t{}) {
     __emplace<__variant::__index_of<T, Ts...>()>(static_cast<Args&&>(args)...);
   }
 
   template <size_t Index, typename... Args>
-  explicit variant(in_place_index_t<Index>, Args&&... args)
+  [[gnu::always_inline]] explicit variant(in_place_index_t<Index>,
+                                          Args&&... args)
       : storage_(__variant::__uninitialized_t{}) {
     __emplace<Index>(static_cast<Args&&>(args)...);
   }
@@ -235,8 +242,11 @@ public:
     return *this;
   }
 
-  constexpr size_t index() const noexcept { return index_; }
-  constexpr bool valueless_by_exception() const noexcept {
+  [[gnu::always_inline]] constexpr size_t index() const noexcept {
+    return index_;
+  }
+  [[gnu::always_inline]] constexpr bool
+  valueless_by_exception() const noexcept {
     return index_ == variant_npos;
   }
 
@@ -255,62 +265,71 @@ public:
     *this = static_cast<variant&&>(tmp);
   }
 
-  template <size_t Index> constexpr __alt<Index>& __get() noexcept {
+  template <size_t Index>
+  [[gnu::always_inline]] constexpr __alt<Index>& __get() noexcept {
     if constexpr (Index == 0)
       return storage_.first;
     else
       return *reinterpret_cast<__alt<Index>*>(&storage_);
   }
-  template <size_t Index> constexpr const __alt<Index>& __get() const noexcept {
+  template <size_t Index>
+  [[gnu::always_inline]] constexpr const __alt<Index>& __get() const noexcept {
     if constexpr (Index == 0)
       return storage_.first;
     else
       return *reinterpret_cast<const __alt<Index>*>(&storage_);
   }
 
-  void* __raw() noexcept { return &storage_; }
-  const void* __raw() const noexcept { return &storage_; }
+  [[gnu::always_inline]] void* __raw() noexcept { return &storage_; }
+  [[gnu::always_inline]] const void* __raw() const noexcept {
+    return &storage_;
+  }
 };
 
 template <typename T, typename... Ts>
-constexpr bool holds_alternative(const variant<Ts...>& v) noexcept {
+[[gnu::always_inline]] constexpr bool
+holds_alternative(const variant<Ts...>& v) noexcept {
   return v.index() == __variant::__index_of<T, Ts...>();
 }
 
 template <size_t Index, typename... Ts>
-constexpr variant_alternative_t<Index, variant<Ts...>>& get(variant<Ts...>& v) {
+[[gnu::always_inline]] constexpr variant_alternative_t<Index, variant<Ts...>>&
+get(variant<Ts...>& v) {
   if (v.index() != Index)
     _PSYCHICSTD_THROW_HELPER(__throw_bad_variant_access);
   return v.template __get<Index>();
 }
 template <size_t Index, typename... Ts>
-constexpr variant_alternative_t<Index, variant<Ts...>>&&
+[[gnu::always_inline]] constexpr variant_alternative_t<Index, variant<Ts...>>&&
 get(variant<Ts...>&& v) {
   return static_cast<variant_alternative_t<Index, variant<Ts...>>&&>(
       get<Index>(v));
 }
 template <size_t Index, typename... Ts>
-constexpr const variant_alternative_t<Index, variant<Ts...>>&
+[[gnu::always_inline]] constexpr const variant_alternative_t<Index,
+                                                             variant<Ts...>>&
 get(const variant<Ts...>& v) {
   if (v.index() != Index)
     _PSYCHICSTD_THROW_HELPER(__throw_bad_variant_access);
   return v.template __get<Index>();
 }
 
-template <typename T, typename... Ts> constexpr T& get(variant<Ts...>& v) {
+template <typename T, typename... Ts>
+[[gnu::always_inline]] constexpr T& get(variant<Ts...>& v) {
   return get<__variant::__index_of<T, Ts...>()>(v);
 }
-template <typename T, typename... Ts> constexpr T&& get(variant<Ts...>&& v) {
+template <typename T, typename... Ts>
+[[gnu::always_inline]] constexpr T&& get(variant<Ts...>&& v) {
   return get<__variant::__index_of<T, Ts...>()>(
       static_cast<variant<Ts...>&&>(v));
 }
 template <typename T, typename... Ts>
-constexpr const T& get(const variant<Ts...>& v) {
+[[gnu::always_inline]] constexpr const T& get(const variant<Ts...>& v) {
   return get<__variant::__index_of<T, Ts...>()>(v);
 }
 
 template <size_t Index, typename... Ts>
-constexpr variant_alternative_t<Index, variant<Ts...>>*
+[[gnu::always_inline]] constexpr variant_alternative_t<Index, variant<Ts...>>*
 get_if(variant<Ts...>* v) noexcept {
   if (!v || v->index() != Index)
     return nullptr;
@@ -318,7 +337,8 @@ get_if(variant<Ts...>* v) noexcept {
       v->__raw());
 }
 template <size_t Index, typename... Ts>
-constexpr const variant_alternative_t<Index, variant<Ts...>>*
+[[gnu::always_inline]] constexpr const variant_alternative_t<Index,
+                                                             variant<Ts...>>*
 get_if(const variant<Ts...>* v) noexcept {
   if (!v || v->index() != Index)
     return nullptr;
@@ -326,11 +346,12 @@ get_if(const variant<Ts...>* v) noexcept {
       v->__raw());
 }
 template <typename T, typename... Ts>
-constexpr T* get_if(variant<Ts...>* v) noexcept {
+[[gnu::always_inline]] constexpr T* get_if(variant<Ts...>* v) noexcept {
   return get_if<__variant::__index_of<T, Ts...>()>(v);
 }
 template <typename T, typename... Ts>
-constexpr const T* get_if(const variant<Ts...>* v) noexcept {
+[[gnu::always_inline]] constexpr const T*
+get_if(const variant<Ts...>* v) noexcept {
   return get_if<__variant::__index_of<T, Ts...>()>(v);
 }
 
@@ -406,7 +427,8 @@ bool operator==(const variant<Ts...>& a, const variant<Ts...>& b) {
 }
 
 template <typename... Ts>
-bool operator!=(const variant<Ts...>& a, const variant<Ts...>& b) {
+[[gnu::always_inline]] inline bool operator!=(const variant<Ts...>& a,
+                                              const variant<Ts...>& b) {
   return !(a == b);
 }
 
@@ -426,15 +448,18 @@ bool operator<(const variant<Ts...>& a, const variant<Ts...>& b) {
   return tbl[a.index()](a, b);
 }
 template <typename... Ts>
-bool operator>(const variant<Ts...>& a, const variant<Ts...>& b) {
+[[gnu::always_inline]] inline bool operator>(const variant<Ts...>& a,
+                                             const variant<Ts...>& b) {
   return b < a;
 }
 template <typename... Ts>
-bool operator<=(const variant<Ts...>& a, const variant<Ts...>& b) {
+[[gnu::always_inline]] inline bool operator<=(const variant<Ts...>& a,
+                                              const variant<Ts...>& b) {
   return !(b < a);
 }
 template <typename... Ts>
-bool operator>=(const variant<Ts...>& a, const variant<Ts...>& b) {
+[[gnu::always_inline]] inline bool operator>=(const variant<Ts...>& a,
+                                              const variant<Ts...>& b) {
   return !(a < b);
 }
 

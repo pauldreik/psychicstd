@@ -2,10 +2,16 @@
 #include <__psychicstd_exception_ptr>
 #include <__psychicstd_placement_new>
 #include <__psychicstd_refcount>
+#include <__psychicstd_thread_launch>
+#include <__psychicstd_type_traits_convert_core>
 #include <__psychicstd_type_traits_invoke>
-#include <condition_variable>
 #include <mutex>
-#include <thread>
+
+#if _PSYCHICSTD_COMPATIBILITY_LEVEL >= _PSYCHICSTD_COMPAT_DROPIN
+#include <condition_variable>
+#else
+#include <__psychicstd_condition_variable_core>
+#endif
 
 namespace std {
 
@@ -21,6 +27,18 @@ namespace __future_detail {
 enum class __error { none, broken_promise };
 
 [[noreturn]] void __throw(const char* message);
+
+template <typename F> struct __async_task final : __thread_detail::__state {
+  F function;
+
+  explicit __async_task(F&& f) : function(static_cast<F&&>(f)) {}
+  void run() override { function(); }
+};
+
+template <typename F> void __launch(F&& function) {
+  using task = __async_task<decay_t<F>>;
+  __thread_detail::__launch_detached(new task(static_cast<F&&>(function)));
+}
 
 struct __state_base {
   unsigned references = 1;
@@ -214,7 +232,7 @@ auto async(launch, F&& function, Arg&& arg)
     _PSYCHICSTD_CATCH(...) { shared->set_exception(current_exception()); }
     shared->release();
   };
-  thread(static_cast<decltype(callable)&&>(callable)).detach();
+  __future_detail::__launch(static_cast<decltype(callable)&&>(callable));
   return result_future;
 }
 
@@ -238,7 +256,7 @@ auto async(launch, F&& function) -> future<invoke_result_t<decay_t<F>>> {
     _PSYCHICSTD_CATCH(...) { shared->set_exception(current_exception()); }
     shared->release();
   };
-  thread(static_cast<decltype(callable)&&>(callable)).detach();
+  __future_detail::__launch(static_cast<decltype(callable)&&>(callable));
   return result_future;
 }
 

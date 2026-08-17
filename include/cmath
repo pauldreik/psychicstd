@@ -1,6 +1,7 @@
 #pragma once
 #include <__psychicstd_abs>
 #include <__psychicstd_config>
+#include <__psychicstd_type_classification>
 #include <math.h>
 
 #if _PSYCHICSTD_COMPATIBILITY_LEVEL >= _PSYCHICSTD_COMPAT_DROPIN
@@ -100,23 +101,23 @@ inline int fpclassify(long double x) {
                               FP_ZERO, x);
 }
 template <typename T>
-  requires(__builtin_classify_type(*(T*)nullptr) == 1)
-constexpr bool isnan(T) {
+  requires _PSYCHICSTD_INTEGER_CLASS
+(T) constexpr bool isnan(T) {
   return false;
 }
 template <typename T>
-  requires(__builtin_classify_type(*(T*)nullptr) == 1)
-constexpr bool isinf(T) {
+  requires _PSYCHICSTD_INTEGER_CLASS
+(T) constexpr bool isinf(T) {
   return false;
 }
 template <typename T>
-  requires(__builtin_classify_type(*(T*)nullptr) == 1)
-constexpr bool isfinite(T) {
+  requires _PSYCHICSTD_INTEGER_CLASS
+(T) constexpr bool isfinite(T) {
   return true;
 }
 template <typename T>
-  requires(__builtin_classify_type(*(T*)nullptr) == 1)
-constexpr int fpclassify(T x) {
+  requires _PSYCHICSTD_INTEGER_CLASS
+(T) constexpr int fpclassify(T x) {
   return x == 0 ? FP_ZERO : FP_NORMAL;
 }
 inline bool isnormal(float x) { return __builtin_isnormal(x); }
@@ -147,10 +148,10 @@ using ::scalbn;
 
 namespace __cmath_detail {
 template <typename T>
-concept integral = __builtin_classify_type(*(T*)nullptr) == 1 && !__is_enum(T);
+concept integral = _PSYCHICSTD_INTEGER_CLASS(T) && !__is_enum(T);
 
 template <typename T>
-concept arithmetic = integral<T> || __builtin_classify_type(*(T*)nullptr) == 8;
+concept arithmetic = integral<T> || _PSYCHICSTD_FLOATING_TYPE(T);
 }
 
 // float overloads
@@ -438,10 +439,7 @@ inline long double nextafter(long double x, long double y) {
   return ::nextafterl(x, y);
 }
 template <typename T, typename U>
-  requires((__builtin_classify_type(*(T*)nullptr) == 1 ||
-            __builtin_classify_type(*(T*)nullptr) == 8) &&
-           (__builtin_classify_type(*(U*)nullptr) == 1 ||
-            __builtin_classify_type(*(U*)nullptr) == 8))
+  requires(_PSYCHICSTD_ARITHMETIC_CLASS(T) && _PSYCHICSTD_ARITHMETIC_CLASS(U))
 inline auto nextafter(T x, U y) {
   if constexpr (__is_same(T, long double) || __is_same(U, long double))
     return ::nextafterl(static_cast<long double>(x),

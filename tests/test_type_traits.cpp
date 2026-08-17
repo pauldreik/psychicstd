@@ -20,6 +20,8 @@ struct NonPod {
   int value;
 };
 
+enum class Enumeration {};
+
 struct ReturnsReference {
   int& operator()(int (&&value)[2]) const { return value[0]; }
 };
@@ -40,6 +42,10 @@ struct ReturnsImmovable {
 };
 
 int main() {
+  static_assert(std::is_integral_v<bool>);
+  static_assert(std::is_integral_v<const volatile int>);
+  static_assert(!std::is_integral_v<int&>);
+  static_assert(!std::is_integral_v<Enumeration>);
 #ifdef __SIZEOF_INT128__
   static_assert(std::is_integral_v<__int128>);
   static_assert(std::is_integral_v<unsigned __int128>);

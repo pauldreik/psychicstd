@@ -20,6 +20,17 @@ bool __create(unsigned long& handle, void* (*start)(void*),
   return true;
 }
 
+static void __destroy_state(void* pointer) noexcept {
+  delete static_cast<__state*>(pointer);
+}
+
+void* __start(void* pointer) {
+  pthread_cleanup_push(__destroy_state, pointer);
+  static_cast<__state*>(pointer)->run();
+  pthread_cleanup_pop(1);
+  return nullptr;
+}
+
 void __sleep_for(long long nanoseconds) noexcept {
   struct timespec duration;
   duration.tv_sec = nanoseconds / 1'000'000'000LL;
@@ -35,15 +46,14 @@ static pthread_t to_native_handle(unsigned long handle) noexcept {
   return result;
 }
 
-void thread::__destroy_state(void* pointer) noexcept {
-  delete static_cast<__state*>(pointer);
-}
-
-void* thread::__start(void* pointer) {
-  pthread_cleanup_push(__destroy_state, pointer);
-  static_cast<__state*>(pointer)->run();
-  pthread_cleanup_pop(1);
-  return nullptr;
+void __thread_detail::__launch_detached(__state* state) {
+  unsigned long handle;
+  if (!__create(handle, __start, state)) {
+    delete state;
+    __builtin_trap();
+  }
+  if (::pthread_detach(to_native_handle(handle)) != 0)
+    __builtin_trap();
 }
 
 thread::thread(thread&& other) noexcept

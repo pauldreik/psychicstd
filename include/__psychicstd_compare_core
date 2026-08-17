@@ -9,6 +9,8 @@ namespace std {
 class partial_ordering {
   int v_;
   constexpr explicit partial_ordering(int v) noexcept : v_(v) {}
+  friend class weak_ordering;
+  friend class strong_ordering;
 
 public:
   static const partial_ordering less;
@@ -29,8 +31,7 @@ public:
   }
   friend constexpr partial_ordering operator<=>(int,
                                                 partial_ordering v) noexcept {
-    return v.v_ == -127 ? unordered
-                        : (v.v_ < 0 ? greater : (v.v_ > 0 ? less : equivalent));
+    return v.v_ == -127 ? unordered : partial_ordering(-v.v_);
   }
   friend constexpr bool operator<(partial_ordering v, int) noexcept {
     return v.v_ < 0 && v.v_ != -127;
@@ -66,6 +67,7 @@ inline constexpr partial_ordering partial_ordering::unordered(-127);
 class weak_ordering {
   int v_;
   constexpr explicit weak_ordering(int v) noexcept : v_(v) {}
+  friend class strong_ordering;
 
 public:
   static const weak_ordering less;
@@ -73,9 +75,7 @@ public:
   static const weak_ordering greater;
 
   constexpr operator partial_ordering() const noexcept {
-    return v_ < 0 ? partial_ordering::less
-                  : (v_ > 0 ? partial_ordering::greater
-                            : partial_ordering::equivalent);
+    return partial_ordering(v_);
   }
 
   friend constexpr bool operator==(weak_ordering v, weak_ordering w) noexcept {
@@ -88,7 +88,7 @@ public:
     return v;
   }
   friend constexpr weak_ordering operator<=>(int, weak_ordering v) noexcept {
-    return v.v_ < 0 ? greater : (v.v_ > 0 ? less : equivalent);
+    return weak_ordering(-v.v_);
   }
   friend constexpr bool operator<(weak_ordering v, int) noexcept {
     return v.v_ < 0;
@@ -131,14 +131,10 @@ public:
   static const strong_ordering greater;
 
   constexpr operator partial_ordering() const noexcept {
-    return v_ < 0 ? partial_ordering::less
-                  : (v_ > 0 ? partial_ordering::greater
-                            : partial_ordering::equivalent);
+    return partial_ordering(v_);
   }
   constexpr operator weak_ordering() const noexcept {
-    return v_ < 0
-               ? weak_ordering::less
-               : (v_ > 0 ? weak_ordering::greater : weak_ordering::equivalent);
+    return weak_ordering(v_);
   }
 
   friend constexpr bool operator==(strong_ordering v,
@@ -154,7 +150,7 @@ public:
   }
   friend constexpr strong_ordering operator<=>(int,
                                                strong_ordering v) noexcept {
-    return v.v_ < 0 ? greater : (v.v_ > 0 ? less : equal);
+    return strong_ordering(-v.v_);
   }
   friend constexpr bool operator<(strong_ordering v, int) noexcept {
     return v.v_ < 0;

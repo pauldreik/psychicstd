@@ -95,27 +95,29 @@ public:
     Node* node_ = nullptr;
 
     iterator() = default;
-    iterator(const unordered_set* s, size_t b, Node* n)
+    [[gnu::always_inline]] iterator(const unordered_set* s, size_t b, Node* n)
         : set_(s), bucket_(b), node_(n) {}
 
-    const Key& operator*() const { return node_->key; }
-    const Key* operator->() const { return &node_->key; }
+    [[gnu::always_inline]] const Key& operator*() const { return node_->key; }
+    [[gnu::always_inline]] const Key* operator->() const { return &node_->key; }
 
-    iterator& operator++() {
+    [[gnu::always_inline]] iterator& operator++() {
       node_ = node_->next;
       while (!node_ && ++bucket_ < set_->nbuckets_)
         node_ = set_->buckets_[bucket_];
       return *this;
     }
-    iterator operator++(int) {
+    [[gnu::always_inline]] iterator operator++(int) {
       auto t = *this;
       ++*this;
       return t;
     }
-    bool operator==(const iterator& o) const {
+    [[gnu::always_inline]] bool operator==(const iterator& o) const {
       return node_ == o.node_ && bucket_ == o.bucket_;
     }
-    bool operator!=(const iterator& o) const { return !(*this == o); }
+    [[gnu::always_inline]] bool operator!=(const iterator& o) const {
+      return !(*this == o);
+    }
   };
   using const_iterator = iterator;
   using local_iterator = iterator;
@@ -220,20 +222,26 @@ public:
     return *this;
   }
 
-  iterator begin() const {
+  [[gnu::always_inline]] iterator begin() const {
     for (size_t i = 0; i < nbuckets_; ++i)
       if (buckets_[i])
         return {this, i, buckets_[i]};
     return end();
   }
-  iterator end() const { return {this, nbuckets_, nullptr}; }
-  const_iterator cbegin() const { return begin(); }
-  const_iterator cend() const { return end(); }
+  [[gnu::always_inline]] iterator end() const {
+    return {this, nbuckets_, nullptr};
+  }
+  [[gnu::always_inline]] const_iterator cbegin() const { return begin(); }
+  [[gnu::always_inline]] const_iterator cend() const { return end(); }
 
   [[gnu::always_inline]] bool empty() const noexcept { return size_ == 0; }
   [[gnu::always_inline]] size_type size() const noexcept { return size_; }
-  size_type bucket_count() const noexcept { return nbuckets_; }
-  size_type max_size() const noexcept { return size_type(-1); }
+  [[gnu::always_inline]] size_type bucket_count() const noexcept {
+    return nbuckets_;
+  }
+  [[gnu::always_inline]] size_type max_size() const noexcept {
+    return size_type(-1);
+  }
   float load_factor() const noexcept {
     return static_cast<float>(size_) / static_cast<float>(nbuckets_);
   }
@@ -274,8 +282,10 @@ public:
     return {{this, b, n}, true};
   }
   // Hint versions (hint ignored)
-  iterator insert(const_iterator, const Key& k) { return insert(k).first; }
-  iterator insert(const_iterator, Key&& k) {
+  [[gnu::always_inline]] iterator insert(const_iterator, const Key& k) {
+    return insert(k).first;
+  }
+  [[gnu::always_inline]] iterator insert(const_iterator, Key&& k) {
     return insert(static_cast<Key&&>(k)).first;
   }
 
@@ -283,12 +293,15 @@ public:
     return insert(Key(static_cast<Args&&>(args)...));
   }
   template <typename... Args>
+  [[gnu::always_inline]]
   iterator emplace_hint(const_iterator, Args&&... args) {
     return emplace(static_cast<Args&&>(args)...).first;
   }
-  hasher hash_function() const { return hasher_; }
-  key_equal key_eq() const { return equal_; }
-  allocator_type get_allocator() const { return allocator_; }
+  [[gnu::always_inline]] hasher hash_function() const { return hasher_; }
+  [[gnu::always_inline]] key_equal key_eq() const { return equal_; }
+  [[gnu::always_inline]] allocator_type get_allocator() const {
+    return allocator_;
+  }
   template <typename It> void insert(It first, It last) {
     for (; first != last; ++first)
       insert(*first);
@@ -457,24 +470,29 @@ public:
     Node* node_ = nullptr;
 
     iterator() = default;
-    iterator(const unordered_multiset* s, size_t b, Node* n)
+    [[gnu::always_inline]] iterator(const unordered_multiset* s, size_t b,
+                                    Node* n)
         : set_(s), bucket_(b), node_(n) {}
 
-    const Key& operator*() const { return node_->key; }
-    const Key* operator->() const { return &node_->key; }
-    iterator& operator++() {
+    [[gnu::always_inline]] const Key& operator*() const { return node_->key; }
+    [[gnu::always_inline]] const Key* operator->() const { return &node_->key; }
+    [[gnu::always_inline]] iterator& operator++() {
       node_ = node_->next;
       while (!node_ && ++bucket_ < set_->nbuckets_)
         node_ = set_->buckets_[bucket_];
       return *this;
     }
-    iterator operator++(int) {
+    [[gnu::always_inline]] iterator operator++(int) {
       auto t = *this;
       ++*this;
       return t;
     }
-    bool operator==(const iterator& o) const { return node_ == o.node_; }
-    bool operator!=(const iterator& o) const { return node_ != o.node_; }
+    [[gnu::always_inline]] bool operator==(const iterator& o) const {
+      return node_ == o.node_;
+    }
+    [[gnu::always_inline]] bool operator!=(const iterator& o) const {
+      return node_ != o.node_;
+    }
   };
   using const_iterator = iterator;
 
@@ -508,15 +526,17 @@ public:
     return *this;
   }
 
-  iterator begin() const {
+  [[gnu::always_inline]] iterator begin() const {
     for (size_t i = 0; i < nbuckets_; ++i)
       if (buckets_[i])
         return {this, i, buckets_[i]};
     return end();
   }
-  iterator end() const { return {this, nbuckets_, nullptr}; }
-  const_iterator cbegin() const { return begin(); }
-  const_iterator cend() const { return end(); }
+  [[gnu::always_inline]] iterator end() const {
+    return {this, nbuckets_, nullptr};
+  }
+  [[gnu::always_inline]] const_iterator cbegin() const { return begin(); }
+  [[gnu::always_inline]] const_iterator cend() const { return end(); }
 
   [[gnu::always_inline]] bool empty() const noexcept { return size_ == 0; }
   [[gnu::always_inline]] size_type size() const noexcept { return size_; }

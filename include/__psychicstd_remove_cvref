@@ -1,0 +1,21 @@
+#pragma once
+
+#if !__has_builtin(__remove_cvref)
+#include <__psychicstd_remove_cv>
+#include <__psychicstd_remove_reference>
+#endif
+
+namespace std::__psychicstd_detail {
+
+#if __has_builtin(__remove_cvref)
+template <typename T> struct __remove_cvref_impl {
+  using type = __remove_cvref(T);
+};
+#else
+template <typename T> struct __remove_cvref_impl {
+  using type = typename __remove_cv_impl<
+      typename __remove_reference_impl<T>::type>::type;
+};
+#endif
+
+}

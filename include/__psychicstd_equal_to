@@ -3,7 +3,10 @@
 namespace std {
 
 template <typename T = void> struct equal_to {
-  constexpr bool operator()(const T& a, const T& b) const { return a == b; }
+  [[gnu::always_inline]] constexpr bool operator()(const T& a,
+                                                   const T& b) const {
+    return a == b;
+  }
 };
 
 template <> struct equal_to<void> {
